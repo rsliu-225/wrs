@@ -16,5 +16,7 @@ if __name__ == '__main__':
     hnd = rtqhe.RobotiqHE()
     # rbt.gen_meshmodel().attach_to(base)
     hnd.gen_meshmodel().attach_to(base)
-    hnd.grip_at_with_jcpose()
+
+    # hnd.grip_at_with_jcpose()
+    gm.gen_cone(radius=.05).attach_to(base)
     base.run()
