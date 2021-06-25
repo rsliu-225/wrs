@@ -4,10 +4,11 @@ import numpy as np
 
 import basis.robot_math as rm
 import modeling.geometric_model as gm
-import vision.depth_camera.gaussian_surface as gs
-import vision.depth_camera.quadratic_surface as qs
 import vision.depth_camera.rbf_surface as rbfs
 import visualization.panda.world as wd
+import math
+import vision.depth_camera.surface.gaussian_surface as gs
+import vision.depth_camera.surface.quadrantic_surface as qs
 
 base = wd.World(cam_pos=np.array([.5, .1, .3]), lookat_pos=np.array([0, 0, 0.05]))
 gm.gen_frame().attach_to(base)

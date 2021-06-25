@@ -307,7 +307,6 @@ def pandageom_from_points(vertices, rgba_list=None, name=''):
     author: weiwei
     date: 20170328, 20210116
     """
-
     if rgba_list is None:
         # default
         vertex_rgbas = np.array([[0, 0, 0, 255], ]*len(vertices), dtype=np.uint8)
