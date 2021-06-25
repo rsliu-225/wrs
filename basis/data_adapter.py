@@ -307,17 +307,19 @@ def pandageom_from_points(vertices, rgba_list=None, name=''):
     author: weiwei
     date: 20170328, 20210116
     """
-    if type(rgba_list) is not list:
-        raise Exception('rgba\_list must be a list!')
+
     if rgba_list is None:
         # default
         vertex_rgbas = np.array([[0, 0, 0, 255], ]*len(vertices), dtype=np.uint8)
-    elif len(rgba_list) == 1:
-        vertex_rgbas = np.tile(rgba_list[0]*255, (len(vertices),1), dtype=np.uint8)
-    elif len(rgba_list) == len(vertices):
-        vertex_rgbas = (np.array(rgba_list)*255).astype(np.uint8)
     else:
-        raise ValueError('rgba_list must be a list of one or len(vertices) 1x4 nparray!')
+        if type(rgba_list) is not list:
+            raise Exception('rgba\_list must be a list!')
+        elif len(rgba_list) == 1:
+            vertex_rgbas = np.tile(rgba_list[0]*255, (len(vertices),1), dtype=np.uint8)
+        elif len(rgba_list) == len(vertices):
+            vertex_rgbas = (np.array(rgba_list)*255).astype(np.uint8)
+        else:
+            raise ValueError('rgba_list must be a list of one or len(vertices) 1x4 nparray!')
     vertformat = GeomVertexFormat()
     arrayformat = GeomVertexArrayFormat()
     arrayformat.addColumn(InternalName.getVertex(), 3, GeomEnums.NTFloat32, GeomEnums.CPoint)
