@@ -81,11 +81,11 @@ if __name__ == '__main__':
         Z += gaussian(X, Y, *p)
     Z += noise_sigma * np.random.randn(*Z.shape)
     # Plot the 3D figure of the fitted function and the residuals.
-    fig = plt.figure()
-    ax = fig.gca(projection='3d')
-    ax.plot_surface(X, Y, Z, cmap='plasma')
-    ax.set_zlim(0, np.max(Z) + 2)
-    plt.show()
+    # fig = plt.figure()
+    # ax = fig.gca(projection='3d')
+    # ax.plot_surface(X, Y, Z, cmap='plasma')
+    # ax.set_zlim(0, np.max(Z) + 2)
+    # plt.show()
     xdata = np.vstack((X.ravel(), Y.ravel())).T
     import visualization.panda.world as wd
 

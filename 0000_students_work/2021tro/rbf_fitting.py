@@ -4,7 +4,7 @@ import numpy as np
 
 import basis.robot_math as rm
 import modeling.geometric_model as gm
-import vision.depth_camera.rbf_surface as rbfs
+import vision.depth_camera.surface.rbf_surface as rbfs
 import visualization.panda.world as wd
 import math
 import vision.depth_camera.surface.gaussian_surface as gs
