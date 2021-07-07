@@ -7,8 +7,11 @@ import modeling.geometric_model as gm
 import vision.depth_camera.surface.rbf_surface as rbfs
 import visualization.panda.world as wd
 import math
-import vision.depth_camera.surface.gaussian_surface as gs
-import vision.depth_camera.surface.quadrantic_surface as qs
+
+# import vision.depth_camera.surface.gaussian_surface as gs
+# import vision.depth_camera.surface.quadrantic_surface as qs
+import vision.depth_camera.surface.bibspline_surface as bs
+import vision.depth_camera.surface.plane_surface as ps
 
 base = wd.World(cam_pos=np.array([.5, .1, .3]), lookat_pos=np.array([0, 0, 0.05]))
 gm.gen_frame().attach_to(base)
@@ -26,6 +29,7 @@ for id, p in enumerate(points.tolist()):
 # y - u
 rotmat_uv = rm.rotmat_from_euler(0, math.pi / 2, 0)
 sampled_points = rotmat_uv.dot(np.array(sampled_points).T).T
+
 surface = rbfs.RBFSurface(sampled_points[:, :2], sampled_points[:, 2])
 z = surface.get_zdata([[20, 0]])
 print(z)
@@ -47,6 +51,7 @@ z = surface.get_zdata([[20, 0]])
 print(z)
 gm.gen_sphere(pos=(10, 0, z[0]), rgba=(0, 1, 1, 1), radius=.5).attach_to(base)
 surface_gm = surface.get_gometricmodel(rgba=(.3, .3, .7, 1))
+surface_gm = surface.get_gometricmodel()
 surface_gm.set_rotmat(rotmat_uv.T)
 surface_gm.attach_to(base)
 

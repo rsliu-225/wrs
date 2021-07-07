@@ -8,7 +8,8 @@ class MixedGaussianSurface(sfc.Surface):
     def __init__(self,
                  xydata,
                  zdata,
-                 n_mix=4):
+                 n_mix=4,
+                 init_guess=[0, 0, .05, .05, .01]):
         """
         :param xydata:
         :param zdata:
@@ -23,7 +24,7 @@ class MixedGaussianSurface(sfc.Surface):
         date: 20210624
         """
         super().__init__(xydata, zdata)
-        guess_prms = np.array([[0, 0, 1, 1, 1]] * n_mix)
+        guess_prms = np.array([init_guess] * n_mix)
         self.popt, pcov = curve_fit(MixedGaussianSurface.mixed_gaussian, xydata, zdata, guess_prms.ravel())
 
     @staticmethod
@@ -81,11 +82,11 @@ if __name__ == '__main__':
         Z += gaussian(X, Y, *p)
     Z += noise_sigma * np.random.randn(*Z.shape)
     # Plot the 3D figure of the fitted function and the residuals.
-    # fig = plt.figure()
-    # ax = fig.gca(projection='3d')
-    # ax.plot_surface(X, Y, Z, cmap='plasma')
-    # ax.set_zlim(0, np.max(Z) + 2)
-    # plt.show()
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+    ax.plot_surface(X, Y, Z, cmap='plasma')
+    ax.set_zlim(0, np.max(Z) + 2)
+    plt.show()
     xdata = np.vstack((X.ravel(), Y.ravel())).T
     import visualization.panda.world as wd
 
