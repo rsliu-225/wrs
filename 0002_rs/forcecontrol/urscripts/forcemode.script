@@ -1,0 +1,297 @@
+def driverProg():
+    def euler2mtx(rx,ry,rz):
+        ch = cos(ry)
+        sh = sin(ry)
+        ca = cos(rz)
+        sa = sin(rz)
+        cb = cos(rx)
+        sb = sin(rx)
+
+        m00 = ch * ca
+        m01 = sh*sb - ch*sa*cb
+        m02 = ch*sa*sb + sh*cb
+        m10 = sa
+        m11 = ca*cb
+        m12 = -ca*sb
+        m20 = -sh*ca
+        m21 = sh*sa*cb + ch*sb
+        m22 = -sh*sa*sb + ch*cb
+#        textmsg(rx)
+#        textmsg(ry)
+#        textmsg(rz)
+#        textmsg([[m00,m01,m02], [m10,m11,m12], [m20,m21,m22]])
+        return [[m00,m01,m02], [m10,m11,m12], [m20,m21,m22]]
+    end
+
+	SERVO_IDLE = 0
+	SERVO_RUNNING = 1
+	cmd_servo_state = SERVO_IDLE
+	global cmd_servo_q = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+	global current_inx = 0
+	global contact_force = 0
+	global toolrelposepose = p[0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    global toolrelpose = parameter_toolrelpose
+    global pTt = euler2mtx(toolrelpose[3], toolrelpose[4], toolrelpose[5])
+
+    def send_info(ip, port, msg, socketname):
+        sendtoserver = socket_open(ip, port, socketname)
+        while (sendtoserver ==  False):
+            sleep(0.05)
+            textmsg("connction failed")
+            sendtoserver = socket_open(ip, port, socketname)
+        end
+        socket_send_string(msg, socketname)
+        socket_close(socketname)
+    end
+
+	def set_servo_setpoint(q):
+		enter_critical
+		cmd_servo_state = SERVO_RUNNING
+		cmd_servo_q = q
+		exit_critical
+	end
+
+	thread sendinfoThread():
+		while True:
+		    sleep(0.5)
+            real_pose = get_target_joint_positions()
+            real_tcp = get_actual_tcp_pose()
+            diff = pose_dist(get_forward_kin(cmd_servo_q), real_tcp)
+            force = get_tcp_force()
+            speed = get_actual_tcp_speed()
+	        bTt = euler2mtx(real_tcp[3], real_tcp[4], real_tcp[5])
+
+            forcel = pTt * inv(bTt) * [force[0],force[1],force[2]]
+            # forcer = pTt * inv(bTt) * [force[3],force[4],force[5]]
+            # force = p[forcel[0], forcel[1], forcel[2], forcer[0], forcer[1], forcer[2]]
+
+            # speedl = pTt * inv(bTt) * [speed[0],speed[1],speed[2]]
+            # speedr = pTt * inv(bTt) * [speed[3],speed[4],speed[5]]
+            # speed = p[speedl[0], speedl[1], speedl[2], speedr[0], speedr[1], speedr[2]]
+            textmsg(forcel)
+            if forcel[0] < 0:
+                textmsg("force lost")
+                send_info("10.0.2.11", 8000, str_cat("i",current_inx), "connection1")
+                send_info("10.0.2.11", 8000, str_cat("d",diff), "connection1")
+                send_info("10.0.2.11", 8000, str_cat("a",real_pose), "connection1")
+                send_info("10.0.2.11", 8000, str_cat("f",force), "connection1")
+                send_info("10.0.2.11", 8000, str_cat("s",speed), "connection1")
+                send_info("10.0.2.11", 8000, str_cat("t",real_tcp), "connection1")
+                send_info("10.0.2.11", 8000, "stop","connection")
+                SERVO_RUNNING = 0
+                keepalive = 0
+                end_force_mode()
+                socket_close()
+                kill thread_servo
+                kill thread_forcemode
+                kill thread_sendinfo
+                break
+            end
+
+            if forcel[2] > 6 or forcel[2] < -6:
+                textmsg("tool slip 2")
+                textmsg(forcel[2])
+                send_info("10.0.2.11", 8000, str_cat("i",current_inx), "connection1")
+                send_info("10.0.2.11", 8000, str_cat("d",diff), "connection1")
+                send_info("10.0.2.11", 8000, str_cat("a",real_pose), "connection1")
+                send_info("10.0.2.11", 8000, str_cat("f",force), "connection1")
+                send_info("10.0.2.11", 8000, str_cat("s",speed), "connection1")
+                send_info("10.0.2.11", 8000, str_cat("t",real_tcp), "connection1")
+                send_info("10.0.2.11", 8000, "stop","connection")
+                SERVO_RUNNING = 0
+                keepalive = 0
+                end_force_mode()
+                socket_close()
+                kill thread_servo
+                kill thread_forcemode
+                kill thread_sendinfo
+                break
+            end
+
+            if forcel[1] > 6 or forcel[1] < -6:
+                textmsg("tool slip 1")
+                textmsg(forcel[1])
+                send_info("10.0.2.11", 8000, str_cat("i",current_inx), "connection1")
+                send_info("10.0.2.11", 8000, str_cat("d",diff), "connection1")
+                send_info("10.0.2.11", 8000, str_cat("a",real_pose), "connection1")
+                send_info("10.0.2.11", 8000, str_cat("f",force), "connection1")
+                send_info("10.0.2.11", 8000, str_cat("s",speed), "connection1")
+                send_info("10.0.2.11", 8000, str_cat("t",real_tcp), "connection1")
+                send_info("10.0.2.11", 8000, "stop","connection")
+                SERVO_RUNNING = 0
+                keepalive = 0
+                end_force_mode()
+                socket_close()
+                kill thread_servo
+                kill thread_forcemode
+                kill thread_sendinfo
+                break
+            end
+
+            send_info("10.0.2.11", 8000, str_cat("i",current_inx), "connection1")
+            send_info("10.0.2.11", 8000, str_cat("d",diff), "connection1")
+            send_info("10.0.2.11", 8000, str_cat("a",real_pose), "connection1")
+            send_info("10.0.2.11", 8000, str_cat("f",force), "connection1")
+            send_info("10.0.2.11", 8000, str_cat("s",speed), "connection1")
+            send_info("10.0.2.11", 8000, str_cat("t",real_tcp), "connection1")
+            sync()
+        end
+    end
+
+	thread servoThread():
+		state = SERVO_IDLE
+		while True:
+			enter_critical
+			q = cmd_servo_q
+			do_brake = False
+			if (state == SERVO_RUNNING) and (cmd_servo_state == SERVO_IDLE):
+				do_brake = True
+			end
+			state = cmd_servo_state
+			cmd_servo_state = SERVO_IDLE
+			exit_critical
+			if do_brake:
+				stopj(1.0)
+				sync()
+			elif state == SERVO_RUNNING:
+				servoj(q)
+				current_inx = current_inx + 1
+			else:
+				sync()
+			end
+		end
+	end
+
+	thread forcemodeThread():
+        toolrelposepose = p[toolrelpose[0], toolrelpose[1], toolrelpose[2],
+                            toolrelpose[3], toolrelpose[4], toolrelpose[5]]
+        while (True):
+            sleep(0.02)
+            force_mode_set_gain_scaling(0.5)
+            force_mode_set_damping(1)
+            speed = get_actual_tcp_speed()
+            contact_force = -4
+
+#            if speed[3] > 0.02:
+#                contact_force = -8
+#            elif speed[3] < -0.02:
+#                contact_force = 0
+#            end
+#
+#            if speed[3] > 0.04:
+#                contact_force = -10
+#            elif speed[3] < -0.04:
+#                contact_force = 2
+#            end
+#
+#            if speed[3] > 0.06:
+#                contact_force = -12
+#            elif speed[3] < -0.06:
+#                contact_force = 4
+#            end
+#
+#            if speed[3] > 0.08:
+#                contact_force = -14
+#            elif speed[3] < -0.08:
+#                contact_force = 6
+#            end
+#
+#            if speed[3] > 0.08:
+#                contact_force = -16
+#            elif speed[3] < -0.08:
+#                contact_force = 8
+#            end
+#
+#            if speed[3] > 0.10:
+#                contact_force = -18
+#            elif speed[3] < -0.10:
+#                contact_force = 10
+#            end
+#
+#           if speed[3] > 0.12:
+#               contact_force = -20
+#           elif speed[3] < -0.12:
+#               contact_force = 12
+#           end
+#
+#           if speed[3] > 0.14:
+#               contact_force = -22
+#           elif speed[3] < -0.14:
+#               contact_force = 14
+#           end
+#
+#           if speed[3] > 0.16:
+#               contact_force = -24
+#           elif speed[3] < -0.16:
+#               contact_force = 16
+#           end
+#
+#           if speed[3] > 0.18:
+#               contact_force = -26
+#           elif speed[3] < -0.18:
+#               contact_force = 18
+#           end
+#
+#           if speed[3] > 0.20:
+#               contact_force = -28
+#           elif speed[3] < -0.20:
+#               contact_force = 20
+#           end
+#
+#           if speed[3] > 0.22:
+#               contact_force = -30
+#           elif speed[3] < -0.22:
+#               contact_force = 22
+#           end
+#
+#           if speed[3] > 0.24:
+#               contact_force = -32
+#           elif speed[3] < -0.22:
+#               contact_force = 24
+#           end
+#
+#           if speed[3] > 0.26:
+#               contact_force = -34
+#           elif speed[3] < -0.26:
+#               contact_force = 26
+#           end
+
+           force_mode(pose_add(tool_pose(), toolrelposepose), [1,0,0,0,0,0],
+                      [contact_force,0,0,0,0,0], 2, [0.15, 0.1, 0.1, 0.1, 0.1, 0.1])
+           sync()
+        end
+    end
+
+	socket_open("parameter_ip", parameter_port)
+	textmsg("open connection")
+	thread_servo = run servoThread()
+	thread_forcemode = run forcemodeThread()
+	thread_sendinfo = run sendinfoThread()
+
+	keepalive = 1
+	while keepalive > 0:
+		textmsg("preparing to read")
+		params_mult = socket_read_binary_integer(7)
+		if params_mult[0] > 0:
+			q = [params_mult[1]/parameter_jointscaler,
+				 params_mult[2]/parameter_jointscaler,
+				 params_mult[3]/parameter_jointscaler,
+				 params_mult[4]/parameter_jointscaler,
+				 params_mult[5]/parameter_jointscaler,
+				 params_mult[6]/parameter_jointscaler]
+			keepalive = params_mult[7]
+			set_servo_setpoint(q)
+	        sync()
+		end
+	end
+
+	sleep(.1)
+	textmsg("finish running")
+    send_info("10.0.2.11", 8000, "stop","connection")
+    end_force_mode()
+	socket_close()
+	kill thread_servo
+	kill thread_forcemode
+    kill thread_sendinfo
+
+end
