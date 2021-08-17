@@ -25,6 +25,7 @@ def get_objpcd(objcm, objmat4=np.eye(4), sample_num=100000, toggledebug=False):
         objpcd = o3d_helper.nparray2o3dpcd(copy.deepcopy(objpcd))
         objpcd.paint_uniform_color([1, 0.706, 0])
         o3d.visualization.draw_geometries([objpcd])
+    print(f"---------------success sample {sample_num} points---------------")
 
     return objpcd
 
@@ -262,23 +263,25 @@ def get_objpcd_withnrmls(objcm, objmat4=np.eye(4), sample_num=100000, toggledebu
     objpcd_nrmls = []
     faces = objcm.trimesh.faces
     vertices = objcm.trimesh.vertices
-    nrmls = objcm.trimesh.face_normals
+    face_nrmls = objcm.trimesh.face_normals
+    nrmls = objcm.trimesh.vertex_normals
 
     if sample_num is not None:
         objpcd, faceid = ts.sample_surface_withfaceid(objcm.trimesh, count=sample_num)
         objpcd = list(objpcd)
         for i in faceid:
-            objpcd_nrmls.append(np.array(nrmls[i]))
+            objpcd_nrmls.append(np.array(face_nrmls[i]))
     else:
-        objpcd = []
+        objpcd = vertices
+        objpcd_nrmls.extend(nrmls)
 
-    v_temp = []
-    for i, face in enumerate(faces):
-        for j, v in enumerate(face):
-            if v not in v_temp:
-                v_temp.append(v)
-                objpcd.append(vertices[v])
-                objpcd_nrmls.append(nrmls[i])
+    # v_temp = []
+    # for i, face in enumerate(faces):
+    #     for j, v in enumerate(face):
+    #         if v not in v_temp:
+    #             v_temp.append(v)
+    #             objpcd.append(vertices[v])
+    #             objpcd_nrmls.append(nrmls[i])
 
     if sample_edge:
         for i, face in enumerate(faces):
@@ -299,7 +302,7 @@ def get_objpcd_withnrmls(objcm, objmat4=np.eye(4), sample_num=100000, toggledebu
         # objcm.sethomomat(objmat4)
         # objcm.setColor(1, 1, 1, 0.7)
         # objcm.reparentTo(base.render)
-        # show_pcd(objpcd, rgba=(1, 0, 0, 1))
+        show_pcd(objpcd, rgba=(1, 0, 0, 1))
         for i, n in enumerate(objpcd_nrmls):
             import random
             v = random.choice(range(0, 10000))

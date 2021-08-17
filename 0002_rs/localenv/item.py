@@ -1,9 +1,13 @@
 import math
-
+import pickle
 import numpy as np
+import basis.trimesh
 
-import trimesh.sample as sample
+import basis.trimesh.sample as sample
 import utils.pcd_utils as pcdu
+import basis.robotmath as rm
+import environment.collisionmodel as cm
+import multiprocessing
 
 TOGGLEDEBUG = False
 
@@ -15,12 +19,22 @@ class Item(object):
             self.__reconstruct = kwargs["reconstruct"]
         else:
             self.__reconstruct = False
+
         if "objmat4" in list(kwargs.keys()):
             self.__objmat4 = kwargs["objmat4"]
         else:
             self.__objmat4 = np.eye(4)
+
         if "objcm" in list(kwargs.keys()):
             self.__objcm = kwargs["objcm"]
+            # if kwargs["filter_dir"] is not None:
+            #     self.__filter_dir = kwargs["filter_dir"]
+            #     pcdu.show_pcd(self.__objcm.trimesh.vertices)
+            #     mask_range = self.__filter_by_range(self.__objcm,
+            #                                         x_range=(-50, 50), y_range=(50, 500), z_range=(-50, 50))
+            #     mask_ndir = self.__filer_by_dir(self.__objcm, self.__filter_dir)
+            #     self.__reconstruct_by_mask(mask_range * mask_ndir)
+
             self.__pcd_std = pcdu.get_objpcd(kwargs["objcm"], objmat4=self.__objmat4)
             self.__w, self.__h = pcdu.get_pcd_w_h(self.__pcd_std)
         if "pcd" in list(kwargs.keys()):
@@ -118,6 +132,89 @@ class Item(object):
             for p in col_ps:
                 base.pggen.plotSphere(base.render, p, rgba=(1, 0, 0, 1), radius=20)
         return col_ps
+
+    def __filer_by_dir(self, objcm, dir):
+        # vs = objcm.trimesh.vertices
+        # faces = objcm.trimesh.faces
+        nrmls = objcm.trimesh.vertex_normals
+        cos = np.dot(nrmls, dir) / (np.linalg.norm(nrmls) * np.linalg.norm(dir))
+        mask = cos > 0
+        return mask
+
+    def __filter_by_range(self, objcm, x_range=None, y_range=None, z_range=None):
+        vs = objcm.trimesh.vertices
+        center = pcdu.get_pcd_center(vs)
+        mask = [True] * len(vs)
+        if x_range is not None:
+            mask *= (vs[:, 0] < center[0] + x_range[1]) * (vs[:, 0] > center[0] + x_range[0])
+        if y_range is not None:
+            mask *= (vs[:, 1] < center[1] + y_range[1]) * (vs[:, 1] > center[1] + y_range[0])
+        if z_range is not None:
+            mask *= (vs[:, 2] < center[2] + z_range[1]) * (vs[:, 2] > center[2] + z_range[0])
+        return mask
+
+    def fff(self, v_ids, fs, start_idx, rl):
+        for idx, f in enumerate(fs):
+            if list(set(v_ids) & set(f)):
+                rl.append(start_idx + idx)
+
+    def __filer_fs_mp(self, faces, v_ids, slices_num=100):
+        step = int(len(faces) / slices_num)
+        ss = 0
+
+        manager = multiprocessing.Manager()
+        result_list = manager.list()
+        processes = []
+
+        for i in range(slices_num):
+            se = ss + step
+            if se > len(faces):
+                se = len(faces)
+
+            sub_faces = faces[ss:se]
+            p = multiprocessing.Process(
+                target=self.fff, args=(v_ids, sub_faces, ss, result_list)
+            )
+            processes.append(p)
+            p.start()
+            ss += step
+
+        for p in processes:
+            p.join()
+
+        face_mask = []
+        for i in range(0, len(faces)):
+            if i in result_list:
+                face_mask.append(False)
+            else:
+                face_mask.append(True)
+        return face_mask
+
+    def __filer_faces(self, faces, v_ids):
+        face_mask = []
+        for i, f in enumerate(faces):
+            if list(set(v_ids) & set(f)):
+                face_mask.append(False)
+            else:
+                face_mask.append(True)
+
+    def __reconstruct_by_mask(self, mask):
+        vs = self.__objcm.trimesh.vertices
+        faces = self.__objcm.trimesh.faces
+        nrmls = self.__objcm.trimesh.vertex_normals
+        vs = vs[mask]
+        nrmls = nrmls[mask]
+        v_ids = np.where(np.asarray(mask))[0]
+        print(len(v_ids))
+        print(len(faces))
+        face_mask = self.__filer_fs_mp(faces, v_ids)
+        faces = faces[face_mask]
+        self.__objcm = cm.CollisionModel(objinit=trimesh.Trimesh(vertices=vs, faces=faces, vertex_normals=nrmls))
+        pickle.dump([vs, nrmls, faces], open('skull.pkl', "wb"))
+        print(len(vs))
+        pcdu.show_pcd(vs)
+        base.run()
+        # self.__objcm = pcdu.reconstruct_surface(vs, radii=[5])
 
     def show_objcm(self, rgba=(1, 1, 1, 1), show_localframe=False):
         # import copy

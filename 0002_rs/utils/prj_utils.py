@@ -24,7 +24,6 @@ import utils.math_utils as mu
 import utils.pcd_utils as pcdu
 import utils.phoxi as phoxi
 import utils.phoxi_locator as pl
-import utils.run_utils as ru
 import utiltools.robotmath as rm
 
 
@@ -152,14 +151,12 @@ def resize_drawpath(drawpath, w, h, space=5):
         else:
             return b, a
 
-    if type(drawpath[0]) != type([]):
-        drawpath = [drawpath]
     print('length of each stroke(dup):', [len(stroke) for stroke in drawpath])
-    drawpath_ms = [remove_list_dup(stroke) for stroke in drawpath]
-    stroke_len_list = [len(stroke) for stroke in drawpath_ms]
+    drawpath = [remove_list_dup(stroke) for stroke in drawpath]
+    stroke_len_list = [len(stroke) for stroke in drawpath]
     print('length of each stroke:', stroke_len_list)
 
-    p_narray = np.array([p for s in drawpath_ms for p in s])
+    p_narray = np.array([p for s in drawpath for p in s])
     pl_w = max(p_narray[:, 0]) - min(p_narray[:, 0])
     pl_h = max(p_narray[:, 1]) - min(p_narray[:, 1])
     pl_w, pl_h = __sort_w_h(pl_w, pl_h)
@@ -272,22 +269,25 @@ def rayhitmesh_drawpath(obj_item, drawpath, direction=np.asarray((0, 0, 1)), err
     return pos_nrml_list_ms, error_list_ms, time_cost_total
 
 
-def rayhitmesh_p(obj, center, p, direction=np.asarray((0, 0, 1))):
+def rayhitmesh_p(obj, center, p, kdt_d3=None, direction=np.asarray((0, 0, 1))):
     if abs(direction[0]) == 1:
-        pfrom = np.asarray((center[0], p[0] + center[1], p[1] + center[2])) + 50 * direction
-        pto = np.asarray((center[0], p[0] + center[1], p[1] + center[2])) - 50 * direction
+        pfrom = np.asarray((center[0], p[0] + center[1], p[1] + center[2])) + 100 * direction
+        pto = np.asarray((center[0], p[0] + center[1], p[1] + center[2])) - 300 * direction
     elif abs(direction[1]) == 1:
-        pfrom = np.asarray((p[0] + center[0], center[1], p[1] + center[2])) + 50 * direction
-        pto = np.asarray((p[0] + center[0], center[1], p[1] + center[2])) - 50 * direction
+        pfrom = np.asarray((p[0] + center[0], center[1], p[1] + center[2])) + 100 * direction
+        pto = np.asarray((p[0] + center[0], center[1], p[1] + center[2])) - 300 * direction
     elif abs(direction[2]) == 1:
-        pfrom = np.asarray((p[0] + center[0], p[1] + center[1], center[2])) + 50 * direction
-        pto = np.asarray((p[0] + center[0], p[1] + center[1], center[2])) - 50 * direction
+        pfrom = np.asarray((p[0] + center[0], p[1] + center[1], center[2])) + 100 * direction
+        pto = np.asarray((p[0] + center[0], p[1] + center[1], center[2])) - 300 * direction
     else:
         print('Wrong input direction!')
         return None, None
     base.pggen.plotArrow(base.render, spos=pfrom, epos=pto, length=100, rgba=(0, 1, 0, 1))
     # base.run()
     pos, nrml = rayhitmesh_closest(obj, pfrom, pto)
+    if kdt_d3 is not None:
+        knn = get_knn(pos, kdt_d3, k=150)
+        nrml = -get_nrml_pca(knn)
 
     return pos, -nrml
 
@@ -863,7 +863,7 @@ def __prj_stroke(stroke, drawcenter, pcd, pcd_nrmls, kdt_d3, mode='DI', objcm=No
             pcd_start_n = pcd_nrmls[inx]
             print('pcd_start_p:', pcd_start_p, 'pcd_start_n:', pcd_start_n)
         else:
-            pcd_start_p, pcd_start_n = rayhitmesh_p(objcm, drawcenter, stroke[0], direction=direction)
+            pcd_start_p, pcd_start_n = rayhitmesh_p(objcm, drawcenter, stroke[0], kdt_d3, direction=direction)
     # base.pggen.plotSphere(base.render, pcd_start_p, radius=2, rgba=(0, 0, 1, 1))
     # base.run()
     pos_nrml_list = [[pcd_start_p, pcd_start_n]]
@@ -871,9 +871,11 @@ def __prj_stroke(stroke, drawcenter, pcd, pcd_nrmls, kdt_d3, mode='DI', objcm=No
     for i in range(len(stroke) - 1):
         p1, p2 = stroke[i], stroke[i + 1]
         if mode == 'EI':
-            p_nxt, nrml = __find_nxt_p_pca(p1, p2, kdt_d3, pos_nrml_list[-1][0], pos_nrml_list[-1][1],
+            p_nxt, p_nxt_nrml = __find_nxt_p_pca(p1, p2, kdt_d3, pos_nrml_list[-1][0], pos_nrml_list[-1][1],
                                            direction=direction, toggledebug=toggledebug, pcd=pcd)
-            pos_nrml_list.append([p_nxt, nrml])
+            base.pggen.plotSphere(base.render, pos=p_nxt, rgba=(1, 0, 0, 1))
+            base.pggen.plotArrow(base.render, spos=p_nxt, epos=p_nxt + p_nxt_nrml * 10, rgba=(1, 0, 0, 1))
+            pos_nrml_list.append([p_nxt, p_nxt_nrml])
         elif mode == 'DI':
             p_nxt_inx = __find_nxt_p(p1, p2, kdt_d3, pos_nrml_list[-1][0], pos_nrml_list[-1][1], direction=direction)
             pos_nrml_list.append([pcd[p_nxt_inx], pcd_nrmls[p_nxt_inx]])
@@ -881,8 +883,6 @@ def __prj_stroke(stroke, drawcenter, pcd, pcd_nrmls, kdt_d3, mode='DI', objcm=No
             p_nxt, p_nxt_nrml = __find_nxt_p_intg(p1, p2, kdt_d3, pos_nrml_list[-1][0], pos_nrml_list[-1][1],
                                                   snap=SNAP_QI, direction=direction, toggledebug=toggledebug, pcd=pcd)
             pos_nrml_list.append([p_nxt, p_nxt_nrml])
-            # base.pggen.plotSphere(base.render, pos=p_nxt, rgba=(1, 0, 0, 1))
-            # base.pggen.plotArrow(base.render, spos=p_nxt, epos=p_nxt + p_nxt_nrml * 10, rgba=(1, 0, 0, 1))
         elif mode in ['rbf', 'gaussian', 'quad', 'bs']:
             p_nxt, p_nxt_nrml = __find_nxt_p_psfc(p1, p2, kdt_d3, pos_nrml_list[-1][0], pos_nrml_list[-1][1],
                                                   direction=direction, toggledebug=toggledebug, pcd=pcd, step=.01,
@@ -1150,6 +1150,7 @@ def prj_drawpath(obj_item, drawpath, mode='DI', step=1.0, direction=np.asarray((
         # pcd = np.asarray(random.choices(pcd, k=50000))
         # if len(pcd) > 40000:
         #     pcd = np.asarray(random.choices(obj_item.pcd, k=30000))
+        KERNEL = 'thin_plate_spline'
         if pca_trans:
             pcd_tr, transmat = mu.trans_data_pcv(pcd, random_rot=False)
             surface = sfc.RBFSurface(pcd_tr[:, :2], pcd_tr[:, 2], kernel=KERNEL)
@@ -1454,6 +1455,7 @@ if __name__ == '__main__':
     import pickle
     import os
     import pandaplotutils.pandactrl as pc
+    import utils.run_utils as ru
 
     SNAP_QI = False
     SNAP_SFC_G = False

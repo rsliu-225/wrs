@@ -17,7 +17,8 @@ import trimesh.sample as ts
 import utiltools.robotmath as rm
 import utiltools.thirdparty.o3dhelper as o3d_helper
 from trimesh.primitives import Box
-
+import utils.pcd_utils as pcdu
+import utils.comformalmapping_utils as cu
 
 class Env_wrs(object):
     def __init__(self, boundingradius=10.0, betransparent=False):
@@ -210,17 +211,26 @@ def update(rbtmnp, motioncounter, robot, path, armname, robotmesh, robotball, ta
     return task.again
 
 
-def loadObjitem(f_name, pos=(0, 0, 0), rot=(0, 0, 0), sample_num=10000, type="box"):
+def loadObjitem(f_name, pos=(0, 0, 0), rot=(0, 0, 0), sample_num=10000, type="box", filter_dir=None):
     if f_name[-3:] != 'stl':
         f_name += '.stl'
     objcm = cm.CollisionModel(objinit=os.path.join(config.ROOT, "obstacles", f_name), type=type)
+    objcm.trimesh.remove_unreferenced_vertices()
+    objcm.trimesh.remove_degenerate_faces()
+    print('num of vs:', len(objcm.trimesh.vertices))
+    # if len(vs) > 20000:
+    #     print('---------------down sample---------------')
+    #     vs, faces, nrmls = cu.downsample(vs, faces, 20000/len(vs))
+    #     print('num of vs:', len(vs))
+    #     objcm = pcdu.reconstruct_surface(vs, radii=[5])
 
     objmat4 = np.zeros([4, 4])
     objmat4[:3, :3] = rm.rotmat_from_euler(rot[0], rot[1], rot[2], axes="sxyz")
     objmat4[:3, 3] = pos
     objcm.sethomomat(objmat4)
+    print("---------------success load---------------")
 
-    return item.Item(objcm=objcm, objmat4=objmat4, sample_num=sample_num)
+    return item.Item(objcm=objcm, objmat4=objmat4, sample_num=sample_num, filter_dir=filter_dir)
 
 
 if __name__ == '__main__':

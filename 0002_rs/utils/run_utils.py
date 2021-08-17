@@ -129,20 +129,20 @@ def get_pen_objmat4_list_by_drawpath(drawpath, paintingobj_item, drawrec_size=(1
         # rayhit
         paintingobj_cm = copy.deepcopy(paintingobj_item.objcm)
         paintingobj_cm.sethomomat(paintingobj_objmat4)
-        pos_nrml_list_ms, error_list = pu.rayhitmesh_drawpath(paintingobj_item, drawpath)
+        pos_nrml_list, error_list = pu.rayhitmesh_drawpath(paintingobj_item, drawpath)
 
     elif mode in ['DI', 'EI', 'QI', 'rbf', 'rbf_g', 'gaussian', 'quad', 'bs', 'bp']:
         # metrology
-        pos_nrml_list_ms, error_list, time_cost = \
+        pos_nrml_list, error_list, time_cost = \
             pu.prj_drawpath(paintingobj_item, drawpath, mode=mode, direction=direction)
     else:
         # conformal mapping
-        pos_nrml_list_ms, error_list = pu.prj_drawpath_II(paintingobj_item, drawpath)
+        pos_nrml_list, error_list = pu.prj_drawpath_II(paintingobj_item, drawpath)
     objmat4_draw_list_ms = []
-    for pos_normal_list in pos_nrml_list_ms:
+    for sub_list in pos_nrml_list:
         if show:
-            pu.show_drawpath(pos_normal_list, color=color)
-        objmat4_draw_list_ms.append(pu.get_penmat4(pos_normal_list))
+            pu.show_drawpath(sub_list, color=color)
+        objmat4_draw_list_ms.append(pu.get_penmat4(sub_list))
 
     return objmat4_draw_list_ms
 

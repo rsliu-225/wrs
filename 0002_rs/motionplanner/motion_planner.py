@@ -11,7 +11,7 @@ from scipy.spatial.transform import Rotation, Slerp
 
 import config
 import graspplanner.grasp_planner as gp
-import manipulation.grip.robotiqhe.robotiqhe as rtqhe
+import robot_sim.end_effectors.grippers.robotiqhe.robotiqhe as rtqhe
 import motionplanner.animation_helper as ani_helper
 import motionplanner.ik_solver as iks
 import motionplanner.robot_helper as rbt_helper
@@ -219,7 +219,7 @@ class MotionPlanner(object):
         return graspseq
 
     def get_rel_posrot(self, grasp, objpos, objrot):
-        eepos, eerot = self.get_ee_by_objmat4(grasp, rm.homobuild(objpos, objrot))
+        eepos, eerot = self.get_ee_by_objmat4(grasp, rm.homomat_from_posrot(objpos, objrot))
         armjnts = self.get_numik(eepos, eerot)
         if armjnts is None:
             return None, None
@@ -374,7 +374,7 @@ class MotionPlanner(object):
         # self.ah.show_armjnts(armjnts=pickupprim[-1], rgba=[1.0, 0.0, 1.0, .5])
         # self.ah.show_armjnts(armjnts=pickupprim[0], rgba=[1.0, 0.0, 0.0, .5])
         # objpos, objrot = self.rbt.getworldpose(objrelpos, objrelrot, self.armname)
-        # objmat4 = rm.homobuild(objpos, objrot)
+        # objmat4 = rm.homomat_from_posrot(objpos, objrot)
         # obj = copy.deepcopy(obj)
         # obj.setColor(1.0, 0.0, 1.0, .5)
         # obj.setMat(base.pg.np4ToMat4(objmat4))
@@ -382,7 +382,7 @@ class MotionPlanner(object):
         # self.ah.show_armjnts(armjnts=placedownprim[0], rgba=[0.0, 1.0, 1.0, .5])
         # self.ah.show_armjnts(armjnts=placedownprim[-1], rgba=[0.0, 0.0, 1.0, .5])
         # objpos, objrot = self.rbt.getworldpose(objrelpos, objrelrot, self.armname)
-        # objmat4 = rm.homobuild(objpos, objrot)
+        # objmat4 = rm.homomat_from_posrot(objpos, objrot)
         # obj = copy.deepcopy(obj)
         # obj.setColor(0.0, 1.0, 1.0, .5)
         # obj.setMat(base.pg.np4ToMat4(objmat4))
@@ -424,7 +424,7 @@ class MotionPlanner(object):
                 interp_p_list = [p1 + (p2 - p1) * t for t in times]
                 interp_rot_list = [interp_r.as_matrix() for interp_r in interp_r_list]
 
-                inp_mat4_list.extend([rm.homobuild(p, rot) for p, rot in zip(interp_p_list, interp_rot_list)])
+                inp_mat4_list.extend([rm.homomat_from_posrot(p, rot) for p, rot in zip(interp_p_list, interp_rot_list)])
         print("length of interpolation result:", len(inp_mat4_list))
 
         return inp_mat4_list
@@ -583,7 +583,7 @@ class MotionPlanner(object):
             if relpos is None:
                 relpos, relrot = rm.relpose(eepos, eerot, objmat4[:3, 3], objmat4[:3, :3])
             armjnts = self.get_numik_nlopt(objmat4[:3, 3], objmat4[:3, :3], seedjntagls=msc, toggledebug=toggledebug,
-                                           releemat4=rm.homobuild(relpos, relrot), col_ps=col_ps,
+                                           releemat4=rm.homomat_from_posrot(relpos, relrot), col_ps=col_ps,
                                            roll_limit=roll_limit, pos_limit=pos_limit, movedir=movedir)
 
             if armjnts is not None:
@@ -591,11 +591,11 @@ class MotionPlanner(object):
                 msc = copy.deepcopy(armjnts)
                 success_cnt += 1
                 if toggledebug:
-                    eepos, eerot = self.rbth.get_ee(armjnts, releemat4=rm.homobuild(relpos, relrot))
+                    eepos, eerot = self.rbth.get_ee(armjnts, releemat4=rm.homomat_from_posrot(relpos, relrot))
                     self.rbth.draw_axis(eepos, eerot, length=100)
                     self.ah.show_armjnts(armjnts=armjnts, rgba=(0, 1, 0, .5))
-                    axmat = self.rbth.manipulability_axmat(armjnts=armjnts, releemat4=rm.homobuild(relpos, relrot))
-                    manipulability = self.rbth.manipulability(armjnts=armjnts, releemat4=rm.homobuild(relpos, relrot))
+                    axmat = self.rbth.manipulability_axmat(armjnts=armjnts, releemat4=rm.homomat_from_posrot(relpos, relrot))
+                    manipulability = self.rbth.manipulability(armjnts=armjnts, releemat4=rm.homomat_from_posrot(relpos, relrot))
                     print("%e" % manipulability)
                     self.rbth.draw_axis_uneven(objmat4[:3, 3], axmat, scale=.5)
                     base.run()
@@ -644,9 +644,9 @@ class MotionPlanner(object):
             armjnts = self.get_numik(eepos, eerot)
             relpos, relrot = rm.relpose(eepos, eerot, objmat4_new[:3, 3], objmat4_new[:3, :3])
             if armjnts is not None:
-                score = self.rbth.manipulability(armjnts=armjnts, releemat4=rm.homobuild(relpos, relrot))
+                score = self.rbth.manipulability(armjnts=armjnts, releemat4=rm.homomat_from_posrot(relpos, relrot))
                 if toggledebug:
-                    axmat = self.rbth.manipulability_axmat(armjnts=armjnts, releemat4=rm.homobuild(relpos, relrot))
+                    axmat = self.rbth.manipulability_axmat(armjnts=armjnts, releemat4=rm.homomat_from_posrot(relpos, relrot))
                     self.ah.show_armjnts(armjnts=armjnts, rgba=(1, 1, 0, .2))
                     # self.rbth.draw_axis(objmat4_new[:3, 3], objmat4_new[:3, :3], rgba=(1, 1, 0, .5))
                     # self.rbth.draw_axis_uneven(objmat4_new[:3, 3], axmat,scale=.5)
@@ -831,7 +831,7 @@ class MotionPlanner(object):
                 objmat4_new[:3, :3] = np.dot(rot, objmat4[:3, :3])
                 objmat4_new[:3, 3] = objmat4[:3, 3]
                 eepos, eerot = self.get_ee_by_objmat4(grasp, objmat4_new)
-                gtsp_dict[key]["eemat4_list"].append(rm.homobuild(eepos, eerot))
+                gtsp_dict[key]["eemat4_list"].append(rm.homomat_from_posrot(eepos, eerot))
                 gtsp_dict[key]["objmat4_list"].append(objmat4_new)
                 gtsp_dict[key]["armjnts_list"].append(None)
 
@@ -1054,7 +1054,7 @@ class MotionPlanner(object):
             if objrelpos_refined is None:
                 objrelpos_refined, objrelrot_refined = self.get_rel_posrot(grasp_refined, objpos, objrot)
 
-            objmat4 = rm.homobuild(objpos, objrot)
+            objmat4 = rm.homomat_from_posrot(objpos, objrot)
             # print("pos diff:", objmat4[:3, 3] - objmat4_new[:3, 3])
             armjnts = self.get_armjnts_by_objmat4ngrasp(grasp_refined, objcm, objmat4, msc=armjnts)
 
@@ -1086,14 +1086,14 @@ class MotionPlanner(object):
             if path_mask[i]:
                 self.rbth.goto_armjnts(armjnts)
                 objpos, objrot = self.rbt.getworldpose(objrelpos, objrelrot, self.armname)
-                objmat4 = rm.homobuild(objpos + posdiff, objrot)
+                objmat4 = rm.homomat_from_posrot(objpos + posdiff, objrot)
                 armjnts_new = self.get_armjnts_by_objmat4ngrasp(grasp, objcm, objmat4, armjnts)
                 if armjnts_new is not None:
                     stepdiff_norm = np.linalg.norm(armjnts_new - armjnts, ord=1)
                     if stepdiff_norm > 300:
                         print("******nlopt******")
                         armjnts_new = self.get_numik_nlopt(objmat4[:3, 3], objmat4[:3, :3], seedjntagls=armjnts,
-                                                           releemat4=rm.homobuild(objrelpos, objrelrot))
+                                                           releemat4=rm.homomat_from_posrot(objrelpos, objrelrot))
                     stepdiff_norm = np.linalg.norm(armjnts_new - armjnts, ord=1)
                     if stepdiff_norm > 300:
                         print(stepdiff_norm, armjnts_new)
@@ -1187,7 +1187,7 @@ class MotionPlanner(object):
             self.rbth.goto_armjnts(armjnts)
         # objpos, objrot = self.rbt.getee(armname=self.armname)
         objpos, objrot = self.rbt.getworldpose(objrelpos, objrelrot, self.armname)
-        objmat4 = rm.homobuild(objpos, objrot)
+        objmat4 = rm.homomat_from_posrot(objpos, objrot)
         return objmat4
 
     def get_moveup_path(self, start, obj, objrelpos, objrelrot, direction=[0, 0, 1], length=20):
@@ -1203,7 +1203,7 @@ class MotionPlanner(object):
         return objrelpos.tolist() + rotation.as_rotvec().tolist()
 
     def refine_relpose_by_transmat(self, objrelpos, objrelrot, transmat):
-        objmat4 = rm.homobuild(objrelpos, objrelrot)
+        objmat4 = rm.homomat_from_posrot(objrelpos, objrelrot)
         objmat4_new = np.dot(objmat4, transmat)
         # objrelrot = np.dot(objrelrot, transmat[:3, :3])
         # objrelpos = np.dot(objrelrot, transmat[:3, 3]) + objrelpos

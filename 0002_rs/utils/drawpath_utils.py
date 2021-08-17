@@ -40,6 +40,22 @@ def draw_spiral(*args):
         size = size + 4
 
 
+def draw_zz(*args):
+    turtle.color("purple")
+    turtle.pensize(5)
+    turtle.goto(0, 0)
+    turtle.speed(1)
+    i = 0
+    turtle.right(60)
+    while i < 10:
+        if i % 2 != 0:
+            turtle.right(120)
+        else:
+            turtle.left(120)
+        turtle.forward(20)
+        i = i + 1
+
+
 def pos_timer():
     global sub_timer
     sub_timer = threading.Timer(0.01, pos_timer)
@@ -55,10 +71,12 @@ def get_draw_result(draw_func, *args, **kwargs):
     timer.start()
     draw_func(*args, **kwargs)
     sub_timer.cancel()
+    plist_ss = [list(t) for t in set(tuple(_) for _ in plist_ss)]
     p_narray = np.array(plist_ss)
     pl_center = ((min(p_narray[:, 0]) + max(p_narray[:, 0])) / 2,
                  (min(p_narray[:, 1]) + max(p_narray[:, 1])) / 2)
     p_narray = p_narray - np.repeat([pl_center], len(p_narray), axis=0)
+
 
     return list(p_narray), turtle.getscreen().getcanvas()
 
@@ -650,8 +668,8 @@ def get_dist(drawpath_ms, size=(80, 80)):
 
 
 if __name__ == '__main__':
-    pl_f_name = "spiral.pkl"
-    img_f_name = "spiral.jpg"
+    pl_f_name = "zz.pkl"
+    img_f_name = "zz.jpg"
     # json_f_name = "pig.json"
 
     '''
@@ -669,8 +687,15 @@ if __name__ == '__main__':
     # dump_drawpath(plist_ss, pl_f_name)
     # save_canvas_png(canvas, img_f_name)
 
-    plist_ss, canvas = get_draw_result(draw_spiral)
+    # plist_ss, canvas = get_draw_result(draw_spiral)
+    # print(len(plist_ss))
+    # dump_drawpath(plist_ss, pl_f_name)
+    # plot_ss(plist_ss)
+    # save_canvas_png(canvas, img_f_name)
+
+    plist_ss, canvas = get_draw_result(draw_zz)
     print(len(plist_ss))
+    print(plist_ss)
     dump_drawpath(plist_ss, pl_f_name)
     plot_ss(plist_ss)
     # save_canvas_png(canvas, img_f_name)
