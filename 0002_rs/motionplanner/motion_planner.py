@@ -16,38 +16,32 @@ import motionplanner.animation_helper as ani_helper
 import motionplanner.ik_solver as iks
 import motionplanner.robot_helper as rbt_helper
 import utils.graph_utils as gh
-import utiltools.robotmath as rm
-from motion import checker as ck
-from motion import collisioncheckerball as cdck
-from motion import smoother as sm
-from motion.rrt import rrtconnect as rrtc
+import basis.robot_math as rm
+import motion.probabilistic.rrt_connect as rrtc
 
 
 class MotionPlanner(object):
-    def __init__(self, env, rbt, rbtmg, rbtball, armname="lft"):
+    def __init__(self, env, rbt, armname="lft_arm"):
         self.rbt = rbt
-        self.rbtmg = rbtmg
-        self.rbtball = rbtball
         self.env = env
         self.armname = armname
 
         self.obscmlist = env.getstationaryobslist() + env.getchangableobslist()
         # for obscm in self.obscmlist:
         #     obscm.showcn()
-        self.cdchecker = cdck.CollisionCheckerBall(rbtball)
-        self.ctcallback = ck.Checker(rbt, self.cdchecker, armname=armname)
-        self.smoother = sm.Smoother()
         self.hndfa = rtqhe.HandFactory()
-        self.iksolver = iks.IkSolver(self.env, self.rbt, self.rbtmg, self.rbtball, self.armname)
+        self.iksolver = iks.IkSolver(self.env, self.rbt, self.armname)
 
-        if self.armname == "lft":
+        if self.armname == "lft_arm":
             self.initjnts = self.rbt.initlftjnts
+            self.arm = self.rbt.lft_arm
         else:
             self.initjnts = self.rbt.initrgtjnts
+            self.arm = self.rbt.rgt_arm
 
         self.graspplanner = gp.GraspPlanner(self.hndfa)
-        self.rbth = rbt_helper.RobotHelper(self.env, self.rbt, self.rbtmg, self.rbtball, self.armname)
-        self.ah = ani_helper.AnimationHelper(self.env, self.rbt, self.rbtmg, self.rbtball, self.armname)
+        self.rbth = rbt_helper.RobotHelper(self.env, self.rbt, self.armname)
+        self.ah = ani_helper.AnimationHelper(self.env, self.rbt,  self.armname)
 
     def add_obs(self, obs):
         self.obscmlist.append(obs)
@@ -240,21 +234,22 @@ class MotionPlanner(object):
 
     def plan_start2end(self, end, start=None, additional_obscmlist=[]):
         if start is None:
-            if self.armname == "lft":
+            if self.armname == "lft_arm":
                 start = self.rbt.initlftjnts
             else:
                 start = self.rbt.initrgtjnts
 
         print("--------------start2end(rrt)---------------")
-        planner = rrtc.RRTConnect(start=start, goal=end, checker=self.ctcallback,
-                                  starttreesamplerate=30, goaltreesamplerate=30, expanddis=10, maxiter=200,
-                                  maxtime=100.0)
-        path, _ = planner.planning(self.obscmlist + additional_obscmlist)
+        # planner = rrtc.RRTConnect(start=start, goal=end, checker=self.ctcallback,
+        #                           starttreesamplerate=30, goaltreesamplerate=30, expanddis=10, maxiter=200,
+        #                           maxtime=100.0)
+        # path, _ = planner.planning(self.obscmlist + additional_obscmlist)
 
-        if path is not None:
-            print("--------------smoothing---------------")
-            path = self.smoother.pathsmoothing(path, planner)
-        else:
+        planner = rrtc.RRTConnect(self.rbt)
+        path = planner.plan(component_name=self.armname, start_conf=start, goal_conf=end,
+                            obstacle_list=self.obscmlist + additional_obscmlist, ext_dist=.2, max_time=300)
+
+        if path is None:
             print("rrt failed!")
 
         return path
@@ -282,10 +277,8 @@ class MotionPlanner(object):
                             starttreesamplerate=30, goaltreesamplerate=30, expanddis=10, maxiter=200, maxtime=100.0)
         path, samples = planner.planninghold([obj], [[objrelpos, objrelrot]], self.obscmlist)
 
-        if path is not None:
-            print("--------------smoothing---------------")
-            path = self.smoother.pathsmoothinghold(path, planner)
-            return path
+        if path is None:
+            print("rrt failed!")
         return None
 
     def plan_start2end_hold_armj(self, armj_pair, obj, objrelpos, objrelrot):
@@ -297,10 +290,8 @@ class MotionPlanner(object):
                             starttreesamplerate=30, goaltreesamplerate=30, expanddis=10, maxiter=200, maxtime=100.0)
         path, samples = planner.planninghold([obj], [[objrelpos, objrelrot]], self.obscmlist)
 
-        if path is not None:
-            print("--------------smoothing---------------")
-            path = self.smoother.pathsmoothinghold(path, planner)
-            return path
+        if path is None:
+            print("rrt failed!")
         return None
 
     def plan_gotopick(self, grasp, objmat4_pick, obj, objrelpos, objrelrot, start=None):
@@ -316,7 +307,7 @@ class MotionPlanner(object):
             return None
 
         if start is None:
-            if self.armname == "lft":
+            if self.armname == "lft_arm":
                 start = self.rbt.initlftjnts
             else:
                 start = self.rbt.initrgtjnts
@@ -330,8 +321,6 @@ class MotionPlanner(object):
         path, _ = planner.planning(self.obscmlist)
 
         if path is not None:
-            print("--------------smoothing---------------")
-            path = self.smoother.pathsmoothing(path, planner)
             path = path + pickupprim
         else:
             print("rrt failed!")
@@ -406,8 +395,6 @@ class MotionPlanner(object):
         path, samples = planner.planninghold([obj], [[objrelpos, objrelrot]], self.obscmlist)
 
         if path is not None:
-            print("--------------smoothing---------------")
-            path = self.smoother.pathsmoothinghold(path, planner)
             path = pickupprim + path + placedownprim
             return path
         else:
