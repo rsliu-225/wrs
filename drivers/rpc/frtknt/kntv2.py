@@ -5,24 +5,25 @@ import numpy as np
 import threading
 import time
 
-from _misc.pykinect2 import PyKinectRuntime
-from _misc.pykinect2 import PyKinectV2
+from drivers.devices.pykinect2 import PyKinectRuntime
+from drivers.devices.pykinect2 import PyKinectV2
 
 import ctypes
+
 
 class KinectV2(PyKinectRuntime.PyKinectRuntime):
     def __init__(self, FrameSourceTypes):
         PyKinectRuntime.PyKinectRuntime.__init__(self, FrameSourceTypes)
 
         self.__color = None
-        self.__color_width = self.color_frame_desc.Width     # 1920
-        self.__color_height = self.color_frame_desc.Height   # 1080
+        self.__color_width = self.color_frame_desc.Width  # 1920
+        self.__color_height = self.color_frame_desc.Height  # 1080
         print('color size = (%d, %d)' % (self.__color_width, self.__color_height))
 
         self.__depth = None
         self.__depth_record = None
-        self.__depth_width = self.depth_frame_desc.Width     # 512
-        self.__depth_height = self.depth_frame_desc.Height   # 424
+        self.__depth_width = self.depth_frame_desc.Width  # 512
+        self.__depth_height = self.depth_frame_desc.Height  # 424
         print('depth size = (%d, %d)' % (self.__depth_width, self.__depth_height))
 
         # self.__infrared = None
@@ -101,14 +102,17 @@ class KinectV2(PyKinectRuntime.PyKinectRuntime):
 
     def mapColorPointToCameraSpace(self, pt):
         dframe = self.getDepthFrame()
-        pcdptr = ctypes.cast((PyKinectV2._CameraSpacePoint * 1920*1080)(), ctypes.POINTER(PyKinectV2._CameraSpacePoint))
-        self._mapper.MapColorFrameToCameraSpace(512*424, dframe.ctypes.data_as(ctypes.POINTER(ctypes.c_ushort)), 1920*1080, pcdptr)
+        pcdptr = ctypes.cast((PyKinectV2._CameraSpacePoint * 1920 * 1080)(),
+                             ctypes.POINTER(PyKinectV2._CameraSpacePoint))
+        self._mapper.MapColorFrameToCameraSpace(512 * 424, dframe.ctypes.data_as(ctypes.POINTER(ctypes.c_ushort)),
+                                                1920 * 1080, pcdptr)
         # self._mapper.MapDepthFrameToCameraSpace(npoints, dframe.ctypes.data_as(ctypes.POINTER(ctypes.c_ushort)), npoints, pcdptr)
-        obj = ctypes.cast(pcdptr, ctypes.POINTER(np.ctypeslib._ctype_ndarray(ctypes.c_float, (1920*1080, 3)))).contents
+        obj = ctypes.cast(pcdptr,
+                          ctypes.POINTER(np.ctypeslib._ctype_ndarray(ctypes.c_float, (1920 * 1080, 3)))).contents
         pcd = np.array(obj)
         pt[0] = int(pt[0])
         pt[1] = int(pt[1])
-        return pcd[(pt[1]-1)*1920+pt[0]]*1000.0
+        return pcd[(pt[1] - 1) * 1920 + pt[0]] * 1000.0
 
     def getDepthWidthAndHeight(self):
         return (self.__depth_width, self.__depth_height)
@@ -136,7 +140,6 @@ class KinectV2(PyKinectRuntime.PyKinectRuntime):
 
         return [point3d.x * 1000.0, point3d.y * 1000.0, point3d.z * 1000.0]
 
-
     def getPointCloud(self, dframe, width=[0, 512], height=[0, 424], mat_kw=None):
         """
         get the point cloud of the depth frame
@@ -152,17 +155,17 @@ class KinectV2(PyKinectRuntime.PyKinectRuntime):
         """
 
         dframecrop = dframe[height[0]:height[1]][width[0]:width[1]]
-        npoints = (height[1]-height[0])*(width[1]-width[0])
-        pcdptr = ctypes.cast((PyKinectV2._CameraSpacePoint*npoints)(), ctypes.POINTER(PyKinectV2._CameraSpacePoint))
+        npoints = (height[1] - height[0]) * (width[1] - width[0])
+        pcdptr = ctypes.cast((PyKinectV2._CameraSpacePoint * npoints)(), ctypes.POINTER(PyKinectV2._CameraSpacePoint))
         self._mapper.MapDepthFrameToCameraSpace(npoints, dframecrop.ctypes.data_as(ctypes.POINTER(ctypes.c_ushort)),
-                                               npoints, pcdptr)
-        obj = ctypes.cast(pcdptr, ctypes.POINTER(np.ctypeslib._ctype_ndarray(ctypes.c_float, (npoints,3)))).contents
+                                                npoints, pcdptr)
+        obj = ctypes.cast(pcdptr, ctypes.POINTER(np.ctypeslib._ctype_ndarray(ctypes.c_float, (npoints, 3)))).contents
         pcd = np.array(obj, dtype=np.float32)
         if mat_kw is None:
-            return pcd*1000
+            return pcd * 1000
         else:
             # TODO transform
-                return np.array([])
+            return np.array([])
 
     def recordDepth(self):
         """
@@ -224,6 +227,7 @@ class KinectV2(PyKinectRuntime.PyKinectRuntime):
         print('Close Kinect sensor, close the window and quit.')
         self.close()
 
+
 class ThreadKinectCam(threading.Thread):
     def __init__(self, index, create_time, kinect):
         threading.Thread.__init__(self)
@@ -236,6 +240,7 @@ class ThreadKinectCam(threading.Thread):
 
     def run(self):
         self.kinect.runForThread()
+
 
 if __name__ == "__main__":
     import cv2
@@ -258,12 +263,12 @@ if __name__ == "__main__":
         break
     while True:
         clframe = kinect.getColorFrame()
-        clb = np.flip(np.array(clframe[0::4]).reshape((kinect.colorHeight, kinect.colorWidth)),1)
-        clg = np.flip(np.array(clframe[1::4]).reshape((kinect.colorHeight, kinect.colorWidth)),1)
-        clr = np.flip(np.array(clframe[2::4]).reshape((kinect.colorHeight, kinect.colorWidth)),1)
+        clb = np.flip(np.array(clframe[0::4]).reshape((kinect.colorHeight, kinect.colorWidth)), 1)
+        clg = np.flip(np.array(clframe[1::4]).reshape((kinect.colorHeight, kinect.colorWidth)), 1)
+        clr = np.flip(np.array(clframe[2::4]).reshape((kinect.colorHeight, kinect.colorWidth)), 1)
         # cla = np.array(clframe[3::4])
         clframe8bit = np.dstack((clb, clg, clr)).reshape((kinect.colorHeight, kinect.colorWidth, 3))
-        img = cv2.merge((clb,clg,clr))
+        img = cv2.merge((clb, clg, clr))
         # img = cv2.resize(img, (int(kinect.colorWidth/3.0), int(kinect.colorHeight/3.0)))
         cv2.imwrite("test.jpg", img)
         aruco = cv2.aruco
@@ -271,9 +276,8 @@ if __name__ == "__main__":
         #
         # camcap = cv2.VideoCapture(3)
         # img = camcap.read()[1]
-        corners,ids, rejectedImgPoints = aruco.detectMarkers(img, arucodict)
-        print(kinect.mapColorPointToCameraSpace([950,974]))
-        aruco.drawDetectedMarkers(img, corners, ids, (0,255,0))
+        corners, ids, rejectedImgPoints = aruco.detectMarkers(img, arucodict)
+        print(kinect.mapColorPointToCameraSpace([950, 974]))
+        aruco.drawDetectedMarkers(img, corners, ids, (0, 255, 0))
         cv2.imshow("xx", img)
         cv2.waitKey(10)
-        

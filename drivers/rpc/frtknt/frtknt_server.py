@@ -1,12 +1,15 @@
 import grpc
 import time
 import numpy as np
-import robotconn.rpc.frtknt.kntv2 as kntv2
+import kntv2 as kntv2
 from concurrent import futures
-import robotconn.rpc.frtknt.frtknt_pb2 as fkmsg
-import robotconn.rpc.frtknt.frtknt_pb2_grpc as fkrpc
-from drivers.pykinect2 import PyKinectV2
-from drivers.pykinect2 import PyKinectRuntime
+import frtknt_pb2 as fkmsg
+import frtknt_pb2_grpc as fkrpc
+# from drivers.devices.pykinect2 import PyKinectV2
+# from drivers.devices.pykinect2 import PyKinectRuntime
+
+from drivers.devices.kinect2.kinect2 import Kinect2
+
 
 class FrtKntServer(fkrpc.KntServicer):
 
@@ -14,7 +17,7 @@ class FrtKntServer(fkrpc.KntServicer):
         h = dobj.width
         w = dobj.height
         ch = dobj.channel
-        return np.frombuffer(dobj.image, (h,w,ch))
+        return np.frombuffer(dobj.image, (h, w, ch))
 
     def initialize(self, kinect):
         self.__kinect = kinect
@@ -29,12 +32,13 @@ class FrtKntServer(fkrpc.KntServicer):
         """
 
         clframe = self.__kinect.getColorFrame()
-        clb = np.flip(np.array(clframe[0::4]).reshape((self.__kinect.colorHeight, self.__kinect.colorWidth)),1)
-        clg = np.flip(np.array(clframe[1::4]).reshape((self.__kinect.colorHeight, self.__kinect.colorWidth)),1)
-        clr = np.flip(np.array(clframe[2::4]).reshape((self.__kinect.colorHeight, self.__kinect.colorWidth)),1)
+        clb = np.flip(np.array(clframe[0::4]).reshape((self.__kinect.colorHeight, self.__kinect.colorWidth)), 1)
+        clg = np.flip(np.array(clframe[1::4]).reshape((self.__kinect.colorHeight, self.__kinect.colorWidth)), 1)
+        clr = np.flip(np.array(clframe[2::4]).reshape((self.__kinect.colorHeight, self.__kinect.colorWidth)), 1)
         channel = 3
         clframe8bit = np.dstack((clb, clg, clr)).reshape((self.__kinect.colorHeight, self.__kinect.colorWidth, channel))
-        return fkmsg.CamImg(width=self.__kinect.colorWidth, height=self.__kinect.colorHeight, channel=channel, image=np.ndarray.tobytes(clframe8bit))
+        return fkmsg.CamImg(width=self.__kinect.colorWidth, height=self.__kinect.colorHeight, channel=channel,
+                            image=np.ndarray.tobytes(clframe8bit))
 
     def getdepthimg(self, request, context):
         """
@@ -49,7 +53,8 @@ class FrtKntServer(fkrpc.KntServicer):
         df8 = np.uint8(dframe.clip(1, 4000) / 16.)
         channel = 1
         dframe8bit = np.array(df8).reshape((self.__kinect.depthHeight, self.__kinect.depthWidth, channel))
-        return fkmsg.CamImg(width=self.__kinect.depthWidth, height=self.__kinect.depthHeight, channel=channel, image=np.ndarray.tobytes(dframe8bit))
+        return fkmsg.CamImg(width=self.__kinect.depthWidth, height=self.__kinect.depthHeight, channel=channel,
+                            image=np.ndarray.tobytes(dframe8bit))
 
     def getpcd(self, request, context):
         """
@@ -72,7 +77,7 @@ class FrtKntServer(fkrpc.KntServicer):
         :param rawdframe yaml string storing raw dframe
         :param width, height
         :param picklemat_tw pickle string storing mat_tw
-``````````````        author: weiwei
+        author: weiwei
         date: 20181121
         """
 
@@ -92,12 +97,14 @@ class FrtKntServer(fkrpc.KntServicer):
         date: 20181121
         """
 
-        return fkmsg.PointCloud(points=np.ndarray.tobytes(self.__kinect.mapColorPointToCameraSpace([request.data0, request.data1]).astype(dtype=np.int16)))
+        return fkmsg.PointCloud(points=np.ndarray.tobytes(
+            self.__kinect.mapColorPointToCameraSpace([request.data0, request.data1]).astype(dtype=np.int16)))
 
-def serve(host = "127.0.0.1:18300"):
+
+def serve(host="127.0.0.1:18300"):
     kinect = kntv2.KinectV2(PyKinectV2.FrameSourceTypes_Color |
                             PyKinectV2.FrameSourceTypes_Depth)
-                            # | PyKinectRuntime.FrameSourceTypes_Infrared)
+    # | PyKinectRuntime.FrameSourceTypes_Infrared)
     threadKinectCam = kntv2.ThreadKinectCam(2, time.time(), kinect)
     threadKinectCam.start()
     while True:
@@ -115,7 +122,7 @@ def serve(host = "127.0.0.1:18300"):
 
     _ONE_DAY_IN_SECONDS = 60 * 60 * 24
     options = [('grpc.max_message_length', 100 * 1024 * 1024)]
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10), options = options)
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10), options=options)
     frtserver = FrtKntServer()
     frtserver.initialize(kinect)
     fkrpc.add_KntServicer_to_server(frtserver, server)
@@ -128,5 +135,6 @@ def serve(host = "127.0.0.1:18300"):
     except KeyboardInterrupt:
         server.stop(0)
 
+
 if __name__ == "__main__":
-    serve(host = "10.2.0.60:183001")
+    serve(host="10.0.1.114:183001")

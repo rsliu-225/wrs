@@ -6,7 +6,7 @@ import numpy as np
 
 import config
 import environment.bulletcdhelper as bch
-import environment.collisionmodel as cm
+import modeling.collision_model as cm
 import basis.robot_math as rm
 
 
