@@ -98,32 +98,46 @@ if __name__ == "__main__":
 
     import cv2
     import time
+    import pickle
 
-    frk = fc.FrtKnt(host="10.0.1.114:183001")
-
+    frk = fc.FrtKnt(host="10.0.1.143:183001")
+    depthimg_list = []
+    rgbimg_list = []
+    pcd_list = []
     while True:
-        img = frk.getdepthimg()
-        # img = frk.getrgbimg()
-        cv2.imshow("test", img)
-        cv2.waitKey(0)
-
-
-    pcdcenter = [0, 0, 1500]
-    base = pc.World(cam_pos=[0, 0, -5000], lookat_pos=pcdcenter, w=1024, h=768)
-
-    pcldnp = [None]
-
-
-    def update(frk, pcldnp, task):
-        if pcldnp[0] is not None:
-            pcldnp[0].detachNode()
+        print(len(depthimg_list))
+        depthimg = frk.getdepthimg()
+        rgbimg = frk.getrgbimg()
         pcd = frk.getpcd()
-        pcldnp[0] = gm.gen_pointcloud(pcd)
-        pcldnp[0].attach_to(base)
-        return task.done
+        pcd = pcd / 1000
+        print(depthimg.shape,len(pcd))
+        cv2.imshow('rgbimg', rgbimg)
+        cv2.imshow('depthimg', depthimg)
+        depthimg_list.append(depthimg)
+        rgbimg_list.append(rgbimg)
 
+        if cv2.waitKey(1) & 0xff == 27:  # ESCで終了
+            cv2.destroyAllWindows()
+            break
+    pickle.dump([rgbimg_list, depthimg_list, pcd_list], open('tst.pkl', 'wb'))
 
-    taskMgr.doMethodLater(0.05, update, "update", extraArgs=[frk, pcldnp],
-                          appendTask=True)
+    # pcdcenter = [0, 0, 1.5]
+    # base = pc.World(cam_pos=[0, 0, -1], lookat_pos=pcdcenter, w=1024, h=768)
+    #
+    # pcldnp = [None]
+    #
+    #
+    # def update(frk, pcldnp, task):
+    #     if pcldnp[0] is not None:
+    #         pcldnp[0].detachNode()
+    #     pcd = frk.getpcd()
+    #     pcd = pcd/1000
+    #     print(pcd)
+    #     pcldnp[0] = gm.gen_pointcloud(pcd)
+    #     pcldnp[0].attach_to(base)
+    #     return task.done
 
-    base.run()
+    # taskMgr.doMethodLater(0.05, update, "update", extraArgs=[frk, pcldnp],
+    #                       appendTask=True)
+    #
+    # base.run()

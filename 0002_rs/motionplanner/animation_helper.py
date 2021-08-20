@@ -4,7 +4,7 @@ import numpy as np
 
 import manipulation.grip.robotiqhe.robotiqhe as rtqhe
 import motionplanner.robot_helper as rbt_helper
-import utiltools.robotmath as rm
+import basis.robot_math as rm
 
 
 class AnimationHelper(object):
@@ -44,7 +44,7 @@ class AnimationHelper(object):
                     1,)
             self.rbt.movearmfk(armjnts, self.armname)
             objpos, objrot = self.rbt.getworldpose(objrelpos, objrelrot, self.armname)
-            objmat4 = rm.homobuild(objpos, objrot)
+            objmat4 = rm.homomat_from_posrot(objpos, objrot)
             self.show_objmat4(objcm, objmat4, rgba=(rgba[0], rgba[1], rgba[2], rgba[3]))
             if pos_pre is not None:
                 base.pggen.plotStick(base.render, spos=pos_pre, epos=objmat4[:3, 3], rgba=(0,0,0,1), thickness=5)
@@ -142,7 +142,7 @@ class AnimationHelper(object):
         self.rbt.movearmfk(armjnts, self.armname)
         self.__genmnp_by_armname(rgba=rgba, toggleendcoord=toggleendcoord)
         objpos, objrot = self.rbt.getworldpose(objrelpos, objrelrot, self.armname)
-        objmat4 = rm.homobuild(objpos, objrot)
+        objmat4 = rm.homomat_from_posrot(objpos, objrot)
         base.pggen.plotSphere(base.render, pos=objmat4[:3, 3], rgba=(1, 1, 0, 1))
         obj.setColor(rgba[0], rgba[1], rgba[2], rgba[3])
         obj.setMat(base.pg.np4ToMat4(objmat4))
@@ -162,7 +162,7 @@ class AnimationHelper(object):
         hnd = self.hndfa.genHand(jawwidth=jawwidth, ftsensoroffset=36, toggleframes=toggleendcoord)
         if rgba is not None:
             hnd.setColor(rgba[0], rgba[1], rgba[2], rgba[3])
-        hnd.sethomomat(rm.homobuild(eepos, eerot))
+        hnd.sethomomat(rm.homomat_from_posrot(eepos, eerot))
         hnd.reparentTo(base.render)
 
     def show_hnd_sgl(self, hndmat4, rgba=None, toggleendcoord=False, jawwidth=50):
@@ -241,7 +241,7 @@ class AnimationHelper(object):
             # rbtball.showfullcn(rbt)
 
             objpos, objrot = self.rbt.getworldpose(objrelpos, objrelrot, self.armname)
-            objmat4 = rm.homobuild(objpos, objrot)
+            objmat4 = rm.homomat_from_posrot(objpos, objrot)
             obj.setColor(1, 0, 0, 1)
             obj.setMat(base.pg.np4ToMat4(objmat4))
             obj.reparentTo(base.render)
@@ -266,14 +266,14 @@ class AnimationHelper(object):
             rbtball.showfullcn(rbt)
 
             objpos_lft, objrot_lft = self.rbt.getworldpose(objrelpos_lft, objrelrot_lft, "lft")
-            objmat4 = rm.homobuild(objpos_lft, objrot_lft)
+            objmat4 = rm.homomat_from_posrot(objpos_lft, objrot_lft)
             obj_lft.setColor(1, 0, 0, 1)
             obj_lft.setMat(base.pg.np4ToMat4(objmat4))
             obj_lft.reparentTo(base.render)
             # obj_lft.showlocalframe()
 
             objpos_rgt, objrot_rgt = self.rbt.getworldpose(objrelpos_rgt, objrelrot_rgt, "rgt")
-            objmat4 = rm.homobuild(objpos_rgt, objrot_rgt)
+            objmat4 = rm.homomat_from_posrot(objpos_rgt, objrot_rgt)
             obj_rgt.setColor(1, 0, 0, 1)
             obj_rgt.setMat(base.pg.np4ToMat4(objmat4))
             obj_rgt.reparentTo(base.render)

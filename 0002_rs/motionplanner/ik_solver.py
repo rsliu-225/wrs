@@ -6,7 +6,7 @@ import numpy as np
 from scipy.optimize import minimize
 
 import motionplanner.robot_helper as rbt_helper
-import utiltools.robotmath as rm
+import basis.robot_math as rm
 import copy
 import localenv.envloader as el
 
@@ -14,17 +14,15 @@ TB = True
 
 
 class FkOptimizer(object):
-    def __init__(self, env, rbt, rbtmg, rbtball, armname="lft", releemat4=np.eye(4), toggledebug=TB,
+    def __init__(self, env, rbt, armname="lft", releemat4=np.eye(4), toggledebug=TB,
                  col_ps=None, roll_limit=1e-2, pos_limit=1e-2):
         self.rbt = rbt
-        self.rbtmg = rbtmg
-        self.rbtball = rbtball
         self.armname = armname
         self.env = env
         self.armname = armname
         self.releemat4 = releemat4
         self.toggledebug = toggledebug
-        self.rbth = rbt_helper.RobotHelper(self.env, self.rbt, self.rbtmg, self.rbtball, self.armname)
+        self.rbth = rbt_helper.RobotHelper(self.env, self.rbt, self.armname)
 
         self.result = None
         self.cons = []
@@ -903,7 +901,7 @@ if __name__ == '__main__':
 
     # releepos = np.asarray((0, 0, 20))
     # releerot = rm.rodrigues((0, 0, 1), 30)
-    # releemat4 = rm.homobuild(releepos, releerot)
+    # releemat4 = rm.homomat_from_posrot(releepos, releerot)
     releemat4 = np.eye(4)
 
     # iks_lft.evaluate(releemat4, func_name="2")

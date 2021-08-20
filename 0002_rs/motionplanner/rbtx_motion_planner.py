@@ -1,20 +1,17 @@
 import numpy as np
 import time
 import pickle
-import utiltools.robotmath as rm
+import basis.robot_math as rm
 from forcecontrol.force_controller import ForceController
-from motion import collisioncheckerball as cdck
-from motion import smoother as sm
 from motion.rrt import rrtconnect as rrtc
 from motionplanner.motion_planner import MotionPlanner
 import utils.run_utils as ru
 
 
 class MotionPlannerRbtX(MotionPlanner):
-    def __init__(self, env, rbt, rbtmg, rbtball, rbtx, armname):
-        MotionPlanner.__init__(self, env, rbt, rbtmg, rbtball, armname)
+    def __init__(self, env, rbt, rbtx, armname):
+        MotionPlanner.__init__(self, env, rbt, armname)
         self.rbtx = rbtx
-        self.pcdchecker = cdck.CollisionCheckerBall(self.rbtball)
         self.force_controller = ForceController(self.rbt, self.rbtx, armname)
         self.arm = self.rbtx.rgtarm if armname == "rgt" else self.rbtx.lftarm
 
@@ -42,16 +39,13 @@ class MotionPlannerRbtX(MotionPlanner):
                                   starttreesamplerate=30, goaltreesamplerate=30, expanddis=10, maxiter=500,
                                   maxtime=100.0)
         path_gotoinit, samples = planner.planning(self.obscmlist)
-        smoother = sm.Smoother()
 
         if path_gotoinit is not None:
-            print("--------------smoother---------------")
-            path_gotoinit = smoother.pathsmoothing(path_gotoinit, planner)
-        self.rbtx.movejntssgl_cont(path_gotoinit, self.armname, wait=False)
-        time.sleep(.5)
-        while self.arm.is_program_running():
-            pass
-        time.sleep(.5)
+            self.rbtx.movejntssgl_cont(path_gotoinit, self.armname, wait=False)
+            time.sleep(.5)
+            while self.arm.is_program_running():
+                pass
+            time.sleep(.5)
 
     def goto_init_hold_x(self, grasp, objcm, objrelpos, objrelrot):
         start = self.rbtx.getjnts(armname=self.armname)
@@ -185,7 +179,7 @@ class MotionPlannerRbtX(MotionPlanner):
             self.rbth.goto_armjnts(armjnts)
             objpos, objrot = self.rbt.getworldpose(objrelpos, objrelrot, self.armname)
             objpos_new = objpos + distance * pentip_direction
-            objmat4_new = rm.homobuild(objpos_new, objrot)
+            objmat4_new = rm.homomat_from_posrot(objpos_new, objrot)
             # print("pos diff:", np.linalg.norm(objpos - objpos_new))
             armjnts = self.get_armjnts_by_objmat4ngrasp(grasp, objcm, objmat4_new, armjnts)
 
@@ -202,11 +196,8 @@ class MotionPlannerRbtX(MotionPlanner):
                                   starttreesamplerate=30, goaltreesamplerate=30, expanddis=10, maxiter=500,
                                   maxtime=100.0)
         path, _ = planner.planning(self.obscmlist)
-        smoother = sm.Smoother()
 
         if path is not None:
-            print("--------------smoother---------------")
-            path = smoother.pathsmoothing(path, planner)
             self.rbtx.movejntssgl_cont(path, self.armname, wait=True)
             time.sleep(.5)
             while self.arm.is_program_running():

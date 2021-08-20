@@ -3078,6 +3078,7 @@ __all__ = ['IKinectSensor', 'IAudioBeamSubFrame',
            'JointType_HipLeft', 'ColorImageFormat_Rgba',
            'IColorCameraSettings', '_DetectionResult',
            'IColorFrameReader', 'ColorImageFormat_Yuy2', '_Activity']
+
 from comtypes import _check_version;
 
 _check_version('')

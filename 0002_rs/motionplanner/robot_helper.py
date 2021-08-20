@@ -3,21 +3,15 @@ import copy
 import matplotlib.pyplot as plt
 import numpy as np
 
-import utiltools.robotmath as rm
-from motion import checker as ck
-from motion import collisioncheckerball as cdck
+import basis.robot_math as rm
 
 
 class RobotHelper(object):
-    def __init__(self, env, rbt, rbtmg, rbtball, armname="lft"):
+    def __init__(self, env, rbt, armname="lft"):
         self.rbt = rbt
-        self.rbtmg = rbtmg
-        self.rbtball = rbtball
         self.env = env
         self.obscmlist = env.getstationaryobslist() + env.getchangableobslist()
         self.armname = armname
-        self.cdchecker = cdck.CollisionCheckerBall(self.rbtball)
-        self.ctcallback = ck.Checker(rbt, self.cdchecker, armname=armname)
 
         if self.armname == "lft":
             self.initjnts = self.rbt.initlftjnts
@@ -40,8 +34,8 @@ class RobotHelper(object):
         armjac = np.zeros((6, len(self.rbt.targetjoints)))
         counter = 0
 
-        endmat4 = np.dot(rm.homobuild(self.armlj[self.rbt.targetjoints[-1]]["linkpos"],
-                                      self.armlj[self.rbt.targetjoints[-1]]["rotmat"]), releemat4)
+        endmat4 = np.dot(rm.homomat_from_posrot(self.armlj[self.rbt.targetjoints[-1]]["linkpos"],
+                                                self.armlj[self.rbt.targetjoints[-1]]["rotmat"]), releemat4)
         endpos = endmat4[:3, 3]
         for i in self.rbt.targetjoints:
             if i != self.rbt.targetjoints[-1]:
@@ -91,7 +85,7 @@ class RobotHelper(object):
         """
         eepos = copy.deepcopy(self.armlj[self.rbt.targetjoints[-1]]["linkend"])
         eerot = copy.deepcopy(self.armlj[self.rbt.targetjoints[-1]]["rotmat"])
-        eemat4 = np.dot(rm.homobuild(eepos, eerot), releemat4)
+        eemat4 = np.dot(rm.homomat_from_posrot(eepos, eerot), releemat4)
         eepos = eemat4[:3, 3]
         eerot = eemat4[:3, :3]
         deltapos = (tgtpos - eepos) * scale
@@ -121,7 +115,7 @@ class RobotHelper(object):
         if armjnts is not None:
             self.goto_armjnts(armjnts)
         eepos, eerot = self.rbt.getee(armname=self.armname)
-        eemat4 = np.dot(rm.homobuild(eepos, eerot), releemat4)
+        eemat4 = np.dot(rm.homomat_from_posrot(eepos, eerot), releemat4)
         return eemat4[:3, 3], eemat4[:3, :3]
 
     def get_tcp(self, armjnts=None):

@@ -5,10 +5,10 @@ import kntv2 as kntv2
 from concurrent import futures
 import frtknt_pb2 as fkmsg
 import frtknt_pb2_grpc as fkrpc
-# from drivers.devices.pykinect2 import PyKinectV2
-# from drivers.devices.pykinect2 import PyKinectRuntime
+from drivers.devices.kinect2.pykinect2 import PyKinectV2, PyKinectRuntime
 
-from drivers.devices.kinect2.kinect2 import Kinect2
+
+# from drivers.devices.kinect2.kinect2 import Kinect2
 
 
 class FrtKntServer(fkrpc.KntServicer):
@@ -137,4 +137,4 @@ def serve(host="127.0.0.1:18300"):
 
 
 if __name__ == "__main__":
-    serve(host="10.0.1.114:183001")
+    serve(host="10.0.1.143:183001")

@@ -5,8 +5,7 @@ import numpy as np
 import threading
 import time
 
-from drivers.devices.pykinect2 import PyKinectRuntime
-from drivers.devices.pykinect2 import PyKinectV2
+from drivers.devices.kinect2.pykinect2 import PyKinectRuntime, PyKinectV2
 
 import ctypes
 
@@ -244,12 +243,10 @@ class ThreadKinectCam(threading.Thread):
 
 if __name__ == "__main__":
     import cv2
-    from pykinect2 import PyKinectV2
-    from pykinect2 import PyKinectRuntime
+    from drivers.devices.kinect2.pykinect2 import PyKinectV2, PyKinectRuntime
 
     kinect = KinectV2(PyKinectV2.FrameSourceTypes_Color |
-                      PyKinectV2.FrameSourceTypes_Depth |
-                      PyKinectRuntime.FrameSourceTypes_Infrared)
+                      PyKinectV2.FrameSourceTypes_Depth)
 
     threadKinectCam = ThreadKinectCam(2, time.time(), kinect)
     threadKinectCam.start()
@@ -273,7 +270,7 @@ if __name__ == "__main__":
         cv2.imwrite("test.jpg", img)
         aruco = cv2.aruco
         arucodict = aruco.getPredefinedDictionary(aruco.DICT_4X4_100)
-        #
+
         # camcap = cv2.VideoCapture(3)
         # img = camcap.read()[1]
         corners, ids, rejectedImgPoints = aruco.detectMarkers(img, arucodict)
