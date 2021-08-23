@@ -23,7 +23,7 @@ if __name__ == '__main__':
     # get camera intrinsics
     intr = profile.get_stream(rs.stream.color).as_video_stream_profile().get_intrinsics()
     print(intr)
-    intr = {"width":intr.width, "height":intr.height, "fx":intr.fx, "fy":intr.fy, "ppx":intr.ppx,"ppy":intr.ppy}
+    intr = {"width": intr.width, "height": intr.height, "fx": intr.fx, "fy": intr.fy, "ppx": intr.ppx, "ppy": intr.ppy}
     pickle.dump(intr, open("realsense_intr.pkl", "wb"))
     intr = pickle.load(open("realsense_intr.pkl", "rb"))
     pinhole_camera_intrinsic = o3d.camera.PinholeCameraIntrinsic(intr["width"], intr["height"],
@@ -87,6 +87,5 @@ if __name__ == '__main__':
         o3d.visualization.draw_geometries([pcd])
 
     finally:
-
         # ストリーミング停止
         pipeline.stop()

@@ -38,8 +38,8 @@ if __name__ == '__main__':
     # record(frk, f_name)
     rgbimg_list, depthimg_list, pcd_list = load(f_name)
     for i, img in enumerate(depthimg_list):
-        cv2.imshow(f_name, img)
-        cv2.imshow(f_name, rgbimg_list[i])
+        cv2.imshow('depth', img)
+        cv2.imshow('rgb', rgbimg_list[i])
         print(img.shape)
         print(rgbimg_list[i].shape)
         cv2.waitKey(0)
