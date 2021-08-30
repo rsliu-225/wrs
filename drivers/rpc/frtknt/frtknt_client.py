@@ -110,16 +110,16 @@ if __name__ == "__main__":
         rgbimg = frk.getrgbimg()
         pcd = frk.getpcd()
         pcd = pcd / 1000
-        print(depthimg.shape,len(pcd))
+        print(depthimg.shape, len(pcd))
         cv2.imshow('rgbimg', rgbimg)
         cv2.imshow('depthimg', depthimg)
+        print(depthimg.shape, rgbimg.shape)
         depthimg_list.append(depthimg)
         rgbimg_list.append(rgbimg)
 
         if cv2.waitKey(1) & 0xff == 27:  # ESCで終了
             cv2.destroyAllWindows()
             break
-    pickle.dump([rgbimg_list, depthimg_list, pcd_list], open('tst.pkl', 'wb'))
 
     # pcdcenter = [0, 0, 1.5]
     # base = pc.World(cam_pos=[0, 0, -1], lookat_pos=pcdcenter, w=1024, h=768)

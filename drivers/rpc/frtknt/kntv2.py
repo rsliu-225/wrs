@@ -4,7 +4,7 @@
 import numpy as np
 import threading
 import time
-
+import cv2
 from drivers.devices.kinect2.pykinect2 import PyKinectRuntime, PyKinectV2
 
 import ctypes
@@ -103,15 +103,67 @@ class KinectV2(PyKinectRuntime.PyKinectRuntime):
         dframe = self.getDepthFrame()
         pcdptr = ctypes.cast((PyKinectV2._CameraSpacePoint * 1920 * 1080)(),
                              ctypes.POINTER(PyKinectV2._CameraSpacePoint))
+        print(pcdptr)
         self._mapper.MapColorFrameToCameraSpace(512 * 424, dframe.ctypes.data_as(ctypes.POINTER(ctypes.c_ushort)),
                                                 1920 * 1080, pcdptr)
-        # self._mapper.MapDepthFrameToCameraSpace(npoints, dframe.ctypes.data_as(ctypes.POINTER(ctypes.c_ushort)), npoints, pcdptr)
         obj = ctypes.cast(pcdptr,
                           ctypes.POINTER(np.ctypeslib._ctype_ndarray(ctypes.c_float, (1920 * 1080, 3)))).contents
         pcd = np.array(obj)
         pt[0] = int(pt[0])
         pt[1] = int(pt[1])
         return pcd[(pt[1] - 1) * 1920 + pt[0]] * 1000.0
+
+    def mapColorFrameToDepthFrame(self, dframe, clframe):
+        color_space_point = PyKinectV2._ColorSpacePoint
+        dframe = dframe.ctypes.data_as(ctypes.POINTER(ctypes.c_ushort))
+        # Map Depth to Color Space
+        depth2color_points_type = color_space_point * np.int(512 * 424)
+        depth2color_points = ctypes.cast(depth2color_points_type(), ctypes.POINTER(color_space_point))
+        self._mapper.MapDepthFrameToColorSpace(ctypes.c_uint(512 * 424), dframe,
+                                               self._depth_frame_data_capacity, depth2color_points)
+        # depth_x = depth2color_points[color_point[0] * 1920 + color_point[0] - 1].x
+        # depth_y = depth2color_points[color_point[0] * 1920 + color_point[0] - 1].y
+        colorXYs = np.copy(np.ctypeslib.as_array(depth2color_points, shape=(
+            self.depth_frame_desc.Height * self.depth_frame_desc.Width,)))  # Convert ctype pointer to array
+        colorXYs = colorXYs.view(np.float32).reshape(colorXYs.shape + (-1,))
+        # colorXYs += 0.5
+        colorXYs = colorXYs.reshape(self.depth_frame_desc.Height, self.depth_frame_desc.Width, 2).astype(np.int)
+        colorXs = np.clip(colorXYs[:, :, 0], 0, self.color_frame_desc.Width - 1)
+        colorYs = np.clip(colorXYs[:, :, 1], 0, self.color_frame_desc.Height - 1)
+        colorimg = clframe.reshape((self.color_frame_desc.Height, self.color_frame_desc.Width, 4)).astype(np.uint8)
+        alignimg = np.zeros((424, 512, 4), dtype=np.uint8)
+        # t = time.time()
+        alignimg[:, :] = colorimg[colorYs, colorXs, :]
+        # print("tc", time.time() - t)
+
+        return cv2.flip(alignimg, 1)[:,:,:3]
+
+    def mapDepthFrameToColorFrame(self, dframe):
+        depth_space_point = PyKinectV2._DepthSpacePoint
+        # print(depth_space_point.x, depth_space_point.y)
+        dframe_ptr = dframe.ctypes.data_as(ctypes.POINTER(ctypes.c_ushort))
+
+        # Map Color to Depth Space
+        color2depth_points_type = depth_space_point * np.int(1920 * 1080)
+        color2depth_points = ctypes.cast(color2depth_points_type(), ctypes.POINTER(depth_space_point))
+        self._mapper.MapColorFrameToDepthSpace(ctypes.c_uint(512 * 424), dframe_ptr,
+                                               ctypes.c_uint(1920 * 1080), color2depth_points)
+        # Where color_point = [xcolor, ycolor]
+        # color_x = color2depth_points[depth_point[1] * 1920 + color_point[0] - 1].x
+        # color_y = color2depth_points[depth_point[1] * 1920 + color_point[0] - 1].y
+        depthXYs = np.copy(np.ctypeslib.as_array(color2depth_points, shape=(
+            self.color_frame_desc.Height * self.color_frame_desc.Width,)))  # Convert ctype pointer to array
+        depthXYs = depthXYs.view(np.float32).reshape(depthXYs.shape + (-1,))
+        depthXYs += 0.5
+        depthXYs = depthXYs.reshape(self.color_frame_desc.Height, self.color_frame_desc.Width, 2).astype(np.int)
+        depthXs = np.clip(depthXYs[:, :, 0], 0, self.depth_frame_desc.Width - 1)
+        depthYs = np.clip(depthXYs[:, :, 1], 0, self.depth_frame_desc.Height - 1)
+        depth_img = dframe.reshape((self.depth_frame_desc.Height, self.depth_frame_desc.Width, 1)).astype(
+            np.uint16)
+        alignimg = np.zeros((1080, 1920, 4), dtype=np.uint16)
+        alignimg[:, :] = depth_img[depthYs, depthXs, :]
+
+        return cv2.flip(alignimg, 1)
 
     def getDepthWidthAndHeight(self):
         return (self.__depth_width, self.__depth_height)
@@ -214,6 +266,8 @@ class KinectV2(PyKinectRuntime.PyKinectRuntime):
             if self.has_new_depth_frame():
                 self.__depth = self.get_last_depth_frame()
                 self.depth_timestample = strtime
+                # self.__color = self.get_last_color_frame()
+                # self.color_timestample = strtime
 
             # if self.has_new_infrared_frame():
             #     self.__infrared = self.get_last_infrared_frame()
@@ -260,21 +314,27 @@ if __name__ == "__main__":
         break
     while True:
         clframe = kinect.getColorFrame()
-        clb = np.flip(np.array(clframe[0::4]).reshape((kinect.colorHeight, kinect.colorWidth)), 1)
-        clg = np.flip(np.array(clframe[1::4]).reshape((kinect.colorHeight, kinect.colorWidth)), 1)
-        clr = np.flip(np.array(clframe[2::4]).reshape((kinect.colorHeight, kinect.colorWidth)), 1)
-        # cla = np.array(clframe[3::4])
-        clframe8bit = np.dstack((clb, clg, clr)).reshape((kinect.colorHeight, kinect.colorWidth, 3))
-        img = cv2.merge((clb, clg, clr))
-        # img = cv2.resize(img, (int(kinect.colorWidth/3.0), int(kinect.colorHeight/3.0)))
-        cv2.imwrite("test.jpg", img)
-        aruco = cv2.aruco
-        arucodict = aruco.getPredefinedDictionary(aruco.DICT_4X4_100)
+        # reshape((kinect.colorHeight, kinect.colorWidth, 4))
+        dframe = kinect.getDepthFrame()
 
-        # camcap = cv2.VideoCapture(3)
-        # img = camcap.read()[1]
-        corners, ids, rejectedImgPoints = aruco.detectMarkers(img, arucodict)
-        print(kinect.mapColorPointToCameraSpace([950, 974]))
-        aruco.drawDetectedMarkers(img, corners, ids, (0, 255, 0))
-        cv2.imshow("xx", img)
+        # pcd = kinect.getPointCloud(dframe, width=[0, 512], height=[0, 424])
+        # clb = np.flip(np.array(clframe[0::4]).reshape((kinect.colorHeight, kinect.colorWidth)), 1)
+        # clg = np.flip(np.array(clframe[1::4]).reshape((kinect.colorHeight, kinect.colorWidth)), 1)
+        # clr = np.flip(np.array(clframe[2::4]).reshape((kinect.colorHeight, kinect.colorWidth)), 1)
+        # # cla = np.array(clframe[3::4])
+        # clframe8bit = np.dstack((clb, clg, clr)).reshape((kinect.colorHeight, kinect.colorWidth, 3))
+        # img = cv2.merge((clb, clg, clr))
+        # # img = cv2.resize(img, (int(kinect.colorWidth/3.0), int(kinect.colorHeight/3.0)))
+        # cv2.imwrite("test.jpg", img)
+        # aruco = cv2.aruco
+        # arucodict = aruco.getPredefinedDictionary(aruco.DICT_4X4_100)
+        # aruco.drawDetectedMarkers(img, corners, ids, (0, 255, 0))
+        # corners, ids, rejectedImgPoints = aruco.detectMarkers(img, arucodict)
+        t1 = time.time()
+        align_colorframe = kinect.mapColorFrameToDepthFrame(dframe, clframe)
+        print(time.time() - t1)
+        align_dframe = kinect.mapDepthFrameToColorFrame(dframe)
+        cv2.imshow('1', align_colorframe)
+        cv2.imshow('2', align_dframe)
+        # cv2.imshow("xx", clframe)
         cv2.waitKey(10)

@@ -84,7 +84,7 @@ class KntServicer(object):
 def add_KntServicer_to_server(servicer, server):
   rpc_method_handlers = {
       'getrgbimg': grpc.unary_unary_rpc_method_handler(
-          servicer.getrgbimg,
+          servicer.clframe2rgbimg,
           request_deserializer=frtknt__pb2.Empty.FromString,
           response_serializer=frtknt__pb2.CamImg.SerializeToString,
       ),

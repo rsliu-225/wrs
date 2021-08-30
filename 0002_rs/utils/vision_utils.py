@@ -43,7 +43,7 @@ def map_depth2pcd(depthnarray, pcd):
 #     return np.delete(pcd, np.where(pcd[:, 2] == 0)[0], axis=0)
 
 def convert_depth2pcd(depthnarray, toggledebug=False):
-    intr = pickle.load(open(os.path.join(config.ROOT, "utils", "realsense_intr.pkl"), "rb"))
+    intr = pickle.load(open(os.path.join(config.ROOT, "utils", "../../0001_LfD/local_vis/realsense_intr.pkl"), "rb"))
     pinhole_camera_intrinsic = o3d.camera.PinholeCameraIntrinsic(intr["width"], intr["height"],
                                                                  intr["fx"], intr["fy"], intr["ppx"], intr["ppy"])
     depthimg = o3d.geometry.Image(depthnarray)

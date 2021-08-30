@@ -40,6 +40,24 @@ class FrtKntServer(fkrpc.KntServicer):
         return fkmsg.CamImg(width=self.__kinect.colorWidth, height=self.__kinect.colorHeight, channel=channel,
                             image=np.ndarray.tobytes(clframe8bit))
 
+    def getrgbaimg(self, request, context):
+        """
+        get color image as an array
+
+        :return: a colorHeight*colorWidth*4 np array, the second and third channels are repeated
+        author: weiwei
+        date: 20180207
+        """
+
+        clframe = self.__kinect.getColorFrame()
+        clb = np.flip(np.array(clframe[0::4]).reshape((self.__kinect.colorHeight, self.__kinect.colorWidth)), 1)
+        clg = np.flip(np.array(clframe[1::4]).reshape((self.__kinect.colorHeight, self.__kinect.colorWidth)), 1)
+        clr = np.flip(np.array(clframe[2::4]).reshape((self.__kinect.colorHeight, self.__kinect.colorWidth)), 1)
+        channel = 3
+        clframe8bit = np.dstack((clb, clg,  clr)).reshape((self.__kinect.colorHeight, self.__kinect.colorWidth, channel))
+        return fkmsg.CamImg(width=self.__kinect.colorWidth, height=self.__kinect.colorHeight, channel=channel,
+                            image=np.ndarray.tobytes(clframe8bit))
+
     def getdepthimg(self, request, context):
         """
         get depth image as an array
@@ -108,9 +126,9 @@ def serve(host="127.0.0.1:18300"):
     threadKinectCam = kntv2.ThreadKinectCam(2, time.time(), kinect)
     threadKinectCam.start()
     while True:
-        # if kinect.getInfraredFrame() is None:
-        #     print("initializing infrared...")
-        #     continue
+        if kinect.getInfraredFrame() is None:
+            print("initializing infrared...")
+            continue
         if kinect.getColorFrame() is None:
             print("initializing color...")
             continue

@@ -11,7 +11,7 @@ loadPrcFileData('', 'show-frame-rate-meter true')
 loadPrcFileData('', 'sync-video 0')
 
 
-def show_rgbd_image(image, depth_image, window_name='Image window', delay=1, depth_offset=0.0, depth_scale=1.0):
+def show_rgbd_image(image, depth_image, delay=1, depth_offset=0.0, depth_scale=1.0):
     if depth_image.dtype != np.uint8:
         if depth_scale is None:
             depth_scale = depth_image.max() - depth_image.min()
@@ -25,7 +25,7 @@ def show_rgbd_image(image, depth_image, window_name='Image window', delay=1, dep
         depth_image = np.concatenate([depth_image, alpha], axis=-1)
     images = np.concatenate([image, depth_image], axis=1)
     # images = cv2.cvtColor(images, cv2.COLOR_RGB2BGR)  # not needed since image is already in BGR format
-    cv2.imshow(window_name, images)
+    cv2.imshow('Image window', images)
     key = cv2.waitKey(delay)
     key &= 255
     if key == 27 or key == ord('q'):
