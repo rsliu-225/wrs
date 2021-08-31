@@ -29,7 +29,7 @@ class MotionPlanner(object):
         self.obscmlist = env.getstationaryobslist() + env.getchangableobslist()
         # for obscm in self.obscmlist:
         #     obscm.showcn()
-        self.hndfa = rtqhe.HandFactory()
+        self.hndfa = rtqhe.RobotiqHE()
         self.iksolver = iks.IkSolver(self.env, self.rbt, self.armname)
 
         if self.armname == "lft_arm":
@@ -41,7 +41,7 @@ class MotionPlanner(object):
 
         self.graspplanner = gp.GraspPlanner(self.hndfa)
         self.rbth = rbt_helper.RobotHelper(self.env, self.rbt, self.armname)
-        self.ah = ani_helper.AnimationHelper(self.env, self.rbt,  self.armname)
+        self.ah = ani_helper.AnimationHelper(self.env, self.rbt, self.armname)
 
     def add_obs(self, obs):
         self.obscmlist.append(obs)
@@ -105,13 +105,13 @@ class MotionPlanner(object):
     def refine_grasp(self, grasp, transmat):
         prejawwidth, prehndfc, prehndmat4 = grasp
         prehndmat4 = np.dot(transmat, prehndmat4)
-        prehndfc = rm.homotransformpoint(transmat, prehndfc)
+        prehndfc = rm.homomat_transform_points(transmat, prehndfc)
         return [prejawwidth, prehndfc, prehndmat4]
 
     def get_armjnts_by_objmat4ngrasp(self, grasp, obj, objmat4, msc=None):
         prejawwidth, prehndfc, prehndmat4 = grasp
         hndmat4 = np.dot(objmat4, prehndmat4)
-        eepos = rm.homotransformpoint(objmat4, prehndfc)[:3]
+        eepos = rm.homomat_transform_points(objmat4, prehndfc)[:3]
         eerot = hndmat4[:3, :3]
         armjnts = self.get_numik(eepos, eerot, msc=msc)
 
@@ -182,7 +182,7 @@ class MotionPlanner(object):
                     break
                 prejawwidth, prehndfc, prehndmat4 = grasp
                 hndmat4 = np.dot(objmat4, prehndmat4)
-                eepos = rm.homotransformpoint(objmat4, prehndfc)[:3]
+                eepos = rm.homomat_transform_points(objmat4, prehndfc)[:3]
                 eerot = hndmat4[:3, :3]
                 armjnts = self.get_numik(eepos, eerot, msc=msc)
 
@@ -208,7 +208,7 @@ class MotionPlanner(object):
     def get_ee_by_objmat4(self, grasp, objmat4):
         _, prehndfc, prehndmat4 = grasp
         hndmat4 = np.dot(objmat4, prehndmat4)
-        eepos = rm.homotransformpoint(objmat4, prehndfc)[:3]
+        eepos = rm.homomat_from_posrot(objmat4, prehndfc)[:3]
         eerot = hndmat4[:3, :3]
         return [eepos, eerot]
 

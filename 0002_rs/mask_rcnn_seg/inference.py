@@ -70,14 +70,19 @@ class MaskRcnnPredictor(object):
 
 
 if __name__ == '__main__':
-    data_f_name = config.ROOT + "/img/realsense/seq/A_light.pkl"
-    data = pickle.load(open(data_f_name, 'rb'))
-    label = 79
+    import local_vis.realsense.realsense as rs
+
+    # data_f_name = config.ROOT + "/img/realsense/seq/A_light.pkl"
+    # data = pickle.load(open(data_f_name, 'rb'))
+    realsense = rs.RealSense()
+    folder_name = "osaka"
+    depthimglist, rgbimg_list = realsense.load_frame_seq(folder_name)
+
+    label = None
     print("Start inferencing process")
-    inference_images = data[1]
 
     predictor = MaskRcnnPredictor()
-    for i, im in tqdm(enumerate(inference_images)):
+    for i, im in tqdm(enumerate(rgbimg_list)):
         predictions = predictor.predict(im, label)
         visualized_pred = predictor.visualize_prediction(im, predictions)
-        cv2.imwrite(f'{INFERENCE_OUTPUT_DIR}/{label}_{i}.png', visualized_pred)
+        cv2.imwrite(f'{INFERENCE_OUTPUT_DIR}/{folder_name}/{str(i).zfill(4)}.png', visualized_pred)

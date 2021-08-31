@@ -8,12 +8,13 @@ import open3d as o3d
 from matplotlib import pyplot as plt
 from sklearn import linear_model
 
-import environment.collisionmodel as cm
-import trimesh
-import trimesh.sample as ts
+import modeling.collision_model as cm
+import modeling.geometric_model as gm
+import basis.trimesh.sample as ts
 import utils.math_utils as mu
-import utiltools.robotmath as rm
-import utiltools.thirdparty.o3dhelper as o3d_helper
+import basis.robot_math as rm
+import basis.o3dhelper as o3d_helper
+from basis import trimesh 
 from localenv import envloader as el
 
 
@@ -48,13 +49,13 @@ def trans_p(p, transmat=None):
 
 
 def show_pcd(pcd, rgba=(1, 1, 1, 1)):
-    base.pg.genpointcloudnp(pcd, colors=rgba).reparentTo(base.render)
+    gm.gen_pointcloud(pcd, rgbas=[rgba]).attach_to(base)
 
 
 def show_pcd_withrbt(pcd, rgba=(1, 1, 1, 1), rbtx=None, toggleendcoord=False):
-    rbt, rbtmg, rbtball = el.loadUr3e()
+    rbt = el.loadUr3e()
     env = el.Env_wrs(boundingradius=7.0)
-    env.reparentTo(base.render)
+    env.reparentTo(base)
 
     if rbtx is not None:
         for armname in ["lft", "rgt"]:
@@ -62,10 +63,8 @@ def show_pcd_withrbt(pcd, rgba=(1, 1, 1, 1), rbtx=None, toggleendcoord=False):
             print(armname, tmprealjnts)
             rbt.movearmfk(tmprealjnts, armname)
 
-    rbtmg.genmnp(rbt, toggleendcoord=toggleendcoord).reparentTo(base.render)
-
-    pcddnp = base.pg.genpointcloudnp(pcd, colors=rgba)
-    pcddnp.reparentTo(base.render)
+    rbt.gen_meshmodel(toggle_tcpcs=toggleendcoord).attach_to(base)
+    gm.gen_pointcloud(pcd, rgbas=[rgba]).attach_to(base)
 
 
 def get_pcd_center(pcd):
@@ -106,11 +105,11 @@ def get_org_convexhull(pcd, color=(1, 1, 1), transparency=1, toggledebug=False):
 
     convexhull = trimesh.Trimesh(vertices=pcd)
     convexhull = convexhull.convex_hull
-    obj = cm.CollisionModel(objinit=convexhull, type="ball")
+    obj = cm.CollisionModel(initor=convexhull, cdprimit_type="ball")
     if toggledebug:
-        obj.setColor(color[0], color[1], color[2], transparency)
-        obj.reparentTo(base.render)
-        obj.showlocalframe()
+        obj.set_rgba((color[0], color[1], color[2], transparency))
+        obj.attach_to(base)
+        obj.show_localframe()
 
     return obj
 
@@ -133,27 +132,27 @@ def get_std_convexhull(pcd, origin="center", color=(1, 1, 1), transparency=1, to
     origin_pos = np.array(center)
 
     pcd = pcd - np.array([center]).repeat(len(pcd), axis=0)
-    pcd = trans_pcd(pcd, rm.homobuild((0, 0, 0), rm.rodrigues((0, 0, 1), -rot_angle)))
+    pcd = trans_pcd(pcd, rm.homomat_from_posrot((0, 0, 0), rm.rodrigues((0, 0, 1), -rot_angle)))
 
     convexhull = trimesh.Trimesh(vertices=pcd)
     convexhull = convexhull.convex_hull
-    obj = cm.CollisionModel(objinit=convexhull)
+    obj = cm.CollisionModel(initor=convexhull)
     obj_w, obj_h = get_pcd_w_h(pcd)
 
     if origin == "tip":
         tip = get_pcd_tip(pcd, axis=0)
         origin_pos = center + \
-                     trans_pcd(np.array([tip]), rm.homobuild((0, 0, 0), rm.rodrigues((0, 0, 1), rot_angle)))[0]
+                     trans_pcd(np.array([tip]), rm.homomat_from_posrot((0, 0, 0), rm.rodrigues((0, 0, 1), rot_angle)))[0]
         pcd = pcd - np.array([tip]).repeat(len(pcd), axis=0)
 
         convexhull = trimesh.Trimesh(vertices=pcd)
         convexhull = convexhull.convex_hull
-        obj = cm.CollisionModel(objinit=convexhull)
+        obj = cm.CollisionModel(initor=convexhull)
 
     if toggledebug:
-        obj.setColor(color[0], color[1], color[2], transparency)
-        obj.reparentTo(base.render)
-        obj.showlocalframe()
+        obj.set_rgba((color[0], color[1], color[2], transparency))
+        obj.attach_to(base)
+        obj.show_localframe()
         print("Rotation angle:", rot_angle)
         print("Origin:", center)
         base.pggen.plotSphere(base.render, center, radius=2, rgba=(1, 0, 0, 1))
@@ -223,10 +222,10 @@ def reconstruct_surface(pcd, radii=[5], toggledebug=False):
     print("---------------reconstruct surface bp---------------")
     pcd = np.asarray(pcd)
     tmmesh = o3d_helper.reconstructsurfaces_bp(pcd, radii=radii, doseparation=False)
-    obj = cm.CollisionModel(objinit=tmmesh)
+    obj = cm.CollisionModel(initor=tmmesh)
     if toggledebug:
-        obj.setColor(1, 1, 1, 1)
-        obj.reparentTo(base.render)
+        obj.set_rgba((1, 1, 1, 1))
+        obj.attach_to(base)
     return obj
 
 
@@ -235,11 +234,11 @@ def reconstruct_surface_list(pcd, radii=[5], color=(1, 1, 1), transparency=1, to
     tmmeshlist = o3d_helper.reconstructsurfaces_bp(pcd, radii=radii, doseparation=True)
     obj_list = []
     for tmmesh in tmmeshlist:
-        obj = cm.CollisionModel(objinit=tmmesh)
+        obj = cm.CollisionModel(initor=tmmesh)
         obj_list.append(obj)
         if toggledebug:
-            obj.setColor(color[0], color[1], color[2], transparency)
-            obj.reparentTo(base.render)
+            obj.set_rgba((color[0], color[1], color[2], transparency))
+            obj.attach_to(base)
     return obj_list
 
 
@@ -267,7 +266,7 @@ def get_objpcd_withnrmls(objcm, objmat4=np.eye(4), sample_num=100000, toggledebu
     nrmls = objcm.trimesh.vertex_normals
 
     if sample_num is not None:
-        objpcd, faceid = ts.sample_surface_withfaceid(objcm.trimesh, count=sample_num)
+        objpcd, faceid = ts.sample_surface(objcm.trimesh, count=sample_num)
         objpcd = list(objpcd)
         for i in faceid:
             objpcd_nrmls.append(np.array(face_nrmls[i]))
@@ -439,7 +438,7 @@ def get_plane(pcd, dist_threshold=0.2, toggledebug=False):
     center = get_pcd_center(plane_pcd)
     if toggledebug:
         show_pcd(pcd[inliers], rgba=(1, 0, 0, 1))
-        base.pggen.plotArrow(base.render, spos=center, epos=plane[:3] * plane[3], rgba=(1, 0, 0, 1))
+        gm.gen_arrow(spos=center, epos=plane[:3] * plane[3], rgba=(1, 0, 0, 1))
 
     return plane[:3], plane[3]
 
@@ -451,7 +450,7 @@ if __name__ == '__main__':
     base, env = el.loadEnv_wrs()
     objcm = el.loadObj("pentip.stl")
 
-    # source_pcd = np.asarray(ts.sample_surface(objcm.trimesh, count=10000))
+    source_pcd = np.asarray(ts.sample_surface(objcm.trimesh, count=10000))
     source = o3d_helper.nparray2o3dpcd(source_pcd[source_pcd[:, 2] > 5])
     # source.paint_uniform_color([0, 0.706, 1])
     # o3d.visualization.draw_geometries([source])

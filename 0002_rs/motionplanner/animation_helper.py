@@ -2,21 +2,19 @@ import copy
 
 import numpy as np
 
-import manipulation.grip.robotiqhe.robotiqhe as rtqhe
+import robot_sim.end_effectors.grippers.robotiqhe.robotiqhe as rtqhe
 import motionplanner.robot_helper as rbt_helper
 import basis.robot_math as rm
 
 
 class AnimationHelper(object):
-    def __init__(self, env, rbt, rbtmg, rbtball, armname="lft"):
+    def __init__(self, env, rbt, armname="lft"):
         self.rbt = rbt
-        self.rbtmg = rbtmg
-        self.rbtball = rbtball
         self.env = env
         self.obscmlist = env.getstationaryobslist() + env.getchangableobslist()
         self.armname = armname
-        self.rbth = rbt_helper.RobotHelper(self.env, self.rbt, self.rbtmg, self.rbtball, self.armname)
-        self.hndfa = rtqhe.HandFactory()
+        self.rbth = rbt_helper.RobotHelper(self.env, self.rbt, self.armname)
+        self.hndfa = rtqhe.RobotiqHE()
 
     def draw_axis(self, pos, rot, rgba=None, length=50, thickness=5):
         base.pggen.plotAxis(base.render, spos=pos, srot=rot, length=length, rgba=rgba, thickness=thickness)
@@ -159,14 +157,14 @@ class AnimationHelper(object):
 
     def show_hnd(self, rgba=None, armjnts=None, toggleendcoord=False, jawwidth=50):
         eepos, eerot = self.rbth.get_tcp(armjnts=armjnts)
-        hnd = self.hndfa.genHand(jawwidth=jawwidth, ftsensoroffset=36, toggleframes=toggleendcoord)
+        hnd = self.hndfa.gen_meshmodel(jawwidth=jawwidth, ftsensoroffset=36, toggle_tcpcs=toggleendcoord)
         if rgba is not None:
             hnd.setColor(rgba[0], rgba[1], rgba[2], rgba[3])
         hnd.sethomomat(rm.homomat_from_posrot(eepos, eerot))
         hnd.reparentTo(base.render)
 
     def show_hnd_sgl(self, hndmat4, rgba=None, toggleendcoord=False, jawwidth=50):
-        hnd = self.hndfa.genHand(jawwidth=jawwidth, ftsensoroffset=36, toggleframes=toggleendcoord)
+        hnd = self.hndfa.gen_meshmodel(jawwidth=jawwidth, ftsensoroffset=36, toggle_tcpcs=toggleendcoord)
         if rgba is not None:
             hnd.setColor(rgba[0], rgba[1], rgba[2], rgba[3])
         hnd.sethomomat(hndmat4)
@@ -176,15 +174,15 @@ class AnimationHelper(object):
         rbtmnp = [None, None]
         motioncounter = [0]
         taskMgr.doMethodLater(0.05, self.__update, "update",
-                              extraArgs=[rbtmnp, motioncounter, self.rbt, path, self.armname, self.rbtmg, self.rbtball],
+                              extraArgs=[rbtmnp, motioncounter, self.rbt, path, self.armname],
                               appendTask=True)
 
     def show_animation_hold(self, path, obj, objrelpos, objrelrot, jawwidth=50):
         rbtmnp = [None, None]
         motioncounter = [0]
         taskMgr.doMethodLater(0.05, self.__update_hold, "update",
-                              extraArgs=[rbtmnp, motioncounter, self.rbt, path, self.armname, self.rbtmg, self.rbtball,
-                                         obj, objrelpos, objrelrot, jawwidth],
+                              extraArgs=[rbtmnp, motioncounter, self.rbt, path, self.armname, obj,
+                                         objrelpos, objrelrot, jawwidth],
                               appendTask=True)
 
     def show_animation_hold_dual(self, path, obj_lft, objrelpos_lft, objrelrot_lft,
@@ -214,21 +212,22 @@ class AnimationHelper(object):
             self.rbtmg.gensnp(self.rbt, togglejntscoord=False, toggleendcoord=toggleendcoord, rgtrgba=rgba). \
                 reparentTo(base.render)
 
-    def __update(self, rbtmnp, motioncounter, rbt, path, armname, rbtmesh, rbtball, task):
+    def __update(self, rbtmnp, motioncounter, rbt, path, armname, task):
         if motioncounter[0] < len(path):
             if rbtmnp[0] is not None:
                 rbtmnp[0].detachNode()
             armjnts = path[motioncounter[0]]
             rbt.movearmfk(armjnts, armname=armname)
-            rbtmnp[0] = rbtmesh.genmnp(rbt)
-            rbtmnp[0].reparentTo(base.render)
+            rbtmnp[0] = rbt.gen_meshmodel()
+            rbtmnp[0].attach_to(base)
+
             # rbtball.showfullcn(rbt)
             motioncounter[0] += 1
         else:
             motioncounter[0] = 0
         return task.again
 
-    def __update_hold(self, rbtmnp, motioncounter, rbt, path, armname, rbttmesh, rbtball,
+    def __update_hold(self, rbtmnp, motioncounter, rbt, path, armname,
                       obj, objrelpos, objrelrot, jawwidth, task):
         self.rbt.closegripper(armname=self.armname, jawwidth=jawwidth)
         if motioncounter[0] < len(path):
@@ -236,9 +235,8 @@ class AnimationHelper(object):
                 rbtmnp[0].detachNode()
             armjnts = path[motioncounter[0]]
             rbt.movearmfk(armjnts, armname=armname)
-            rbtmnp[0] = rbttmesh.genmnp(rbt, toggleendcoord=False)
-            rbtmnp[0].reparentTo(base.render)
-            # rbtball.showfullcn(rbt)
+            rbtmnp[0] = rbt.gen_meshmodel()
+            rbtmnp[0].attach_to(base)
 
             objpos, objrot = self.rbt.getworldpose(objrelpos, objrelrot, self.armname)
             objmat4 = rm.homomat_from_posrot(objpos, objrot)

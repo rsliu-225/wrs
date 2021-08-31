@@ -30,29 +30,32 @@ def map_depth2pcd(depthnarray, pcd):
     return pcdnarray
 
 
-# def convert_depth2pcd(depthnarray):
-#     h, w = depthnarray.shape
-#     y_ = np.linspace(1, h, h)
-#     x_ = np.linspace(1, w, w)
-#     mesh_x, mesh_y = np.meshgrid(x_, y_)
-#     z_ = depthnarray.flatten()
-#     pcd = np.zeros((np.size(mesh_x), 3))
-#     pcd[:, 0] = np.reshape(mesh_x, -1)
-#     pcd[:, 1] = np.reshape(mesh_y, -1)
-#     pcd[:, 2] = np.reshape(z_, -1)
-#     return np.delete(pcd, np.where(pcd[:, 2] == 0)[0], axis=0)
+def convert_depth2pcd(depthnarray):
+    h, w = depthnarray.shape
+    y_ = np.linspace(1, h, h)
+    x_ = np.linspace(1, w, w)
+    mesh_x, mesh_y = np.meshgrid(x_, y_)
+    z_ = depthnarray.flatten()
+    pcd = np.zeros((np.size(mesh_x), 3))
+    pcd[:, 0] = np.reshape(mesh_x, -1)
+    pcd[:, 1] = np.reshape(mesh_y, -1)
+    pcd[:, 2] = np.reshape(z_, -1)
+    return np.delete(pcd, np.where(pcd[:, 2] == 0)[0], axis=0)/1000
 
-def convert_depth2pcd(depthnarray, toggledebug=False):
-    intr = pickle.load(open(os.path.join(config.ROOT, "utils", "../../0001_LfD/local_vis/realsense_intr.pkl"), "rb"))
+
+def convert_depth2pcd_rs(depthnarray, toggledebug=False):
+    intr = pickle.load(open(os.path.join(config.ROOT, "camcalib/data", "realsense_intr.pkl"), "rb"))
     pinhole_camera_intrinsic = o3d.camera.PinholeCameraIntrinsic(intr["width"], intr["height"],
                                                                  intr["fx"], intr["fy"], intr["ppx"], intr["ppy"])
+    depthnarray = np.array(depthnarray, dtype=np.uint16)
     depthimg = o3d.geometry.Image(depthnarray)
-    pcd = o3d.geometry.PointCloud.create_from_depth_image(depthimg, pinhole_camera_intrinsic, np.eye(4))
+    pcd = o3d.geometry.PointCloud.create_from_depth_image(depthimg, pinhole_camera_intrinsic,
+                                                          np.array(np.eye(4), dtype=np.float64))
 
     if toggledebug:
         o3d.visualization.draw_geometries([pcd])
         print(np.asarray(pcd.points))
-    return np.asarray(pcd.points) * 1000
+    return np.asarray(pcd.points)
 
 
 def map_gray2pcd(grayimg, pcd):

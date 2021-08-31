@@ -5,8 +5,8 @@ import basis.trimesh
 
 import basis.trimesh.sample as sample
 import utils.pcd_utils as pcdu
-import basis.robotmath as rm
-import environment.collisionmodel as cm
+import basis.robot_math as rm
+import modeling.collision_model as cm
 import multiprocessing
 
 TOGGLEDEBUG = False

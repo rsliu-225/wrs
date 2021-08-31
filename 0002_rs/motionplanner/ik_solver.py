@@ -351,14 +351,12 @@ class NsOptimizer(object):
 
 
 class IkSolver(object):
-    def __init__(self, env, rbt, rbtmg, rbtball, armname):
+    def __init__(self, env, rbt, armname):
         self.rbt = rbt
-        self.rbtmg = rbtmg
-        self.rbtball = rbtball
         self.armname = armname
         self.env = env
         self.obscmlist = self.env.getstationaryobslist() + self.env.getchangableobslist()
-        self.rbth = rbt_helper.RobotHelper(self.env, self.rbt, self.rbtmg, self.rbtball, self.armname)
+        self.rbth = rbt_helper.RobotHelper(self.env, self.rbt, self.armname)
 
         if self.armname == "lft":
             self.initjnts = self.rbt.initlftjnts

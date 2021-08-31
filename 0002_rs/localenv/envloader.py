@@ -5,20 +5,20 @@ import numpy as np
 import open3d as o3d
 
 import config
-import environment.collisionmodel as cm
+import modeling.collision_model as cm
+import modeling.geometric_model as gm
 import localenv.item as item
-import manipulation.grip.robotiqhe.robotiqhe as rtqhe
-import pandaplotutils.pandactrl as pc
-import robotcon.ur3edual as ur3ex
-import robotsim.robots.dualarm.ur3edual.ur3edual as ur3edual
-import robotsim.robots.dualarm.ur3edual.ur3edualball as robotball
-import robotsim.robots.dualarm.ur3edual.ur3edualmesh as robotmesh
-import trimesh.sample as ts
-import utiltools.robotmath as rm
-import utiltools.thirdparty.o3dhelper as o3d_helper
-from trimesh.primitives import Box
+import robot_sim.end_effectors.grippers.robotiqhe.robotiqhe as rtqhe
+import visualization.panda.world as pc
+import robot_con.ur.ur3e_dual_x as ur3ex
+import robot_sim.robots.ur3e_dual.ur3e_dual as ur3edual
+import basis.trimesh.sample as ts
+import basis.robot_math as rm
+import basis.o3dhelper as o3d_helper
+from basis.trimesh.primitives import Box
 import utils.pcd_utils as pcdu
 import utils.comformalmapping_utils as cu
+
 
 class Env_wrs(object):
     def __init__(self, boundingradius=10.0, betransparent=False):
@@ -35,9 +35,9 @@ class Env_wrs(object):
 
         # table
         self.__tablepath = os.path.join(self.__this_dir, "../obstacles", "ur3edtable.stl")
-        self.__tablecm = cm.CollisionModel(self.__tablepath, expand_radius=boundingradius, betransparency=betransparent)
-        self.__tablecm.setPos(180, 0, 0)
-        self.__tablecm.setColor(.32, .32, .3, 1.0)
+        self.__tablecm = cm.CollisionModel(self.__tablepath, expand_radius=boundingradius, btransparency=betransparent)
+        self.__tablecm.set_pos((.18, 0, 0))
+        self.__tablecm.set_rgba((.32, .32, .3, 1.0))
 
         self.__battached = False
         self.__changableobslist = []
@@ -45,13 +45,13 @@ class Env_wrs(object):
     def reparentTo(self, nodepath):
         if not self.__battached:
             # table
-            self.__tablecm.reparentTo(nodepath)
+            self.__tablecm.attach_to(nodepath)
             # housing
             self.__battached = True
 
     def loadobj(self, name):
         self.__objpath = os.path.join(self.__this_dir, "../../0000_srl/objects", name)
-        self.__objcm = cm.CollisionModel(self.__objpath, type="ball")
+        self.__objcm = cm.CollisionModel(self.__objpath, cdprimit_type="ball")
         return self.__objcm
 
     def getstationaryobslist(self):
@@ -78,7 +78,7 @@ class Env_wrs(object):
         """
         return self.__changableobslist
 
-    def addchangableobs(self, nodepath, objcm, pos, rot):
+    def addchangableobs(self, base, objcm, pos, rot):
         """
 
         :param objcm: CollisionModel
@@ -91,8 +91,8 @@ class Env_wrs(object):
         """
 
         self.__changableobslist.append(objcm)
-        objcm.reparentTo(nodepath)
-        objcm.setMat(base.pg.npToMat4(rot, pos))
+        objcm.attach_to(base)
+        objcm.set_homomat(rm.homomat_from_posrot(pos, rot))
 
     def addchangableobscm(self, objcm):
         self.__changableobslist.append(objcm)
@@ -102,13 +102,13 @@ class Env_wrs(object):
             objcm.remove()
 
 
-def loadEnv_wrs(camp=[4000, 0, 1700], lookatpos=[0, 0, 1000]):
+def loadEnv_wrs(camp=[4, 0, 1.7], lookatpos=[0, 0, 1]):
     # Table width: 120
     # Table long: 1080
 
-    base = pc.World(camp=camp, lookatpos=lookatpos)
+    base = pc.World(cam_pos=camp, lookat_pos=lookatpos)
     env = Env_wrs(boundingradius=7.0)
-    env.reparentTo(base.render)
+    env.reparentTo(base)
 
     # obstacle = cm.CollisionModel(objinit=Box(box_extents=[30, 298, 194]))
     # env.addchangableobs(base.render, obstacle, [1080 + 30 / 2, -600 + 200 + 298 / 2 - 20, 780 + 97], np.eye(3))
@@ -120,14 +120,14 @@ def loadEnv_wrs(camp=[4000, 0, 1700], lookatpos=[0, 0, 1000]):
     # env.addchangableobs(base.render, obstacle, [1080, -600 + 200 + 105 + 298 / 2, 780 + 97], np.eye(3))
 
     # phonix
-    phoxicam = cm.CollisionModel(objinit=Box(box_extents=[550, 200, 100]))
-    phoxicam.setColor(.32, .32, .3, 1)
-    env.addchangableobs(base.render, phoxicam, [650, 0, 1760], np.eye(3))
+    phoxicam = cm.CollisionModel(initor=Box(box_extents=[.55, .2, .1]))
+    phoxicam.set_rgba((.32, .32, .3, 1))
+    env.addchangableobs(base, phoxicam, [.65, 0, 1.76], np.eye(3))
 
     # desk
-    desk = cm.CollisionModel(objinit=Box(box_extents=[1080, 400, 760]))
-    desk.setColor(0.7, 0.7, 0.7, 1)
-    env.addchangableobs(base.render, desk, [540, 800, 380], np.eye(3))
+    desk = cm.CollisionModel(initor=Box(box_extents=[1.08, .4, .76]))
+    desk.set_rgba((0.7, 0.7, 0.7, 1))
+    env.addchangableobs(base, desk, [.54, .8, .38], np.eye(3))
 
     # penframe
     # penframe = cm.CollisionModel(objinit=Box(box_extents=[200, 320, 100]))
@@ -145,21 +145,12 @@ def __pcd_trans(pcd, amat):
 
 
 def loadUr3e(showrbt=False):
-    hndfa = rtqhe.HandFactory()
-    rgthnd = hndfa.genHand(ftsensoroffset=36)
-    lfthnd = hndfa.genHand(ftsensoroffset=36)
+    rbt = ur3edual.UR3EDual()
 
-    rbtball = robotball.Ur3EDualBall()
-    rbt = ur3edual.Ur3EDualRobot(rgthnd, lfthnd)
-
-    rbt.opengripper(armname="lft")
-    rbt.opengripper(armname="rgt")
-    rbtmg = robotmesh.Ur3EDualMesh()
-    rbt.goinitpose()
     if showrbt:
-        rbtmg.genmnp(rbt, toggleendcoord=False).reparentTo(base.render)
+        rbt.gen_meshmodel().attach_to(base)
 
-    return rbt, rbtmg, rbtball
+    return rbt
 
 
 def loadUr3ex(rbt):
@@ -169,16 +160,16 @@ def loadUr3ex(rbt):
 
 
 def loadObj(f_name, pos=(0, 0, 0), rot=(0, 0, 0), color=(1, 1, 1), transparency=0.5):
-    obj = cm.CollisionModel(objinit=os.path.join(config.ROOT, "obstacles", f_name))
-    obj.setPos(pos[0], pos[1], pos[2])
-    obj.setColor(color[0], color[1], color[2], transparency)
-    obj.setRPY(rot[0], rot[1], rot[2])
+    obj = cm.CollisionModel(initor=os.path.join(config.ROOT, "obstacles", f_name))
+    obj.set_pos(pos)
+    obj.set_rgba((color[0], color[1], color[2], transparency))
+    obj.set_rpy(rot[0], rot[1], rot[2])
 
     return obj
 
 
 def loadObjpcd(f_name, pos=(0, 0, 0), rot=(0, 0, 0), sample_num=100000, toggledebug=False):
-    obj = cm.CollisionModel(objinit=os.path.join(config.ROOT, "obstacles", f_name))
+    obj = cm.CollisionModel(initor=os.path.join(config.ROOT, "obstacles", f_name))
     rotmat4 = np.zeros([4, 4])
     rotmat4[:3, :3] = rm.rotmat_from_euler(rot[0], rot[1], rot[2], axes="sxyz")
     rotmat4[:3, 3] = pos
@@ -191,19 +182,19 @@ def loadObjpcd(f_name, pos=(0, 0, 0), rot=(0, 0, 0), sample_num=100000, togglede
         obj_surface = o3d_helper.nparray2o3dpcd(copy.deepcopy(obj_surface))
         obj_surface.paint_uniform_color([1, 0.706, 0])
         o3d.visualization.draw_geometries([obj_surface], window_name='loadObjpcd')
-        pcddnp = base.pg.genpointcloudnp(obj_surface_real)
+        pcddnp = gm.gen_pointcloud(obj_surface_real)
         pcddnp.reparentTo(base.render)
 
     return obj_surface_real
 
 
-def update(rbtmnp, motioncounter, robot, path, armname, robotmesh, robotball, task):
+def update(rbtmnp, motioncounter, robot, path, armname, task):
     if motioncounter[0] < len(path):
         if rbtmnp[0] is not None:
             rbtmnp[0].detachNode()
         pose = path[motioncounter[0]]
         robot.movearmfk(pose, armname)
-        rbtmnp[0] = robotmesh.genmnp(robot)
+        rbtmnp[0] = robot.gen_meshmodel()
         rbtmnp[0].reparentTo(base.render)
         motioncounter[0] += 1
     else:
@@ -214,7 +205,7 @@ def update(rbtmnp, motioncounter, robot, path, armname, robotmesh, robotball, ta
 def loadObjitem(f_name, pos=(0, 0, 0), rot=(0, 0, 0), sample_num=10000, type="box", filter_dir=None):
     if f_name[-3:] != 'stl':
         f_name += '.stl'
-    objcm = cm.CollisionModel(objinit=os.path.join(config.ROOT, "obstacles", f_name), type=type)
+    objcm = cm.CollisionModel(initor=os.path.join(config.ROOT, "obstacles", f_name), cdprimit_type=type)
     objcm.trimesh.remove_unreferenced_vertices()
     objcm.trimesh.remove_degenerate_faces()
     print('num of vs:', len(objcm.trimesh.vertices))
@@ -227,7 +218,7 @@ def loadObjitem(f_name, pos=(0, 0, 0), rot=(0, 0, 0), sample_num=10000, type="bo
     objmat4 = np.zeros([4, 4])
     objmat4[:3, :3] = rm.rotmat_from_euler(rot[0], rot[1], rot[2], axes="sxyz")
     objmat4[:3, 3] = pos
-    objcm.sethomomat(objmat4)
+    objcm.set_homomat(objmat4)
     print("---------------success load---------------")
 
     return item.Item(objcm=objcm, objmat4=objmat4, sample_num=sample_num, filter_dir=filter_dir)
@@ -235,13 +226,10 @@ def loadObjitem(f_name, pos=(0, 0, 0), rot=(0, 0, 0), sample_num=10000, type="bo
 
 if __name__ == '__main__':
     base, env = loadEnv_wrs()
-    objcm = loadObj('cylinder.stl', pos=(700, 0, 780), rot=(0, 0, 0), transparency=1)
-    objcm.reparentTo(base.render)
-    # loadObjpcd('obstacles/cylinder.stl', pos=(800, 400, 780), rot=(0, -90, 0))
-    # loadObjpcd('obstacles/pen.stl', pos=(800, 400, 785), rot=(0, -90, 0))
-    rbt, rbtmg, rbtball = loadUr3e()
-    # rbtmg.genmnp(rbt, togglejntscoord=True).reparentTo(base.render)
-    rbtmg.gensnp(rbt, togglejntscoord=True).reparentTo(base.render)
+    gm.gen_frame().attach_to(base)
+    # objcm = loadObj('cylinder.stl', pos=(.7, 0, .78), rot=(0, 0, 0), transparency=1)
+    # objcm.attach_to(base)
+    rbt = loadUr3e()
+    rbt.gen_meshmodel(toggle_tcpcs=True).attach_to(base)
 
-    # rbtball.showfullcn(rbt)
     base.run()

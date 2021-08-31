@@ -119,14 +119,14 @@ if __name__ == '__main__':
     set up env and param
     '''
     base, env = el.loadEnv_wrs()
-    rbt, rbtmg, rbtball = el.loadUr3e()
-    rbtx = el.loadUr3ex()
+    rbt = el.loadUr3e()
+    rbtx = el.loadUr3ex(rbt)
 
     phxi_host = "10.0.1.124:18300"
     phxi_client = phoxi.Phoxi(host=phxi_host)
 
-    motion_planner_lft = m_planner.MotionPlanner(env, rbt, rbtmg, rbtball, armname="lft")
-    motion_planner_x_lft = m_plannerx.MotionPlannerRbtX(env, rbt, rbtmg, rbt, rbtx, armname="lft")
+    motion_planner_lft = m_planner.MotionPlanner(env, rbt, armname="lft")
+    motion_planner_x_lft = m_plannerx.MotionPlannerRbtX(env, rbt, rbtx, armname="lft")
 
     '''
     Initialize camera
