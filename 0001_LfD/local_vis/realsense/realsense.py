@@ -28,12 +28,16 @@ class RealSense(object):
                                     depth_frame_format, depth_frame_framerate)
 
         self.__flag = False
+        self.intr = pickle.load(open("./realsense_intr.pkl", "rb"))
 
     def start(self):
         profile = self.__pipeline.start(self.__config)
+        intr = profile.get_stream(rs2.stream.color).as_video_stream_profile().get_intrinsics()
+        self.intr = {"width": intr.width, "height": intr.height, "fx": intr.fx, "fy": intr.fy,
+                "ppx": intr.ppx, "ppy": intr.ppy}
+        pickle.dump(intr, open("./realsense_intr.pkl", "wb"))
         depth_sensor = profile.get_device().first_depth_sensor()
         depth_scale = depth_sensor.get_depth_scale()
-
         clipping_distance_in_meters = 1  # 1 meter
         self.__clipping_distance = clipping_distance_in_meters / depth_scale
         self.__flag = True
@@ -110,9 +114,9 @@ class RealSense(object):
         return pickle.load(open(os.path.join(root_path, f_name), 'rb'))
 
     def depth2pcd(self, depthimg, toggledebug=False):
-        intr = pickle.load(open("./realsense_intr.pkl", "rb"))
-        pinhole_camera_intrinsic = o3d.camera.PinholeCameraIntrinsic(intr["width"], intr["height"],
-                                                                     intr["fx"], intr["fy"], intr["ppx"], intr["ppy"])
+        pinhole_camera_intrinsic = \
+            o3d.camera.PinholeCameraIntrinsic(self.intr["width"], self.intr["height"],
+                                              self.intr["fx"], self.intr["fy"], self.intr["ppx"], self.intr["ppy"])
         depthimg = o3d.geometry.Image(depthimg)
         pcd = o3d.geometry.PointCloud.create_from_depth_image(depthimg, pinhole_camera_intrinsic)
         if toggledebug:
@@ -121,18 +125,18 @@ class RealSense(object):
         return np.asarray(pcd.points)
 
     def rgbd2pcd(self, depthimg, rgbimg, toggledebug=False):
-        intr = pickle.load(open("./realsense_intr.pkl", "rb"))
-        pinhole_camera_intrinsic = o3d.camera.PinholeCameraIntrinsic(intr["width"], intr["height"],
-                                                                     intr["fx"], intr["fy"], intr["ppx"], intr["ppy"])
+        pinhole_camera_intrinsic = \
+            o3d.camera.PinholeCameraIntrinsic(self.intr["width"], self.intr["height"],
+                                              self.intr["fx"], self.intr["fy"], self.intr["ppx"], self.intr["ppy"])
         img_depth = o3d.geometry.Image(depthimg)
-        img_color = o3d.geometry.Image(rgbimg)
+        img_color = o3d.geometry.Image(cv2.cvtColor(rgbimg, cv2.COLOR_BGR2RGB))
         rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(img_color, img_depth, convert_rgb_to_intensity=False)
         pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd, pinhole_camera_intrinsic)
         pcd.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
         if toggledebug:
             o3d.visualization.draw_geometries([pcd])
             print(np.asarray(pcd.points))
-        return np.asarray(pcd.points)
+        return pcd
 
     def get_depth_colormap(self):
         self.start()
@@ -331,12 +335,43 @@ class RealSense(object):
 
         base.run()
 
+    def show_rgbdseq(self, folder_name, root_path=os.path.join(config.ROOT, "res/rs/seq/")):
+        pointcloud = o3d.geometry.PointCloud()
+        vis = o3d.visualization.Visualizer()
+        vis.create_window('PCD', width=1280, height=720)
+        depthimg_list, rgbimg_list = self.load_frame_seq(folder_name, root_path=root_path)
+        geom_added = False
+        i = 0
+        while True:
+            if i >= len(depthimg_list):
+                i = 0
+            pcd = self.rgbd2pcd(depthimg_list[i], rgbimg_list[i])
+            pointcloud.points = pcd.points
+            pointcloud.colors = pcd.colors
+            if geom_added == False:
+                vis.add_geometry(pointcloud)
+                geom_added = True
+
+            vis.update_geometry(pointcloud)
+            vis.poll_events()
+            vis.update_renderer()
+
+            cv2.imshow('rgb', rgbimg_list[i])
+            key = cv2.waitKey(1)
+            if key == ord('q'):
+                break
+            i += 1
+        cv2.destroyAllWindows()
+        vis.destroy_window()
+        del vis
+
 
 if __name__ == '__main__':
     realsense = RealSense()
     # realsense.dump_frameseq("tst", time_interval=0)
     # realsense.show_frameseq("osaka")
-    realsense.show_pcdseq("osaka")
+    # realsense.show_pcdseq("osaka")
+    realsense.show_rgbdseq("osaka")
     # realsense.dump_bag(f_name="tst.bag", time_limit=5)
     # realsense.convert_bag2frameseq(f_name="tst.bag", time_interval=.1)
     # realsense.view()

@@ -40,11 +40,11 @@ def convert_depth2pcd(depthnarray):
     pcd[:, 0] = np.reshape(mesh_x, -1)
     pcd[:, 1] = np.reshape(mesh_y, -1)
     pcd[:, 2] = np.reshape(z_, -1)
-    return np.delete(pcd, np.where(pcd[:, 2] == 0)[0], axis=0)/1000
+    return np.delete(pcd, np.where(pcd[:, 2] == 0)[0], axis=0) / 1000
 
 
-def convert_depth2pcd_rs(depthnarray, toggledebug=False):
-    intr = pickle.load(open(os.path.join(config.ROOT, "camcalib/data", "realsense_intr.pkl"), "rb"))
+def convert_depth2pcd_o3d(depthnarray, intr_f_name="realsense_intr.pkl", toggledebug=False):
+    intr = pickle.load(open(os.path.join(config.ROOT, "camcalib/data", intr_f_name), "rb"))
     pinhole_camera_intrinsic = o3d.camera.PinholeCameraIntrinsic(intr["width"], intr["height"],
                                                                  intr["fx"], intr["fy"], intr["ppx"], intr["ppy"])
     depthnarray = np.array(depthnarray, dtype=np.uint16)

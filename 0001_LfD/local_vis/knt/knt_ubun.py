@@ -11,6 +11,7 @@ import os
 import config_LfD as config
 import shutil
 import utils.vision_utils as vu
+import open3d as o3d
 
 
 def dump_frameseq(folder_name, time_interval=1.0, root_path=os.path.join(config.ROOT, "res/knt/")):
@@ -104,8 +105,57 @@ def show_pcdseq(folder_name, root_path=os.path.join(config.ROOT, "res/knt/")):
     base.run()
 
 
+def show_rgbdseq(folder_name, root_path=os.path.join(config.ROOT, "res/knt/")):
+    depthimg_list, rgbaimg_list, pcd_list = load_frame_seq(folder_name, root_path=root_path)
+    pointcloud = o3d.geometry.PointCloud()
+    vis = o3d.visualization.Visualizer()
+    vis.create_window('PCD', width=1280, height=720)
+    try:
+        knt = ktb.Kinect()
+        intr = knt.intrinsic_parameters
+        intr = {"width": 512, "height": 424, "fx": intr.fx, "fy": intr.fy, "cx": intr.cx, "cy": intr.cy}
+        pickle.dump(intr, open("./knt_intr.pkl", "wb"))
+        print(intr)
+    except:
+        intr = pickle.load(open("./knt_intr.pkl", "rb"))
+    pinhole_camera_intrinsic = \
+        o3d.camera.PinholeCameraIntrinsic(512, 424, intr["fx"], intr["fy"], intr["cx"], intr["cy"])
+    geom_added = False
+    print(f"num of frames: {len(pcd_list)}")
+    i = 0
+    while True:
+        if i >= len(depthimg_list):
+            i = 0
+        img_depth = o3d.geometry.Image(depthimg_list[i])
+        img_color = o3d.geometry.Image(cv2.cvtColor(rgbaimg_list[i], cv2.COLOR_BGR2RGB))
+        rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(img_color, img_depth, convert_rgb_to_intensity=False)
+
+        pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd, pinhole_camera_intrinsic)
+        pcd.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
+        pointcloud.points = pcd.points
+        pointcloud.colors = pcd.colors
+
+        if geom_added == False:
+            vis.add_geometry(pointcloud)
+            geom_added = True
+
+        vis.update_geometry(pointcloud)
+        vis.poll_events()
+        vis.update_renderer()
+
+        cv2.imshow('rgb', rgbaimg_list[i])
+        key = cv2.waitKey(1)
+        if key == ord('q'):
+            break
+        i += 1
+    cv2.destroyAllWindows()
+    vis.destroy_window()
+    del vis
+
+
 if __name__ == '__main__':
     folder_name = "sakura"
     # dump_frameseq(folder_name, time_interval=0)
-    show_frameseq(folder_name)
+    # show_frameseq(folder_name)
     # show_pcdseq(folder_name)
+    show_rgbdseq(folder_name)

@@ -108,12 +108,11 @@ class MyApp(ShowBase):
 
 
 def convert_depth2pcd(depthnarray):
-    print(depthnarray.shape)
     h, w, _ = depthnarray.shape
     y_ = np.linspace(1, h, h)
     x_ = np.linspace(1, w, w)
     mesh_x, mesh_y = np.meshgrid(x_, y_)
-    z_ = depthnarray.flatten()*1000
+    z_ = depthnarray.flatten() * 1000
     pcd = np.zeros((np.size(mesh_x), 3))
     pcd[:, 0] = np.reshape(mesh_x, -1)
     pcd[:, 1] = np.reshape(mesh_y, -1)
@@ -141,8 +140,8 @@ if __name__ == '__main__':
         depth_image = app.get_camera_depth_image()
         pcd = convert_depth2pcd(depth_image)
         pcd = pcd / 100
-        pickle.dump(pcd, open('tst.pkl', 'wb'))
-        break
+        # pickle.dump(pcd, open('tst.pkl', 'wb'))
+        # break
         show_rgbd_image(image, depth_image)
 
     end_time = time.time()

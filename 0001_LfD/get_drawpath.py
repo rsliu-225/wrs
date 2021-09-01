@@ -334,7 +334,7 @@ if __name__ == '__main__':
 
     depthimglist, rgbimg_list = realsense.load_frame_seq("osaka")
     depthimg_bg = depthimglist[5]
-    pcd_bg = vu.convert_depth2pcd_rs(depthimg_bg)
+    pcd_bg = vu.convert_depth2pcd_o3d(depthimg_bg)
     pcdu.show_pcd(pcd_bg, rgba=(1, 1, 1, 1))
     normal, d = pcdu.get_plane(pcd_bg, dist_threshold=2, toggledebug=True)
     # print(normal, d)
@@ -353,7 +353,7 @@ if __name__ == '__main__':
             print("no target mask!")
             continue
         depthimg = np.asarray(mask[0]) * depthimglist[i]
-        pcd = vu.convert_depth2pcd_rs(depthimg, toggledebug=False)
+        pcd = vu.convert_depth2pcd_o3d(depthimg, toggledebug=False)
         if len(pcd) == 0:
             print("no pcd generated!")
             continue
