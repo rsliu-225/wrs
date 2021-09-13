@@ -7,18 +7,18 @@ import basis.robot_math as rm
 
 
 class RobotHelper(object):
-    def __init__(self, env, rbt, armname="lft"):
+    def __init__(self, env, rbt, armname="lft_arm"):
         self.rbt = rbt
         self.env = env
         self.obscmlist = env.getstationaryobslist() + env.getchangableobslist()
         self.armname = armname
 
-        if self.armname == "lft":
+        if self.armname == "lft_arm":
             self.initjnts = self.rbt.initlftjnts
-            self.armlj = self.rbt.lftarm
+            self.armlj = self.rbt.lft_arm
         else:
             self.initjnts = self.rbt.initrgtjnts
-            self.armlj = self.rbt.rgtarm
+            self.armlj = self.rbt.rgt_arm
 
     def jacobian(self, releemat4=np.eye(4), scale=1.0):
         """
@@ -95,12 +95,12 @@ class RobotHelper(object):
     def is_selfcollided(self, armjnts=None):
         if armjnts is not None:
             self.rbt.movearmfk(armjnts, self.armname)
-        return self.cdchecker.isRobotCollided(self.rbt, self.obscmlist, self.armname)
+        return self.rbt.is_collided(self.rbt, self.obscmlist, self.armname)
 
     def is_objcollided(self, obj, armjnts=None):
         if armjnts is not None:
             self.rbt.movearmfk(armjnts, self.armname)
-        return self.cdchecker.isObjectsOthersCollided([obj], self.rbt, self.armname, self.obscmlist)
+        return self.rbt.is_collided([obj], self.rbt, self.armname, self.obscmlist)
 
     def goto_armjnts(self, armjnts):
         self.rbt.movearmfk(armjnts, self.armname)

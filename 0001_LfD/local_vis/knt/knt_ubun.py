@@ -24,14 +24,15 @@ def dump_frameseq(folder_name, time_interval=1.0, root_path=os.path.join(config.
         os.makedirs(dump_path)
 
     i = 0
+    time.sleep(3)
     while True:
         # Specify as many types as you want here
-        rgbaimg = k.get_frame(ktb.COLOR)
+        rgbimg = k.get_frame(ktb.COLOR)
         depthimg = k.get_frame(ktb.DEPTH)
         pcd = k.get_ptcld()
-        cv2.imshow('frame', rgbaimg)
+        cv2.imshow('frame', rgbimg)
         key = cv2.waitKey(1)
-        pickle.dump([depthimg, rgbaimg, pcd], open(os.path.join(dump_path, f"{str(i).zfill(4)}.pkl"), 'wb'))
+        pickle.dump([depthimg, rgbimg, pcd], open(os.path.join(dump_path, f"{str(i).zfill(4)}.pkl"), 'wb'))
         print("Captured!", i)
         i += 1
         if time_interval > 0:
@@ -144,7 +145,7 @@ def show_rgbdseq(folder_name, root_path=os.path.join(config.ROOT, "res/knt/")):
         vis.update_renderer()
 
         cv2.imshow('rgb', rgbaimg_list[i])
-        key = cv2.waitKey(1)
+        key = cv2.waitKey(10)
         if key == ord('q'):
             break
         i += 1
@@ -155,7 +156,7 @@ def show_rgbdseq(folder_name, root_path=os.path.join(config.ROOT, "res/knt/")):
 
 if __name__ == '__main__':
     folder_name = "sakura"
-    # dump_frameseq(folder_name, time_interval=0)
+    dump_frameseq(folder_name, time_interval=0)
     # show_frameseq(folder_name)
     # show_pcdseq(folder_name)
     show_rgbdseq(folder_name)

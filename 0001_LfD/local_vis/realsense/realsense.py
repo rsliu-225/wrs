@@ -28,14 +28,14 @@ class RealSense(object):
                                     depth_frame_format, depth_frame_framerate)
 
         self.__flag = False
-        self.intr = pickle.load(open("./realsense_intr.pkl", "rb"))
+        self.intr = pickle.load(open(f"{config.ROOT}/local_vis/realsense/realsense_intr.pkl", "rb"))
 
     def start(self):
         profile = self.__pipeline.start(self.__config)
         intr = profile.get_stream(rs2.stream.color).as_video_stream_profile().get_intrinsics()
+        # pickle.dump(intr, open(f"{config.ROOT}/local_vis/realsense/realsense_intr.pkl", "wb"))
         self.intr = {"width": intr.width, "height": intr.height, "fx": intr.fx, "fy": intr.fy,
                 "ppx": intr.ppx, "ppy": intr.ppy}
-        pickle.dump(intr, open("./realsense_intr.pkl", "wb"))
         depth_sensor = profile.get_device().first_depth_sensor()
         depth_scale = depth_sensor.get_depth_scale()
         clipping_distance_in_meters = 1  # 1 meter
@@ -101,6 +101,8 @@ class RealSense(object):
         depthimg_list = []
         rgbimg_list = []
         for f in sorted(os.listdir(os.path.join(root_path, folder_name))):
+            if f[-3:] != "pkl":
+                continue
             tmp = pickle.load(open(os.path.join(root_path, folder_name, f), 'rb'))
             if tmp[0].shape[-1] == 3:
                 depthimg_list.append(tmp[1])
@@ -335,6 +337,15 @@ class RealSense(object):
 
         base.run()
 
+    def scale_depth_img(self, depth_img, scale_max=255.0, range=(1, 1000)):
+        mask = np.logical_or(depth_img < range[0], depth_img > range[1])
+        # print(depth_img.min(), depth_img.max())
+        scaled_depth_image = depth_img
+        scaled_depth_image[mask] = 0
+        scaled_depth_image[~mask] = np.round(scale_max * (depth_img[~mask] - range[0]) / (range[1] - range[0] - 1.0))
+        scaled_depth_image = scaled_depth_image.astype(np.uint8)
+        return scaled_depth_image
+
     def show_rgbdseq(self, folder_name, root_path=os.path.join(config.ROOT, "res/rs/seq/")):
         pointcloud = o3d.geometry.PointCloud()
         vis = o3d.visualization.Visualizer()
@@ -355,12 +366,13 @@ class RealSense(object):
             vis.update_geometry(pointcloud)
             vis.poll_events()
             vis.update_renderer()
-
+            cv2.imshow("depth", self.scale_depth_img(depthimg_list[i]))
             cv2.imshow('rgb', rgbimg_list[i])
             key = cv2.waitKey(1)
             if key == ord('q'):
                 break
             i += 1
+            time.sleep(.1)
         cv2.destroyAllWindows()
         vis.destroy_window()
         del vis
@@ -368,10 +380,10 @@ class RealSense(object):
 
 if __name__ == '__main__':
     realsense = RealSense()
-    # realsense.dump_frameseq("tst", time_interval=0)
-    # realsense.show_frameseq("osaka")
+    # realsense.dump_frameseq("recons", time_interval=0)
+    # realsense.show_frameseq("recons")
     # realsense.show_pcdseq("osaka")
-    realsense.show_rgbdseq("osaka")
+    # realsense.show_rgbdseq("recons")
     # realsense.dump_bag(f_name="tst.bag", time_limit=5)
     # realsense.convert_bag2frameseq(f_name="tst.bag", time_interval=.1)
     # realsense.view()
