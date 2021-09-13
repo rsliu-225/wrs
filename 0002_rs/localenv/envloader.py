@@ -7,7 +7,7 @@ import open3d as o3d
 import config
 import modeling.collision_model as cm
 import modeling.geometric_model as gm
-import localenv.item as item
+import item as item
 import robot_sim.end_effectors.grippers.robotiqhe.robotiqhe as rtqhe
 import visualization.panda.world as pc
 import robot_con.ur.ur3e_dual_x as ur3ex
@@ -16,8 +16,8 @@ import basis.trimesh.sample as ts
 import basis.robot_math as rm
 import basis.o3dhelper as o3d_helper
 from basis.trimesh.primitives import Box
-import utils.pcd_utils as pcdu
-import utils.comformalmapping_utils as cu
+# import utils.pcd_utils as pcdu
+# import utils.comformalmapping_utils as cu
 
 
 class Env_wrs(object):
@@ -231,5 +231,13 @@ if __name__ == '__main__':
     # objcm.attach_to(base)
     rbt = loadUr3e()
     rbt.gen_meshmodel(toggle_tcpcs=True).attach_to(base)
+
+    m_mat = rbt.manipulability_axmat()
+    tcp_pos, _ = rbt.get_gl_tcp("lft_arm")
+
+    gm.gen_arrow(spos=tcp_pos, epos=tcp_pos + m_mat[:, 0]).attach_to(base)
+    gm.gen_arrow(spos=tcp_pos, epos=tcp_pos + m_mat[:, 1]).attach_to(base)
+    gm.gen_arrow(spos=tcp_pos, epos=tcp_pos + m_mat[:, 2]).attach_to(base)
+    gm.gen_ellipsoid(pos=tcp_pos, axmat=m_mat).attach_to(base)
 
     base.run()
