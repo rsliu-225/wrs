@@ -431,14 +431,23 @@ def get_nrmls(pcd, camera_location=(800, -200, 1800), toggledebug=False):
     return pcd_nrmls
 
 
-def get_plane(pcd, dist_threshold=0.2, toggledebug=False):
+def get_plane(pcd, dist_threshold=0.0002, toggledebug=False):
     pcd_o3d = o3d_helper.nparray2o3dpcd(pcd)
-    plane, inliers = pcd_o3d.segment_plane(distance_threshold=dist_threshold, ransac_n=3, num_iterations=1000)
+    plane, inliers = pcd_o3d.segment_plane(distance_threshold=dist_threshold, ransac_n=30, num_iterations=100)
     plane_pcd = pcd[inliers]
     center = get_pcd_center(plane_pcd)
     if toggledebug:
-        show_pcd(pcd[inliers], rgba=(1, 0, 0, 1))
-        gm.gen_arrow(spos=center, epos=plane[:3] * plane[3], rgba=(1, 0, 0, 1))
+        show_pcd(pcd[inliers], rgba=(1, 1, 0, 1))
+        gm.gen_arrow(spos=center, epos=plane[:3] * plane[3], rgba=(1, 0, 0, 1)).attach_to(base)
+
+        pt_direction = rm.orthogonal_vector(plane[:3], toggle_unit=True)
+        tmp_direction = np.cross(plane[:3], pt_direction)
+        plane_rotmat = np.column_stack((pt_direction, tmp_direction, plane[:3]))
+        homomat = np.eye(4)
+        homomat[:3, :3] = plane_rotmat
+        homomat[:3, 3] = center
+        gm.gen_box(np.array([.2, .2, .001]), homomat=homomat, rgba=[1, 1, 0, .3]).attach_to(base)
+
 
     return plane[:3], plane[3]
 

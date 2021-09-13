@@ -16,29 +16,37 @@ import utils.vision_utils as vu
 import basis.robot_math as rm
 import basis.o3dhelper as o3dhelper
 from mask_rcnn_seg.inference import MaskRcnnPredictor
-import modeling.geometric_model as gm
 
 
-def get_depth_diff(depth_img_bg, depth_img, threshold=10):
+def get_depth_diff(depth_img_bg, depth_img, threshold=2):
     diff = depth_img.astype(int) - depth_img_bg.astype(int)
     mask = np.abs(diff) > threshold
     return depth_img * mask
 
 
-def get_depth_diff_list(depth_img_list, rgb_img_list, threshold=10, toggledebug=False):
-    depth_bg = scale_depth_img(depth_img_list[0])
+def flist_remove_bg(depthimg_list, rgb_img_list, threshold=10, bg_index=0, toggledebug=False, find_same=True):
+    depth_bg = scale_depth_img(depthimg_list[bg_index])
     mask_list = []
+    depthimg_bg = depthimg_list[bg_index]
+    pcd_bg = realsense.depth2pcd(depthimg_bg)
+    pcdu.show_pcd(pcd_bg, rgba=(1, 1, 1, .1))
+    base.run()
 
-    for inx, depth_img in enumerate(depth_img_list[1:]):
+    for inx, depth_img in enumerate(depthimg_list):
+        if inx == bg_index:
+            continue
         depth_img = scale_depth_img(depth_img)
         diff = depth_img.astype(int) - depth_bg.astype(int)
-        mask = np.abs(diff) < threshold
+        if find_same:
+            mask = np.abs(diff) < threshold
+        else:
+            mask = np.abs(diff) > threshold
         mask_list.append(mask)
         if toggledebug:
             # cv2.imshow("", mask.astype(np.uint8)*255)
             # cv2.waitKey(0)
-            mask = np.repeat(mask[:, :, np.newaxis], 3, axis=2)
-            rgb_img = rgb_img_list[inx + 1] * mask
+            mask_show = np.repeat(mask[:, :, np.newaxis], 3, axis=2)
+            rgb_img = rgb_img_list[inx + 1] * mask_show
             show_img_hstack(rgb_img, vu.gray23channel(depth_img))
 
     return mask_list
@@ -48,7 +56,7 @@ def show_rgb_diff_list(depth_img_list, rgb_img_list, threshold=20, toggledebug=F
     stroke_mask = get_strokes_mask(rgb_img_list[0], rgb_img_list[-1], threshold=threshold, toggledebug=toggledebug)
     rgbimg_bg = rgb_img_list[0]
     grayimg_bg = vu.rgb2gray(rgbimg_bg)
-    depth_mask_list = get_depth_diff_list(depth_img_list, rgb_img_list)
+    depth_mask_list = flist_remove_bg(depth_img_list, rgb_img_list)
     for inx, rgb_img in enumerate(rgb_img_list[1:]):
         diff_gray = np.abs(vu.rgb2gray(rgb_img).astype(int) - grayimg_bg.astype(int)).astype(np.uint8)
         current_mask = diff_gray > threshold
@@ -212,9 +220,9 @@ def mask2narray(mask):
     return np.asarray(p_list)
 
 
-def get_max_cluster(pts):
+def get_max_cluster(pts,eps=.003):
     pts_narray = np.array(pts)
-    db = DBSCAN(eps=3, min_samples=2).fit(pts)
+    db = DBSCAN(eps=eps, min_samples=2).fit(pts)
     core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
     core_samples_mask[db.core_sample_indices_] = True
     labels = db.labels_
@@ -343,7 +351,7 @@ if __name__ == '__main__':
     # depthimg = get_depth_diff(depthimg_list[0], depthimg_list[5])
 
     predictor = MaskRcnnPredictor()
-    label = 79
+    label = 0
     stroke = []
     for i, im in tqdm(enumerate(rgbimg_list)):
         print(f"---------------image {i}---------------")

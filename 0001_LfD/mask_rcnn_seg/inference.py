@@ -2,6 +2,7 @@ import itertools
 import os
 import pickle
 import config
+import numpy as np
 
 import cv2
 from detectron2 import model_zoo
@@ -75,7 +76,7 @@ if __name__ == '__main__':
     # data_f_name = config.ROOT + "/img/realsense/seq/A_light.pkl"
     # data = pickle.load(open(data_f_name, 'rb'))
     realsense = rs.RealSense()
-    folder_name = "osaka"
+    folder_name = "recons"
     depthimglist, rgbimg_list = realsense.load_frame_seq(folder_name)
 
     label = None
@@ -84,5 +85,10 @@ if __name__ == '__main__':
     predictor = MaskRcnnPredictor()
     for i, im in tqdm(enumerate(rgbimg_list)):
         predictions = predictor.predict(im, label)
+        print(predictions.get("pred_masks").numpy())
+        cv2.imshow("mask", predictions.get("pred_masks").numpy()[0])
+
         visualized_pred = predictor.visualize_prediction(im, predictions)
+        cv2.imshow("prediction", visualized_pred)
+        cv2.waitKey(0)
         cv2.imwrite(f'{INFERENCE_OUTPUT_DIR}/{folder_name}/{str(i).zfill(4)}.png', visualized_pred)
