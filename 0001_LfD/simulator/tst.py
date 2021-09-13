@@ -6,10 +6,92 @@ from panda3d.core import FrameBufferProperties, WindowProperties
 from panda3d.core import GraphicsPipe, GraphicsOutput
 from panda3d.core import Texture
 from panda3d.core import loadPrcFileData
+import os
+import modeling.collision_model as cm
 
 loadPrcFileData('', 'show-frame-rate-meter true')
 loadPrcFileData('', 'sync-video 0')
 
+class Env_wrs(object):
+    def __init__(self, boundingradius=.001, betransparent=False):
+        """
+        load obstacles model
+        separated by category
+
+        :param base:
+        author: weiwei
+        date: 20181205
+        """
+
+        self.__this_dir, _ = os.path.split(__file__)
+
+        # table
+        self.__tablepath = os.path.join(self.__this_dir, "../obstacles", "ur3edtable.stl")
+        self.__tablecm = cm.CollisionModel(self.__tablepath, expand_radius=boundingradius, btransparency=betransparent)
+        self.__tablecm.set_pos([.18, 0, 0])
+        self.__tablecm.set_rgba([.32, .32, .3, 1.0])
+
+        self.__battached = False
+        self.__changableobslist = []
+
+    def reparentTo(self, nodepath):
+        if not self.__battached:
+            # table
+            self.__tablecm.attach_to(nodepath)
+            # housing
+            self.__battached = True
+
+    def loadobj(self, name):
+        self.__objpath = os.path.join(self.__this_dir, "../../0000_srl/objects", name)
+        self.__objcm = cm.CollisionModel(self.__objpath, cdprimit_type="ball")
+        return self.__objcm
+
+    def getstationaryobslist(self):
+        """
+        generate the collision model for stationary obstacles
+
+        :return:
+
+        author: weiwei
+        date: 20180811
+        """
+
+        stationaryobslist = [self.__tablecm]
+        return stationaryobslist
+
+    def getchangableobslist(self):
+        """
+        get the collision model for changable obstacles
+
+        :return:
+
+        author: weiwei
+        date: 20190313
+        """
+        return self.__changableobslist
+
+    def addchangableobs(self, nodepath, objcm, pos, rot):
+        """
+
+        :param objcm: CollisionModel
+        :param pos: nparray 1x3
+        :param rot: nparray 3x3
+        :return:
+
+        author: weiwei
+        date: 20190313
+        """
+
+        self.__changableobslist.append(objcm)
+        objcm.attach_to(nodepath)
+        objcm.setMat(base.pg.npToMat4(rot, pos))
+
+    def addchangableobscm(self, objcm):
+        self.__changableobslist.append(objcm)
+
+    def removechangableobs(self, objcm):
+        if objcm in self.__changableobslist:
+            objcm.remove()
 
 def show_rgbd_image(image, depth_image, delay=1, depth_offset=0.0, depth_scale=1.0):
     if depth_image.dtype != np.uint8:
@@ -41,8 +123,12 @@ class MyApp(ShowBase):
         ShowBase.__init__(self)
 
         # Load the environment model.
+        self.scene = Env_wrs()
+        self.scene.reparentTo(self.render)
+        print(self.scene)
+
+        base.run()
         self.scene = self.loader.loadModel("models/environment")
-        # Reparent the model to render.
         self.scene.reparentTo(self.render)
         # Apply scale and position transforms on the model.
         self.scene.setScale(0.25, 0.25, 0.25)
@@ -140,6 +226,7 @@ if __name__ == '__main__':
         depth_image = app.get_camera_depth_image()
         pcd = convert_depth2pcd(depth_image)
         pcd = pcd / 100
+
         # pickle.dump(pcd, open('tst.pkl', 'wb'))
         # break
         show_rgbd_image(image, depth_image)
