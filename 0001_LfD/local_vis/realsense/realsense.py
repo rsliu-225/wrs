@@ -13,6 +13,7 @@ import detection_utils as du
 import visualization.panda.world as wd
 import modeling.geometric_model as gm
 import open3d as o3d
+import utils.pcd_utils as pcdu
 
 
 class RealSense(object):
@@ -155,9 +156,9 @@ class RealSense(object):
         return depth_img, rgb_img
 
     def dump_frame(self, f_name, root_path=os.path.join(config.DATA_PATH, 'raw_img/rs/sgl/')):
-        depth_img, rgb_img = self.get_frame()
         if not os.path.exists(root_path):
             os.makedirs(root_path)
+        depth_img, rgb_img = self.get_frame()
         pickle.dump([depth_img, rgb_img], open(os.path.join(root_path, f_name), 'wb'))
 
     def dump_bag(self, f_name, root_path=os.path.join(config.DATA_PATH, 'raw_img/rs/bag/')):
@@ -193,7 +194,8 @@ class RealSense(object):
         print('--------------------done--------------------')
         self.stop()
 
-    def dump_frameseq(self, folder_name, time_interval=1.0, root_path=os.path.join(config.ROOT, 'raw_img/rs/seq/')):
+    def dump_frameseq(self, folder_name, time_interval=1.0,
+                      root_path=os.path.join(config.DATA_PATH, 'raw_img/rs/seq/')):
         dump_path = os.path.join(root_path, folder_name)
         if not os.path.exists(dump_path):
             os.makedirs(dump_path)
@@ -283,31 +285,14 @@ class RealSense(object):
             cv2.imshow('', imgs)
             cv2.waitKey(0)
 
-    def show_pcdseq(self, depthimg_list):
-        def __update(pcldnp, counter, pcd_list, task):
-            if counter[0] >= len(pcd_list):
-                counter[0] = 0
-            if counter[0] < len(pcd_list):
-                if pcldnp[0] is not None:
-                    pcldnp[0].detach()
-                pcd = pcd_list[counter[0]]
-                pcldnp[0] = gm.gen_pointcloud(pcd, pntsize=1)
-                pcldnp[0].attach_to(base)
-                counter[0] += 1
-            else:
-                counter[0] = 0
-            return task.again
-
-        counter = [0]
-        pcldnp = [None]
-        base = wd.World(cam_pos=[.2, .2, -1.8], lookat_pos=[.2, .2, 0])
+    def show_pcdseq(self, depthimg_list, rgba_list=None):
         pcd_list = []
         for i in range(len(depthimg_list)):
             pcd_list.append(self.depth2pcd(depthimg_list[i]))
-        print(f'num of frames: {len(pcd_list)}')
-        taskMgr.doMethodLater(0.1, __update, 'update', extraArgs=[pcldnp, counter, pcd_list], appendTask=True)
-
-        base.run()
+        if rgba_list is None:
+            pcdu.show_pcdseq(pcd_list)
+        else:
+            pcdu.show_pcdseq_withrgb(pcd_list, rgba_list)
 
     def scale_depth_img(self, depth_img, scale_max=255.0, range=(1, 1000)):
         mask = np.logical_or(depth_img < range[0], depth_img > range[1])
@@ -330,6 +315,7 @@ class RealSense(object):
             pcd = self.rgbd2pcd(depthimg_list[i], rgbimg_list[i])
             pointcloud.points = pcd.points
             pointcloud.colors = pcd.colors
+
             if geom_added == False:
                 vis.add_geometry(pointcloud)
                 geom_added = True
@@ -337,8 +323,10 @@ class RealSense(object):
             vis.update_geometry(pointcloud)
             vis.poll_events()
             vis.update_renderer()
-            cv2.imshow('depth', self.scale_depth_img(depthimg_list[i]))
-            cv2.imshow('rgb', rgbimg_list[i])
+            # cv2.imshow('depth', self.scale_depth_img(depthimg_list[i]))
+            # cv2.imshow('rgb', rgbimg_list[i])
+            du.show_img_hstack(rgbimg_list[i], vu.gray23channel(self.scale_depth_img(depthimg_list[i])))
+
             key = cv2.waitKey(1)
             if key == ord('q'):
                 break

@@ -26,6 +26,7 @@ import config_LfD as config
 def load_frame_seq(folder_name, root_path=os.path.join(config.DATA_PATH, 'raw_img/rs/seq/')):
     depthimg_list = []
     rgbimg_list = []
+    pcd_list = []
     for f in sorted(os.listdir(os.path.join(root_path, folder_name))):
         if f[-3:] != 'pkl':
             continue
@@ -36,7 +37,9 @@ def load_frame_seq(folder_name, root_path=os.path.join(config.DATA_PATH, 'raw_im
         else:
             depthimg_list.append(tmp[0])
             rgbimg_list.append(tmp[1])
-    return [depthimg_list, rgbimg_list]
+        if len(tmp) == 3:
+            pcd_list.append(tmp[2])
+    return [depthimg_list, rgbimg_list, pcd_list]
 
 
 def load_frame(f_name, root_path=os.path.join(config.DATA_PATH, 'rs/sgl/')):
@@ -89,12 +92,12 @@ def flist_remove_bg(depthimg_list, rgb_img_list, threshold=10, bg_index=0, toggl
     return mask_list
 
 
-def show_rgb_diff_list(depth_img_list, rgb_img_list, threshold=20, toggledebug=False):
-    stroke_mask = get_strokes_mask(rgb_img_list[0], rgb_img_list[-1], threshold=threshold, toggledebug=toggledebug)
-    rgbimg_bg = rgb_img_list[0]
+def show_rgb_diff_list(depthimg_list, rgbimg_list, threshold=20, toggledebug=False):
+    stroke_mask = get_strokes_mask(rgbimg_list[0], rgbimg_list[-1], threshold=threshold, toggledebug=toggledebug)
+    rgbimg_bg = rgbimg_list[0]
     grayimg_bg = vu.rgb2gray(rgbimg_bg)
-    depth_mask_list = flist_remove_bg(depth_img_list, rgb_img_list)
-    for inx, rgb_img in enumerate(rgb_img_list[1:]):
+    depth_mask_list = flist_remove_bg(depthimg_list, rgbimg_list)
+    for inx, rgb_img in enumerate(rgbimg_list[1:]):
         diff_gray = np.abs(vu.rgb2gray(rgb_img).astype(int) - grayimg_bg.astype(int)).astype(np.uint8)
         current_mask = diff_gray > threshold
         mask = np.logical_and(stroke_mask, current_mask)
@@ -116,10 +119,10 @@ def unpooling_2d(x, ksize):
     return x
 
 
-def max_pooling_2d(depth_img_list, rgb_img_list):
-    depth_bg = depth_img_list[0].astype(float)
+def max_pooling_2d(depthimg_list, rgbimg_list):
+    depth_bg = depthimg_list[0].astype(float)
 
-    for inx, depth_img in enumerate(depth_img_list[1:]):
+    for inx, depth_img in enumerate(depthimg_list[1:]):
         depth_img = depth_img.astype(float)
         depth_bg_pooled = F.max_pooling_2d(depth_bg[np.newaxis, np.newaxis, :, :], ksize=(4, 4))
         depth_img_pooled = F.max_pooling_2d(depth_img[np.newaxis, np.newaxis, :, :], ksize=(4, 4))
@@ -130,7 +133,7 @@ def max_pooling_2d(depth_img_list, rgb_img_list):
         print(diff.shape)
         mask = np.abs(diff) < 20
         mask = np.repeat(mask[:, :, np.newaxis], 3, axis=2)
-        rgb_img = rgb_img_list[inx + 1] * mask
+        rgb_img = rgbimg_list[inx + 1] * mask
         cv2.imshow("", rgb_img)
         cv2.waitKey(0)
 
@@ -307,7 +310,7 @@ def get_closest_cluster(pts, seed, eps=.003, min_pts=50):
                 min_dist = dist
                 res = cluster
                 mask = [class_member_mask & core_samples_mask]
-    print('dist:',min_dist)
+    print('dist:', min_dist)
 
     return res, mask
 
@@ -404,7 +407,7 @@ def get_strokes_from_img(f_name):
     return stroke_list
 
 
-def get_component_by_seed(depthnparray_float32, seed=[0, 0], epdelta=.005, minsize=300):
+def get_component_by_rg(depthnparray_float32, seed=[0, 0], epdelta=.005, minsize=300):
     """
     finds the next connected components whose area is larger than minsize
     region grow using the given seed
@@ -415,6 +418,79 @@ def get_component_by_seed(depthnparray_float32, seed=[0, 0], epdelta=.005, minsi
     :param minsize:
     :return:
     """
+
+    def __region_growing(depthimg, seed, epdelta):
+        print(depthimg)
+        cv2.imshow("", depthimg)
+        cv2.waitKey(0)
+        list = []
+        outimg = np.zeros_like(depthimg).astype(dtype=np.uint8)
+        list.append((seed[0], seed[1]))
+        __processed = np.zeros_like(depthimg).astype(dtype=np.uint8)
+        while len(list) > 0:
+            pix = list[0]
+            outimg[pix[0], pix[1]] = 255
+            for coord in __get8n(pix[0], pix[1], depthimg.shape, __processed):
+                newvalue = int(depthimg[coord[0], coord[1]][0])
+                cmpvalue = int(depthimg[pix[0], pix[1]][0])
+                if depthimg[coord[0], coord[1]] != 0 and abs(newvalue - cmpvalue) < epdelta:
+                    outimg[coord[0], coord[1]] = 255
+                    if __processed[coord[0], coord[1]] == 0:
+                        list.append(coord)
+                    __processed[coord[0], coord[1]] = 1
+                    # if not coord in processed:
+                    #     list.append(coord)
+                    # processed.append(coord)
+            list.pop(0)
+            cv2.imshow("progress", outimg)
+            cv2.waitKey(0)
+        return outimg
+
+    def __get8n(x, y, shape, processed):
+        out = []
+        maxx = shape[1] - 1
+        maxy = shape[0] - 1
+        # top left
+        outx = min(max(x - 1, 0), maxx)
+        outy = min(max(y - 1, 0), maxy)
+        if processed[outx, outy] == 0:
+            out.append((outx, outy))
+        # top center
+        outx = x
+        outy = min(max(y - 1, 0), maxy)
+        if processed[outx, outy] == 0:
+            out.append((outx, outy))
+        # top right
+        outx = min(max(x + 1, 0), maxx)
+        outy = min(max(y - 1, 0), maxy)
+        if processed[outx, outy] == 0:
+            out.append((outx, outy))
+        # left
+        outx = min(max(x - 1, 0), maxx)
+        outy = y
+        if processed[outx, outy] == 0:
+            out.append((outx, outy))
+        # right
+        outx = min(max(x + 1, 0), maxx)
+        outy = y
+        out.append((outx, outy))
+        # bottom left
+        outx = min(max(x - 1, 0), maxx)
+        outy = min(max(y + 1, 0), maxy)
+        if processed[outx, outy] == 0:
+            out.append((outx, outy))
+        # bottom center
+        outx = x
+        outy = min(max(y + 1, 0), maxy)
+        if processed[outx, outy] == 0:
+            out.append((outx, outy))
+        # bottom right
+        outx = min(max(x + 1, 0), maxx)
+        outy = min(max(y + 1, 0), maxy)
+        if processed[outx, outy] == 0:
+            out.append((outx, outy))
+
+        return out
 
     depthnparray_float32_cp = copy.deepcopy(depthnparray_float32)
     while True:
@@ -429,81 +505,6 @@ def get_component_by_seed(depthnparray_float32, seed=[0, 0], epdelta=.005, minsi
             continue
 
 
-def __region_growing(depthimg, seed, epdelta):
-    print(depthimg)
-    cv2.imshow("", depthimg)
-    cv2.waitKey(0)
-    list = []
-    outimg = np.zeros_like(depthimg).astype(dtype=np.uint8)
-    list.append((seed[0], seed[1]))
-    __processed = np.zeros_like(depthimg).astype(dtype=np.uint8)
-    while len(list) > 0:
-        pix = list[0]
-        outimg[pix[0], pix[1]] = 255
-        for coord in __get8n(pix[0], pix[1], depthimg.shape, __processed):
-            newvalue = int(depthimg[coord[0], coord[1]][0])
-            cmpvalue = int(depthimg[pix[0], pix[1]][0])
-            if depthimg[coord[0], coord[1]] != 0 and abs(newvalue - cmpvalue) < epdelta:
-                outimg[coord[0], coord[1]] = 255
-                if __processed[coord[0], coord[1]] == 0:
-                    list.append(coord)
-                __processed[coord[0], coord[1]] = 1
-                # if not coord in processed:
-                #     list.append(coord)
-                # processed.append(coord)
-        list.pop(0)
-        cv2.imshow("progress", outimg)
-        cv2.waitKey(0)
-    return outimg
-
-
-def __get8n(x, y, shape, processed):
-    out = []
-    maxx = shape[1] - 1
-    maxy = shape[0] - 1
-    # top left
-    outx = min(max(x - 1, 0), maxx)
-    outy = min(max(y - 1, 0), maxy)
-    if processed[outx, outy] == 0:
-        out.append((outx, outy))
-    # top center
-    outx = x
-    outy = min(max(y - 1, 0), maxy)
-    if processed[outx, outy] == 0:
-        out.append((outx, outy))
-    # top right
-    outx = min(max(x + 1, 0), maxx)
-    outy = min(max(y - 1, 0), maxy)
-    if processed[outx, outy] == 0:
-        out.append((outx, outy))
-    # left
-    outx = min(max(x - 1, 0), maxx)
-    outy = y
-    if processed[outx, outy] == 0:
-        out.append((outx, outy))
-    # right
-    outx = min(max(x + 1, 0), maxx)
-    outy = y
-    out.append((outx, outy))
-    # bottom left
-    outx = min(max(x - 1, 0), maxx)
-    outy = min(max(y + 1, 0), maxy)
-    if processed[outx, outy] == 0:
-        out.append((outx, outy))
-    # bottom center
-    outx = x
-    outy = min(max(y + 1, 0), maxy)
-    if processed[outx, outy] == 0:
-        out.append((outx, outy))
-    # bottom right
-    outx = min(max(x + 1, 0), maxx)
-    outy = min(max(y + 1, 0), maxy)
-    if processed[outx, outy] == 0:
-        out.append((outx, outy))
-
-    return out
-
-
 if __name__ == '__main__':
     import geojson
     # from shapely.geometry.polygon import LinearRing
@@ -514,7 +515,7 @@ if __name__ == '__main__':
 
     realsense = rs.RealSense()
 
-    depthimglist, rgbimg_list = realsense.load_frame_seq("osaka")
+    depthimglist, rgbimg_list = load_frame_seq("osaka")
     depthimg_bg = depthimglist[5]
     pcd_bg = vu.convert_depth2pcd_o3d(depthimg_bg)
     pcdu.show_pcd(pcd_bg, rgba=(1, 1, 1, 1))

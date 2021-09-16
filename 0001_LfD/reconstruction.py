@@ -1,18 +1,12 @@
-import chainer.functions as F
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-import sknw
-from shapely.geometry import Polygon
-from skimage.morphology import skeletonize
-from sklearn.cluster import DBSCAN
 
 from localenv import envloader as el
 import visualization.panda.world as wd
 import utils.pcd_utils as pcdu
 import local_vis.realsense.realsense as rs
-import utils.vision_utils as vu
-import basis.robot_math as rm
+import local_vis.knt_azura.knt_azura as k4a
 import basis.o3dhelper as o3dhelper
 from mask_rcnn_seg.inference import MaskRcnnPredictor
 import detection_utils as du
@@ -242,14 +236,16 @@ def merge_o3dpcd_seq(o3dpcd_seq, win_size=4):
 
 
 if __name__ == '__main__':
-    folder_name = 'bunny'
+    folder_name = 'tst'
     base = wd.World(cam_pos=[2, 0, 1], lookat_pos=[0, 0, 0])
+    # camera = rs.RealSense()
+    camera = k4a.KinectAzura()
 
-    # depthimg_list, rgbimg_list = du.load_frame_seq(folder_name)
-    # du.show_rgbdseq(depthimg_list, rgbimg_list)
-    # depthimg_list_res, rgbimg_list_res = remove_by_label(depthimg_list, rgbimg_list, folder_name, toggledebug=False,
-    #                                                      dilation=True)
-    # pcdu.show_pcd(pcd, rgba=(1, 1, 1, 1))
+    depthimg_list, rgbimg_list, _ = du.load_frame_seq(folder_name,
+                                                      root_path=os.path.join(config.DATA_PATH, 'raw_img/k4a/seq/'))
+    # camera.show_rgbdseq(depthimg_list, rgbimg_list)
+    depthimg_list_res, rgbimg_list_res = remove_by_label(depthimg_list, rgbimg_list, folder_name, toggledebug=False,
+                                                         dilation=True)
 
     # depthimg_list, rgbimg_list = \
     #     du.load_frame_seq(folder_name, root_path=os.path.join(config.DATA_PATH, 'seg_result/'))
@@ -272,6 +268,6 @@ if __name__ == '__main__':
     #                          rgbasseq=[o3d.colors for o3d in res_o3dpcd_list[1:]], time_sleep=.5)
     # base.run()
     for res_o3dpcd in res_o3dpcd_list:
-        pcdu.show_pcd_withrgb(res_o3dpcd.points, res_o3dpcd.colors, show_percentage=1/len(res_o3dpcd_list)*2)
+        pcdu.show_pcd_withrgb(res_o3dpcd.points, res_o3dpcd.colors, show_percentage=1 / len(res_o3dpcd_list) * 2)
     # pcdu.show_pcd(pcd)
     base.run()
