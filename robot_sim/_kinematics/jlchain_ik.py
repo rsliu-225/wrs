@@ -103,22 +103,27 @@ class JLChainIK(object):
         j = self.jacobian(tcp_jntid)
         return math.sqrt(np.linalg.det(np.dot(j, j.transpose())))
 
-    def manipulability_axmat(self, tcp_jntid=None):
+    def manipulability_axmat(self, tcp_jntid=None, type="translational"):
         """
         compute the yasukawa manipulability of the rjlinstance
         :param tcp_jntid: the joint id where the tool center pose is specified, single vlaue or list
+        :param type: translational, rotational
         :return: axmat with each column being the manipulability
         """
         if tcp_jntid is None:
             tcp_jntid = self.jlc_object.tcp_jntid
-        armjac = self.jacobian(tcp_jntid)
-        jjt = np.dot(armjac, armjac.T)
+        j = self.jacobian(tcp_jntid)
+        if type == "translational":
+            jjt = np.dot(j[:3,:], j.transpose()[:,:3])
+        elif type == "rotational":
+            jjt = np.dot(j[3:,:], j.transpose()[:,3:])
+        else:
+            raise Exception("The parameter 'type' must be 'translational' or 'rotational'!")
         pcv, pcaxmat = np.linalg.eig(jjt)
-        # only keep translation
         axmat = np.eye(3)
-        axmat[:, 0] = np.sqrt(pcv[0]) * pcaxmat[:3, 0]
-        axmat[:, 1] = np.sqrt(pcv[1]) * pcaxmat[:3, 1]
-        axmat[:, 2] = np.sqrt(pcv[2]) * pcaxmat[:3, 2]
+        axmat[:,0]=np.sqrt(pcv[0])*pcaxmat[:,0]
+        axmat[:,1]=np.sqrt(pcv[1])*pcaxmat[:,1]
+        axmat[:,2]=np.sqrt(pcv[2])*pcaxmat[:,2]
         return axmat
 
     def get_gl_tcp(self, tcp_jnt_id, tcp_loc_pos, tcp_loc_rotmat):
@@ -251,7 +256,7 @@ class JLChainIK(object):
                tgt_pos,
                tgt_rot,
                seed_jnt_values=None,
-               max_niter = 100,
+               max_niter=100,
                tcp_jntid=None,
                tcp_loc_pos=None,
                tcp_loc_rotmat=None,

@@ -336,7 +336,7 @@ def pandageom_from_points(vertices, rgba_list=None, name=''):
     vertformat.addArray(arrayformat)
     vertformat = GeomVertexFormat.registerFormat(vertformat)
     vertexdata = GeomVertexData(name, vertformat, Geom.UHStatic)
-    vertexdata.modifyArrayHandle(0).copyDataFrom(vertices.astype(np.float32))
+    vertexdata.modifyArrayHandle(0).copyDataFrom(np.ascontiguousarray(vertices, dtype=np.float32))
     vertexdata.modifyArrayHandle(1).copyDataFrom(vertex_rgbas)
     primitive = GeomPoints(Geom.UHStatic)
     primitive.setIndexType(GeomEnums.NTUint32)
