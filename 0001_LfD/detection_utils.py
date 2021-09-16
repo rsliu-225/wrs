@@ -1,11 +1,15 @@
 import chainer.functions as F
 import cv2
+import copy
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 import sknw
+import pickle
 from shapely.geometry import Polygon
 from skimage.morphology import skeletonize
 from sklearn.cluster import DBSCAN
+import open3d as o3d
 
 from localenv import envloader as el
 import visualization.panda.world as wd
@@ -16,6 +20,36 @@ import utils.vision_utils as vu
 import basis.robot_math as rm
 import basis.o3dhelper as o3dhelper
 from mask_rcnn_seg.inference import MaskRcnnPredictor
+import config_LfD as config
+
+
+def load_frame_seq(folder_name, root_path=os.path.join(config.DATA_PATH, 'raw_img/rs/seq/')):
+    depthimg_list = []
+    rgbimg_list = []
+    for f in sorted(os.listdir(os.path.join(root_path, folder_name))):
+        if f[-3:] != 'pkl':
+            continue
+        tmp = pickle.load(open(os.path.join(root_path, folder_name, f), 'rb'))
+        if tmp[0].shape[-1] == 3:
+            depthimg_list.append(tmp[1])
+            rgbimg_list.append(tmp[0])
+        else:
+            depthimg_list.append(tmp[0])
+            rgbimg_list.append(tmp[1])
+    return [depthimg_list, rgbimg_list]
+
+
+def load_frame(f_name, root_path=os.path.join(config.DATA_PATH, 'rs/sgl/')):
+    return pickle.load(open(os.path.join(root_path, f_name), 'rb'))
+
+
+def load_o3dpcd_seq(folder_name, root_path=os.path.join(config.DATA_PATH, 'seg_pcd/')):
+    res_list = []
+    for f in sorted(os.listdir(os.path.join(root_path, folder_name))):
+        if f[-3:] != 'pcd':
+            continue
+        res_list.append(o3d.io.read_point_cloud(os.path.join(root_path, folder_name, f)))
+    return res_list
 
 
 def get_depth_diff(depth_img_bg, depth_img, threshold=2):
@@ -25,18 +59,21 @@ def get_depth_diff(depth_img_bg, depth_img, threshold=2):
 
 
 def flist_remove_bg(depthimg_list, rgb_img_list, threshold=10, bg_index=0, toggledebug=False, find_same=True):
-    depth_bg = scale_depth_img(depthimg_list[bg_index])
+    # depth_bg_scaled = scale_depth_img(depthimg_list[bg_index])
+    depth_bg = depthimg_list[bg_index]
     mask_list = []
-    depthimg_bg = depthimg_list[bg_index]
-    pcd_bg = realsense.depth2pcd(depthimg_bg)
-    pcdu.show_pcd(pcd_bg, rgba=(1, 1, 1, .1))
-    base.run()
+    if toggledebug:
+        realsense = rs.RealSense()
+        depthimg_bg = depthimg_list[bg_index]
+        pcd_bg = realsense.depth2pcd(depthimg_bg)
+        pcdu.show_pcd(pcd_bg, rgba=(1, 1, 1, .1))
+        base.run()
 
-    for inx, depth_img in enumerate(depthimg_list):
+    for inx, depthimg in enumerate(depthimg_list):
         if inx == bg_index:
             continue
-        depth_img = scale_depth_img(depth_img)
-        diff = depth_img.astype(int) - depth_bg.astype(int)
+        # depthimg_scaled = scale_depth_img(depthimg)
+        diff = depthimg.astype(int) - depth_bg.astype(int)
         if find_same:
             mask = np.abs(diff) < threshold
         else:
@@ -47,7 +84,7 @@ def flist_remove_bg(depthimg_list, rgb_img_list, threshold=10, bg_index=0, toggl
             # cv2.waitKey(0)
             mask_show = np.repeat(mask[:, :, np.newaxis], 3, axis=2)
             rgb_img = rgb_img_list[inx + 1] * mask_show
-            show_img_hstack(rgb_img, vu.gray23channel(depth_img))
+            show_img_hstack(rgb_img, vu.gray23channel(depthimg))
 
     return mask_list
 
@@ -98,14 +135,14 @@ def max_pooling_2d(depth_img_list, rgb_img_list):
         cv2.waitKey(0)
 
 
-def scale_depth_img(depth_img, scale_max=255.0, range=(1, 1000)):
-    mask = np.logical_or(depth_img < range[0], depth_img > range[1])
-    # print(depth_img.min(), depth_img.max())
-    scaled_depth_image = depth_img
-    scaled_depth_image[mask] = 0
-    scaled_depth_image[~mask] = np.round(scale_max * (depth_img[~mask] - range[0]) / (range[1] - range[0] - 1.0))
-    scaled_depth_image = scaled_depth_image.astype(np.uint8)
-    return scaled_depth_image
+def scale_depth_img(depthimg, scale_max=255.0, range=(1, 1000)):
+    mask = np.logical_or(depthimg < range[0], depthimg > range[1])
+    # print(depth_img.min(), depthimg.max())
+    scaled_depthimg = depthimg
+    scaled_depthimg[mask] = 0
+    scaled_depthimg[~mask] = np.round(scale_max * (depthimg[~mask] - range[0]) / (range[1] - range[0] - 1.0))
+    scaled_depthimg = scaled_depthimg.astype(np.uint8)
+    return scaled_depthimg
 
 
 def show_img_hstack(img1, img2):
@@ -220,15 +257,16 @@ def mask2narray(mask):
     return np.asarray(p_list)
 
 
-def get_max_cluster(pts,eps=.003):
+def get_max_cluster(pts, eps=.003):
     pts_narray = np.array(pts)
     db = DBSCAN(eps=eps, min_samples=2).fit(pts)
     core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
     core_samples_mask[db.core_sample_indices_] = True
     labels = db.labels_
     unique_labels = set(labels)
-    print("cluster:", unique_labels)
+    # print("cluster:", unique_labels)
     res = []
+    mask = []
     max_len = 0
 
     for k in unique_labels:
@@ -240,25 +278,61 @@ def get_max_cluster(pts,eps=.003):
             if len(cluster) > max_len:
                 max_len = len(cluster)
                 res = cluster
-    return res
+                mask = [class_member_mask & core_samples_mask]
+
+    return res, mask
 
 
-def cluster_dbscan(pts):
+def get_closest_cluster(pts, seed, eps=.003, min_pts=50):
     pts_narray = np.array(pts)
-    db = DBSCAN(eps=3, min_samples=2).fit(pts)
+    db = DBSCAN(eps=eps, min_samples=2).fit(pts)
+    core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
+    core_samples_mask[db.core_sample_indices_] = True
+    labels = db.labels_
+    unique_labels = set(labels)
+    # print("cluster:", unique_labels)
+    res = []
+    mask = []
+    min_dist = .2
+
+    for k in unique_labels:
+        if k == -1:
+            continue
+        else:
+            class_member_mask = (labels == k)
+            cluster = pts_narray[class_member_mask & core_samples_mask]
+            cluster_center = np.mean(cluster, axis=0)
+            dist = np.linalg.norm(cluster_center - seed)
+            if dist < min_dist and len(cluster) > min_pts:
+                min_dist = dist
+                res = cluster
+                mask = [class_member_mask & core_samples_mask]
+    print('dist:',min_dist)
+
+    return res, mask
+
+
+def cluster_dbscan(pts, eps=0.003):
+    pts_narray = np.array(pts)
+    db = DBSCAN(eps=eps, min_samples=2).fit(pts)
     core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
     core_samples_mask[db.core_sample_indices_] = True
     labels = db.labels_
     unique_labels = set(labels)
     print("cluster:", unique_labels)
     cluster_list = []
+    fig = plt.figure(figsize=(8, 8))
+    ax = fig.add_subplot(111, projection='3d')
+    ax.set_xlabel("x", size=14)
+    ax.set_ylabel("y", size=14)
+    ax.set_zlabel("z", size=14)
     for k in unique_labels:
         if k == -1:
             continue
         class_member_mask = (labels == k)
         cluster = pts_narray[class_member_mask & core_samples_mask]
         cluster_list.append(cluster)
-        plt.scatter(cluster[:, 1], -cluster[:, 0], s=1)
+        ax.scatter(cluster[:, 0], cluster[:, 1], cluster[:, 2], s=1)
     plt.show()
 
     return cluster_list
@@ -328,6 +402,106 @@ def get_strokes_from_img(f_name):
     stroke_list = du.fit_drawpath_in_center_ms(stroke_list)
 
     return stroke_list
+
+
+def get_component_by_seed(depthnparray_float32, seed=[0, 0], epdelta=.005, minsize=300):
+    """
+    finds the next connected components whose area is larger than minsize
+    region grow using the given seed
+    returns one nparray_float32
+
+    :param depthnparray_float32:
+    :param epdelta:
+    :param minsize:
+    :return:
+    """
+
+    depthnparray_float32_cp = copy.deepcopy(depthnparray_float32)
+    while True:
+        tmpidx = np.nonzero(depthnparray_float32_cp)
+        if len(tmpidx[0]) == 0:
+            return np.zeros_like(depthnparray_float32)
+        tmpcomponent = __region_growing(depthnparray_float32_cp, seed, epdelta)
+        depthnparray_float32_cp[tmpcomponent != 0] = 0
+        if np.count_nonzero(tmpcomponent) > minsize:
+            return tmpcomponent
+        else:
+            continue
+
+
+def __region_growing(depthimg, seed, epdelta):
+    print(depthimg)
+    cv2.imshow("", depthimg)
+    cv2.waitKey(0)
+    list = []
+    outimg = np.zeros_like(depthimg).astype(dtype=np.uint8)
+    list.append((seed[0], seed[1]))
+    __processed = np.zeros_like(depthimg).astype(dtype=np.uint8)
+    while len(list) > 0:
+        pix = list[0]
+        outimg[pix[0], pix[1]] = 255
+        for coord in __get8n(pix[0], pix[1], depthimg.shape, __processed):
+            newvalue = int(depthimg[coord[0], coord[1]][0])
+            cmpvalue = int(depthimg[pix[0], pix[1]][0])
+            if depthimg[coord[0], coord[1]] != 0 and abs(newvalue - cmpvalue) < epdelta:
+                outimg[coord[0], coord[1]] = 255
+                if __processed[coord[0], coord[1]] == 0:
+                    list.append(coord)
+                __processed[coord[0], coord[1]] = 1
+                # if not coord in processed:
+                #     list.append(coord)
+                # processed.append(coord)
+        list.pop(0)
+        cv2.imshow("progress", outimg)
+        cv2.waitKey(0)
+    return outimg
+
+
+def __get8n(x, y, shape, processed):
+    out = []
+    maxx = shape[1] - 1
+    maxy = shape[0] - 1
+    # top left
+    outx = min(max(x - 1, 0), maxx)
+    outy = min(max(y - 1, 0), maxy)
+    if processed[outx, outy] == 0:
+        out.append((outx, outy))
+    # top center
+    outx = x
+    outy = min(max(y - 1, 0), maxy)
+    if processed[outx, outy] == 0:
+        out.append((outx, outy))
+    # top right
+    outx = min(max(x + 1, 0), maxx)
+    outy = min(max(y - 1, 0), maxy)
+    if processed[outx, outy] == 0:
+        out.append((outx, outy))
+    # left
+    outx = min(max(x - 1, 0), maxx)
+    outy = y
+    if processed[outx, outy] == 0:
+        out.append((outx, outy))
+    # right
+    outx = min(max(x + 1, 0), maxx)
+    outy = y
+    out.append((outx, outy))
+    # bottom left
+    outx = min(max(x - 1, 0), maxx)
+    outy = min(max(y + 1, 0), maxy)
+    if processed[outx, outy] == 0:
+        out.append((outx, outy))
+    # bottom center
+    outx = x
+    outy = min(max(y + 1, 0), maxy)
+    if processed[outx, outy] == 0:
+        out.append((outx, outy))
+    # bottom right
+    outx = min(max(x + 1, 0), maxx)
+    outy = min(max(y + 1, 0), maxy)
+    if processed[outx, outy] == 0:
+        out.append((outx, outy))
+
+    return out
 
 
 if __name__ == '__main__':

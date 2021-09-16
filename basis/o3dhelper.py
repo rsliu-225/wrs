@@ -1,15 +1,16 @@
 import numpy as np
 import open3d as o3d
 import copy
-import basis.trimesh
+import basis.trimesh as trimesh
 import sklearn.cluster as skc
+
 
 # abbreviations
 # pnp panda nodepath
 # o3d open3d
 # pnppcd - a point cloud in the panda nodepath format
 
-def nparray2o3dpcd(nx3nparray_pnts, nx3nparray_nrmls=None, estimate_normals = False):
+def nparray2o3dpcd(nx3nparray_pnts, nx3nparray_nrmls=None, estimate_normals=False):
     """
 
     :param nx3nparray_pnts: (n,3) nparray
@@ -23,12 +24,13 @@ def nparray2o3dpcd(nx3nparray_pnts, nx3nparray_nrmls=None, estimate_normals = Fa
     o3dpcd = o3d.geometry.PointCloud()
     o3dpcd.points = o3d.utility.Vector3dVector(nx3nparray_pnts[:, :3])
     if nx3nparray_nrmls is not None:
-        o3dpcd.normals = o3d.utility.Vector3dVector(nx3nparray_nrmls[:,:3])
+        o3dpcd.normals = o3d.utility.Vector3dVector(nx3nparray_nrmls[:, :3])
     elif estimate_normals:
         o3dpcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=5, max_nn=30))
     return o3dpcd
 
-def o3dpcd2nparray(o3dpcd, return_normals = False):
+
+def o3dpcd2nparray(o3dpcd, return_normals=False):
     """
 
     :param o3dpcd: open3d point cloud
@@ -48,6 +50,7 @@ def o3dpcd2nparray(o3dpcd, return_normals = False):
     else:
         return np.asarray(o3dpcd.points)
 
+
 def cropnx3nparray(nx3nparray, xrng, yrng, zrng):
     """
     crop a n-by-3 nparray
@@ -60,11 +63,12 @@ def cropnx3nparray(nx3nparray, xrng, yrng, zrng):
     date: 20191210
     """
 
-    xmask = np.logical_and(nx3nparray[:,0]>xrng[0], nx3nparray[:,0]<xrng[1])
-    ymask = np.logical_and(nx3nparray[:,1]>yrng[0], nx3nparray[:,1]<yrng[1])
-    zmask = np.logical_and(nx3nparray[:,2]>zrng[0], nx3nparray[:,2]<zrng[1])
-    mask = xmask*ymask*zmask
+    xmask = np.logical_and(nx3nparray[:, 0] > xrng[0], nx3nparray[:, 0] < xrng[1])
+    ymask = np.logical_and(nx3nparray[:, 1] > yrng[0], nx3nparray[:, 1] < yrng[1])
+    zmask = np.logical_and(nx3nparray[:, 2] > zrng[0], nx3nparray[:, 2] < zrng[1])
+    mask = xmask * ymask * zmask
     return nx3nparray[mask]
+
 
 def cropo3dpcd(o3dpcd, xrng, yrng, zrng):
     """
@@ -79,11 +83,12 @@ def cropo3dpcd(o3dpcd, xrng, yrng, zrng):
     """
 
     o3dpcdarray = np.asarray(o3dpcd.points)
-    xmask = np.logical_and(o3dpcdarray[:,0]>xrng[0], o3dpcdarray[:,0]<xrng[1])
-    ymask = np.logical_and(o3dpcdarray[:,1]>yrng[0], o3dpcdarray[:,1]<yrng[1])
-    zmask = np.logical_and(o3dpcdarray[:,2]>zrng[0], o3dpcdarray[:,2]<zrng[1])
-    mask = xmask*ymask*zmask
+    xmask = np.logical_and(o3dpcdarray[:, 0] > xrng[0], o3dpcdarray[:, 0] < xrng[1])
+    ymask = np.logical_and(o3dpcdarray[:, 1] > yrng[0], o3dpcdarray[:, 1] < yrng[1])
+    zmask = np.logical_and(o3dpcdarray[:, 2] > zrng[0], o3dpcdarray[:, 2] < zrng[1])
+    mask = xmask * ymask * zmask
     return nparray2o3dpcd(o3dpcdarray[mask])
+
 
 def o3dmesh2trimesh(o3dmesh):
     """
@@ -98,6 +103,7 @@ def o3dmesh2trimesh(o3dmesh):
     cvterdtrimesh = trimesh.Trimesh(vertices=vertices, faces=faces, face_normals=face_normals)
     return cvterdtrimesh
 
+
 def __draw_registration_result(source_o3d, target_o3d, transformation):
     source_temp = copy.deepcopy(source_o3d)
     target_temp = copy.deepcopy(target_o3d)
@@ -106,7 +112,8 @@ def __draw_registration_result(source_o3d, target_o3d, transformation):
     source_temp.transform(transformation)
     o3d.visualization.draw_geometries([source_temp, target_temp])
 
-def registration_ptpt(src, tgt, downsampling_voxelsize=1, toggledebug = False):
+
+def registration_ptpt(src, tgt, downsampling_voxelsize=1, toggledebug=False):
     """
     registrate two point clouds using global registration + local icp
     the correspondence checker for icp is point to point
@@ -130,32 +137,26 @@ def registration_ptpt(src, tgt, downsampling_voxelsize=1, toggledebug = False):
         down_radius_normal = voxel_size * 15
         pcd_down.estimate_normals(o3d.geometry.KDTreeSearchParamHybrid(radius=down_radius_normal, max_nn=30))
         radius_feature = voxel_size * 15
-        pcd_fpfh = o3d.registration.compute_fpfh_feature(
+        pcd_fpfh = o3d.pipelines.registration.compute_fpfh_feature(
             pcd_down,
             o3d.geometry.KDTreeSearchParamHybrid(radius=radius_feature, max_nn=100))
         return pcd_down, pcd_fpfh
 
-    if toggledebug:
-        __draw_registration_result(src_o3d, tgt_o3d, np.identity(4))
+    # if toggledebug:
+    #     __draw_registration_result(src_o3d, tgt_o3d, np.identity(4))
 
     source_down, source_fpfh = __preprocess_point_cloud(src_o3d, downsampling_voxelsize)
     target_down, target_fpfh = __preprocess_point_cloud(tgt_o3d, downsampling_voxelsize)
 
     distance_threshold = downsampling_voxelsize * 1.5
-    if toggledebug:
-        print(":: RANSAC registration on downsampled point clouds.")
-        print("   Since the downsampling voxel size is %.3f," % downsampling_voxelsize)
-        print("   we use a liberal distance threshold %.3f." % distance_threshold)
+    # if toggledebug:
+    #     print(":: RANSAC registration on downsampled point clouds.")
+    #     print("   Since the downsampling voxel size is %.3f," % downsampling_voxelsize)
+    #     print("   we use a liberal distance threshold %.3f." % distance_threshold)
 
-    # result_global = o3d.registration.registration_fass_based_on_feature_matching(
-    #     source_down, target_down, source_fpfh, target_fpfh, distance_threshold,
-    #     o3d.registration.TransformationEstimationPointToPoint(False), 4, [
-    #         o3d.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9),
-    #         o3d.registration.CorrespondenceCheckerBasedOnDistance(distance_threshold)],
-    #     o3d.registration.RANSACConvergenceCriteria(4000000, 500))
-    result_global = o3d.registration.registration_fast_based_on_feature_matching(
+    result_global = o3d.pipelines.registration.registration_fast_based_on_feature_matching(
         source_down, target_down, source_fpfh, target_fpfh,
-        o3d.registration.FastGlobalRegistrationOption(
+        o3d.pipelines.registration.FastGlobalRegistrationOption(
             maximum_correspondence_distance=distance_threshold))
     if toggledebug:
         __draw_registration_result(source_down, target_down, result_global.transformation)
@@ -168,36 +169,8 @@ def registration_ptpt(src, tgt, downsampling_voxelsize=1, toggledebug = False):
 
     return _registration_icp_ptpt_o3d(src_o3d, tgt_o3d, result_global.transformation, toggledebug=toggledebug)
 
-    # def _registration_icp_ptpt_o3d(src, tgt, inithomomat=np.eye(4), maxcorrdist=2, toggledebug=False):
-    #     """
-    #
-    #     :param src:
-    #     :param tgt:
-    #     :param maxcorrdist:
-    #     :param toggledebug:
-    #     :return:
-    #
-    #     author: weiwei
-    #     date: 20191229
-    #     """
-    #
-    #     criteria = o3d.registration.ICPConvergenceCriteria(relative_fitness=1e-6,
-    #                                                        # converge if fitnesss smaller than this
-    #                                                        relative_rmse=1e-6,  # converge if rmse smaller than this
-    #                                                        max_iteration=2000)
-    #     result_icp = o3d.registration.registration_icp(src, tgt, maxcorrdist, inithomomat, criteria=criteria)
-    #     if toggledebug:
-    #         __draw_registration_result(src, tgt, result_icp.transformation)
-    #     return [result_icp.inlier_rmse, result_icp.transformation]
-    #
-    # result_icp = o3d.registration.registration_icp(
-    #     src_o3d, tgt_o3d, distance_threshold, result_global.transformation,
-    #     o3d.registration.TransformationEstimationPointToPoint(False))
-    # if toggledebug:
-    #     __draw_registration_result(src_o3d, tgt_o3d, result_icp.transformation)
-    # return [result_icp.inlier_rmse, result_icp.transformation]
 
-def registration_ptpln(src, tgt, downsampling_voxelsize=2, toggledebug = False):
+def registration_ptpln(src, tgt, downsampling_voxelsize=2, toggledebug=False):
     """
     registrate two point clouds using global registration + local icp
     the correspondence checker for icp is point to plane
@@ -261,6 +234,7 @@ def registration_ptpln(src, tgt, downsampling_voxelsize=2, toggledebug = False):
         __draw_registration_result(src_o3d, tgt_o3d, result_icp.transformation)
     return [result_icp.inlier_rmse, result_icp.transformation]
 
+
 def registration_icp_ptpt(src, tgt, inithomomat=np.eye(4), maxcorrdist=2, toggledebug=False):
     """
 
@@ -278,7 +252,9 @@ def registration_icp_ptpt(src, tgt, inithomomat=np.eye(4), maxcorrdist=2, toggle
     tgt_o3d = nparray2o3dpcd(tgt)
     return _registration_icp_ptpt_o3d(src_o3d, tgt_o3d, inithomomat, maxcorrdist, toggledebug)
 
-def removeoutlier(src_nparray, downsampling_voxelsize=2, nb_points=7, radius=3, estimate_normals = False, toggledebug=False):
+
+def removeoutlier(src_nparray, downsampling_voxelsize=2, nb_points=7, radius=3, estimate_normals=False,
+                  toggledebug=False):
     """
     downsample and remove outliers statistically
 
@@ -289,11 +265,12 @@ def removeoutlier(src_nparray, downsampling_voxelsize=2, nb_points=7, radius=3, 
     date: 20191229
     """
 
-    src_o3d = nparray2o3dpcd(src_nparray, estimate_normals = estimate_normals)
-    cl = _removeoutlier_o3d(src_o3d, downsampling_voxelsize, nb_points, radius, toggledebug)
+    src_o3d = nparray2o3dpcd(src_nparray, estimate_normals=estimate_normals)
+    cl = removeoutlier_o3d(src_o3d, downsampling_voxelsize, nb_points, radius, toggledebug)
     return o3dpcd2nparray(cl, return_normals=estimate_normals)
 
-def _removeoutlier_o3d(src_o3d, downsampling_voxelsize=2, nb_points=7, radius=3, toggledebug=False):
+
+def removeoutlier_o3d(src_o3d, downsampling_voxelsize=None, nb_points=5, radius=.003, toggledebug=False):
     """
     downsample and remove outliers statistically
 
@@ -316,6 +293,7 @@ def _removeoutlier_o3d(src_o3d, downsampling_voxelsize=2, nb_points=7, radius=3,
         o3d.visualization.draw_geometries([src_o3d_down, src_o3d, cl])
     return cl
 
+
 def _registration_icp_ptpt_o3d(src, tgt, inithomomat=np.eye(4), maxcorrdist=2, toggledebug=False):
     """
 
@@ -329,15 +307,18 @@ def _registration_icp_ptpt_o3d(src, tgt, inithomomat=np.eye(4), maxcorrdist=2, t
     date: 20191229
     """
 
-    criteria = o3d.registration.ICPConvergenceCriteria(relative_fitness=1e-6,  # converge if fitnesss smaller than this
-                                                       relative_rmse=1e-6, # converge if rmse smaller than this
-                                                       max_iteration=2000)
-    result_icp = o3d.registration.registration_icp(src, tgt, maxcorrdist, inithomomat, criteria=criteria)
+    criteria = o3d.pipelines.registration.ICPConvergenceCriteria(relative_fitness=1e-6,
+                                                                 # converge if fitnesss smaller than this
+                                                                 relative_rmse=1e-6,
+                                                                 # converge if rmse smaller than this
+                                                                 max_iteration=2000)
+    result_icp = o3d.pipelines.registration.registration_icp(src, tgt, maxcorrdist, inithomomat, criteria=criteria)
     if toggledebug:
         __draw_registration_result(src, tgt, result_icp.transformation)
     return [result_icp.inlier_rmse, result_icp.fitness, result_icp.transformation]
 
-def clusterpcd(pcd_nparray, pcd_nparray_nrmls = None):
+
+def clusterpcd(pcd_nparray, pcd_nparray_nrmls=None):
     """
     segment pcd into clusters using the DBSCAN method
 
@@ -370,7 +351,8 @@ def clusterpcd(pcd_nparray, pcd_nparray_nrmls = None):
 
     return [pcd_nparray_list, pcdnrmls_nparray_list]
 
-def reconstructsurfaces_bp(nppcd, nppcdnrmls = None, radii = [5], doseparation=True):
+
+def reconstructsurfaces_bp(nppcd, nppcdnrmls=None, radii=[5], doseparation=True):
     """
 
     :param nppcd:
@@ -380,33 +362,13 @@ def reconstructsurfaces_bp(nppcd, nppcdnrmls = None, radii = [5], doseparation=T
     """
 
     if doseparation:
-        # db = skc.DBSCAN(eps=10, min_samples=50).fit(nppcd)
-        # core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
-        # core_samples_mask[db.core_sample_indices_] = True
-        # labels = db.labels_
-        # n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
-        # unique_labels = set(labels)
-        # nppcdlist = []
-        # nppcdnrmlslist = []
-        # if nppcdnrmls is None:
-        #     nppcdnrmls = np.array([[0,0,1]]*nppcd.shape[0])
-        # else:
-        #     nppcdnrmls = nppcdnrmls
-        # for k in unique_labels:
-        #     if k == -1:
-        #         continue
-        #     else:
-        #         class_member_mask = (labels == k)
-        #         temppartialpcd = nppcd[class_member_mask & core_samples_mask]
-        #         nppcdlist.append(temppartialpcd)
-        #         temppartialpcdnrmls = nppcdnrmls[class_member_mask & core_samples_mask]
-        #         nppcdnrmlslist.append(temppartialpcdnrmls)
         nppcdlist, nppcdnrmlslist = clusterpcd(nppcd, nppcdnrmls)
 
         tmmeshlist = []
         for i, thisnppcd in enumerate(nppcdlist):
             o3dpcd = nparray2o3dpcd(thisnppcd, nppcdnrmlslist[i])
-            mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_ball_pivoting(o3dpcd, o3d.utility.DoubleVector(radii))
+            mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_ball_pivoting(o3dpcd,
+                                                                                   o3d.utility.DoubleVector(radii))
             # mesh.compute_vertex_normals()
             mesh.compute_triangle_normals()
             tmmesh = o3dmesh2trimesh(mesh)
@@ -414,7 +376,7 @@ def reconstructsurfaces_bp(nppcd, nppcdnrmls = None, radii = [5], doseparation=T
         return tmmeshlist, nppcdlist
     else:
         if nppcdnrmls is None:
-            npnrmls = np.array([[0,0,1]]*nppcd.shape[0])
+            npnrmls = np.array([[0, 0, 1]] * nppcd.shape[0])
         else:
             npnrmls = nppcdnrmls
         o3dpcd = nparray2o3dpcd(nppcd, npnrmls)
@@ -423,6 +385,7 @@ def reconstructsurfaces_bp(nppcd, nppcdnrmls = None, radii = [5], doseparation=T
         mesh.compute_triangle_normals()
         tmmesh = o3dmesh2trimesh(mesh)
         return tmmesh
+
 
 def mergepcd(pnppcd1, pnppcd2, rotmat2, posmat2):
     """
@@ -438,12 +401,13 @@ def mergepcd(pnppcd1, pnppcd2, rotmat2, posmat2):
     date: 20200221
     """
 
-    transformednppcd2 = np.dot(rotmat2, pnppcd2.T).T+posmat2
-    mergednppcd = np.zeros((len(transformednppcd2)+len(pnppcd1),3))
+    transformednppcd2 = np.dot(rotmat2, pnppcd2.T).T + posmat2
+    mergednppcd = np.zeros((len(transformednppcd2) + len(pnppcd1), 3))
     mergednppcd[:len(pnppcd1), :] = pnppcd1
     mergednppcd[len(pnppcd1):, :] = transformednppcd2
 
     return mergednppcd
+
 
 def getobb(pnppcd):
     """
@@ -457,4 +421,3 @@ def getobb(pnppcd):
 
     # TODO get the object oriented bounding box of a point cloud using PoindCloud.get_oriented_bounding_box() and OrientedBoundinBox
     pass
-

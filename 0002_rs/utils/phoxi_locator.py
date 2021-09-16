@@ -8,13 +8,13 @@ import numpy as np
 import sklearn.cluster as skc
 
 import config
-import environment.collisionmodel as cm
+import modeling.collision_model as cm
 import trimesh.sample as ts
 import utils.pcd_utils as pcdu
 import utils.phoxi as phoxi
 import utils.vision_utils as vu
-import utiltools.robotmath as rm
-import utiltools.thirdparty.o3dhelper as o3dh
+import basis.robot_math as rm
+import basis.o3dhelper as o3dh
 from localenv import envloader as el
 
 
@@ -196,7 +196,7 @@ class PhxiLocator(object):
         return objpcd_list
 
     def find_closest_objpcd_by_stl(self, src_stl_f_name, objpcd_list, inithomomat=None, use_rmse=True):
-        objcm = cm.CollisionModel(objinit=os.path.join(config.ROOT + '/obstacles/' + src_stl_f_name))
+        objcm = cm.CollisionModel(initor=os.path.join(config.ROOT + '/obstacles/' + src_stl_f_name))
         min_rmse = 100
         max_fitness = 0
         result_pcd = None
@@ -379,7 +379,7 @@ class PhxiLocator(object):
         return highest_component
 
     def match_pcdncm_ptpt(self, target, src_stl_f_name, dv=10, show_icp=False):
-        obj = cm.CollisionModel(objinit=os.path.join(config.ROOT + '/obstacles/' + src_stl_f_name))
+        obj = cm.CollisionModel(initor=os.path.join(config.ROOT + '/obstacles/' + src_stl_f_name))
         source = np.asarray(ts.sample_surface(obj.trimesh, count=10000))
         source = source[source[:, 2] > 5]
         target = np.asarray(target)

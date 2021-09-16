@@ -7,7 +7,7 @@ import open3d as o3d
 import config
 import modeling.collision_model as cm
 import modeling.geometric_model as gm
-import item as item
+import localenv.item as item
 import robot_sim.end_effectors.grippers.robotiqhe.robotiqhe as rtqhe
 import visualization.panda.world as pc
 import robot_con.ur.ur3e_dual_x as ur3ex
@@ -241,7 +241,7 @@ if __name__ == '__main__':
     gm.gen_arrow(spos=tcp_pos, epos=tcp_pos + mnpax[:, 1], rgba=(0, 1, 0, 1)).attach_to(base)
     gm.gen_arrow(spos=tcp_pos, epos=tcp_pos + mnpax[:, 2], rgba=(0, 0, 1, 1)).attach_to(base)
 
-    m_mat = rbt.manipulability_axmat()
+    m_mat = rbt.manipulability_axmat("lft_arm")
     tcp_pos, _ = rbt.get_gl_tcp("lft_arm")
 
     gm.gen_arrow(spos=tcp_pos, epos=tcp_pos + m_mat[:, 0]).attach_to(base)

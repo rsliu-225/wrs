@@ -14,7 +14,7 @@ import basis.trimesh.sample as ts
 import utils.math_utils as mu
 import basis.robot_math as rm
 import basis.o3dhelper as o3d_helper
-from basis import trimesh 
+from basis import trimesh
 from localenv import envloader as el
 
 
@@ -50,6 +50,65 @@ def trans_p(p, transmat=None):
 
 def show_pcd(pcd, rgba=(1, 1, 1, 1)):
     gm.gen_pointcloud(pcd, rgbas=[rgba]).attach_to(base)
+
+
+def show_pcd_withrgb(pcd, rgbas, show_percentage=1):
+    n = int(1 / show_percentage)
+    pcd = [p for i, p in enumerate(list(pcd)) if i % n == 0]
+    rgbas = [c for i, c in enumerate(list(rgbas)) if i % n == 0]
+    if len(rgbas[0]) == 3:
+        rgbas = np.hstack((np.asarray(rgbas),
+                           np.repeat(1, [len(rgbas)]).reshape((len(rgbas), 1))))
+    gm.gen_pointcloud(np.asarray(pcd), rgbas=list(rgbas), pntsize=2).attach_to(base)
+
+
+def show_pcdseq(pcdseq, rgba=(1, 1, 1, 1), time_sleep=.1):
+    def __update(pcldnp, counter, pcdseq, task):
+        if counter[0] >= len(pcdseq):
+            counter[0] = 0
+        if counter[0] < len(pcdseq):
+            if pcldnp[0] is not None:
+                pcldnp[0].detach()
+            pcd = np.asarray(pcdseq[counter[0]])
+            pcldnp[0] = gm.gen_pointcloud(pcd, rgbas=[rgba], pntsize=1)
+            pcldnp[0].attach_to(base)
+            counter[0] += 1
+        else:
+            counter[0] = 0
+        return task.again
+
+    counter = [0]
+    pcldnp = [None]
+    print(f'num of frames: {len(pcdseq)}')
+    taskMgr.doMethodLater(time_sleep, __update, 'update', extraArgs=[pcldnp, counter, np.asarray(pcdseq)],
+                          appendTask=True)
+
+
+def show_pcdseq_withrgb(pcdseq, rgbasseq, time_sleep=.1):
+    def __update(pcldnp, counter, pcdseq, rgbasseq, task):
+        if counter[0] >= len(pcdseq):
+            counter[0] = 0
+        if counter[0] < len(pcdseq):
+            if pcldnp[0] is not None:
+                pcldnp[0].detach()
+            pcd = np.asarray(pcdseq[counter[0]])
+            rgbas = list(rgbasseq[counter[0]])
+            if len(rgbas[0]) == 3:
+                rgbas = np.hstack((rgbasseq[counter[0]],
+                                   np.repeat(1, [len(pcd)]).reshape((len(pcd), 1))))
+            pcldnp[0] = gm.gen_pointcloud(pcd, rgbas=list(rgbas), pntsize=1.5)
+            pcldnp[0].attach_to(base)
+            counter[0] += 1
+        else:
+            counter[0] = 0
+        return task.again
+
+    counter = [0]
+    pcldnp = [None]
+    print(f'num of frames: {len(pcdseq)}')
+    taskMgr.doMethodLater(time_sleep, __update, 'update',
+                          extraArgs=[pcldnp, counter, np.asarray(pcdseq), np.asarray(rgbasseq)],
+                          appendTask=True)
 
 
 def show_pcd_withrbt(pcd, rgba=(1, 1, 1, 1), rbtx=None, toggleendcoord=False):
@@ -142,7 +201,8 @@ def get_std_convexhull(pcd, origin="center", color=(1, 1, 1), transparency=1, to
     if origin == "tip":
         tip = get_pcd_tip(pcd, axis=0)
         origin_pos = center + \
-                     trans_pcd(np.array([tip]), rm.homomat_from_posrot((0, 0, 0), rm.rodrigues((0, 0, 1), rot_angle)))[0]
+                     trans_pcd(np.array([tip]), rm.homomat_from_posrot((0, 0, 0), rm.rodrigues((0, 0, 1), rot_angle)))[
+                         0]
         pcd = pcd - np.array([tip]).repeat(len(pcd), axis=0)
 
         convexhull = trimesh.Trimesh(vertices=pcd)
@@ -447,7 +507,6 @@ def get_plane(pcd, dist_threshold=0.0002, toggledebug=False):
         homomat[:3, :3] = plane_rotmat
         homomat[:3, 3] = center
         gm.gen_box(np.array([.2, .2, .001]), homomat=homomat, rgba=[1, 1, 0, .3]).attach_to(base)
-
 
     return plane[:3], plane[3]
 

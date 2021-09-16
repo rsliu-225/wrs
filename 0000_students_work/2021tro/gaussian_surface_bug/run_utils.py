@@ -55,7 +55,7 @@ def get_obj_from_phoxiinfo_nobgf(phxilocator, load=True, phoxi_f_name=None, reco
 
 def get_obj_from_phoxiinfo_withmodel(phxilocator, stl_f_name, load_f_name=None, match_filp=False,
                                      bg_f_name="bg_0217.pkl"):
-    objcm = cm.CollisionModel(objinit=os.path.join(config.ROOT + '/obstacles/' + stl_f_name))
+    objcm = cm.CollisionModel(initor=os.path.join(config.ROOT + '/obstacles/' + stl_f_name))
     grayimg, depthnparray_float32, pcd = load_phxiinfo(phoxi_f_name=load_f_name)
 
     workingarea_uint8 = phxilocator.remove_depth_bg(depthnparray_float32, bg_f_name=bg_f_name, toggledebug=False)
@@ -66,7 +66,7 @@ def get_obj_from_phoxiinfo_withmodel(phxilocator, stl_f_name, load_f_name=None, 
 
     objpcd = pcdu.trans_pcd(pcdu.remove_pcd_zeros(vu.map_depth2pcd(obj_depth, pcd)), phxilocator.amat)
     objmat4 = phxilocator.match_pcdncm(objpcd, objcm, match_rotz=match_filp)
-    objcm.sethomomat(objmat4)
+    objcm.set_homomat(objmat4)
 
     return item.Item(objcm=objcm, pcd=objpcd, objmat4=objmat4)
 
@@ -76,7 +76,7 @@ def get_obj_from_phoxiinfo_withmodel_nobgf(phxilocator, stl_f_name, objpcd_list=
                                            match_rotz=False, resolution=1, eps=5, use_rmse=True):
     if stl_f_name[-3:] != 'stl':
         stl_f_name += '.stl'
-    objcm = cm.CollisionModel(objinit=os.path.join(config.ROOT + '/obstacles/' + stl_f_name))
+    objcm = cm.CollisionModel(initor=os.path.join(config.ROOT + '/obstacles/' + stl_f_name))
     if objpcd_list is None:
         grayimg, depthnparray_float32, pcd = load_phxiinfo(phoxi_f_name=phoxi_f_name, load=load)
         objpcd_list = phxilocator.find_objpcd_list_by_pos(pcd, x_range=x_range, y_range=y_range, z_range=z_range,
@@ -88,7 +88,7 @@ def get_obj_from_phoxiinfo_withmodel_nobgf(phxilocator, stl_f_name, objpcd_list=
     objpcd = phxilocator.find_closest_objpcd_by_stl(stl_f_name, objpcd_list, use_rmse=use_rmse)
     objmat4 = phxilocator.match_pcdncm(objpcd, objcm, toggledebug=False, match_rotz=match_rotz)
     objmat4[:3, :3] = np.eye(3)
-    objcm.sethomomat(objmat4)
+    objcm.set_homomat(objmat4)
 
     return item.Item(objcm=objcm, pcd=objpcd, objmat4=objmat4)
 

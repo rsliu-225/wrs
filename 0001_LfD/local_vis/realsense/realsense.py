@@ -9,6 +9,7 @@ import pyrealsense2 as rs2
 import config_LfD as config
 import shutil
 import utils.vision_utils as vu
+import detection_utils as du
 import visualization.panda.world as wd
 import modeling.geometric_model as gm
 import open3d as o3d
@@ -28,21 +29,21 @@ class RealSense(object):
                                     depth_frame_format, depth_frame_framerate)
 
         self.__flag = False
-        self.intr = pickle.load(open(f"{config.ROOT}/local_vis/realsense/realsense_intr.pkl", "rb"))
+        self.intr = pickle.load(open(f'{config.ROOT}/local_vis/realsense/realsense_intr.pkl', 'rb'))
 
     def start(self):
         profile = self.__pipeline.start(self.__config)
         intr = profile.get_stream(rs2.stream.color).as_video_stream_profile().get_intrinsics()
-        # pickle.dump(intr, open(f"{config.ROOT}/local_vis/realsense/realsense_intr.pkl", "wb"))
-        self.intr = {"width": intr.width, "height": intr.height, "fx": intr.fx, "fy": intr.fy,
-                "ppx": intr.ppx, "ppy": intr.ppy}
+        # pickle.dump(intr, open(f'{config.ROOT}/local_vis/realsense/realsense_intr.pkl', 'wb'))
+        self.intr = {'width': intr.width, 'height': intr.height, 'fx': intr.fx, 'fy': intr.fy,
+                     'ppx': intr.ppx, 'ppy': intr.ppy}
         depth_sensor = profile.get_device().first_depth_sensor()
         depth_scale = depth_sensor.get_depth_scale()
         clipping_distance_in_meters = 1  # 1 meter
         self.__clipping_distance = clipping_distance_in_meters / depth_scale
         self.__flag = True
         if not self.__flag:
-            raise Exception("Frame pipeline is not started, please call \"start()\" first")
+            raise Exception('Frame pipeline is not started, please call \'start()\' first')
 
     def stop(self):
         self.__pipeline.stop()
@@ -97,28 +98,10 @@ class RealSense(object):
         finally:
             self.stop()
 
-    def load_frame_seq(self, folder_name, root_path=os.path.join(config.ROOT, "res/rs/seq/")):
-        depthimg_list = []
-        rgbimg_list = []
-        for f in sorted(os.listdir(os.path.join(root_path, folder_name))):
-            if f[-3:] != "pkl":
-                continue
-            tmp = pickle.load(open(os.path.join(root_path, folder_name, f), 'rb'))
-            if tmp[0].shape[-1] == 3:
-                depthimg_list.append(tmp[1])
-                rgbimg_list.append(tmp[0])
-            else:
-                depthimg_list.append(tmp[0])
-                rgbimg_list.append(tmp[1])
-        return [depthimg_list, rgbimg_list]
-
-    def load_frame(self, f_name, root_path=os.path.join(config.ROOT, "/res/rs/sgl/")):
-        return pickle.load(open(os.path.join(root_path, f_name), 'rb'))
-
     def depth2pcd(self, depthimg, toggledebug=False):
         pinhole_camera_intrinsic = \
-            o3d.camera.PinholeCameraIntrinsic(self.intr["width"], self.intr["height"],
-                                              self.intr["fx"], self.intr["fy"], self.intr["ppx"], self.intr["ppy"])
+            o3d.camera.PinholeCameraIntrinsic(self.intr['width'], self.intr['height'],
+                                              self.intr['fx'], self.intr['fy'], self.intr['ppx'], self.intr['ppy'])
         depthimg = o3d.geometry.Image(depthimg)
         pcd = o3d.geometry.PointCloud.create_from_depth_image(depthimg, pinhole_camera_intrinsic)
         if toggledebug:
@@ -128,8 +111,8 @@ class RealSense(object):
 
     def rgbd2pcd(self, depthimg, rgbimg, toggledebug=False):
         pinhole_camera_intrinsic = \
-            o3d.camera.PinholeCameraIntrinsic(self.intr["width"], self.intr["height"],
-                                              self.intr["fx"], self.intr["fy"], self.intr["ppx"], self.intr["ppy"])
+            o3d.camera.PinholeCameraIntrinsic(self.intr['width'], self.intr['height'],
+                                              self.intr['fx'], self.intr['fy'], self.intr['ppx'], self.intr['ppy'])
         img_depth = o3d.geometry.Image(depthimg)
         img_color = o3d.geometry.Image(cv2.cvtColor(rgbimg, cv2.COLOR_BGR2RGB))
         rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(img_color, img_depth, convert_rgb_to_intensity=False)
@@ -137,7 +120,6 @@ class RealSense(object):
         pcd.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
         if toggledebug:
             o3d.visualization.draw_geometries([pcd])
-            print(np.asarray(pcd.points))
         return pcd
 
     def get_depth_colormap(self):
@@ -157,7 +139,7 @@ class RealSense(object):
 
         # Create an align object
         # rs.align allows us to perform alignment of depth frames to others frames
-        # The "align_to" is the stream type to which we plan to align depth frames.
+        # The 'align_to' is the stream type to which we plan to align depth frames.
 
         align_to = rs2.stream.color
         align = rs2.align(align_to)
@@ -172,13 +154,13 @@ class RealSense(object):
 
         return depth_img, rgb_img
 
-    def dump_frame(self, f_name, root_path=os.path.join(config.ROOT, "res/rs/sgl/")):
+    def dump_frame(self, f_name, root_path=os.path.join(config.DATA_PATH, 'raw_img/rs/sgl/')):
         depth_img, rgb_img = self.get_frame()
         if not os.path.exists(root_path):
             os.makedirs(root_path)
         pickle.dump([depth_img, rgb_img], open(os.path.join(root_path, f_name), 'wb'))
 
-    def dump_bag(self, f_name, root_path=os.path.join(config.ROOT, "res/rs/bag/")):
+    def dump_bag(self, f_name, root_path=os.path.join(config.DATA_PATH, 'raw_img/rs/bag/')):
         if not os.path.exists(os.path.join(root_path)):
             os.makedirs(os.path.join(root_path))
         self.__config.enable_record_to_file(os.path.join(root_path, f_name))
@@ -186,7 +168,7 @@ class RealSense(object):
         time.sleep(3)
         align_to = rs2.stream.color
         align = rs2.align(align_to)
-        print("--------------------start--------------------")
+        print('--------------------start--------------------')
         while self.__flag:
             frames = self.__pipeline.wait_for_frames()
             aligned_frames = align.process(frames)
@@ -208,10 +190,10 @@ class RealSense(object):
                 self.stop()
                 break
 
-        print("--------------------done--------------------")
+        print('--------------------done--------------------')
         self.stop()
 
-    def dump_frameseq(self, folder_name, time_interval=1.0, root_path=os.path.join(config.ROOT, "res/rs/seq/")):
+    def dump_frameseq(self, folder_name, time_interval=1.0, root_path=os.path.join(config.ROOT, 'raw_img/rs/seq/')):
         dump_path = os.path.join(root_path, folder_name)
         if not os.path.exists(dump_path):
             os.makedirs(dump_path)
@@ -223,7 +205,7 @@ class RealSense(object):
         align_to = rs2.stream.color
         align = rs2.align(align_to)
         time.sleep(3)
-        print("--------------------start--------------------")
+        print('--------------------start--------------------')
         i = 0
         while self.__flag:
             frames = self.__pipeline.wait_for_frames()
@@ -237,8 +219,8 @@ class RealSense(object):
             depthimg = np.asanyarray(depth_frame.get_data())
             rgbimg = np.asanyarray(rgb_frame.get_data())
 
-            pickle.dump([depthimg, rgbimg], open(os.path.join(dump_path, f"{str(i).zfill(4)}.pkl"), 'wb'))
-            print("Captured!", i)
+            pickle.dump([depthimg, rgbimg], open(os.path.join(dump_path, f'{str(i).zfill(4)}.pkl'), 'wb'))
+            print('Captured!', i)
             i += 1
 
             depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depthimg, alpha=0.03), cv2.COLORMAP_JET)
@@ -254,11 +236,12 @@ class RealSense(object):
                 self.stop()
                 break
 
-        print("--------------------done--------------------")
+        print('--------------------done--------------------')
         self.stop()
 
-    def convert_bag2frameseq(self, f_name, time_interval=0.1, root_path=os.path.join(config.ROOT, "res/rs/bag/")):
-        dump_path = os.path.join("/".join(root_path.split("/")[:-2]), "seq", f_name.split(".bag")[0])
+    def convert_bag2frameseq(self, f_name, time_interval=0.1,
+                             root_path=os.path.join(config.DATA_PATH, 'raw_img/rs/bag/')):
+        dump_path = os.path.join('/'.join(root_path.split('/')[:-2]), 'seq', f_name.split('.bag')[0])
 
         if not os.path.exists(dump_path):
             os.makedirs(dump_path)
@@ -279,7 +262,7 @@ class RealSense(object):
                 imgs = np.hstack((rgbimg, depth_colormap))
                 cv2.namedWindow(f_name, cv2.WINDOW_AUTOSIZE)
                 cv2.imshow(f_name, imgs)
-                pickle.dump([depthimg, rgbimg], open(os.path.join(dump_path, f"{str(i).zfill(4)}.pkl"), 'wb'))
+                pickle.dump([depthimg, rgbimg], open(os.path.join(dump_path, f'{str(i).zfill(4)}.pkl'), 'wb'))
                 i += 1
                 key = cv2.waitKey(1)
                 if key & 0xFF == ord('q') or key == 27:
@@ -290,27 +273,17 @@ class RealSense(object):
             except:
                 break
 
-    def show_frameseq(self, folder_name, root_path=os.path.join(config.ROOT, "res/rs/seq/")):
-        """
-
-        :param folder_name:
-        :param inx: 0 - depth image; 1 - rgb image
-        :param root_path:
-        :return:
-        """
-        print(root_path)
-        data = self.load_frame_seq(folder_name, root_path=root_path)
-        print(f"num of frames: {len(data[0])}")
-        for img_id in range(len(data[0])):
-            depth_img = data[0][img_id]
-            color_img = data[1][img_id]
-            depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_img, alpha=0.03), cv2.COLORMAP_JET)
-            imgs = np.hstack((color_img, depth_colormap))
-            cv2.namedWindow(folder_name, cv2.WINDOW_AUTOSIZE)
-            cv2.imshow(folder_name, imgs)
+    def show_frameseq(self, depthimg_list, rgbimg_list):
+        print(f'num of frames: {len(depthimg_list)}')
+        for img_id in range(len(depthimg_list)):
+            depthimg = depthimg_list[img_id]
+            rgbimg = rgbimg_list[img_id]
+            depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depthimg, alpha=0.03), cv2.COLORMAP_JET)
+            imgs = np.hstack((rgbimg, depth_colormap))
+            cv2.imshow('', imgs)
             cv2.waitKey(0)
 
-    def show_pcdseq(self, folder_name, root_path=os.path.join(config.ROOT, "res/rs/seq/")):
+    def show_pcdseq(self, depthimg_list):
         def __update(pcldnp, counter, pcd_list, task):
             if counter[0] >= len(pcd_list):
                 counter[0] = 0
@@ -328,12 +301,11 @@ class RealSense(object):
         counter = [0]
         pcldnp = [None]
         base = wd.World(cam_pos=[.2, .2, -1.8], lookat_pos=[.2, .2, 0])
-        depthimg_list, rgbimg_list = self.load_frame_seq(folder_name, root_path=root_path)
         pcd_list = []
         for i in range(len(depthimg_list)):
             pcd_list.append(self.depth2pcd(depthimg_list[i]))
-        print(f"num of frames: {len(pcd_list)}")
-        taskMgr.doMethodLater(0.1, __update, "update", extraArgs=[pcldnp, counter, pcd_list], appendTask=True)
+        print(f'num of frames: {len(pcd_list)}')
+        taskMgr.doMethodLater(0.1, __update, 'update', extraArgs=[pcldnp, counter, pcd_list], appendTask=True)
 
         base.run()
 
@@ -346,11 +318,10 @@ class RealSense(object):
         scaled_depth_image = scaled_depth_image.astype(np.uint8)
         return scaled_depth_image
 
-    def show_rgbdseq(self, folder_name, root_path=os.path.join(config.ROOT, "res/rs/seq/")):
+    def show_rgbdseq(self, depthimg_list, rgbimg_list):
         pointcloud = o3d.geometry.PointCloud()
         vis = o3d.visualization.Visualizer()
         vis.create_window('PCD', width=1280, height=720)
-        depthimg_list, rgbimg_list = self.load_frame_seq(folder_name, root_path=root_path)
         geom_added = False
         i = 0
         while True:
@@ -366,7 +337,7 @@ class RealSense(object):
             vis.update_geometry(pointcloud)
             vis.poll_events()
             vis.update_renderer()
-            cv2.imshow("depth", self.scale_depth_img(depthimg_list[i]))
+            cv2.imshow('depth', self.scale_depth_img(depthimg_list[i]))
             cv2.imshow('rgb', rgbimg_list[i])
             key = cv2.waitKey(1)
             if key == ord('q'):
@@ -380,10 +351,11 @@ class RealSense(object):
 
 if __name__ == '__main__':
     realsense = RealSense()
-    # realsense.dump_frameseq("recons", time_interval=0)
-    # realsense.show_frameseq("recons")
-    # realsense.show_pcdseq("osaka")
-    # realsense.show_rgbdseq("recons")
-    # realsense.dump_bag(f_name="tst.bag", time_limit=5)
-    # realsense.convert_bag2frameseq(f_name="tst.bag", time_interval=.1)
+    realsense.dump_frameseq('bunny', time_interval=0)
+    # depthimg_list, rgbimg_list = du.load_frame_seq('osaka')
+    # realsense.show_frameseq(depthimg_list, rgbimg_list)
+    # realsense.show_pcdseq(depthimg_list)
+    # realsense.show_rgbdseq('recons')
+    # realsense.dump_bag(f_name='tst.bag', time_limit=5)
+    # realsense.convert_bag2frameseq(f_name='tst.bag', time_interval=.1)
     # realsense.view()
