@@ -15,20 +15,21 @@ import open3d as o3d
 
 
 class KinectAzura(object):
-    def __init__(self):
-        self.knt = pk.PyKinectAzure()
+    def __init__(self,online=True):
         self.root = config.DATA_PATH
-        calibration = self.knt.get_calibration()
-        depth_param = calibration.depth_camera_calibration.intrinsics.parameters.param
-        self.knt.device_get_capture()
-        depth_image_handle = self.knt.capture_get_depth_image()
-        self.intr = {'width': self.knt.image_get_width_pixels(depth_image_handle),
-                     'height': self.knt.image_get_height_pixels(depth_image_handle),
-                     'fx': depth_param.fx, 'fy': depth_param.fy,
-                     'cx': depth_param.cx, 'cy': depth_param.cy}
-        print(self.intr)
-        # pickle.dump(self.intr, open(f'{config.ROOT}/local_vis/knt_azura/knt_azura_intr.pkl', 'wb'))
-        # self.intr = pickle.load(open(f'{config.ROOT}/local_vis/knt_azura/knt_azura_intr.pkl', 'rb'))
+        if online:
+            self.knt = pk.PyKinectAzure()
+            calibration = self.knt.get_calibration()
+            depth_param = calibration.depth_camera_calibration.intrinsics.parameters.param
+            self.knt.device_get_capture()
+            depth_image_handle = self.knt.capture_get_depth_image()
+            self.intr = {'width': self.knt.image_get_width_pixels(depth_image_handle),
+                         'height': self.knt.image_get_height_pixels(depth_image_handle),
+                         'fx': depth_param.fx, 'fy': depth_param.fy,
+                         'cx': depth_param.cx, 'cy': depth_param.cy}
+            pickle.dump(self.intr, open(f'{config.ROOT}/local_vis/knt_azura/knt_azura_intr.pkl', 'wb'))
+        else:
+            self.intr = pickle.load(open(f'{config.ROOT}/local_vis/knt_azura/knt_azura_intr.pkl', 'rb'))
 
     def view(self):
         while True:
@@ -111,10 +112,10 @@ class KinectAzura(object):
             o3d.visualization.draw_geometries([pcd])
         return pcd
 
-    def show_rgbdseq(self, depthimg_list, rgbimg_list):
+    def show_rgbdseq(self, depthimg_list, rgbimg_list,win_name=''):
         pointcloud = o3d.geometry.PointCloud()
         vis = o3d.visualization.Visualizer()
-        vis.create_window('PCD', width=1280, height=720)
+        vis.create_window(win_name, width=1280, height=720)
 
         geom_added = False
         print(f"num of frames: {len(depthimg_list)}")
@@ -134,12 +135,12 @@ class KinectAzura(object):
             vis.poll_events()
             vis.update_renderer()
 
-            cv2.imshow('rgb', rgbimg_list[i])
+            # cv2.imshow('rgb', rgbimg_list[i])
             key = cv2.waitKey(10)
             if key == ord('q'):
                 break
             i += 1
-        cv2.destroyAllWindows()
+        # cv2.destroyAllWindows()
         vis.destroy_window()
         del vis
 

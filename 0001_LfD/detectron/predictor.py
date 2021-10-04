@@ -1,34 +1,32 @@
 import itertools
 import os
 import pickle
-import config
+import config_LfD as config
 import numpy as np
 
 import cv2
-# from detectron2 import model_zoo
-# from detectron2.config import get_cfg
-# from detectron2.data.catalog import MetadataCatalog
-# from detectron2.data.datasets import register_coco_instances
-# from detectron2.engine import DefaultPredictor
-# from detectron2.structures import Instances
-# from detectron2.utils.visualizer import Visualizer, ColorMode
+from detectron2 import model_zoo
+from detectron2.config import get_cfg
+from detectron2.data.catalog import MetadataCatalog
+from detectron2.data.datasets import register_coco_instances
+from detectron2.engine import DefaultPredictor
+from detectron2.structures import Instances
+from detectron2.utils.visualizer import Visualizer, ColorMode
 from tqdm import tqdm
+import detection_utils as du
 
 '''
 Configurations
 '''
 
 SCORE_THRESHOLD = 0.5
-INFERENCE_OUTPUT_DIR = os.path.join(config.ROOT, "mask_rcnn_seg", "inference_results")
-if not os.path.exists(INFERENCE_OUTPUT_DIR):
-    os.makedirs(INFERENCE_OUTPUT_DIR)
 
 MODEL_SETUP_FILE = 'COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml'
 NUM_CLASSES = 80
 DEVICE = 'cpu'
 
 
-class MaskRcnnPredictor(object):
+class DetectronPredictor(object):
     def __init__(self):
         register_coco_instances("coco_test2017", {}, "res/image_info_test2017.json", "")
 
@@ -73,22 +71,18 @@ class MaskRcnnPredictor(object):
 if __name__ == '__main__':
     import local_vis.realsense.realsense as rs
 
-    # data_f_name = config.ROOT + "/img/realsense/seq/A_light.pkl"
-    # data = pickle.load(open(data_f_name, 'rb'))
     realsense = rs.RealSense()
     folder_name = "recons"
-    depthimglist, rgbimg_list = realsense.load_frame_seq(folder_name)
+    depthimglist, rgbimg_list, _ = du.load_frame_seq(folder_name)
 
     label = None
     print("Start inferencing process")
 
-    predictor = MaskRcnnPredictor()
+    predictor = DetectronPredictor()
     for i, im in tqdm(enumerate(rgbimg_list)):
         predictions = predictor.predict(im, label)
         print(predictions.get("pred_masks").numpy())
-        cv2.imshow("mask", predictions.get("pred_masks").numpy()[0])
 
         visualized_pred = predictor.visualize_prediction(im, predictions)
         cv2.imshow("prediction", visualized_pred)
         cv2.waitKey(0)
-        cv2.imwrite(f'{INFERENCE_OUTPUT_DIR}/{folder_name}/{str(i).zfill(4)}.png', visualized_pred)

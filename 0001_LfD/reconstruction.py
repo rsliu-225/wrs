@@ -1,96 +1,35 @@
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-
-from localenv import envloader as el
 import visualization.panda.world as wd
 import utils.pcd_utils as pcdu
 import local_vis.realsense.realsense as rs
 import local_vis.knt_azura.knt_azura as k4a
 import basis.o3dhelper as o3dhelper
-from mask_rcnn_seg.inference import MaskRcnnPredictor
 import detection_utils as du
+import utils.vision_utils as vu
 import open3d as o3d
-import pickle
 import config_LfD as config
 import os
-from tqdm import tqdm
+import time
+import pickle
 import copy
 
 
-def remove_by_label(depthimg_list, rgbimg_list, folder_name=None, label=0, toggledebug=False, dilation=False):
+def extract_component_o3d(camera, depthimg_list, rgbimg_list, folder_name=None, seed=None, toggledebug=False):
     if folder_name is not None:
-        if not os.path.exists(f'{config.DATA_PATH}/seg_result/{folder_name}/'):
-            os.makedirs(f'{config.DATA_PATH}/seg_result/{folder_name}/')
-        if not os.path.exists(f'{config.DATA_PATH}/inf_result/{folder_name}/'):
-            os.makedirs(f'{config.DATA_PATH}/inf_result/{folder_name}/')
-
-    bgmask_list = du.flist_remove_bg(depthimg_list, rgbimg_list, threshold=100, toggledebug=False)
-    depthimg_list_res, rgbimg_list_res = [], []
-    predictor = MaskRcnnPredictor()
-    realsense = rs.RealSense()
-
-    for i, im in tqdm(enumerate(rgbimg_list)):
-        if i < 86:
-            continue
-        # pcdu.show_pcd(realsense.depth2pcd(depthimg_list[i]), rgba=(1, 1, 1, .1))
-        # base.run()
-
-        print(f'---------------image {i}---------------')
-        hnd_prediction = predictor.predict(im, label)
-        hnd_mask_list = hnd_prediction.get('pred_masks').numpy()
-        if len(hnd_mask_list) == 0:
-            print('no target mask!')
-            continue
-
-        visualized_pred = predictor.visualize_prediction(im, hnd_prediction)
-        depthimg = depthimg_list[i]
-        # print(depthimg)
-
-        hnd_mask = np.zeros(depthimg.shape)
-        for m in hnd_mask_list:
-            if dilation:
-                kernel = np.ones((3, 3), np.uint8)
-                if toggledebug:
-                    cv2.imshow('mask_org', m.astype(np.uint8) * 255)
-                    cv2.waitKey(0)
-                m = cv2.dilate(np.float32(m), kernel, iterations=5)
-            hnd_mask = np.logical_or(hnd_mask, m)
-
-        mask = np.logical_and(~bgmask_list[i], ~hnd_mask)
-        depthimg[~mask] = 0
-        rgbimg = rgbimg_list[i] * np.repeat(mask[:, :, np.newaxis], 3, axis=2)
-
-        if toggledebug:
-            cv2.imshow('prediction', np.hstack((rgbimg, visualized_pred)))
-            cv2.imshow('mask', np.hstack(((~bgmask_list[i]).astype(np.uint8) * 255,
-                                          (~hnd_mask).astype(np.uint8) * 255,
-                                          mask.astype(np.uint8) * 255)))
-            cv2.waitKey(0)
-            pcd_o3d = realsense.rgbd2pcd(depthimg, rgbimg, toggledebug=False)
-            pcd, colors = np.asarray(pcd_o3d.points), np.asarray(pcd_o3d.colors)
-            pcdu.show_pcd_withrgb(pcd, rgbas=np.hstack((colors,
-                                                        np.repeat(1, [len(pcd)]).reshape((len(pcd), 1)))))
-            base.run()
-        depthimg_list_res.append(depthimg)
-        rgbimg_list_res.append(rgbimg)
-        if folder_name is not None:
-            pickle.dump([depthimg, rgbimg],
-                        open(f'{config.DATA_PATH}/seg_result/{folder_name}/{str(i).zfill(4)}.pkl', 'wb'))
-            cv2.imwrite(f'{config.DATA_PATH}/inf_result/{folder_name}/{str(i).zfill(4)}.png', visualized_pred)
-    return depthimg_list_res, rgbimg_list_res
-
-
-def extract_conponent_o3d(depthimg_list, rgbimg_list, folder_name=None, seed=None, toggledebug=False):
-    if folder_name is not None:
-        if not os.path.exists(f'{config.DATA_PATH}/seg_pcd/{folder_name}/'):
-            os.makedirs(f'{config.DATA_PATH}/seg_pcd/{folder_name}/')
+        if not os.path.exists(f'{config.DATA_PATH}/seg_result/{folder_name}/pcd/'):
+            os.makedirs(f'{config.DATA_PATH}/seg_result/{folder_name}/pcd/')
     cluster_o3d_list = []
     pcd_list = []
-    realsense = rs.RealSense()
+
     for i in range(len(depthimg_list)):
-        pcd_o3d = realsense.rgbd2pcd(depthimg_list[i], rgbimg_list[i])
+        pcd_o3d = camera.rgbd2pcd(depthimg_list[i], rgbimg_list[i])
         pcd_o3d = o3dhelper.removeoutlier_o3d(pcd_o3d)
+        if len(np.asarray(pcd_o3d.points)) < 500:
+            continue
+        # print(np.asarray(pcd_o3d.points))
+        # du.cluster_meanshift(pcd_o3d.points, toggledebug=True)
         if seed is None:
             du.cluster_dbscan(pcd_o3d.points)
             cluster_pts, mask = du.get_max_cluster(pcd_o3d.points)
@@ -107,14 +46,51 @@ def extract_conponent_o3d(depthimg_list, rgbimg_list, folder_name=None, seed=Non
         seed = np.mean(cluster_pts, axis=0)
         print(seed, len(cluster_pts))
         if folder_name is not None:
-            o3d.io.write_point_cloud(f'{config.DATA_PATH}/seg_pcd/{folder_name}/{str(i).zfill(4)}.pcd', cluster_o3d)
+            o3d.io.write_point_cloud(f'{config.DATA_PATH}/seg_result/{folder_name}/pcd/{str(i).zfill(4)}.pcd',
+                                     cluster_o3d)
 
     if toggledebug:
         pcdu.show_pcdseq_withrgb(pcdseq=[o3d.points for o3d in cluster_o3d_list],
                                  rgbasseq=[o3d.colors for o3d in cluster_o3d_list], time_sleep=.5)
-        pcdu.show_pcdseq(pcd_list, rgba=(1, 1, 1, .1), time_sleep=.5)
+        pcdu.show_pcdseq(pcd_list, rgba=(1, 1, 1, .4), time_sleep=.5)
         base.run()
     return cluster_o3d_list
+
+
+def extract_component_rg(depthimg_list, rgbimg_list, folder_name=None, seed=None, toggledebug=False):
+    if folder_name is not None:
+        if not os.path.exists(f'{config.DATA_PATH}/seg_result/{folder_name}/rg/'):
+            os.makedirs(f'{config.DATA_PATH}/seg_result/{folder_name}/rg/')
+        if not os.path.exists(f'{config.DATA_PATH}/mask/{folder_name}/obj/'):
+            os.makedirs(f'{config.DATA_PATH}/mask/{folder_name}/obj/')
+    result_list = []
+    for i in range(len(depthimg_list)):
+        try:
+            components_list = du.get_dp_components(depthimg_list[i], toggledebug=False)
+        except:
+            continue
+        if len(components_list) == 0:
+            continue
+        if seed is None:
+            mask, seed = du.find_largest_dpcomponent(components_list)
+        else:
+            mask, seed = du.find_closest_dpcomponent(components_list, seed)
+        mask[mask == 255] = 1
+        depthimg = copy.deepcopy(depthimg_list[i])
+        rgbimg = copy.deepcopy(rgbimg_list[i])
+        depthimg[mask == 0] = 0
+        rgbimg = rgbimg * np.repeat(mask[:, :, np.newaxis], 3, axis=2)
+        result_list.append([depthimg, rgbimg])
+        # cv2.imshow('result', mask)
+        # cv2.imshow('depth', du.scale_depth_img(depthimg))
+        # cv2.imshow('rgb', rgbimg)
+        # cv2.waitKey(0)
+        if folder_name is not None:
+            pickle.dump([depthimg, rgbimg],
+                        open(f'{config.DATA_PATH}/seg_result/{folder_name}/rg/{str(i).zfill(4)}.pkl', 'wb'))
+            cv2.imwrite(f'{config.DATA_PATH}/mask/{folder_name}/obj/{str(i).zfill(4)}.png', mask * 255)
+
+    return result_list
 
 
 def registration_rgbd(source, target, current_transformation=np.identity(4)):
@@ -235,39 +211,139 @@ def merge_o3dpcd_seq(o3dpcd_seq, win_size=4):
     return res_o3dpcd_seq
 
 
+def graphcut(image, init_mask, itercont=10):
+    if len(image.shape) == 2:
+        image = vu.gray23channel(du.scale_depth_img(image))
+    saliency = cv2.saliency.StaticSaliencyFineGrained_create()
+    success, saliency_map = saliency.computeSaliency(image)
+    saliency_map = (saliency_map * 255).astype("uint8")
+    saliency_mask = cv2.threshold(saliency_map.astype("uint8"), 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+    cv2.imshow("Saliency Mask", saliency_mask)
+    cv2.waitKey(0)
+
+    # mask = np.where((init_mask == 1) & (saliency_mask == 255), 2, init_mask)
+    # mask = np.where((mask == 0) & (saliency_mask == 255), 2, mask)
+    mask = init_mask
+    mask[init_mask == 0] = 3
+    mask[init_mask == 1] = 0
+    cv2.imshow("Mask", mask * 100)
+    cv2.waitKey(0)
+
+    fgModel = np.zeros((1, 65), dtype="float")
+    bgModel = np.zeros((1, 65), dtype="float")
+
+    start = time.time()
+    mask, bgModel, fgModel = cv2.grabCut(image, mask, None, bgModel, fgModel, iterCount=itercont,
+                                         mode=cv2.GC_INIT_WITH_MASK)
+    end = time.time()
+    print("[INFO] applying GrabCut took {:.2f} seconds".format(end - start))
+    values = (
+        ("Definite Background", cv2.GC_BGD),
+        ("Probable Background", cv2.GC_PR_BGD),
+        ("Definite Foreground", cv2.GC_FGD),
+        ("Probable Foreground", cv2.GC_PR_FGD),
+    )
+    # loop over the possible GrabCut mask values
+    for (name, value) in values:
+        # construct a mask that for the current value
+        print("[INFO] showing mask for '{}'".format(name))
+        valueMask = (mask == value).astype("uint8") * 255
+        # display the mask so we can visualize it
+        cv2.imshow(name, valueMask)
+        cv2.waitKey(0)
+
+    outputMask = np.where((mask == cv2.GC_BGD) | (mask == cv2.GC_PR_BGD), 0, 1)
+    outputMask = (outputMask * 255).astype("uint8")
+    output = cv2.bitwise_and(image, image, mask=outputMask)
+
+    cv2.imshow("Input", image)
+    cv2.imshow("GrabCut Mask", outputMask)
+    cv2.imshow("GrabCut Output", output)
+    cv2.waitKey(0)
+
+
 if __name__ == '__main__':
-    folder_name = 'tst'
+    folder_name = 'glue'
     base = wd.World(cam_pos=[2, 0, 1], lookat_pos=[0, 0, 0])
     # camera = rs.RealSense()
-    camera = k4a.KinectAzura()
+    camera = k4a.KinectAzura(online=False)
 
-    depthimg_list, rgbimg_list, _ = du.load_frame_seq(folder_name,
-                                                      root_path=os.path.join(config.DATA_PATH, 'raw_img/k4a/seq/'))
+    '''
+    remove background and hand
+    '''
+    # depthimg_list, rgbimg_list, _ = du.load_frame_seq(folder_name,
+    #                                                   root_path=os.path.join(config.DATA_PATH, 'raw_img/k4a/seq/'))
+    # # camera.show_rgbdseq(depthimg_list, rgbimg_list)
+    # # depthimg_list = depthimg_list[:80]
+    # # rgbimg_list = rgbimg_list[:80]
+    # # bgmask_list = du.get_bg_maskseq(depthimg_list, bg_inxs=range(30), threshold=100, folder_name=folder_name,
+    # #                                 toggledebug=False)
+    # # hndmask_list = du.get_tgt_maskseq(rgbimg_list, start_id=70, folder_name=folder_name, toggledebug=False)
+    # # depthimg_list, rgbimg_list = du.filter_by_maskseq(bgmask_list, depthimg_list, rgbimg_list, folder_name,
+    # #                                                   toggledebug=False)
+    # # depthimg_list, rgbimg_list = du.filter_by_maskseq(hndmask_list, depthimg_list, rgbimg_list, folder_name,
+    # #                                                   toggledebug=False)
+    # # camera.show_rgbdseq(depthimg_list, rgbimg_list)
+    #
+    # bgmask_list, bg_id_list = du.load_mask(folder_name, 'bg')
+    # hndmask_list, hnd_id_list = du.load_mask(folder_name, 'hand')
+    # ls, id_list = du.get_list_inersection_by_id([bgmask_list, hndmask_list], [bg_id_list, hnd_id_list])
+    # bgmask_list, hndmask_list = ls
+    # hndmask_list = [np.logical_and(~bgmask_list[i], hndmask_list[i]) for i in range(len(id_list))]
+    #
+    # hnd_depthimg_list, hnd_rgbimg_list = \
+    #     du.filter_by_maskseq(hndmask_list, depthimg_list, rgbimg_list, id_list, exclude=False, toggledebug=False)
+    # front_depthimg_list, front_rgbimg_list = \
+    #     du.filter_by_maskseq(bgmask_list, depthimg_list, rgbimg_list, id_list, exclude=True, toggledebug=False)
+    #
+    # for i, f_name in enumerate(hnd_id_list):
+    #     if i < 100:
+    #         continue
+    #     # init_mask = np.asarray(np.logical_not(bgmask_list[i]), dtype='uint8')
+    #     init_mask = np.asarray(hndmask_list[i], dtype='uint8')
+    #     graphcut(front_rgbimg_list[int(f_name)], init_mask)
+    #     # graphcut(front_depthimg_list[int(f_name)], init_mask)
+    #
+    # # pcd = camera.rgbd2pcd(hnd_depthimg_list[100], hnd_rgbimg_list[100], toggledebug=True)
+    # # pcd2 = camera.rgbd2pcd(front_depthimg_list[100], front_rgbimg_list[100], toggledebug=True)
+    # # du.oneclasssvm_pcd(pcd, pcd2)
+    #
+    # res_depthimg_list, res_rgbimg_list = \
+    #     du.filter_by_maskseq([np.logical_and(~bgmask_list[i], ~hndmask_list[i]) for i in range(len(id_list))],
+    #                          depthimg_list, rgbimg_list, id_list, exclude=False, toggledebug=False)
+    # # camera.show_rgbdseq(hnd_depthimg_list, hnd_rgbimg_list, win_name='hnd')
+    # camera.show_rgbdseq(res_depthimg_list, res_rgbimg_list, win_name='rest')
+
+    '''
+    extract main cluster
+    '''
+    depthimg_list, rgbimg_list, _ = \
+        du.load_frame_seq(folder_name, root_path=os.path.join(config.DATA_PATH, 'filter_result/'))
+    # camera.show_frameseq(depthimg_list, rgbimg_list)
     # camera.show_rgbdseq(depthimg_list, rgbimg_list)
-    depthimg_list_res, rgbimg_list_res = remove_by_label(depthimg_list, rgbimg_list, folder_name, toggledebug=False,
-                                                         dilation=True)
 
-    # depthimg_list, rgbimg_list = \
-    #     du.load_frame_seq(folder_name, root_path=os.path.join(config.DATA_PATH, 'seg_result/'))
-    # seed = np.asarray([0, .1, -.25])
-    # cluster_o3d_list = extract_conponent_o3d(depthimg_list, rgbimg_list, folder_name=folder_name,
-    #                                          seed=seed, toggledebug=True)
-
+    seed = np.asarray([0, .1, -.25])
+    # cluster_o3d_list = extract_component_o3d(camera, depthimg_list, rgbimg_list, folder_name=folder_name,
+    #                                          seed=None, toggledebug=True)
+    components_list = extract_component_rg(depthimg_list, rgbimg_list, folder_name=folder_name, toggledebug=True)
+    camera.show_rgbdseq([c[0] for c in components_list], [c[1] for c in components_list], win_name='hnd')
     # o3dpcd_list = du.load_o3dpcd_seq(folder_name)
     # pcdu.show_pcdseq_withrgb(pcdseq=[o3d.points for o3d in o3dpcd_list],
     #                          rgbasseq=[o3d.colors for o3d in o3dpcd_list], time_sleep=.1)
     # base.run()
-
-    o3dpcd_list = du.load_o3dpcd_seq(folder_name, root_path=os.path.join(config.DATA_PATH, 'seg_pcd/'))
-    o3dpcd_list = o3dpcd_list[20:200]
-
-    res_o3dpcd_list = merge_o3dpcd_seq(o3dpcd_list)
+    '''
+    icp
+    '''
+    # o3dpcd_list = du.load_o3dpcd_seq(folder_name, root_path=os.path.join(config.DATA_PATH, 'seg_pcd/'))
+    # o3dpcd_list = o3dpcd_list[20:200]
+    #
+    # res_o3dpcd_list = merge_o3dpcd_seq(o3dpcd_list)
     # pcdu.show_pcdseq_withrgb(pcdseq=[o3d.points for o3d in res_o3dpcd_list],
     #                          rgbasseq=[o3d.colors for o3d in res_o3dpcd_list], time_sleep=.5)
     # pcdu.show_pcdseq_withrgb(pcdseq=[o3d.points for o3d in res_o3dpcd_list[1:]],
     #                          rgbasseq=[o3d.colors for o3d in res_o3dpcd_list[1:]], time_sleep=.5)
     # base.run()
-    for res_o3dpcd in res_o3dpcd_list:
-        pcdu.show_pcd_withrgb(res_o3dpcd.points, res_o3dpcd.colors, show_percentage=1 / len(res_o3dpcd_list) * 2)
-    # pcdu.show_pcd(pcd)
-    base.run()
+    # for res_o3dpcd in res_o3dpcd_list:
+    #     pcdu.show_pcd_withrgb(res_o3dpcd.points, res_o3dpcd.colors, show_percentage=1 / len(res_o3dpcd_list) * 2)
+    # # pcdu.show_pcd(pcd)
+    # base.run()
