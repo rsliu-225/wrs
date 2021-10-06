@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 
 import config
-import environment.collisionmodel as cm
+import modeling.collision_model as cm
 import localenv.item as item
 import motionplanner.motion_planner as m_planner
 import utils.pcd_utils as pcdu
@@ -90,7 +90,7 @@ def get_obj_from_phoxiinfo_withmodel(phxilocator, stl_f_name, objpcd_list=None, 
     objmat4 = phxilocator.match_pcdncm(objpcd, objcm, toggledebug=False, match_rotz=match_rotz)
     # objmat4[:3, :3] = np.eye(3)
     # objmat4[:3, 3] = objmat4[:3, 3] + np.asarray([-20, 0, 0])
-    objcm.sethomomat(objmat4)
+    objcm.set_homomat(objmat4)
 
     return item.Item(objcm=objcm, pcd=objpcd, objmat4=objmat4)
 
@@ -110,17 +110,17 @@ def get_obj_inhand_from_phoxiinfo_withmodel(phxilocator, stl_f_name, tcp_pos, in
     :param h:
     :return:
     """
-    objcm = cm.CollisionModel(objinit=os.path.join(config.ROOT + '/obstacles/' + stl_f_name))
+    objcm = cm.CollisionModel(initor=os.path.join(config.ROOT + '/obstacles/' + stl_f_name))
     grayimg, depthnparray_float32, pcd = load_phxiinfo(phoxi_f_name=phoxi_f_name, load=load)
 
     objpcd = phxilocator.find_objinhand_pcd(tcp_pos, pcd, stl_f_name, toggledebug=showcluster)
     objmat4 = phxilocator.match_pcdncm(objpcd, objcm, inithomomat, toggledebug=showicp)
-    objcm.sethomomat(objmat4)
+    objcm.set_homomat(objmat4)
 
     return item.Item(objcm=objcm, pcd=objpcd, objmat4=objmat4, draw_center=tcp_pos)
 
 
-def get_pen_objmat4_list_by_drawpath(drawpath, paintingobj_item, drawrec_size=(15, 15), space=0,
+def get_pen_objmat4_list_by_drawpath(drawpath, paintingobj_item, drawrec_size=(.015, .015), space=0,
                                      color=(1, 0, 0), mode="DI", direction=np.asarray((0, 0, 1)), show=True):
     drawpath = pu.resize_drawpath(pu.remove_list_dup(drawpath), drawrec_size[0], drawrec_size[1], space)
     paintingobj_objmat4 = paintingobj_item.objmat4
@@ -165,23 +165,21 @@ if __name__ == '__main__':
     set up env and param
     '''
     base, env = el.loadEnv_wrs()
-    rbt, rbtmg, rbtball = el.loadUr3e()
+    rbt= el.loadUr3e()
     rbtx = el.loadUr3ex
-    rbt.opengripper(armname="rgt")
-    rbt.opengripper(armname="lft")
 
     pen_stl_f_name = "pentip"
 
     '''
     init planner
     '''
-    motion_planner_rgt = m_planner.MotionPlanner(env, rbt, rbtmg, rbtball, armname="rgt")
-    motion_planner_lft = m_planner.MotionPlanner(env, rbt, rbtmg, rbtball, armname="lft")
+    motion_planner_rgt = m_planner.MotionPlanner(env, rbt, armname="rgt_arm")
+    motion_planner_lft = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
 
-    obj = cm.CollisionModel(objinit=os.path.join(config.ROOT + '/obstacles/pentip.stl'))
+    obj = cm.CollisionModel(initor=os.path.join(config.ROOT + '/obstacles/pentip.stl'))
 
     objmat4_list = pickle.load(
-        open(config.PREGRASP_REL_PATH + pen_stl_f_name + "_objmat4_list.pkl", "rb"))
+        open(config.GRASPMAP_REL_PATH + pen_stl_f_name + "_objmat4_list.pkl", "rb"))
     grasp_map = pickle.load(open(config.GRASPMAP_REL_PATH + pen_stl_f_name + "_graspmap.pkl", "rb"))
     print(len(objmat4_list))
     objmat4_id_list = []

@@ -117,7 +117,7 @@ if __name__ == '__main__':
     '''
     get draw path
     '''
-    objmat4_draw_list = mp_lft.objmat4_list_inp(
+    objmat4_draw_list = mp_lft.__objmat4_list_inp(
         ru.get_pen_objmat4_list_by_drawpath(drawpath, paintingobj_item, drawrec_size=drawrec_size,
                                             color=(1, 0, 0), mode='EI', direction=prj_direction, show=False),
         max_inp=max_inp)

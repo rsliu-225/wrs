@@ -110,7 +110,7 @@ if __name__ == '__main__':
     get draw path
     '''
     drawpath = du.gen_circle(interval=5)
-    objmat4_draw_list = motion_planner_lft.objmat4_list_inp(
+    objmat4_draw_list = motion_planner_lft.__objmat4_list_inp(
         ru.get_pen_objmat4_list_by_drawpath(drawpath, paintingobj_item, drawrec_size=drawrec_size))
     motion_planner_lft.ah.show_objmat4_list(objmat4_draw_list, pen_cm, rgba=(1, 0, 0, .5))
 

@@ -1,12 +1,13 @@
 import math
 import pickle
 import numpy as np
-import basis.trimesh
+import basis.trimesh as trimesh
 
 import basis.trimesh.sample as sample
 import utils.pcd_utils as pcdu
 import basis.robot_math as rm
 import modeling.collision_model as cm
+import modeling.geometric_model as gm
 import multiprocessing
 
 TOGGLEDEBUG = False
@@ -34,7 +35,6 @@ class Item(object):
             #                                         x_range=(-50, 50), y_range=(50, 500), z_range=(-50, 50))
             #     mask_ndir = self.__filer_by_dir(self.__objcm, self.__filter_dir)
             #     self.__reconstruct_by_mask(mask_range * mask_ndir)
-
             self.__pcd_std = pcdu.get_objpcd(kwargs["objcm"], objmat4=self.__objmat4)
             self.__w, self.__h = pcdu.get_pcd_w_h(self.__pcd_std)
         if "pcd" in list(kwargs.keys()):
@@ -104,15 +104,15 @@ class Item(object):
     def reverse_nrmls(self):
         self.__nrmls = [-n for n in self.__nrmls]
 
-    def gen_colps(self, radius=30, max_smp=120, show=False):
-        nsample = int(math.ceil(self.objcm.trimesh.area / (radius ** 2 / 3.0)))
+    def gen_colps(self, radius=.03, max_smp=120, show=False):
+        nsample = int(math.ceil(self.objcm.objtrm.area / (radius ** 2 / 3.0)))
         if nsample > max_smp:
             nsample = max_smp
-        samples = sample.sample_surface_even(self.objcm.trimesh, nsample)
+        samples = self.objcm.sample_surface(nsample=nsample, toggle_option=None)
         samples = pcdu.trans_pcd(samples, self.objmat4)
         if show:
             for p in samples:
-                base.pggen.plotSphere(base.render, p, rgba=(1, 1, 0, .2), radius=radius)
+                gm.gen_sphere(pos=p, rgba=(1, 1, 0, .2), radius=radius)
         return samples
 
     def gen_colps_top(self, show=False):
@@ -130,13 +130,13 @@ class Item(object):
         col_ps = np.asarray(col_ps)
         if show:
             for p in col_ps:
-                base.pggen.plotSphere(base.render, p, rgba=(1, 0, 0, 1), radius=20)
+                gm.gen_sphere(pos=p, rgba=(1, 0, 0, .2), radius=.01)
         return col_ps
 
     def __filer_by_dir(self, objcm, dir):
         # vs = objcm.trimesh.vertices
         # faces = objcm.trimesh.faces
-        nrmls = objcm.trimesh.vertex_normals
+        nrmls = objcm.objtrm.vertex_normals
         cos = np.dot(nrmls, dir) / (np.linalg.norm(nrmls) * np.linalg.norm(dir))
         mask = cos > 0
         return mask
@@ -209,7 +209,7 @@ class Item(object):
         print(len(faces))
         face_mask = self.__filer_fs_mp(faces, v_ids)
         faces = faces[face_mask]
-        self.__objcm = cm.CollisionModel(objinit=trimesh.Trimesh(vertices=vs, faces=faces, vertex_normals=nrmls))
+        self.__objcm = cm.CollisionModel(initor=trimesh.Trimesh(vertices=vs, faces=faces, vertex_normals=nrmls))
         pickle.dump([vs, nrmls, faces], open('skull.pkl', "wb"))
         print(len(vs))
         pcdu.show_pcd(vs)
@@ -225,7 +225,7 @@ class Item(object):
         self.__objcm.setColor(rgba[0], rgba[1], rgba[2], rgba[3])
         if show_localframe:
             self.__objcm.showlocalframe()
-        self.__objcm.reparentTo(base.render)
+        self.__objcm.attach_to(base)
 
     def show_objpcd(self, rgba=(1, 1, 1, 1)):
         pcdu.show_pcd(self.__pcd, rgba=rgba)

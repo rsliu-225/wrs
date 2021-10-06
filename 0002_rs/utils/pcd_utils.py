@@ -19,7 +19,7 @@ from localenv import envloader as el
 
 
 def get_objpcd(objcm, objmat4=np.eye(4), sample_num=100000, toggledebug=False):
-    objpcd = np.asarray(ts.sample_surface(objcm.trimesh, count=sample_num))
+    objpcd = objcm.sample_surface(nsample=sample_num, toggle_option=None)
     objpcd = trans_pcd(objpcd, objmat4)
 
     if toggledebug:
@@ -320,13 +320,13 @@ def get_pcdidx_by_pos(pcd, realpos, diff=10, dim=3):
 
 def get_objpcd_withnrmls(objcm, objmat4=np.eye(4), sample_num=100000, toggledebug=False, sample_edge=False):
     objpcd_nrmls = []
-    faces = objcm.trimesh.faces
-    vertices = objcm.trimesh.vertices
-    face_nrmls = objcm.trimesh.face_normals
-    nrmls = objcm.trimesh.vertex_normals
+    faces = objcm.objtrm.faces
+    vertices = objcm.objtrm.vertices
+    face_nrmls = objcm.objtrm.face_normals
+    nrmls = objcm.objtrm.vertex_normals
 
     if sample_num is not None:
-        objpcd, faceid = ts.sample_surface(objcm.trimesh, count=sample_num)
+        objpcd, faceid = ts.sample_surface(objcm.objtrm, count=sample_num)
         objpcd = list(objpcd)
         for i in faceid:
             objpcd_nrmls.append(np.array(face_nrmls[i]))
@@ -374,7 +374,7 @@ def get_objpcd_withnrmls(objcm, objmat4=np.eye(4), sample_num=100000, toggledebu
 
 
 def get_objpcd_partial(objcm, objmat4=np.eye(4), sample_num=100000, toggledebug=False):
-    objpcd = np.asarray(ts.sample_surface(objcm.trimesh, count=sample_num))
+    objpcd = np.asarray(ts.sample_surface(objcm.objtrm, count=sample_num))
     objpcd = trans_pcd(objpcd, objmat4)
 
     grid = {}
@@ -423,15 +423,15 @@ def get_objpcd_partial_bycampos(objcm, objmat4=np.eye(4), sample_num=100000, cam
     def sigmoid(angle):
         return 1 / (1 + np.exp((angle - 90) / 90)) - 0.5
 
-    objpcd = np.asarray(ts.sample_surface(objcm.trimesh, count=sample_num))
+    objpcd = np.asarray(ts.sample_surface(objcm.objtrm, count=sample_num))
     objpcd_center = get_pcd_center(objpcd)
-    face_num = len(objcm.trimesh.face_normals)
+    face_num = len(objcm.objtrm.face_normals)
 
     objpcd_new = []
-    area_list = objcm.trimesh.area_faces
+    area_list = objcm.objtrm.area_faces
     area_sum = sum(area_list)
 
-    for i, n in enumerate(objcm.trimesh.face_normals):
+    for i, n in enumerate(objcm.objtrm.face_normals):
         n = np.dot(n, objmat4[:3, :3])
         angle = __get_angle(n, np.array(cam_pos - objpcd_center))
 
@@ -518,7 +518,7 @@ if __name__ == '__main__':
     base, env = el.loadEnv_wrs()
     objcm = el.loadObj("pentip.stl")
 
-    source_pcd = np.asarray(ts.sample_surface(objcm.trimesh, count=10000))
+    source_pcd = np.asarray(ts.sample_surface(objcm.objtrm, count=10000))
     source = o3d_helper.nparray2o3dpcd(source_pcd[source_pcd[:, 2] > 5])
     # source.paint_uniform_color([0, 0.706, 1])
     # o3d.visualization.draw_geometries([source])

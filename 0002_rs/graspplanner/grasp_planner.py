@@ -1,23 +1,23 @@
 import copy
 import os
 import pickle
-
+import math
 import numpy as np
 
 import config
-import environment.bulletcdhelper as bch
 import modeling.collision_model as cm
+import modeling.geometric_model as gm
 import basis.robot_math as rm
+import grasping.annotation.utils as gau
 
 
 class GraspPlanner(object):
-    def __init__(self, hndfa):
-        self.hndfa = hndfa
-        self.bcdchecker = bch.MCMchecker(toggledebug=False)
+    def __init__(self, gripper_s):
+        self.gripper_s = gripper_s
 
     def load_objcm(self, stl_f_name):
-        obj = cm.CollisionModel(objinit=os.path.join(config.ROOT, "obstacles/", stl_f_name))
-        obj.setColor(1, 1, 0, 1)
+        obj = cm.CollisionModel(initor=os.path.join(config.ROOT, "obstacles/", stl_f_name))
+        obj.set_rgba((1, 1, 0, 1))
         return obj
 
     def write_pregrasps(self, stl_f_name, pregrasps, mode=""):
@@ -38,83 +38,39 @@ class GraspPlanner(object):
                 open(config.ROOT + "/graspplanner/pregrasp_hndovr/" + stl_f_name.split(".stl")[0] + '_pregrasps.pkl',
                      'rb'))
 
-    def checkhndenvcollision(self, hnd, jawwidth, homomat, inputobj):
-        handtmp = hnd
-        handtmp.sethomomat(homomat)
-        handtmp.setjawwidth(jawwidth + 10)
-        iscollided = self.bcdchecker.isMeshListMeshListCollided(handtmp.cmlist, [copy.deepcopy(inputobj)])
-        return iscollided
-
     def define_grasp(self, grasp_coordinate, finger_normal, hand_normal, jawwidth, obj, toggledebug=False):
-        effect_grasp = []
-        hnd = self.hndfa.genHand(ftsensoroffset=36)
-        base.pggen.plotAxis(hnd.handnp, length=15, thickness=2)
-        grasp = hnd.approachAt(grasp_coordinate[0], grasp_coordinate[1], grasp_coordinate[2],
-                               finger_normal[0], finger_normal[1], finger_normal[2],
-                               hand_normal[0], hand_normal[1], hand_normal[2], jawwidth=jawwidth)
-        if not self.checkhndenvcollision(self.hndfa.genHand(ftsensoroffset=36), grasp[0], grasp[2], obj):
-            if toggledebug:
-                hnd.setColor(1, 0, 0, .5)
-                hnd.reparentTo(base.render)
-                obj.reparentTo(base.render)
-            effect_grasp.append(grasp)
-
-        hnd_reverse = self.hndfa.genHand(ftsensoroffset=36)
-        base.pggen.plotAxis(hnd_reverse.handnp, length=15, thickness=2)
-        grasp_reverse = hnd_reverse.approachAt(grasp_coordinate[0], grasp_coordinate[1], grasp_coordinate[2],
-                                               -finger_normal[0], -finger_normal[1], -finger_normal[2],
-                                               hand_normal[0], hand_normal[1], hand_normal[2], jawwidth=jawwidth)
-        if not self.checkhndenvcollision(self.hndfa.genHand(ftsensoroffset=36), grasp[0], grasp[2], obj):
-            if toggledebug:
-                hnd_reverse.setColor(1, 0, 0, .5)
-                hnd_reverse.reparentTo(base.render)
-                obj.reparentTo(base.render)
-            effect_grasp.append(grasp_reverse)
+        effect_grasp = gau.define_grasp(self.gripper_s, obj,
+                                        gl_jaw_center_pos=grasp_coordinate,
+                                        gl_jaw_center_z=hand_normal,
+                                        gl_jaw_center_y=finger_normal,
+                                        jaw_width=jawwidth,
+                                        toggle_flip=True, toggle_debug=toggledebug)
 
         return effect_grasp
 
     def define_grasp_with_rotation(self, grasp_coordinate, finger_normal, hand_normal, jawwidth, obj,
-                                   rotation_interval=15, rotation_range=(-90, 90), toggledebug=False):
-        effect_grasp = []
-        rotation_list = []
-        for i in range(rotation_range[0], rotation_range[1] + 1):
-            if i % rotation_interval == 0:
-                rotation_list.append(i)
-        for rotate_angle in rotation_list:
-            hnd = self.hndfa.genHand(ftsensoroffset=36)
-            # base.pggen.plotAxis(hnd.handnp, length=15, thickness=2)
-            rotate = np.dot(np.array([hand_normal[0], hand_normal[1], hand_normal[2]]),
-                            rm.rodrigues(finger_normal, rotate_angle))
-            grasp = hnd.approachAt(grasp_coordinate[0], grasp_coordinate[1], grasp_coordinate[2], finger_normal[0],
-                                   finger_normal[1], finger_normal[2], rotate[0], rotate[1], rotate[2],
-                                   jawwidth=jawwidth)
-            if not self.checkhndenvcollision(self.hndfa.genHand(ftsensoroffset=36), grasp[0], grasp[2], obj):
-                if toggledebug:
-                    hnd.setColor(1, 0, 0, .2)
-                    hnd.reparentTo(base.render)
-                    obj.reparentTo(base.render)
-                effect_grasp.append(grasp)
-
-            hnd_reverse = self.hndfa.genHand(ftsensoroffset=36)
-            # base.pggen.plotAxis(hnd_reverse.handnp, length=15, thickness=2)
-            grasp_reverse = hnd_reverse.approachAt(grasp_coordinate[0], grasp_coordinate[1], grasp_coordinate[2],
-                                                   -finger_normal[0], -finger_normal[1], -finger_normal[2], rotate[0],
-                                                   rotate[1], rotate[2], jawwidth=jawwidth)
-            if not self.checkhndenvcollision(self.hndfa.genHand(ftsensoroffset=36), grasp_reverse[0],
-                                             grasp_reverse[2], obj):
-                if toggledebug:
-                    hnd_reverse.setColor(1, 0, 0, .2)
-                    hnd_reverse.reparentTo(base.render)
-                    obj.reparentTo(base.render)
-                effect_grasp.append(grasp_reverse)
+                                   rotation_ax=np.array([0, 1, 0]), rotation_interval=15, rotation_range=(-90, 90),
+                                   toggledebug=False):
+        if toggledebug:
+            gm.gen_frame().attach_to(base)
+        effect_grasp = \
+            gau.define_grasp_with_rotation(self.gripper_s, obj,
+                                           gl_jaw_center_pos=np.asarray(grasp_coordinate),
+                                           gl_jaw_center_z=np.asarray(hand_normal),
+                                           gl_jaw_center_y=np.asarray(finger_normal),
+                                           jaw_width=jawwidth,
+                                           gl_rotation_ax=rotation_ax,
+                                           rotation_interval=math.radians(rotation_interval),
+                                           rotation_range=(
+                                               math.radians(rotation_range[0]), math.radians(rotation_range[1])),
+                                           toggle_flip=True, toggle_debug=toggledebug)
 
         return effect_grasp
 
-    def show_grasp(self,grasp_list, obj, rgba=(1, 0, 0, .2)):
-        obj.reparentTo(base.render)
+    def show_grasp(self, grasp_list, obj, rgba=None):
+        obj.attach_to(base)
         for grasp in grasp_list:
-            hnd = self.hndfa.genHand(ftsensoroffset=36)
-            hnd.sethomomat(grasp[2])
-            hnd.setColor(rgba[0], rgba[1], rgba[2], rgba[3])
-            hnd.reparentTo(base.render)
-
+            self.gripper_s.jaw_to(grasp[0])
+            self.gripper_s.fix_to(grasp[3], grasp[4])
+            # self.gripper_s.gen_meshmodel(rgba=rgba, toggle_tcpcs=True, toggle_jntscs=True).attach_to(base)
+            self.gripper_s.gen_stickmodel(toggle_tcpcs=True, toggle_jntscs=False).attach_to(base)

@@ -47,7 +47,7 @@ def get_objmat4_draw_list(mp, drawpath_f_name, paintingobj_item, drawrec_size, t
         objmat4_list = ru.get_pen_objmat4_list_by_drawpath(drawpath, paintingobj_item, drawrec_size=drawrec_size,
                                                            color=(0, 1, 0), mode=mode, direction=prj_direction)
 
-        return mp.objmat4_list_inp(objmat4_list)
+        return mp.__inp(objmat4_list)
     else:
         drawpath_ms = du.load_drawpath(drawpath_f_name)
         objmat4_draw_list_ms = \
@@ -258,6 +258,6 @@ if __name__ == '__main__':
     if type == "ss":
         rmu.show_drawmotion_ss(mp_lft, pen_cm, motion_f_path, grasp_id_list)
     else:
-        rmu.show_drawmotion_ms(mp_lft, pen_cm, motion_f_path, grasp_id_list, jawwidth=18)
+        rmu.show_drawmotion(mp_lft, pen_cm, motion_f_path, grasp_id_list, jawwidth=18)
 
     base.run()

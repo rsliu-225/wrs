@@ -250,29 +250,25 @@ def setting_real(phxilocator, phoxi_f_path, pen_stl_f_name, paintingobj_stl_f_na
     pen_item.show_objcm(rgba=(0, 1, 0, 1))
 
 
-def show_drawmotion_ms(motion_planner, pen_cm, motion_f_path, grasp_id_list, jawwidth=20):
+def show_drawmotion(motion_planner, pen_cm, motion_f_path, grasp_id_list, jawwidth=20):
     draw_dict = pickle.load(open(motion_f_path, "rb"))
     objrelpos, objrelrot = None, None
 
     for grasp_id in grasp_id_list:
-        path = []
-        if grasp_id not in draw_dict.keys():
-            continue
-        for stroke_key, v in draw_dict[grasp_id].items():
-            print("------", stroke_key, "--------")
-            objrelpos, objrelrot, path_stroke = v
-            if path != []:
-                path_gotodraw = motion_planner.plan_start2end(start=path[-1], end=path_stroke[0])
-            else:
-                path_gotodraw = []
-            path_up = motion_planner.get_moveup_path(path_stroke[-1], pen_cm, objrelpos, objrelrot, length=30)
-            path.extend(path_gotodraw + path_stroke + path_up)
-        motion_planner.ah.show_animation_hold(path, copy.deepcopy(pen_cm), objrelpos, objrelrot, jawwidth=jawwidth)
-
-
-def show_drawmotion_ss(motion_planner, pen_cm, motion_f_path, grasp_id_list, jawwidth=20):
-    draw_dict = pickle.load(open(motion_f_path, "rb"))
-
-    for grasp_id in grasp_id_list:
-        objrelpos, objrelrot, path = draw_dict[grasp_id]
-        motion_planner.ah.show_animation_hold(path, copy.deepcopy(pen_cm), objrelpos, objrelrot, jawwidth=jawwidth)
+        try:
+            objrelpos, objrelrot, path = draw_dict[grasp_id]
+            motion_planner.ah.show_animation_hold(path, copy.deepcopy(pen_cm), objrelpos, objrelrot, jawwidth=jawwidth)
+        except:
+            path = []
+            if grasp_id not in draw_dict.keys():
+                continue
+            for stroke_key, v in draw_dict[grasp_id].items():
+                print("------", stroke_key, "--------")
+                objrelpos, objrelrot, path_stroke = v
+                if path != []:
+                    path_gotodraw = motion_planner.plan_start2end(start=path[-1], end=path_stroke[0])
+                else:
+                    path_gotodraw = []
+                path_up = motion_planner.get_moveup_path(path_stroke[-1], pen_cm, objrelpos, objrelrot, length=30)
+                path.extend(path_gotodraw + path_stroke + path_up)
+            motion_planner.ah.show_animation_hold(path, copy.deepcopy(pen_cm), objrelpos, objrelrot, jawwidth=jawwidth)

@@ -2,7 +2,7 @@ import copy
 
 import matplotlib.pyplot as plt
 import numpy as np
-
+import modeling.geometric_model as gm
 import basis.robot_math as rm
 
 
@@ -12,13 +12,8 @@ class RobotHelper(object):
         self.env = env
         self.obscmlist = env.getstationaryobslist() + env.getchangableobslist()
         self.armname = armname
-
-        if self.armname == "lft_arm":
-            self.initjnts = self.rbt.initlftjnts
-            self.armlj = self.rbt.lft_arm
-        else:
-            self.initjnts = self.rbt.initrgtjnts
-            self.armlj = self.rbt.rgt_arm
+        self.initjnts = self.rbt.get_jnt_values(self.armname)
+        # self.armlj = self.rbt.get_jnt_values
 
     def jacobian(self, releemat4=np.eye(4), scale=1.0):
         """
@@ -89,26 +84,26 @@ class RobotHelper(object):
         eepos = eemat4[:3, 3]
         eerot = eemat4[:3, :3]
         deltapos = (tgtpos - eepos) * scale
-        deltaw = rm.deltaw_betweenrotmat(tgtrot, eerot.T)
+        deltaw = rm.deltaw_between_rotmat(tgtrot, eerot.T)
         return np.append(deltapos, deltaw)
 
     def is_selfcollided(self, armjnts=None):
         if armjnts is not None:
-            self.rbt.movearmfk(armjnts, self.armname)
-        return self.rbt.is_collided(self.rbt, self.obscmlist, self.armname)
+            self.rbt.fk(self.armname, armjnts)
+        return self.rbt.is_collided(obstacle_list=self.obscmlist)
 
     def is_objcollided(self, obj, armjnts=None):
         if armjnts is not None:
-            self.rbt.movearmfk(armjnts, self.armname)
-        return self.rbt.is_collided([obj], self.rbt, self.armname, self.obscmlist)
+            self.rbt.fk(self.armname, armjnts)
+        return self.rbt.is_collided(obstacle_list=self.obscmlist + [obj])
 
     def goto_armjnts(self, armjnts):
-        self.rbt.movearmfk(armjnts, self.armname)
+        self.rbt.fk(self.armname, armjnts)
 
     def goto_initarmjnts(self):
-        if self.armname == "rgt":
+        if self.armname == "rgt_arm":
             self.goto_armjnts(self.rbt.initrgtjnts)
-        if self.armname == "lft":
+        if self.armname == "lft_arm":
             self.goto_armjnts(self.rbt.initlftjnts)
 
     def get_ee(self, armjnts=None, releemat4=np.eye(4)):
@@ -121,19 +116,16 @@ class RobotHelper(object):
     def get_tcp(self, armjnts=None):
         if armjnts is not None:
             self.goto_armjnts(armjnts)
-        return self.rbt.gettcp(armname=self.armname)
+        return self.rbt.get_gl_tcp(manipulator_name=self.armname)
 
     def draw_axis(self, pos, rot, rgba=None, length=50, thickness=5):
-        base.pggen.plotAxis(base.render, spos=pos, srot=rot, length=length, rgba=rgba, thickness=thickness)
-        base.pggen.plotSphere(base.render, pos, 10, rgba=(1, 1, 0, 1))
+        gm.gen_frame(pos=pos, rotmat=rot, length=length, thickness=thickness)
+        gm.gen_sphere(pos, radius=10, rgba=(1, 1, 0, 1))
 
-    def draw_axis_uneven(self, pos, rot, scale=1, thickness=5):
-        base.pggen.plotArrow(base.render, spos=pos, epos=pos + scale * rot[:3, 0], rgba=(1, 0, 0, 1),
-                             thickness=thickness)
-        base.pggen.plotArrow(base.render, spos=pos, epos=pos + scale * rot[:3, 1], rgba=(0, 1, 0, 1),
-                             thickness=thickness)
-        base.pggen.plotArrow(base.render, spos=pos, epos=pos + scale * rot[:3, 2], rgba=(0, 0, 1, 1),
-                             thickness=thickness)
+    def draw_axis_uneven(self, pos, rot, scale=1, thickness=.005):
+        gm.gen_arrow(spos=pos, epos=pos + scale * rot[:3, 0], rgba=(1, 0, 0, 1), thickness=thickness)
+        gm.gen_arrow(spos=pos, epos=pos + scale * rot[:3, 1], rgba=(0, 1, 0, 1), thickness=thickness)
+        gm.gen_arrow(spos=pos, epos=pos + scale * rot[:3, 2], rgba=(0, 0, 1, 1), thickness=thickness)
 
     def plot_armjnts(self, path, scatter=False, title="armjnts", show=True):
         path = np.array(path)
@@ -192,21 +184,17 @@ class RobotHelper(object):
 
     def __genmnp_by_armname(self, rgba, toggleendcoord=False, jawwidth=50):
         self.rbt.closegripper(armname=self.armname, jawwidth=jawwidth)
-        if self.armname == "lft":
-            self.rbtmg.genmnp(self.rbt, togglejntscoord=False, toggleendcoord=toggleendcoord, rgbalft=rgba). \
-                reparentTo(base.render)
+        if self.armname == "lft_arm":
+            self.rbt.gen_meshmodel(toggle_tcpcs=toggleendcoord, rgba=rgba).attach_to(base)
         else:
-            self.rbtmg.genmnp(self.rbt, togglejntscoord=False, toggleendcoord=toggleendcoord, rgbargt=rgba). \
-                reparentTo(base.render)
+            self.rbt.gen_meshmodel(toggle_tcpcs=toggleendcoord, rgba=rgba).attach_to(base)
 
     def __gensnp_by_armname(self, rgba, toggleendcoord=False):
         self.rbt.closegripper(armname=self.armname)
-        if self.armname == "lft":
-            self.rbtmg.gensnp(self.rbt, togglejntscoord=False, toggleendcoord=toggleendcoord, lftrgba=rgba). \
-                reparentTo(base.render)
+        if self.armname == "lft_arm":
+            self.rbt.gen_stickmodel(toggle_jntscs=False, toggle_tcpcs=toggleendcoord).attach_to(base)
         else:
-            self.rbtmg.gensnp(self.rbt, togglejntscoord=False, toggleendcoord=toggleendcoord, rgtrgba=rgba). \
-                reparentTo(base.render)
+            self.rbt.gen_stickmodel(toggle_jntscs=False, toggle_tcpcs=toggleendcoord).attach_to(base)
 
 
 if __name__ == '__main__':
@@ -217,6 +205,6 @@ if __name__ == '__main__':
 
     base, env = el.loadEnv_wrs()
 
-    rbt, rbtmg, rbtball = el.loadUr3e(showrbt=False)
-    rbth = RobotHelper(env, rbt, rbtmg, rbtball, "lft")
+    rbt = el.loadUr3e(showrbt=False)
+    rbth = RobotHelper(env, rbt, "lft_arm")
     print(rbth.manipulability())

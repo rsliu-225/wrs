@@ -17,6 +17,7 @@ import motionplanner.ik_solver as iks
 import motionplanner.robot_helper as rbt_helper
 import utils.graph_utils as gh
 import basis.robot_math as rm
+import modeling.geometric_model as gm
 import motion.probabilistic.rrt_connect as rrtc
 
 
@@ -31,13 +32,8 @@ class MotionPlanner(object):
         #     obscm.showcn()
         self.hndfa = rtqhe.RobotiqHE()
         self.iksolver = iks.IkSolver(self.env, self.rbt, self.armname)
-
-        if self.armname == "lft_arm":
-            self.initjnts = self.rbt.initlftjnts
-            self.arm = self.rbt.lft_arm
-        else:
-            self.initjnts = self.rbt.initrgtjnts
-            self.arm = self.rbt.rgt_arm
+        self.initjnts = self.rbt.get_jnt_values(self.armname)
+        print(self.initjnts)
 
         self.graspplanner = gp.GraspPlanner(self.hndfa)
         self.rbth = rbt_helper.RobotHelper(self.env, self.rbt, self.armname)
@@ -57,12 +53,12 @@ class MotionPlanner(object):
 
     def get_numik(self, eepos, eerot, msc=None):
         if msc is None:
-            # armjnts = self.rbt.numik(eepos, eerot, armname=self.armname)
-            armjnts = self.iksolver.solve_numik3(eepos, eerot)
+            armjnts = self.rbt.ik(self.armname, eepos, eerot)
+            # armjnts = self.iksolver.solve_numik3(eepos, eerot)
 
         else:
-            # armjnts = self.rbt.numik(eepos, eerot, seedjntagls=msc, armname=self.armname)
-            armjnts = self.iksolver.solve_numik3(eepos, eerot, seedjntagls=msc)
+            armjnts = self.rbt.ik(self.armname, eepos, eerot, seedjntagls=msc)
+            # armjnts = self.iksolver.solve_numik3(eepos, eerot, seedjntagls=msc)
         if armjnts is None:
             return None
         if not self.rbth.is_selfcollided(armjnts):
@@ -208,9 +204,7 @@ class MotionPlanner(object):
     def get_ee_by_objmat4(self, grasp, objmat4):
         _, prehndfc, prehndmat4 = grasp
         hndmat4 = np.dot(objmat4, prehndmat4)
-        eepos = rm.homomat_from_posrot(objmat4, prehndfc)[:3]
-        eerot = hndmat4[:3, :3]
-        return [eepos, eerot]
+        return [hndmat4[:3, 3], hndmat4[:3, :3]]
 
     def get_eeseq_by_objmat4seq(self, grasp, objmat4_list):
         graspseq = []
@@ -254,7 +248,8 @@ class MotionPlanner(object):
 
         return path
 
-    def plan_start2end_hold(self, grasp, objmat4_pair, obj, objrelpos, objrelrot, start=None, use_msc=True):
+    def plan_start2end_hold(self, grasp, objmat4_pair, obj, objrelpos, objrelrot, start=None, use_msc=True,
+                            additional_obscmlist=[]):
         start_grasp = self.get_ee_by_objmat4(grasp, objmat4_pair[0])
         end_grasp = self.get_ee_by_objmat4(grasp, objmat4_pair[1])
         if start is None:
@@ -272,10 +267,13 @@ class MotionPlanner(object):
             return None
 
         print("--------------rrt---------------")
-        planner = \
-            rrtc.RRTConnect(start=start, goal=goal, checker=self.ctcallback,
-                            starttreesamplerate=30, goaltreesamplerate=30, expanddis=10, maxiter=200, maxtime=100.0)
-        path, samples = planner.planninghold([obj], [[objrelpos, objrelrot]], self.obscmlist)
+        planner = rrtc.RRTConnect(self.rbt)
+        path = planner.plan(component_name=self.armname, start_conf=start, goal_conf=goal,
+                            obstacle_list=self.obscmlist + additional_obscmlist, ext_dist=.2, max_time=300)
+        # planner = \
+        #     rrtc.RRTConnect(start=start, goal=goal, checker=self.ctcallback,
+        #                     starttreesamplerate=30, goaltreesamplerate=30, expanddis=10, maxiter=200, maxtime=100.0)
+        # path, samples = planner.planninghold([obj], [[objrelpos, objrelrot]], self.obscmlist)
 
         if path is None:
             print("rrt failed!")
@@ -402,12 +400,12 @@ class MotionPlanner(object):
 
         return None
 
-    def objmat4_list_inp(self, objmat4_list, max_inp=30):
+    def __inp(self, objmat4_list, max_inp=30):
         inp_mat4_list = []
         for i, objmat4 in enumerate(objmat4_list):
             if i > 0:
                 inp_mat4_list.append(objmat4_list[i - 1])
-                angle, _ = rm.degree_betweenrotmat(objmat4_list[i - 1][:3, :3], objmat4[:3, :3])
+                _, angle = rm.axangle_between_rotmat(objmat4_list[i - 1][:3, :3], objmat4[:3, :3])
                 if angle < 1.0:
                     continue
                 cnt = int(angle) if int(angle) < max_inp else max_inp
@@ -429,10 +427,10 @@ class MotionPlanner(object):
 
         return inp_mat4_list
 
-    def objmat4_list_inp_ms(self, objmat4_list_ms):
+    def objmat4_list_inp(self, objmat4_list_ms):
         inp_mat4_list_ms = []
         for objmat4_list in objmat4_list_ms:
-            inp_mat4_list_ms.append(self.objmat4_list_inp(objmat4_list))
+            inp_mat4_list_ms.append(self.__inp(objmat4_list))
         return inp_mat4_list_ms
 
     def get_continuouspath(self, msc, grasp, objmat4_list, grasp_id=0, threshold=1, toggledebug=False,
@@ -510,7 +508,7 @@ class MotionPlanner(object):
             tgtpos = objmat4[:3, 3]
             tgtrot = objmat4[:3, :3]
             if relpos is None:
-                relpos, relrot = rm.relpose(eepos, eerot, tgtpos, tgtrot)
+                relpos, relrot = rm.rel_pose(eepos, eerot, tgtpos, tgtrot)
             armjnts = self.get_numik(eepos, eerot, msc=msc)
 
             if armjnts is not None:
@@ -581,7 +579,7 @@ class MotionPlanner(object):
                 movedir = None
             eepos, eerot = self.get_ee_by_objmat4(grasp, objmat4)
             if relpos is None:
-                relpos, relrot = rm.relpose(eepos, eerot, objmat4[:3, 3], objmat4[:3, :3])
+                relpos, relrot = rm.rel_pose(eepos, eerot, objmat4[:3, 3], objmat4[:3, :3])
             armjnts = self.get_numik_nlopt(objmat4[:3, 3], objmat4[:3, :3], seedjntagls=msc, toggledebug=toggledebug,
                                            releemat4=rm.homomat_from_posrot(relpos, relrot), col_ps=col_ps,
                                            roll_limit=roll_limit, pos_limit=pos_limit, movedir=movedir)
@@ -594,8 +592,10 @@ class MotionPlanner(object):
                     eepos, eerot = self.rbth.get_ee(armjnts, releemat4=rm.homomat_from_posrot(relpos, relrot))
                     self.rbth.draw_axis(eepos, eerot, length=100)
                     self.ah.show_armjnts(armjnts=armjnts, rgba=(0, 1, 0, .5))
-                    axmat = self.rbth.manipulability_axmat(armjnts=armjnts, releemat4=rm.homomat_from_posrot(relpos, relrot))
-                    manipulability = self.rbth.manipulability(armjnts=armjnts, releemat4=rm.homomat_from_posrot(relpos, relrot))
+                    axmat = self.rbth.manipulability_axmat(armjnts=armjnts,
+                                                           releemat4=rm.homomat_from_posrot(relpos, relrot))
+                    manipulability = self.rbth.manipulability(armjnts=armjnts,
+                                                              releemat4=rm.homomat_from_posrot(relpos, relrot))
                     print("%e" % manipulability)
                     self.rbth.draw_axis_uneven(objmat4[:3, 3], axmat, scale=.5)
                     base.run()
@@ -632,21 +632,23 @@ class MotionPlanner(object):
         if toggledebug:
             best_ellipsoid = np.eye(3)
             best_objmat4 = objmat4
-
+        print(objmat4)
         for inx, v in enumerate(sample_range):
             r, p, y = v
-            rot = np.dot(rm.rodrigues(objmat4[:3, 0], r),
-                         np.dot(rm.rodrigues(objmat4[:3, 2], p), rm.rodrigues(objmat4[:3, 1], y)))
+            rot = np.dot(rm.rotmat_from_axangle(objmat4[:3, 0], r),
+                         np.dot(rm.rotmat_from_axangle(objmat4[:3, 2], p),
+                                rm.rotmat_from_axangle(objmat4[:3, 1], y)))
             objmat4_new = np.eye(4)
             objmat4_new[:3, :3] = np.dot(rot, objmat4[:3, :3])
             objmat4_new[:3, 3] = objmat4[:3, 3]
             eepos, eerot = self.get_ee_by_objmat4(grasp, objmat4_new)
             armjnts = self.get_numik(eepos, eerot)
-            relpos, relrot = rm.relpose(eepos, eerot, objmat4_new[:3, 3], objmat4_new[:3, :3])
+            relpos, relrot = rm.rel_pose(eepos, eerot, objmat4_new[:3, 3], objmat4_new[:3, :3])
             if armjnts is not None:
                 score = self.rbth.manipulability(armjnts=armjnts, releemat4=rm.homomat_from_posrot(relpos, relrot))
                 if toggledebug:
-                    axmat = self.rbth.manipulability_axmat(armjnts=armjnts, releemat4=rm.homomat_from_posrot(relpos, relrot))
+                    axmat = self.rbth.manipulability_axmat(armjnts=armjnts,
+                                                           releemat4=rm.homomat_from_posrot(relpos, relrot))
                     self.ah.show_armjnts(armjnts=armjnts, rgba=(1, 1, 0, .2))
                     # self.rbth.draw_axis(objmat4_new[:3, 3], objmat4_new[:3, :3], rgba=(1, 1, 0, .5))
                     # self.rbth.draw_axis_uneven(objmat4_new[:3, 3], axmat,scale=.5)
@@ -661,7 +663,6 @@ class MotionPlanner(object):
                         best_objmat4 = objmat4_new
         if toggledebug:
             self.ah.show_armjnts(armjnts=best_config, rgba=(0, 1, 0, .5))
-            # self.rbth.draw_axis(best_objmat4[:3, 3], best_objmat4[:3, :3], rgba=(1, 1, 0, .5))
             self.rbth.draw_axis_uneven(best_objmat4[:3, 3], best_ellipsoid, scale=.2)
             print(("%e" % best_score))
             base.run()
@@ -684,18 +685,19 @@ class MotionPlanner(object):
 
         for key, objmat4 in enumerate(objmat4_list):
             gtsp_dict[key] = {"main": objmat4, "objmat4_list": []}
-            base.pggen.plotArrow(base.render, spos=objmat4[:3, 3], epos=objmat4[:3, 3] + 10 * objmat4[:3, 0],
-                                 rgba=(1, 0, 0, 0.2), thickness=1)
+            gm.gen_arrow(spos=objmat4[:3, 3], epos=objmat4[:3, 3] + 10 * objmat4[:3, 0],
+                         rgba=(1, 0, 0, 0.2), thickness=1)
             cnt = 0
             for r, p, y in sample_range:
                 cnt += 1
-                rot = np.dot(rm.rodrigues(objmat4[:3, 0], r),
-                             np.dot(rm.rodrigues(objmat4[:3, 2], p), rm.rodrigues(objmat4[:3, 1], y)))
+                rot = np.dot(rm.rotmat_from_axangle(objmat4[:3, 0], r),
+                             np.dot(rm.rotmat_from_axangle(objmat4[:3, 2], p),
+                                    rm.rotmat_from_axangle(objmat4[:3, 1], y)))
                 objmat4_new = np.eye(4)
                 objmat4_new[:3, :3] = np.dot(rot, objmat4[:3, :3])
                 objmat4_new[:3, 3] = objmat4[:3, 3]
                 gtsp_dict[key]["objmat4_list"].append(objmat4_new)
-                # base.pggen.plotArrow(base.render, spos=objmat4_new[:3, 3],
+                # gm.gen_arrow(spos=objmat4_new[:3, 3],
                 #                      epos=objmat4_new[:3, 3] + 10 * objmat4_new[:3, 0],
                 #                      rgba=(1, 1, 0, 0.2), thickness=1)
 
@@ -705,8 +707,7 @@ class MotionPlanner(object):
             for i, objmat4 in enumerate(v["objmat4_list"]):
                 eepos, eerot = self.get_ee_by_objmat4(grasp, objmat4)
                 if relpos is None and relrot is None:
-                    relpos, relrot = rm.relpose(eepos, eerot, objmat4[:3, 3], objmat4[:3, :3])
-                # armjnts = self.get_numik(eepos, eerot, msc)
+                    relpos, relrot = rm.rel_pose(eepos, eerot, objmat4[:3, 3], objmat4[:3, :3])
                 armjnts = self.get_numik(eepos, eerot, msc=msc)
                 if armjnts is not None:
                     armjnts_list.append(armjnts)
@@ -771,8 +772,8 @@ class MotionPlanner(object):
             objmat4 = gtsp_dict[int(k)]["objmat4_list"][int(objmat4_id)]
             # self.show_armjnts(rgba=(0, 1, 0, 0.5), armjnts=gtsp_dict[int(k)]["armjnts_list"][int(objmat4_id)])
             armjnts_path.append(gtsp_dict[int(k)]["armjnts_list"][int(objmat4_id)])
-            base.pggen.plotArrow(base.render, spos=objmat4[:3, 3], epos=objmat4[:3, 3] + 10 * objmat4[:3, 0],
-                                 rgba=(0, 1, 0, 1), thickness=1)
+            gm.gen_arrow(spos=objmat4[:3, 3], epos=objmat4[:3, 3] + 10 * objmat4[:3, 0],
+                         rgba=(0, 1, 0, 1), thickness=1)
 
         fig = plt.figure(1, figsize=(12.8, 4.8))
         plt.ion()
@@ -820,13 +821,14 @@ class MotionPlanner(object):
 
         for key, objmat4 in enumerate(objmat4_list):
             gtsp_dict[key] = {"main": objmat4, "eemat4_list": [], "objmat4_list": [], "armjnts_list": []}
-            base.pggen.plotArrow(base.render, spos=objmat4[:3, 3], epos=objmat4[:3, 3] + 10 * objmat4[:3, 0],
-                                 rgba=(1, 0, 0, 0.2), thickness=1)
+            gm.gen_arrow(spos=objmat4[:3, 3], epos=objmat4[:3, 3] + 10 * objmat4[:3, 0],
+                         rgba=(1, 0, 0, 0.2), thickness=1)
             cnt = 0
             for r, p, y in sample_range:
                 cnt += 1
-                rot = np.dot(rm.rodrigues(objmat4[:3, 0], r),
-                             np.dot(rm.rodrigues(objmat4[:3, 2], p), rm.rodrigues(objmat4[:3, 1], y)))
+                rot = np.dot(rm.rotmat_from_axangle(objmat4[:3, 0], r),
+                             np.dot(rm.rotmat_from_axangle(objmat4[:3, 2], p),
+                                    rm.rotmat_from_axangle(objmat4[:3, 1], y)))
                 objmat4_new = np.eye(4)
                 objmat4_new[:3, :3] = np.dot(rot, objmat4[:3, :3])
                 objmat4_new[:3, 3] = objmat4[:3, 3]
@@ -880,8 +882,8 @@ class MotionPlanner(object):
 
         print("search time cost:", time.time() - time_start_2)
         for objmat4 in objmat4_list:
-            base.pggen.plotArrow(base.render, spos=objmat4[:3, 3], epos=objmat4[:3, 3] + 10 * objmat4[:3, 0],
-                                 rgba=(0, 1, 0, 1), thickness=1)
+            gm.gen_arrow(spos=objmat4[:3, 3], epos=objmat4[:3, 3] + 10 * objmat4[:3, 0],
+                         rgba=(0, 1, 0, 1), thickness=1)
 
         cost = self.get_path_cost(armjnts_path)
         fig = plt.figure(1, figsize=(12.8, 4.8))
@@ -968,19 +970,20 @@ class MotionPlanner(object):
 
         for key, objmat4 in enumerate(objmat4_list):
             gtsp_dict[key] = {"main": objmat4, "objmat4_list": [], "armjnts_list": []}
-            base.pggen.plotArrow(base.render, spos=objmat4[:3, 3], epos=objmat4[:3, 3] + 10 * objmat4[:3, 0],
-                                 rgba=(1, 0, 0, 0.2), thickness=1)
+            gm.gen_arrow(spos=objmat4[:3, 3], epos=objmat4[:3, 3] + 10 * objmat4[:3, 0],
+                         rgba=(1, 0, 0, 0.2), thickness=1)
             cnt = 0
             for r, p, y in sample_range:
                 cnt += 1
-                rot = np.dot(rm.rodrigues(objmat4[:3, 0], r),
-                             np.dot(rm.rodrigues(objmat4[:3, 2], p), rm.rodrigues(objmat4[:3, 1], y)))
+                rot = np.dot(rm.rotmat_from_axangle(objmat4[:3, 0], r),
+                             np.dot(rm.rotmat_from_axangle(objmat4[:3, 2], p),
+                                    rm.rotmat_from_axangle(objmat4[:3, 1], y)))
                 objmat4_new = np.eye(4)
                 objmat4_new[:3, :3] = np.dot(rot, objmat4[:3, :3])
                 objmat4_new[:3, 3] = objmat4[:3, 3]
                 gtsp_dict[key]["objmat4_list"].append(objmat4_new)
                 gtsp_dict[key]["armjnts_list"].append(None)
-                # base.pggen.plotArrow(base.render, spos=objmat4_new[:3, 3],
+                # gm.gen_arrow(spos=objmat4_new[:3, 3],
                 #                      epos=objmat4_new[:3, 3] + 10 * objmat4_new[:3, 0],
                 #                      rgba=(1, 1, 0, 0.2), thickness=1)
 
@@ -1023,8 +1026,8 @@ class MotionPlanner(object):
             objmat4 = gtsp_dict[int(k)]["objmat4_list"][int(objmat4_id)]
             # self.show_armjnts(rgba=(0, 1, 0, 0.5), armjnts=gtsp_dict[int(k)]["armjnts_list"][int(objmat4_id)])
             armjnts_path.append(gtsp_dict[int(k)]["armjnts_list"][int(objmat4_id)])
-            base.pggen.plotArrow(base.render, spos=objmat4[:3, 3], epos=objmat4[:3, 3] + 10 * objmat4[:3, 0],
-                                 rgba=(0, 1, 0, 1), thickness=1)
+            gm.gen_arrow(spos=objmat4[:3, 3], epos=objmat4[:3, 3] + 10 * objmat4[:3, 0],
+                         rgba=(0, 1, 0, 1), thickness=1)
         print("time cost:", time.time() - time_start_1)
 
         plt.subplot(122)
@@ -1136,7 +1139,7 @@ class MotionPlanner(object):
         posdiff = [0, 0, 0]
         self.ah.show_armjnts_with_obj(path[stop_id], objcm, objrelpos, objrelrot, rgba=(0, 1, 0, .5))
         spos = self.get_world_objmat4(objrelpos, objrelrot, path[stop_id])[:3, 3]
-        base.pggen.plotArrow(base.render, spos=spos, epos=spos + 10 * f)
+        gm.gen_arrow(spos=spos, epos=spos + 10 * f)
 
         for i, armjnts in enumerate(path_pre):
             objmat4 = self.get_world_objmat4(objrelpos, objrelrot, armjnts)

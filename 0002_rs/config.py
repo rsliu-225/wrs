@@ -26,13 +26,13 @@ ROOT = os.path.abspath(os.path.dirname(__file__))
 # AMAT_F_NAME = "phoxi_calibmat_0615.pkl"
 # AMAT_F_NAME = "phoxi_calibmat_1222.pkl"
 AMAT_F_NAME = "phoxi_calibmat_210527.pkl"
-PEN_STL_F_NAME = "pentip_short.stl"
-# PEN_STL_F_NAME = "pentip.stl"
+# PEN_STL_F_NAME = "pentip_short.stl"
+PEN_STL_F_NAME = "pentip.stl"
 IPURX = '10.0.2.11'
 
 PREGRASP_REL_PATH = ROOT + "/graspplanner/pregrasp/"
-# GRASPMAP_REL_PATH = ROOT + "/graspplanner/graspmap/"
-GRASPMAP_REL_PATH = ROOT + "/graspplanner/graspmap/temp/"
+GRASPMAP_REL_PATH = ROOT + "/graspplanner/graspmap/"
+# GRASPMAP_REL_PATH = ROOT + "/graspplanner/graspmap/temp/"
 MOTIONSCRIPT_REL_PATH = ROOT + "/motionscript/"
 PENPOSE_REL_PATH = ROOT + "/log/penpose/"
 

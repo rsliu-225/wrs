@@ -48,7 +48,7 @@ def get_objmat4_draw_list(mp, drawpath_f_name, paintingobj_item, drawrec_size, t
             ru.get_pen_objmat4_list_by_drawpath(drawpath, paintingobj_item, drawrec_size=drawrec_size,
                                                 color=(0, 1, 0), mode=mode, direction=prj_direction)
 
-        return mp.objmat4_list_inp(objmat4_draw_list)
+        return mp.__inp(objmat4_draw_list)
     else:
         drawpath_ms = du.load_drawpath(drawpath_f_name)
         objmat4_draw_list_ms = \

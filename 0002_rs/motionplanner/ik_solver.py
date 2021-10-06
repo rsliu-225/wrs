@@ -14,7 +14,7 @@ TB = True
 
 
 class FkOptimizer(object):
-    def __init__(self, env, rbt, armname="lft", releemat4=np.eye(4), toggledebug=TB,
+    def __init__(self, env, rbt, armname="lft_arm", releemat4=np.eye(4), toggledebug=TB,
                  col_ps=None, roll_limit=1e-2, pos_limit=1e-2):
         self.rbt = rbt
         self.armname = armname
@@ -180,16 +180,14 @@ class FkOptimizer(object):
 
 
 class NsOptimizer(object):
-    def __init__(self, env, rbt, rbtmg, rbtball, armname="lft", releemat4=np.eye(4), toggledebug=False):
+    def __init__(self, env, rbt, armname="lft", releemat4=np.eye(4), toggledebug=False):
         self.rbt = rbt
-        self.rbtmg = rbtmg
-        self.rbtball = rbtball
         self.armname = armname
         self.env = env
         self.armname = armname
         self.releemat4 = releemat4
         self.toggledebug = toggledebug
-        self.rbth = rbt_helper.RobotHelper(self.env, self.rbt, self.rbtmg, self.rbtball, self.armname)
+        self.rbth = rbt_helper.RobotHelper(self.env, self.rbt, self.armname)
 
         self.result = None
         self.cons = []
@@ -280,7 +278,7 @@ class NsOptimizer(object):
         self.cons.append({'type': condition, 'fun': constraint})
 
     def update_rels(self):
-        iks = IkSolver(self.env, self.rbt, self.rbtmg, self.rbtball, self.armname)
+        iks = IkSolver(self.env, self.rbt, self.armname)
 
         self.q0 = iks.solve_numik3(self.tgtpos, tgtrot=None, seedjntagls=self.seedjntagls, releemat4=self.releemat4)
         eepos, eerot = self.rbth.get_ee(armjnts=self.q0, releemat4=self.releemat4)
@@ -358,12 +356,8 @@ class IkSolver(object):
         self.obscmlist = self.env.getstationaryobslist() + self.env.getchangableobslist()
         self.rbth = rbt_helper.RobotHelper(self.env, self.rbt, self.armname)
 
-        if self.armname == "lft":
-            self.initjnts = self.rbt.initlftjnts
-            self.armlj = self.rbt.lftarm
-        else:
-            self.initjnts = self.rbt.initrgtjnts
-            self.armlj = self.rbt.rgtarm
+        self.initjnts = self.rbt.get_jnt_values(self.armname)
+        # self.armlj = self.rbt.get_jnt_values
 
     def __initsearch(self, seedjntagls, tgtpos=None, tgtrot=None):
         if isinstance(seedjntagls, str):
@@ -814,7 +808,7 @@ class IkSolver(object):
         seedjntagls, armjntsiter = self.__initsearch(seedjntagls, tgtpos, tgtrot)
         # opt = NsOptimizer(self.env, self.rbt, self.rbtmg, self.rbtball, self.armname, releemat4=releemat4,
         #                   toggledebug=toggledebug)
-        opt = FkOptimizer(self.env, self.rbt, self.rbtmg, self.rbtball, self.armname, releemat4=releemat4,
+        opt = FkOptimizer(self.env, self.rbt, self.armname, releemat4=releemat4,
                           toggledebug=toggledebug, col_ps=col_ps, roll_limit=roll_limit, pos_limit=pos_limit)
         q, cost = opt.solve(seedjntagls, tgtpos, tgtrot, movedir=movedir, method=method)
         if toggledebug:
@@ -854,7 +848,7 @@ class IkSolver(object):
             time_start = time.time()
             _, tgtrot = self.rbth.get_tcp()
             tgtpos = np.asarray((x, y, z))
-            tgtrot = np.dot(rm.rodrigues((1, 0, 0), r), tgtrot)
+            tgtrot = np.dot(rm.rotmat_from_axangle((1, 0, 0), r), tgtrot)
             self.rbth.draw_axis(tgtpos, tgtrot, length=20)
             if func_name == "1":
                 armjnts = self.solve_numik(tgtpos, tgtrot, releemat4=releemat4, toggledebug=False)
@@ -892,10 +886,10 @@ if __name__ == '__main__':
 
     base, env = el.loadEnv_wrs()
 
-    rbt, rbtmg, rbtball = el.loadUr3e(showrbt=False)
-    rbth = rbt_helper.RobotHelper(env, rbt, rbtmg, rbtball, "lft")
-    iks_lft = IkSolver(env, rbt, rbtmg, rbtball, "lft")
-    mp_lft = m_planner.MotionPlanner(env, rbt, rbtmg, rbtball, "lft")
+    rbt = el.loadUr3e(showrbt=False)
+    rbth = rbt_helper.RobotHelper(env, rbt, "lft_arm")
+    iks_lft = IkSolver(env, rbt, "lft_arm")
+    mp_lft = m_planner.MotionPlanner(env, rbt, "lft_arm")
 
     # releepos = np.asarray((0, 0, 20))
     # releerot = rm.rodrigues((0, 0, 1), 30)

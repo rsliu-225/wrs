@@ -98,7 +98,9 @@ def define_grasp_with_rotation(hnd_s,
                 grasp_info_list.append(grasp_info)
             else:
                 collided_grasp_info_list.append(grasp_info)
+    print(len(collided_grasp_info_list),len(grasp_info_list))
     if toggle_debug:
+        objcm.attach_to(base)
         for grasp_info in collided_grasp_info_list:
             jaw_width, gl_jaw_center_pos, gl_jaw_center_rotmat, hnd_pos, hnd_rotmat = grasp_info
             hnd_s.fix_to(hnd_pos, hnd_rotmat)

@@ -16,6 +16,8 @@ import basis.trimesh.sample as ts
 import basis.robot_math as rm
 import basis.o3dhelper as o3d_helper
 from basis.trimesh.primitives import Box
+
+
 # import utils.pcd_utils as pcdu
 # import utils.comformalmapping_utils as cu
 
@@ -110,15 +112,6 @@ def loadEnv_wrs(camp=[4, 0, 1.7], lookatpos=[0, 0, 1]):
     env = Env_wrs(boundingradius=7.0)
     env.reparentTo(base)
 
-    # obstacle = cm.CollisionModel(objinit=Box(box_extents=[30, 298, 194]))
-    # env.addchangableobs(base.render, obstacle, [1080 + 30 / 2, -600 + 200 + 298 / 2 - 20, 780 + 97], np.eye(3))
-
-    # obstacle = cm.CollisionModel(objinit=Box(box_extents=[60, 298, 15]))
-    # env.addchangableobs(base.render, obstacle, [1080, -600 + 200 + 298 / 2 - 20, 780 + 130], np.eye(3))
-
-    # obstacle = cm.CollisionModel(objinit=Box(box_extents=[60, 40, 194]))
-    # env.addchangableobs(base.render, obstacle, [1080, -600 + 200 + 105 + 298 / 2, 780 + 97], np.eye(3))
-
     # phonix
     phoxicam = cm.CollisionModel(initor=Box(box_extents=[.55, .2, .1]))
     phoxicam.set_rgba((.32, .32, .3, 1))
@@ -130,9 +123,9 @@ def loadEnv_wrs(camp=[4, 0, 1.7], lookatpos=[0, 0, 1]):
     env.addchangableobs(base, desk, [.54, .8, .38], np.eye(3))
 
     # penframe
-    # penframe = cm.CollisionModel(objinit=Box(box_extents=[200, 320, 100]))
-    # penframe.setColor(0.7, 0.7, 0.7, 0.8)
-    # env.addchangableobs(base.render, penframe, [1080 - 300 + 100, 600 - 175, 795], np.eye(3))
+    penframe = cm.CollisionModel(initor=Box(box_extents=[.2, .32, .1]))
+    penframe.set_rgba((0.7, 0.7, 0.7, 0.8))
+    env.addchangableobs(base.render, penframe, [1.08 - .3 + .1, .6 - .175, .795], np.eye(3))
 
     return base, env
 
@@ -146,7 +139,6 @@ def __pcd_trans(pcd, amat):
 
 def loadUr3e(showrbt=False):
     rbt = ur3edual.UR3EDual()
-
     if showrbt:
         rbt.gen_meshmodel().attach_to(base)
 
@@ -206,9 +198,9 @@ def loadObjitem(f_name, pos=(0, 0, 0), rot=(0, 0, 0), sample_num=10000, type="bo
     if f_name[-3:] != 'stl':
         f_name += '.stl'
     objcm = cm.CollisionModel(initor=os.path.join(config.ROOT, "obstacles", f_name), cdprimit_type=type)
-    objcm.trimesh.remove_unreferenced_vertices()
-    objcm.trimesh.remove_degenerate_faces()
-    print('num of vs:', len(objcm.trimesh.vertices))
+    objcm.objtrm.remove_unreferenced_vertices()
+    objcm.objtrm.remove_degenerate_faces()
+    print('num of vs:', len(objcm.objtrm.vertices))
     # if len(vs) > 20000:
     #     print('---------------down sample---------------')
     #     vs, faces, nrmls = cu.downsample(vs, faces, 20000/len(vs))
@@ -227,8 +219,8 @@ def loadObjitem(f_name, pos=(0, 0, 0), rot=(0, 0, 0), sample_num=10000, type="bo
 if __name__ == '__main__':
     base, env = loadEnv_wrs()
     gm.gen_frame().attach_to(base)
-    # objcm = loadObj('cylinder.stl', pos=(.7, 0, .78), rot=(0, 0, 0), transparency=1)
-    # objcm.attach_to(base)
+    objcm = loadObj('cylinder.stl', pos=(.7, 0, .78), rot=(0, 0, 0), transparency=1)
+    objcm.attach_to(base)
     rbt = loadUr3e()
     rbt.gen_meshmodel(toggle_tcpcs=False).attach_to(base)
     print(rbt.manipulability(component_name="lft_arm"))
@@ -240,13 +232,5 @@ if __name__ == '__main__':
     gm.gen_arrow(spos=tcp_pos, epos=tcp_pos + mnpax[:, 0], rgba=(1, 0, 0, 1)).attach_to(base)
     gm.gen_arrow(spos=tcp_pos, epos=tcp_pos + mnpax[:, 1], rgba=(0, 1, 0, 1)).attach_to(base)
     gm.gen_arrow(spos=tcp_pos, epos=tcp_pos + mnpax[:, 2], rgba=(0, 0, 1, 1)).attach_to(base)
-
-    m_mat = rbt.manipulability_axmat("lft_arm")
-    tcp_pos, _ = rbt.get_gl_tcp("lft_arm")
-
-    gm.gen_arrow(spos=tcp_pos, epos=tcp_pos + m_mat[:, 0]).attach_to(base)
-    gm.gen_arrow(spos=tcp_pos, epos=tcp_pos + m_mat[:, 1]).attach_to(base)
-    gm.gen_arrow(spos=tcp_pos, epos=tcp_pos + m_mat[:, 2]).attach_to(base)
-    gm.gen_ellipsoid(pos=tcp_pos, axmat=m_mat).attach_to(base)
 
     base.run()

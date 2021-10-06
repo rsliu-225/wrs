@@ -1,34 +1,12 @@
 import config
-import manipulation.grip.robotiqhe.robotiqhe as rtqhe
+import robot_sim.end_effectors.grippers.robotiqhe.robotiqhe as rtqhe
 import graspplanner.grasp_planner as gp
-import pandaplotutils.pandactrl as pc
+import visualization.panda.world as wd
 
 if __name__ == '__main__':
-    base = pc.World(camp=[4000, 500, 3000], lookatpos=[0, 0, 0])
-    hndfa = rtqhe.HandFactory()
-    grasp_planner = gp.GraspPlanner(hndfa)
-
-    '''
-    egg.stl
-    '''
-    # stl_f_name = "egg.stl"
-    # pregrasp_list = \
-    #     grasp_planner.define_grasp_with_rotation(grasp_coordinate=(0, 0, 5), finger_normal=(0, 1, 0),
-    #                                              hand_normal=(0, 0, -1), jawwidth=40,
-    #                                              obj=grasp_planner.load_objcm(stl_f_name),
-    #                                              rotation_range=(-75, 75), toggledebug=True)
-
-    '''
-    pen.stl
-    '''
-    # stl_f_name = "pen.stl"
-    # pregrasp_list = []
-    # for i in range(-40, 20, 20):
-    #     pregrasp_list.extend(
-    #         grasp_planner.define_grasp_with_rotation(grasp_coordinate=(0, 0, i), finger_normal=(0, 1, 0),
-    #                                                  hand_normal=(-1, 0, 0), jawwidth=20,
-    #                                                  obj=grasp_planner.load_objcm(stl_f_name),
-    #                                                  rotation_range=(-45, 45), toggledebug=True))
+    base = wd.World(cam_pos=[.5, .5, .3], lookat_pos=[0, 0, 0])
+    gripper = rtqhe.RobotiqHE()
+    grasp_planner = gp.GraspPlanner(gripper)
 
     '''
     pentip.stl
@@ -37,13 +15,13 @@ if __name__ == '__main__':
     # pregrasp_list = []
     # for i in range(20, 160, 40):
     #     pregrasp_list.extend(
-    #         grasp_planner.define_grasp_with_rotation(grasp_coordinate=(i, 0, -10), finger_normal=(0, 1, 0),
-    #                                                  hand_normal=(0, 0, -1), jawwidth=20,
+    #         grasp_planner.define_grasp_with_rotation(grasp_coordinate=(i / 1000, 0, 0), finger_normal=(1, 0, 0),
+    #                                                  hand_normal=(0, 0, -1), jawwidth=.02,
     #                                                  obj=grasp_planner.load_objcm(stl_f_name),
     #                                                  rotation_range=(-75, 75), toggledebug=True))
     #
     # print(len(pregrasp_list))
-    # grasp_planner.write_pregrasps(stl_f_name, pregrasp_list, mode="hndovr")
+    # grasp_planner.write_pregrasps(stl_f_name, pregrasp_list)
     # base.run()
 
     # '''
@@ -64,6 +42,6 @@ if __name__ == '__main__':
     stl_f_name = "pentip.stl"
     obj = grasp_planner.load_objcm(stl_f_name)
     grasp_list = grasp_planner.load_pregrasp(stl_f_name)
-    grasp_planner.show_grasp(grasp_list[:30], obj, rgba=(1, 0, 0, .2))
+    grasp_planner.show_grasp(grasp_list[:30], obj, rgba=None)
 
     base.run()

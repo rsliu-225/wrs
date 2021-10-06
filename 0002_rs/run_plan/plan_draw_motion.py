@@ -41,80 +41,55 @@ def show_result(mp, path, objmat4_list, grasp, show_objax=False):
 
 def get_objmat4_draw_list(mp, drawpath_f_name, paintingobj_item, drawrec_size, type="ss", mode="DI",
                           prj_direction=np.asarray((0, 0, 1))):
-    if type == "ss":
-        drawpath = du.load_drawpath(drawpath_f_name)
-        # drawpath = drawpath[36:] + drawpath[:36]
-        objmat4_list = ru.get_pen_objmat4_list_by_drawpath(drawpath, paintingobj_item, drawrec_size=drawrec_size,
-                                                           color=(0, 1, 0), mode=mode, direction=prj_direction)
+    # if type == "ss":
+    #     drawpath = du.load_drawpath(drawpath_f_name)
+    #     # drawpath = drawpath[36:] + drawpath[:36]
+    #     objmat4_list = ru.get_pen_objmat4_list_by_drawpath(drawpath, paintingobj_item, drawrec_size=drawrec_size,
+    #                                                        color=(0, 1, 0), mode=mode, direction=prj_direction)
+    #
+    #     return mp.objmat4_list_inp(objmat4_list)
+    # else:
+    drawpath = du.load_drawpath(drawpath_f_name)
+    objmat4_draw_list = \
+        ru.get_pen_objmat4_list_by_drawpath(drawpath, paintingobj_item, color=(0, 1, 0),
+                                            drawrec_size=drawrec_size, mode=mode, direction=prj_direction)
+    return mp.objmat4_list_inp(objmat4_draw_list)
 
-        return mp.objmat4_list_inp(objmat4_list)
-    else:
-        drawpath_ms = du.load_drawpath(drawpath_f_name)
-        objmat4_draw_list_ms = \
-            ru.get_pen_objmat4_list_by_drawpath(drawpath_ms, paintingobj_item, color=(0, 1, 0),
-                                                drawrec_size=drawrec_size, mode=mode, direction=prj_direction)
-        return objmat4_draw_list_ms
 
-
-def dump_drawpath_ss(mp, motion_f_path, objmat4_list, grasp, grasp_id, msc=None, col_ps=None, threshold=1.0,
-                     method='ik'):
+def dump_drawpath(mp, motion_f_path, objmat4_draw_list_ms, grasp, grasp_id, msc=None, col_ps=None, threshold=1.0,
+                  method='ik'):
     try:
         draw_dict = pickle.load(open(motion_f_path, "rb"))
     except:
         draw_dict = {}
+    draw_dict[grasp_id] = {}
 
     time_start = time.time()
-
     print(f"---------------planing draw path {str(grasp_id)}---------------")
     # sample_range = [(0, 0, 0)]
     # sample_range = mp.get_rpy_list((-180, 180, 1), (-15, 15 + 1, 15), (-15, 15 + 1, 15))
     # sample_range = mp.get_rpy_list((0, 0, 0), (-5, 5 + 1, 1), (-5, 5 + 1, 1))
     # sample_range = mp.get_rpy_list((0, 0, 0), (-5, 5 + 1, 1), (-5, 5 + 1, 1))
-    # path_draw = mp.get_continuouspath_opt1(grasp, grasp_id, objmat4_list, sample_range, msc=msc)
-    msc = mp_lft.get_draw_sconfig(objmat4_list[0], grasp)
-    if method == 'ik':
-        path_draw = mp.get_continuouspath_ik(msc, grasp, objmat4_list, grasp_id=grasp_id, threshold=threshold)
-    else:
-        # dump_f_name = "bucketcol"
-        path_draw = mp.get_continuouspath_nlopt(msc, grasp, objmat4_list, grasp_id=grasp_id, col_ps=col_ps,
-                                                roll_limit=60, pos_limit=1e-2, add_mvcon=False, dump_f_name=None)
-    objrelpos, objrelrot = mp.get_rel_posrot(grasp, objmat4_list[0][:3, 3], objmat4_list[0][:3, :3])
-
-    if path_draw is not None:
-        # show_result(mp, path_draw, objmat4_list, grasp)
-        time_cost = time.time() - time_start
-        draw_dict[grasp_id] = [objrelpos, objrelrot, path_draw]
-        pickle.dump(draw_dict, open(motion_f_path, "wb"))
-        print('time cost(get ik)', time_cost, 's')
-        return True
-    else:
-        print("planning drawing motion failed!")
-        return False
-
-
-def dump_drawpath_ms(mp, motion_f_path, objmat4_draw_list_ms, grasp, grasp_id, msc=None):
-    if os.path.exists(motion_f_path):
-        draw_dict = pickle.load(open(motion_f_path, "rb"))
-    else:
-        draw_dict = {}
-
-    draw_dict[grasp_id] = {}
-
-    if msc is None:
-        msc = mp.initjnts
-
-    print(f"---------------planing draw path {str(grasp_id)}---------------")
+    # path_s = mp.get_continuouspath_opt1(grasp, grasp_id, objmat4_list, sample_range, msc=msc)
     status = True
-    for i, objmat4_draw_list_stroke in enumerate(objmat4_draw_list_ms):
-        path_draw_stroke = mp.get_continuouspath(msc, grasp, objmat4_draw_list_stroke,
-                                                 threshold=continuouspath_threshold)
-        if path_draw_stroke is not None:
-            draw_dict[grasp_id]["stroke_" + str(i)] = [objrelpos, objrelrot, path_draw_stroke]
-            pickle.dump(draw_dict, open(motion_f_path, "wb"))
+    for i, objmat4_list in enumerate(objmat4_draw_list_ms):
+        msc = mp_lft.get_draw_sconfig(objmat4_list[0], grasp)
+        if method == 'ik':
+            path_s = mp.get_continuouspath_ik(msc, grasp, objmat4_list, grasp_id=grasp_id, threshold=threshold)
         else:
-            print("stroke_" + str(i), "failed!")
-            status = False
+            # dump_f_name = "bucketcol"
+            path_s = mp.get_continuouspath_nlopt(msc, grasp, objmat4_list, grasp_id=grasp_id, col_ps=col_ps,
+                                                 roll_limit=60, pos_limit=1e-2, add_mvcon=False, dump_f_name=None)
+        objrelpos, objrelrot = mp.get_rel_posrot(grasp, objmat4_list[0][:3, 3], objmat4_list[0][:3, :3])
+        if path_s is not None:
+            time_cost = time.time() - time_start
+            draw_dict[grasp_id]["stroke_" + str(i)] = [objrelpos, objrelrot, path_s]
+            pickle.dump(draw_dict, open(motion_f_path, "wb"))
+            print(f'time cost(get ik), stroke {str(i)}, {time_cost} s')
 
+        else:
+            print(f"stroke {str(i)}", "failed!")
+            status = False
     return status
 
 
@@ -122,35 +97,37 @@ if __name__ == '__main__':
     '''
     set up env and param
     '''
+    import modeling.geometric_model as gm
+
     # import pandaplotutils.pandactrl as pc
     # base = pc.World(camp=[0, 0, 1700], lookatpos=[0, 0, 1000])
 
     base, env = el.loadEnv_wrs()
-    rbt, rbtmg, rbtball = el.loadUr3e()
-    base.pggen.plotAxis(base.render, thickness=2, length=150)
+    rbt = el.loadUr3e()
+    gm.gen_frame(thickness=2, length=150)
 
     continuouspath_threshold = 1
     sample_num = 500000
     match_rotz = True
     # drawrec_size = (80, 80)
-    drawrec_size = (40, 40)
+    drawrec_size = (.04, .04)
     # drawrec_size = (25, 25)
     # exp_name = "bucket"
-    # exp_name = "cylinder_cad"
-    exp_name = "leg"
+    exp_name = "cylinder_cad"
+    # exp_name = "leg"
     # exp_name = "box"
     # exp_name = "cube"
     # folder_path = os.path.join(config.MOTIONSCRIPT_REL_PATH + f"exp_{exp_name}/")
-    phoxi_f_path = f"phoxi_tempdata_{exp_name}.pkl"
-    # phoxi_f_path = None
+    # phoxi_f_path = f"phoxi_tempdata_{exp_name}.pkl"
+    phoxi_f_path = None
     folder_path = f"exp_{exp_name}/"
 
     # paintingobj_f_name = "box"
     # paintingobj_f_name = "bucket"
-    # paintingobj_f_name = "cylinder"
+    paintingobj_f_name = "cylinder"
     # paintingobj_f_name = "bunny"
     # paintingobj_f_name = "cube"
-    paintingobj_f_name = None
+    # paintingobj_f_name = None
 
     phxilocator = pl.PhxiLocator(phoxi, amat_f_name=config.AMAT_F_NAME)
     pen_cm = el.loadObj(config.PEN_STL_F_NAME)
@@ -170,8 +147,8 @@ if __name__ == '__main__':
     '''
     init planner
     '''
-    mp_lft = m_planner.MotionPlanner(env, rbt, rbtmg, rbtball, armname="lft")
-    mp_rgt = m_planner.MotionPlanner(env, rbt, rbtmg, rbtball, armname="rgt")
+    mp_lft = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
+    mp_rgt = m_planner.MotionPlanner(env, rbt, armname="rgt_arm")
 
     '''
     process image
@@ -181,17 +158,17 @@ if __name__ == '__main__':
             paintingobj_item = el.loadObjitem(paintingobj_f_name, sample_num=sample_num,
                                               pos=rconfig.OBJ_POS[paintingobj_f_name])
         else:
-            paintingobj_item = el.loadObjitem(paintingobj_f_name, sample_num=sample_num, pos=(800, 100, 780))
+            paintingobj_item = el.loadObjitem(paintingobj_f_name, sample_num=sample_num, pos=(.8, .1, .78))
     else:
         if paintingobj_f_name is None:
             paintingobj_item = \
                 ru.get_obj_by_range(phxilocator, phoxi_f_name=phoxi_f_path, load=True, reconstruct_surface=True,
-                                    x_range=(400, 1000), y_range=(-100, 300), z_range=(790, 1000))
+                                    x_range=(.4, 1), y_range=(-.1, .3), z_range=(.79, 1))
         else:
             paintingobj_item = \
                 ru.get_obj_from_phoxiinfo_withmodel(phxilocator, paintingobj_f_name, phoxi_f_name=phoxi_f_path,
                                                     load=True, match_rotz=match_rotz,
-                                                    x_range=(200, 900), y_range=(-100, 300), z_range=(790, 1000))
+                                                    x_range=(.2, .9), y_range=(-.1, .3), z_range=(.79, 1))
     if exp_name in rconfig.PRJ_INFO.keys():
         paintingobj_item.set_drawcenter(rconfig.PRJ_INFO[exp_name]['draw_center'])
         prj_direction = np.asarray(rconfig.PRJ_INFO[exp_name]['prj_direction'])
@@ -214,18 +191,19 @@ if __name__ == '__main__':
     print('time cost(projection&slerp)', time.time() - time_start, 's')
     objmat4_draw_list = get_objmat4_draw_list(mp_lft, drawpath_f_name, paintingobj_item, drawrec_size, type=type,
                                               mode="EI", prj_direction=prj_direction)
-    pickle.dump(objmat4_draw_list, open(config.PENPOSE_REL_PATH + penpose_f_name, "wb"))
+    # pickle.dump(objmat4_draw_list, open(config.PENPOSE_REL_PATH + penpose_f_name, "wb"))
 
     '''
     load pen pose
     '''
-    objmat4_draw_list = pickle.load(open(config.PENPOSE_REL_PATH + penpose_f_name, "rb"))
+    # objmat4_draw_list = pickle.load(open(config.PENPOSE_REL_PATH + penpose_f_name, "rb"))
     print("drawing path length:", len(objmat4_draw_list))
-    mp_lft.ah.show_objmat4(pen_cm, objmat4_draw_list[0], rgba=(1, 0, 0, 1))
-    mp_lft.ah.show_objmat4_list(objmat4_draw_list, fromrgba=(1, 1, 1, .2), objcm=pen_cm)
+    mp_lft.ah.show_objmat4(pen_cm, objmat4_draw_list[0][0], rgba=(1, 0, 0, 1))
+    for l in objmat4_draw_list:
+        mp_lft.ah.show_objmat4_list(l, fromrgba=(1, 1, 1, .2), objcm=pen_cm)
     col_ps = paintingobj_item.gen_colps(radius=40, show=True, max_smp=400)
     # col_ps = None
-    # base.run()
+    base.run()
 
     success_cnt = 0
     time_start = time.time()
@@ -239,24 +217,17 @@ if __name__ == '__main__':
 
         # motion_f_path = os.path.join(config.ROOT, 'log/path/', f'{paintingobj_f_name}.pkl')
         grasp = grasp_list[grasp_id]
-        # msc = None
         '''
         plan pen draw motion 
         '''
-        if type == "ss":
-            status = dump_drawpath_ss(mp_lft, motion_f_path, objmat4_draw_list, grasp, grasp_id, msc=msc, col_ps=col_ps,
-                                      threshold=continuouspath_threshold)
-            if status:
-                success_cnt += 1
-        else:
-            dump_drawpath_ms(mp_lft, motion_f_path, objmat4_draw_list, grasp, grasp_id)
+        status = dump_drawpath(mp_lft, motion_f_path, objmat4_draw_list, grasp, grasp_id, msc=msc, col_ps=col_ps,
+                               threshold=continuouspath_threshold)
+        if status:
+            success_cnt += 1
 
     print(f"time cost(loop all grasp): {time.time() - time_start}")
     print(f"{success_cnt} of {len(grasp_list)}")
 
-    if type == "ss":
-        rmu.show_drawmotion_ss(mp_lft, pen_cm, motion_f_path, grasp_id_list, jawwidth=18)
-    else:
-        rmu.show_drawmotion_ms(mp_lft, pen_cm, motion_f_path, grasp_id_list, jawwidth=18)
+    rmu.show_drawmotion(mp_lft, pen_cm, motion_f_path, grasp_id_list, jawwidth=18)
 
     base.run()

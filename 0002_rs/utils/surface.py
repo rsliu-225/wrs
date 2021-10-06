@@ -4,7 +4,7 @@ from scipy.linalg import lstsq
 from scipy.optimize import curve_fit
 import scipy.interpolate as si
 
-import environment.collisionmodel as cm
+import modeling.collision_model as cm
 import trimesh as trm
 
 
@@ -62,8 +62,8 @@ class Surface(object):
             rng = [[min(self.xydata[:, 0]) - 10, max(self.xydata[:, 0]) + 10],
                    [min(self.xydata[:, 1]) - 10, max(self.xydata[:, 1]) + 10]]
         surface_trm = self._gen_surface(self.get_zdata, rng=rng, granularity=granularity)
-        surface_cm = cm.CollisionModel(objinit=surface_trm, two_sided=True)
-        surface_cm.setColor(rgba[0], rgba[1], rgba[2], rgba[3])
+        surface_cm = cm.CollisionModel(initor=surface_trm, btwosided=True)
+        surface_cm.set_rgba(rgba)
         return surface_cm
 
 

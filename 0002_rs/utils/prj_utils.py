@@ -10,21 +10,21 @@ import numpy as np
 # from geomdl import fitting
 # from geomdl.visualization import VisMPL as vis
 from matplotlib import cm
-# from scipy.interpolate import RBFInterpolator
+from scipy.interpolate import RBFInterpolator
 from sklearn.neighbors import KDTree
 
 import config
-import environment.bulletcdhelper as bcdhelper
 import localenv.envloader as el
-# import surface as sfc
 import trimesh.intersections as inc
+import modeling.geometric_model as gm
+import utils.surface as sfc
 import utils.comformalmapping_utils as cu
 import utils.drawpath_utils as du
 import utils.math_utils as mu
 import utils.pcd_utils as pcdu
 import utils.phoxi as phoxi
 import utils.phoxi_locator as pl
-import utiltools.robotmath as rm
+import basis.robot_math as rm
 
 
 def find_img_interior_rec(img, gray_threshold=1, toggledebug=False):
@@ -191,14 +191,14 @@ def show_drawpath_on_img(p_list, img):
 
 
 def rayhitmesh_closest(obj, pfrom, pto, toggledebug=False):
-    mcm = bcdhelper.MCMchecker()
-    pos, nrml = mcm.getRayHitMeshClosest(pfrom=pfrom, pto=pto, objcm=obj)
+    pos, nrml = obj.ray_hit(point_from=pfrom, point_to=pto, option='closest')
     if toggledebug:
         print('------------------')
         print('pfrom, pto:', pfrom, pto)
         print('pos:', pos)
         print('normal:', -nrml)
-        # base.pggen.plotArrow(base.render, spos=pfrom, epos=pto, length=100, rgba=(0, 1, 0, 0.5))
+        # gm.gen_arrow(spos=pfrom, epos=pto, rgba=(0, 1, 0, 0.5)).attach_to(base)
+        # base.run()
 
     if pos is not None:
         return np.array(pos), -np.array(nrml)
@@ -271,18 +271,18 @@ def rayhitmesh_drawpath(obj_item, drawpath, direction=np.asarray((0, 0, 1)), err
 
 def rayhitmesh_p(obj, center, p, kdt_d3=None, direction=np.asarray((0, 0, 1))):
     if abs(direction[0]) == 1:
-        pfrom = np.asarray((center[0], p[0] + center[1], p[1] + center[2])) + 100 * direction
-        pto = np.asarray((center[0], p[0] + center[1], p[1] + center[2])) - 300 * direction
+        pfrom = np.asarray((center[0], p[0] + center[1], p[1] + center[2])) + .1 * direction
+        pto = np.asarray((center[0], p[0] + center[1], p[1] + center[2])) - .3 * direction
     elif abs(direction[1]) == 1:
-        pfrom = np.asarray((p[0] + center[0], center[1], p[1] + center[2])) + 100 * direction
-        pto = np.asarray((p[0] + center[0], center[1], p[1] + center[2])) - 300 * direction
+        pfrom = np.asarray((p[0] + center[0], center[1], p[1] + center[2])) + .1 * direction
+        pto = np.asarray((p[0] + center[0], center[1], p[1] + center[2])) - .3 * direction
     elif abs(direction[2]) == 1:
-        pfrom = np.asarray((p[0] + center[0], p[1] + center[1], center[2])) + 100 * direction
-        pto = np.asarray((p[0] + center[0], p[1] + center[1], center[2])) - 300 * direction
+        pfrom = np.asarray((p[0] + center[0], p[1] + center[1], center[2])) + .1 * direction
+        pto = np.asarray((p[0] + center[0], p[1] + center[1], center[2])) - .3 * direction
     else:
         print('Wrong input direction!')
         return None, None
-    base.pggen.plotArrow(base.render, spos=pfrom, epos=pto, length=100, rgba=(0, 1, 0, 1))
+    gm.gen_arrow(spos=pfrom, epos=pto, rgba=(0, 1, 0, 1))
     # base.run()
     pos, nrml = rayhitmesh_closest(obj, pfrom, pto)
     if kdt_d3 is not None:
@@ -323,7 +323,7 @@ def get_kdt(p_list, dimension=3):
     p_list = np.asarray(p_list)
     p_narray = np.array(p_list[:, :dimension])
     kdt = KDTree(p_narray, leaf_size=100, metric='euclidean')
-    # print('time cost(kdt):', time.time() - time_start)
+    print('time cost(kdt):', time.time() - time_start)
     return kdt, p_narray
 
 
@@ -350,7 +350,7 @@ def get_intersec(p1, p2, plane_nrml, d):
 
 
 def get_nrml_pca(knn):
-    pcv, pcaxmat = rm.computepca(knn)
+    pcv, pcaxmat = rm.compute_pca(knn)
     return pcaxmat[:, np.argmin(pcv)]
 
 
@@ -366,7 +366,7 @@ def __find_nxt_p_pca(drawpath_p1, drawpath_p2, kdt_d3, p0, n0, max_nn=200, direc
     else:
         print('Wrong input direction!')
         return None
-    rotmat = rm.rotmat_betweenvector(direction, n0)
+    rotmat = rm.rotmat_between_vectors(direction, n0)
     v_draw = np.dot(rotmat, v_draw)
     pt = p0 + v_draw
 
@@ -465,7 +465,7 @@ def __find_nxt_p_psfc(drawpath_p1, drawpath_p2, kdt_d3, p0, n0, max_nn=150, dire
             surface = None
         return surface
 
-    rotmat = rm.rotmat_betweenvector(direction, n0)
+    rotmat = rm.rotmat_between_vectors(direction, n0)
     v_draw = np.dot(rotmat, v_draw)
 
     knn_p0 = get_knn(p0, kdt_d3, k=max_nn)
@@ -565,7 +565,7 @@ def __find_nxt_p_rbf_g(drawpath_p1, drawpath_p2, surface, transmat, kdt_d3, p0, 
         print('Wrong input direction!')
         return None
 
-    rotmat = rm.rotmat_betweenvector(direction, n0)
+    rotmat = rm.rotmat_between_vectors(direction, n0)
     v_draw = np.dot(rotmat, v_draw)
 
     tgt_len = np.linalg.norm(v_draw)
@@ -654,7 +654,7 @@ def __find_nxt_p_bp(drawpath_p1, drawpath_p2, kdt_d3, p0, n0, objcm, pcd, max_nn
     trimesh = objcm.trimesh
     objcm.reparentTo(base.render)
 
-    rotmat = rm.rotmat_betweenvector(direction, n0)
+    rotmat = rm.rotmat_between_vectors(direction, n0)
     v_draw = np.dot(rotmat, v_draw)
 
     tgt_len = np.linalg.norm(v_draw)
@@ -705,7 +705,7 @@ def __find_nxt_p(drawpath_p1, drawpath_p2, kdt_d3, pcd_start_p, pcd_start_n, dir
     else:
         print('Wrong input direction!')
         return None
-    rotmat = rm.rotmat_betweenvector(direction, pcd_start_n)
+    rotmat = rm.rotmat_between_vectors(direction, pcd_start_n)
     pt = pcd_start_p + np.dot(rotmat, v_draw)
     p_start_inx = get_knn_indices(pcd_start_p, kdt_d3, k=1)[0]
     p_nxt_inx = get_knn_indices(pt, kdt_d3, k=1)[0]
@@ -728,7 +728,7 @@ def __find_nxt_p_intg(drawpath_p1, drawpath_p2, kdt_d3, p0, n0, direction=np.arr
     else:
         print('Wrong input direction!')
         return None
-    rotmat = rm.rotmat_betweenvector(direction, np.asarray(n0))
+    rotmat = rm.rotmat_between_vectors(direction, np.asarray(n0))
     v_draw = np.dot(rotmat, v_draw)
 
     knn_p0 = get_knn(p0, kdt_d3, k=max_nn)
@@ -864,7 +864,7 @@ def __prj_stroke(stroke, drawcenter, pcd, pcd_nrmls, kdt_d3, mode='DI', objcm=No
             print('pcd_start_p:', pcd_start_p, 'pcd_start_n:', pcd_start_n)
         else:
             pcd_start_p, pcd_start_n = rayhitmesh_p(objcm, drawcenter, stroke[0], kdt_d3, direction=direction)
-    # base.pggen.plotSphere(base.render, pcd_start_p, radius=2, rgba=(0, 0, 1, 1))
+    # gm.gen_sphere(pcd_start_p, radius=2, rgba=(0, 0, 1, 1))
     # base.run()
     pos_nrml_list = [[pcd_start_p, pcd_start_n]]
 
@@ -872,9 +872,9 @@ def __prj_stroke(stroke, drawcenter, pcd, pcd_nrmls, kdt_d3, mode='DI', objcm=No
         p1, p2 = stroke[i], stroke[i + 1]
         if mode == 'EI':
             p_nxt, p_nxt_nrml = __find_nxt_p_pca(p1, p2, kdt_d3, pos_nrml_list[-1][0], pos_nrml_list[-1][1],
-                                           direction=direction, toggledebug=toggledebug, pcd=pcd)
-            base.pggen.plotSphere(base.render, pos=p_nxt, rgba=(1, 0, 0, 1))
-            base.pggen.plotArrow(base.render, spos=p_nxt, epos=p_nxt + p_nxt_nrml * 10, rgba=(1, 0, 0, 1))
+                                                 direction=direction, toggledebug=toggledebug, pcd=pcd)
+            gm.gen_sphere(pos=p_nxt, rgba=(1, 0, 0, 1))
+            gm.gen_arrow(spos=p_nxt, epos=p_nxt + p_nxt_nrml * 10, rgba=(1, 0, 0, 1))
             pos_nrml_list.append([p_nxt, p_nxt_nrml])
         elif mode == 'DI':
             p_nxt_inx = __find_nxt_p(p1, p2, kdt_d3, pos_nrml_list[-1][0], pos_nrml_list[-1][1], direction=direction)
@@ -1009,7 +1009,7 @@ def get_prj_error(drawpath, pos_nrml_list, method='ED', kdt_d3=None, pcd=None, o
                 step = .05
                 iter_times = 1 / step
                 prj_len = 0
-                base.pggen.plotSphere(base.render, p1, rgba=(1, 0, 0, 1))
+                gm.gen_sphere(p1, rgba=(1, 0, 0, 1))
 
                 while iter_times > 0:
                     p_uv = (pm + np.dot(np.linalg.inv(transmat), v_draw) * step)[:2]
@@ -1018,7 +1018,7 @@ def get_prj_error(drawpath, pos_nrml_list, method='ED', kdt_d3=None, pcd=None, o
                     prj_len += np.linalg.norm(pt - pm)
                     pm = pt
                     iter_times -= 1
-                    base.pggen.plotSphere(base.render, pt, rgba=(1, 0, 1, 1))
+                    gm.gen_sphere(pt, rgba=(1, 0, 1, 1))
 
                 error = round((prj_len - real_len) / real_len, 4)
                 error_list.append(error)
@@ -1048,7 +1048,7 @@ def get_prj_error(drawpath, pos_nrml_list, method='ED', kdt_d3=None, pcd=None, o
                 for p in seg_pts:
                     if _is_p_on_seg(p1, p2, p):
                         inp_list.append(p)
-                        # base.pggen.plotSphere(base.render, p, rgba=(1, 1, 0, 1))
+                        # gm.gen_sphere(p, rgba=(1, 1, 0, 1))
                 kdt, _ = get_kdt(inp_list)
                 _, indices = kdt.query([p1], k=len(inp_list))
                 prj_len = 0
@@ -1058,8 +1058,8 @@ def get_prj_error(drawpath, pos_nrml_list, method='ED', kdt_d3=None, pcd=None, o
                 error_list.append(error)
                 prj_len_list.append(prj_len)
                 real_len_list.append(real_len)
-                # base.pggen.plotSphere(base.render, p1, rgba=(1, 0, 0, 1))
-                # base.pggen.plotSphere(base.render, p2, rgba=(0, 1, 0, 1))
+                # gm.gen_sphere(p1, rgba=(1, 0, 0, 1))
+                # gm.gen_sphere(p2, rgba=(0, 1, 0, 1))
             except:
                 error_list.append(None)
 
@@ -1264,8 +1264,8 @@ def __prj_stroke_SI(stroke, drawcenter, uv, vs, nrmls, faces, scale_list, error_
                 # plt.scatter([polygon[0][0]], [polygon[0][1]], color='green', marker='.')
                 v_draw = p_uv - polygon[0]
                 v_draw = (v_draw[0], v_draw[1], 0)
-                rotmat = rm.rotmat_betweenvector(np.array([0, 0, 1]), nrmls[face_id])
-                # base.pggen.plotSphere(base.render, vs[face[0]], radius=1, rgba=(1, 1, 0, 1))
+                rotmat = rm.rotmat_between_vector(np.array([0, 0, 1]), nrmls[face_id])
+                # gm.gen_sphere(vs[face[0]], radius=1, rgba=(1, 1, 0, 1))
                 prj_p = vs[face[0]] + np.dot(rotmat, v_draw) * scale_list[face_id]
                 pos_nrml_list.append([prj_p, nrmls[face_id]])
                 break
@@ -1353,10 +1353,9 @@ def show_drawpath(pos_nrml_list, color=(1, 0, 0), show_nrmls=False, transparency
             # if i < len(pos_nrml_list) - 1:
             #     base.pggen.plotStick(base.render, spos=p, epos=pos_nrml_list[i + 1][0],
             #                          thickness=1, rgba=(1, 1, 0, 1))
-            base.pggen.plotSphere(base.render, np.array(p), radius=1, rgba=(color[0], color[1], color[2], 1))
+            gm.gen_sphere(np.array(p), radius=1, rgba=(color[0], color[1], color[2], 1))
             if show_nrmls:
-                base.pggen.plotArrow(base.render, spos=p, epos=p + 10 * n,
-                                     rgba=(color[0], color[1], color[2], transparency))
+                gm.gen_arrow(spos=p, epos=p + 10 * n, rgba=(color[0], color[1], color[2], transparency))
 
 
 def get_penmat4(pos_nrml_list, pen_orgrot=(1, 0, 0)):
@@ -1364,11 +1363,11 @@ def get_penmat4(pos_nrml_list, pen_orgrot=(1, 0, 0)):
     for p, n in pos_nrml_list:
         # TODO: remove if
         # if rm.angle_between_vectors(n, np.asarray((0, 1, 0))) > 3:
-        #     rot = rm.rotmat_betweenvector(pen_orgrot, -n)
+        #     rot = rm.rotmat_between_vector(pen_orgrot, -n)
         # else:
-        #     rot = rm.rotmat_betweenvector(pen_orgrot, n)
-        rot = rm.rotmat_betweenvector(pen_orgrot, n)
-        objmat4_list.append(rm.homobuild(p, rot))
+        #     rot = rm.rotmat_between_vector(pen_orgrot, n)
+        rot = rm.rotmat_between_vectors(pen_orgrot, n)
+        objmat4_list.append(rm.homomat_from_posrot(p, rot))
     return objmat4_list
 
 
@@ -1428,8 +1427,8 @@ def get_connection_error(pos_nrml_list, size=(80, 80), step=1):
                     p1 = np.asarray((0, 0, 0))
                     p2 = np.asarray((0, 0, 0))
 
-                # base.pggen.plotSphere(base.render, p1, radius=2, rgba=(1, 0, 0, 1))
-                # base.pggen.plotSphere(base.render, p2, radius=2, rgba=(0, 1, 0, 1))
+                # gm.gen_sphere(p1, radius=2, rgba=(1, 0, 0, 1))
+                # gm.gen_sphere(p2, radius=2, rgba=(0, 1, 0, 1))
 
                 grid_points_dist.append(np.linalg.norm(p1 - p2))
                 grid_angle_div.append(abs(90 - angle))

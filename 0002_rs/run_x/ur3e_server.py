@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from direct.stdpy import threading
 import numpy as np
 import utils.run_script_utils as rsu
-import utiltools.robotmath as rm
+import basis.robot_math as rm
 import localenv.envloader as el
 import pickle
 
@@ -170,7 +170,7 @@ class UR3eServer(object):
             if len(self.__tcppose) > 0 and len(self.__armjnts) > 0:
                 self.rbt.movearmfk(self.__armjnts[-1], self.armname)
                 _, eerot = self.rbt.getee(armname=self.armname)
-                baserot = np.dot(rm.rodrigues((1, 0, 0), -90), rm.rodrigues((0, 1, 0), 90))
+                baserot = np.dot(rm.rotmat_from_axangle((1, 0, 0), -90), rm.rotmat_from_axangle((0, 1, 0), 90))
                 T = np.linalg.inv(np.dot(eerot, np.linalg.inv(self.objrelrot))).dot(baserot)
                 # tcprot = rm.rotmat_from_euler(self.__tcppose[-1][3], self.__tcppose[-1][4], self.__tcppose[-1][5])
                 # T = self.objrelrot.dot(np.linalg.inv(tcprot))
