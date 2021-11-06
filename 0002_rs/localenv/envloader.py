@@ -112,7 +112,7 @@ def loadEnv_wrs(camp=[4, 0, 1.7], lookatpos=[0, 0, 1]):
     env = Env_wrs(boundingradius=7.0)
     env.reparentTo(base)
 
-    # phonix
+    # phoxi
     phoxicam = cm.CollisionModel(initor=Box(box_extents=[.55, .2, .1]))
     phoxicam.set_rgba((.32, .32, .3, 1))
     env.addchangableobs(base, phoxicam, [.65, 0, 1.76], np.eye(3))
@@ -123,9 +123,9 @@ def loadEnv_wrs(camp=[4, 0, 1.7], lookatpos=[0, 0, 1]):
     env.addchangableobs(base, desk, [.54, .8, .38], np.eye(3))
 
     # penframe
-    penframe = cm.CollisionModel(initor=Box(box_extents=[.2, .32, .1]))
-    penframe.set_rgba((0.7, 0.7, 0.7, 0.8))
-    env.addchangableobs(base.render, penframe, [1.08 - .3 + .1, .6 - .175, .795], np.eye(3))
+    # penframe = cm.CollisionModel(initor=Box(box_extents=[.2, .32, .1]))
+    # penframe.set_rgba((0.7, 0.7, 0.7, 1))
+    # env.addchangableobs(base.render, penframe, [1.08 - .3 + .1, .6 - .175, .795], np.eye(3))
 
     return base, env
 
@@ -145,8 +145,8 @@ def loadUr3e(showrbt=False):
     return rbt
 
 
-def loadUr3ex(rbt):
-    rbtx = ur3ex.Ur3EDualUrx(rbt)
+def loadUr3ex(pc_ip='10.2.0.100'):
+    rbtx = ur3ex.Ur3EDualUrx(lft_robot_ip='10.0.2.2', rgt_robot_ip='10.0.2.3', pc_ip=pc_ip)
 
     return rbtx
 

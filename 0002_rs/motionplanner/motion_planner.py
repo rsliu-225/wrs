@@ -19,6 +19,9 @@ import utils.graph_utils as gh
 import basis.robot_math as rm
 import modeling.geometric_model as gm
 import motion.probabilistic.rrt_connect as rrtc
+import manipulation.approach_depart_planner as adp
+import math
+import motion.optimization_based.incremental_nik as inik
 
 
 class MotionPlanner(object):
@@ -26,16 +29,24 @@ class MotionPlanner(object):
         self.rbt = rbt
         self.env = env
         self.armname = armname
+        if self.armname == 'lft_arm':
+            self.hnd_name = 'lft_hnd'
+            self.arm = self.rbt.lft_arm
+        else:
+            self.hnd_name = 'rgt_hnd'
+            self.arm = self.rbt.rgt_arm
 
-        self.obscmlist = env.getstationaryobslist() + env.getchangableobslist()
+        self.obscmlist = []
         # for obscm in self.obscmlist:
         #     obscm.showcn()
-        self.hndfa = rtqhe.RobotiqHE()
+        self.gripper = rtqhe.RobotiqHE()
         self.iksolver = iks.IkSolver(self.env, self.rbt, self.armname)
+        # self.adp_s = adp.ADPlanner(self.rbt)
+        self.inik_slvr = inik.IncrementalNIK(self.rbt)
         self.initjnts = self.rbt.get_jnt_values(self.armname)
-        print(self.initjnts)
+        # print(self.initjnts)
 
-        self.graspplanner = gp.GraspPlanner(self.hndfa)
+        self.graspplanner = gp.GraspPlanner(self.gripper)
         self.rbth = rbt_helper.RobotHelper(self.env, self.rbt, self.armname)
         self.ah = ani_helper.AnimationHelper(self.env, self.rbt, self.armname)
 
@@ -54,16 +65,15 @@ class MotionPlanner(object):
     def get_numik(self, eepos, eerot, msc=None):
         if msc is None:
             armjnts = self.rbt.ik(self.armname, eepos, eerot)
-            # armjnts = self.iksolver.solve_numik3(eepos, eerot)
-
         else:
-            armjnts = self.rbt.ik(self.armname, eepos, eerot, seedjntagls=msc)
-            # armjnts = self.iksolver.solve_numik3(eepos, eerot, seedjntagls=msc)
+            armjnts = self.rbt.ik(self.armname, eepos, eerot, seed_jnt_values=msc)
         if armjnts is None:
             return None
-        if not self.rbth.is_selfcollided(armjnts):
-            return armjnts
-        return None
+        # self.ah.show_armjnts(armjnts=armjnts)
+        if self.rbth.is_selfcollided(armjnts):
+            print('Collided!')
+            return None
+        return armjnts
 
     def get_numik_nlopt(self, tgtpos, tgtrot=None, seedjntagls="default", releemat4=np.eye(4), col_ps=None,
                         roll_limit=1e-2, pos_limit=1e-2, movedir=None, toggledebug=False):
@@ -98,19 +108,9 @@ class MotionPlanner(object):
                 result.append(self.load_objmat4(model_name, k))
         return result
 
-    def refine_grasp(self, grasp, transmat):
-        prejawwidth, prehndfc, prehndmat4 = grasp
-        prehndmat4 = np.dot(transmat, prehndmat4)
-        prehndfc = rm.homomat_transform_points(transmat, prehndfc)
-        return [prejawwidth, prehndfc, prehndmat4]
-
     def get_armjnts_by_objmat4ngrasp(self, grasp, obj, objmat4, msc=None):
-        prejawwidth, prehndfc, prehndmat4 = grasp
-        hndmat4 = np.dot(objmat4, prehndmat4)
-        eepos = rm.homomat_transform_points(objmat4, prehndfc)[:3]
-        eerot = hndmat4[:3, :3]
+        eepos, eerot = self.get_ee_by_objmat4(grasp, objmat4)
         armjnts = self.get_numik(eepos, eerot, msc=msc)
-
         if armjnts is None:
             print("No ik solution")
             return None
@@ -176,10 +176,7 @@ class MotionPlanner(object):
             for objmat4 in objmat4_list:
                 if failed_cnt > len(objmat4_list) * (1 - threshold):
                     break
-                prejawwidth, prehndfc, prehndmat4 = grasp
-                hndmat4 = np.dot(objmat4, prehndmat4)
-                eepos = rm.homomat_transform_points(objmat4, prehndfc)[:3]
-                eerot = hndmat4[:3, :3]
+                eepos, eerot = self.get_ee_by_objmat4(grasp, objmat4)
                 armjnts = self.get_numik(eepos, eerot, msc=msc)
 
                 if armjnts is not None:
@@ -202,7 +199,8 @@ class MotionPlanner(object):
         return remaingraspid_list, time_cost_dict
 
     def get_ee_by_objmat4(self, grasp, objmat4):
-        _, prehndfc, prehndmat4 = grasp
+        _, gl_jaw_center_pos, gl_jaw_center_rotmat, hnd_pos, hnd_rotmat = grasp
+        prehndmat4 = rm.homomat_from_posrot(gl_jaw_center_pos, gl_jaw_center_rotmat)
         hndmat4 = np.dot(objmat4, prehndmat4)
         return [hndmat4[:3, 3], hndmat4[:3, :3]]
 
@@ -218,7 +216,7 @@ class MotionPlanner(object):
         if armjnts is None:
             return None, None
         self.rbth.goto_armjnts(armjnts)
-        return self.rbt.getinhandpose(objpos, objrot, self.armname)
+        return self.arm.cvt_gl_to_loc_tcp(objpos, objrot)
 
     def get_tool_primitive_armjnts(self, armjnts, objrelrot, tool_direction=np.array([-1, 0, 0]), length=50):
         eepos, eerot = self.get_ee(armjnts)
@@ -228,28 +226,19 @@ class MotionPlanner(object):
 
     def plan_start2end(self, end, start=None, additional_obscmlist=[]):
         if start is None:
-            if self.armname == "lft_arm":
-                start = self.rbt.initlftjnts
-            else:
-                start = self.rbt.initrgtjnts
+            start = self.initjnts
 
         print("--------------start2end(rrt)---------------")
-        # planner = rrtc.RRTConnect(start=start, goal=end, checker=self.ctcallback,
-        #                           starttreesamplerate=30, goaltreesamplerate=30, expanddis=10, maxiter=200,
-        #                           maxtime=100.0)
-        # path, _ = planner.planning(self.obscmlist + additional_obscmlist)
-
         planner = rrtc.RRTConnect(self.rbt)
         path = planner.plan(component_name=self.armname, start_conf=start, goal_conf=end,
-                            obstacle_list=self.obscmlist + additional_obscmlist, ext_dist=.2, max_time=300)
+                            obstacle_list=self.obscmlist + additional_obscmlist, ext_dist=.02, max_time=300)
 
         if path is None:
             print("rrt failed!")
 
         return path
 
-    def plan_start2end_hold(self, grasp, objmat4_pair, obj, objrelpos, objrelrot, start=None, use_msc=True,
-                            additional_obscmlist=[]):
+    def plan_start2end_hold(self, grasp, objmat4_pair, obj, start=None, use_msc=True, additional_obscmlist=[]):
         start_grasp = self.get_ee_by_objmat4(grasp, objmat4_pair[0])
         end_grasp = self.get_ee_by_objmat4(grasp, objmat4_pair[1])
         if start is None:
@@ -269,54 +258,45 @@ class MotionPlanner(object):
         print("--------------rrt---------------")
         planner = rrtc.RRTConnect(self.rbt)
         path = planner.plan(component_name=self.armname, start_conf=start, goal_conf=goal,
-                            obstacle_list=self.obscmlist + additional_obscmlist, ext_dist=.2, max_time=300)
-        # planner = \
-        #     rrtc.RRTConnect(start=start, goal=goal, checker=self.ctcallback,
-        #                     starttreesamplerate=30, goaltreesamplerate=30, expanddis=10, maxiter=200, maxtime=100.0)
-        # path, samples = planner.planninghold([obj], [[objrelpos, objrelrot]], self.obscmlist)
+                            obstacle_list=self.obscmlist + additional_obscmlist, ext_dist=.02, max_time=300)
 
         if path is None:
             print("rrt failed!")
         return None
 
-    def plan_start2end_hold_armj(self, armj_pair, obj, objrelpos, objrelrot):
+    def plan_start2end_hold_armj(self, armj_pair, obj):
         start = armj_pair[0]
         goal = armj_pair[1]
+
         print("--------------rrt---------------")
-        planner = \
-            rrtc.RRTConnect(start=start, goal=goal, checker=self.ctcallback,
-                            starttreesamplerate=30, goaltreesamplerate=30, expanddis=10, maxiter=200, maxtime=100.0)
-        path, samples = planner.planninghold([obj], [[objrelpos, objrelrot]], self.obscmlist)
+        planner = rrtc.RRTConnect(self.rbt)
+        path = planner.plan(component_name=self.armname, start_conf=start, goal_conf=goal,
+                            obstacle_list=self.obscmlist, ext_dist=.02, max_time=300)
 
         if path is None:
             print("rrt failed!")
         return None
 
-    def plan_gotopick(self, grasp, objmat4_pick, obj, objrelpos, objrelrot, start=None):
+    def plan_gotopick(self, grasp, objmat4_pick, obj, start=None):
         eepos_initial, eerot_initial = self.get_ee_by_objmat4(grasp, objmat4_pick)
         pick_start = self.get_numik(eepos_initial, eerot_initial)
         # planning
         if pick_start is None:
             return None
-        pickupprim = self.ctcallback.getLinearPrimitive(pick_start, [0, 0, 1], 100, [obj], [[objrelpos, objrelrot]], [],
-                                                        type="sink")
+        pickupprim = self.get_linear_path_to(pick_start, direction=np.asarray([0, 0, 1]), length=.1)
         if pickupprim == []:
             print("Cannot reach pick up primitive position!")
             return None
 
         if start is None:
-            if self.armname == "lft_arm":
-                start = self.rbt.initlftjnts
-            else:
-                start = self.rbt.initrgtjnts
+            start = self.initjnts
         else:
             self.rbth.goto_armjnts(start)
 
         print("--------------rrt---------------")
-        planner = rrtc.RRTConnect(start=start, goal=pickupprim[0], checker=self.ctcallback,
-                                  starttreesamplerate=30, goaltreesamplerate=30, expanddis=10, maxiter=200,
-                                  maxtime=100.0)
-        path, _ = planner.planning(self.obscmlist)
+        planner = rrtc.RRTConnect(self.rbt)
+        path = planner.plan(component_name=self.armname, start_conf=start, goal_conf=pickupprim[0],
+                            obstacle_list=self.obscmlist, ext_dist=.02, max_time=300)
 
         if path is not None:
             path = path + pickupprim
@@ -325,35 +305,37 @@ class MotionPlanner(object):
 
         return path
 
-    def plan_picknplace(self, grasp, objmat4_pair, obj, objrelpos, objrelrot, use_msc=True, use_pickupprim=True,
-                        use_placedownprim=True, start=None, pickupprim_len=100, placedownprim_len=70):
+    def plan_picknplace(self, grasp, objmat4_pair, obj, use_msc=True, use_pickupprim=True,
+                        use_placedownprim=True, start=None, pickupprim_len=.1, placedownprim_len=.07):
         eepos_initial, eerot_initial = self.get_ee_by_objmat4(grasp, objmat4_pair[0])
         if start is None:
             start = self.get_numik(eepos_initial, eerot_initial)
-
         if start is None:
             print("Cannot reach init position!")
             return None
+        self.rbt.fk(component_name=self.armname, jnt_values=start)
+        objcm_copy = obj.copy()
+        objcm_copy.set_homomat(objmat4_pair[0])
+        objrelpos, objrelrot = self.rbt.hold(objcm_copy, hnd_name=self.hnd_name, jaw_width=.02)
+        self.rbt.gen_meshmodel().attach_to(base)
 
         eepos_final, eerot_final = self.get_ee_by_objmat4(grasp, objmat4_pair[1])
         if use_msc:
             goal = self.get_numik(eepos_final, eerot_final, msc=start)
-
             if goal is None:
                 print("get_picknplace_goal msc failed!")
                 goal = self.get_numik(eepos_final, eerot_final)
-
         else:
             goal = self.get_numik(eepos_final, eerot_final, msc=start)
 
         if goal is None:
             print("Cannot reach final position!")
             return None
+        self.rbt.gen_meshmodel().attach_to(base)
 
         # planning
         if use_pickupprim:
-            pickupprim = self.ctcallback.getLinearPrimitive(start, [0, 0, 1], pickupprim_len, [obj],
-                                                            [[objrelpos, objrelrot]], [], type="source")
+            pickupprim = self.get_linear_path_from(start=start, length=pickupprim_len)
             if pickupprim == []:
                 print("Cannot reach init primitive position!")
                 return None
@@ -361,37 +343,23 @@ class MotionPlanner(object):
             pickupprim = [start]
 
         if use_placedownprim:
-            placedownprim = self.ctcallback.getLinearPrimitive(goal, [0, 0, 1], placedownprim_len, [obj],
-                                                               [[objrelpos, objrelrot]], [], type="sink")
+            placedownprim = self.get_linear_path_from(start=goal, length=placedownprim_len)[::-1]
             if placedownprim == []:
                 print("Cannot reach final primitive position!")
                 return None
         else:
             placedownprim = [goal]
 
-        # self.ah.show_armjnts(armjnts=pickupprim[-1], rgba=[1.0, 0.0, 1.0, .5])
-        # self.ah.show_armjnts(armjnts=pickupprim[0], rgba=[1.0, 0.0, 0.0, .5])
-        # objpos, objrot = self.rbt.getworldpose(objrelpos, objrelrot, self.armname)
-        # objmat4 = rm.homomat_from_posrot(objpos, objrot)
-        # obj = copy.deepcopy(obj)
-        # obj.setColor(1.0, 0.0, 1.0, .5)
-        # obj.setMat(base.pg.np4ToMat4(objmat4))
-        #
-        # self.ah.show_armjnts(armjnts=placedownprim[0], rgba=[0.0, 1.0, 1.0, .5])
-        # self.ah.show_armjnts(armjnts=placedownprim[-1], rgba=[0.0, 0.0, 1.0, .5])
-        # objpos, objrot = self.rbt.getworldpose(objrelpos, objrelrot, self.armname)
-        # objmat4 = rm.homomat_from_posrot(objpos, objrot)
-        # obj = copy.deepcopy(obj)
-        # obj.setColor(0.0, 1.0, 1.0, .5)
-        # obj.setMat(base.pg.np4ToMat4(objmat4))
-        # base.run()
+        self.ah.show_armjnts(armjnts=pickupprim[-1], rgba=[1, 0, 1, .5])
+        self.ah.show_armjnts(armjnts=pickupprim[0], rgba=[1, 0, 0, .5])
+        self.ah.show_armjnts(armjnts=placedownprim[0], rgba=[0, 1, 1, .5])
+        self.ah.show_armjnts(armjnts=placedownprim[-1], rgba=[0, 0, 1, .5])
 
         print("--------------rrt---------------")
-        planner = \
-            rrtc.RRTConnect(start=pickupprim[-1], goal=placedownprim[0], checker=self.ctcallback,
-                            starttreesamplerate=30, goaltreesamplerate=30, expanddis=10, maxiter=200, maxtime=100.0)
-        path, samples = planner.planninghold([obj], [[objrelpos, objrelrot]], self.obscmlist)
-
+        planner = rrtc.RRTConnect(self.rbt)
+        path = planner.plan(component_name=self.armname, start_conf=pickupprim[-1], goal_conf=placedownprim[0],
+                            obstacle_list=self.obscmlist, ext_dist=.02, max_time=300)
+        self.rbt.release(self.hnd_name, obj)
         if path is not None:
             path = pickupprim + path + placedownprim
             return path
@@ -427,10 +395,10 @@ class MotionPlanner(object):
 
         return inp_mat4_list
 
-    def objmat4_list_inp(self, objmat4_list_ms):
+    def objmat4_list_inp(self, objmat4_list_ms, max_inp=30):
         inp_mat4_list_ms = []
         for objmat4_list in objmat4_list_ms:
-            inp_mat4_list_ms.append(self.__inp(objmat4_list))
+            inp_mat4_list_ms.append(self.__inp(objmat4_list, max_inp=max_inp))
         return inp_mat4_list_ms
 
     def get_continuouspath(self, msc, grasp, objmat4_list, grasp_id=0, threshold=1, toggledebug=False,
@@ -501,7 +469,6 @@ class MotionPlanner(object):
         path = []
         # init_msc = msc
         time_start_1 = time.time()
-        _, _, prehndmat4 = grasp
         relpos, relrot = None, None
         for i, objmat4 in enumerate(objmat4_list):
             eepos, eerot = self.get_ee_by_objmat4(grasp, objmat4)
@@ -563,7 +530,6 @@ class MotionPlanner(object):
         success_cnt = 0
         path = []
         time_start_1 = time.time()
-        _, _, prehndmat4 = grasp
         relpos, relrot = None, None
 
         if msc is None:
@@ -592,10 +558,8 @@ class MotionPlanner(object):
                     eepos, eerot = self.rbth.get_ee(armjnts, releemat4=rm.homomat_from_posrot(relpos, relrot))
                     self.rbth.draw_axis(eepos, eerot, length=100)
                     self.ah.show_armjnts(armjnts=armjnts, rgba=(0, 1, 0, .5))
-                    axmat = self.rbth.manipulability_axmat(armjnts=armjnts,
-                                                           releemat4=rm.homomat_from_posrot(relpos, relrot))
-                    manipulability = self.rbth.manipulability(armjnts=armjnts,
-                                                              releemat4=rm.homomat_from_posrot(relpos, relrot))
+                    axmat = self.rbt.manipulability_axmat(component_name=self.armname)
+                    manipulability = self.rbt.manipulability(component_name=self.armname)
                     print("%e" % manipulability)
                     self.rbth.draw_axis_uneven(objmat4[:3, 3], axmat, scale=.5)
                     base.run()
@@ -645,10 +609,9 @@ class MotionPlanner(object):
             armjnts = self.get_numik(eepos, eerot)
             relpos, relrot = rm.rel_pose(eepos, eerot, objmat4_new[:3, 3], objmat4_new[:3, :3])
             if armjnts is not None:
-                score = self.rbth.manipulability(armjnts=armjnts, releemat4=rm.homomat_from_posrot(relpos, relrot))
+                score = self.rbt.manipulability(component_name=self.armname)
                 if toggledebug:
-                    axmat = self.rbth.manipulability_axmat(armjnts=armjnts,
-                                                           releemat4=rm.homomat_from_posrot(relpos, relrot))
+                    axmat = self.rbt.manipulability_axmat(component_name=self.armname)
                     self.ah.show_armjnts(armjnts=armjnts, rgba=(1, 1, 0, .2))
                     # self.rbth.draw_axis(objmat4_new[:3, 3], objmat4_new[:3, :3], rgba=(1, 1, 0, .5))
                     # self.rbth.draw_axis_uneven(objmat4_new[:3, 3], axmat,scale=.5)
@@ -1042,135 +1005,11 @@ class MotionPlanner(object):
         # base.run()
         return armjnts_path
 
-    def refine_continuouspath_by_transmat(self, objrelpos, objrelrot, path, grasp, objcm, transmat):
-        time_start = time.time()
-        print("transmat:", transmat)
-        success_cnt = 0
-        path_new = []
-        path_mask = []
-        grasp_refined = self.refine_grasp(grasp, transmat)
-        # objrelpos_refined, objrelrot_refined = copy.deepcopy(objrelpos), copy.deepcopy(objrelrot)
-        objrelpos_refined, objrelrot_refined = None, None
-        for armjnts in path:
-            self.rbth.goto_armjnts(armjnts)
-            objpos, objrot = self.rbt.getworldpose(objrelpos, objrelrot, self.armname)
-            if objrelpos_refined is None:
-                objrelpos_refined, objrelrot_refined = self.get_rel_posrot(grasp_refined, objpos, objrot)
-
-            objmat4 = rm.homomat_from_posrot(objpos, objrot)
-            # print("pos diff:", objmat4[:3, 3] - objmat4_new[:3, 3])
-            armjnts = self.get_armjnts_by_objmat4ngrasp(grasp_refined, objcm, objmat4, msc=armjnts)
-
-            if armjnts is not None:
-                stepdiff_norm = np.linalg.norm(armjnts - path[-1], ord=1)
-                if stepdiff_norm > 300:
-                    print(stepdiff_norm, armjnts)
-                    print("***************")
-                    path_mask.append(False)
-                    continue
-                path_new.append(armjnts)
-                path_mask.append(True)
-                success_cnt += 1
-            else:
-                path_mask.append(False)
-
-        print("Success point:", success_cnt, "of", len(path))
-        print("time cost(refine by transmat):", time.time() - time_start)
-        return grasp_refined, objrelpos_refined, objrelrot_refined, path_new, path_mask
-
-    def refine_continuouspath_by_posdiff(self, objrelpos, objrelrot, path, grasp, objcm, posdiff, path_mask=None):
-        if path_mask is None:
-            path_mask = [True] * len(path)
-        success_cnt = 0
-        path_new = []
-        time_start = time.time()
-
-        for i, armjnts in enumerate(path):
-            if path_mask[i]:
-                self.rbth.goto_armjnts(armjnts)
-                objpos, objrot = self.rbt.getworldpose(objrelpos, objrelrot, self.armname)
-                objmat4 = rm.homomat_from_posrot(objpos + posdiff, objrot)
-                armjnts_new = self.get_armjnts_by_objmat4ngrasp(grasp, objcm, objmat4, armjnts)
-                if armjnts_new is not None:
-                    stepdiff_norm = np.linalg.norm(armjnts_new - armjnts, ord=1)
-                    if stepdiff_norm > 300:
-                        print("******nlopt******")
-                        armjnts_new = self.get_numik_nlopt(objmat4[:3, 3], objmat4[:3, :3], seedjntagls=armjnts,
-                                                           releemat4=rm.homomat_from_posrot(objrelpos, objrelrot))
-                    stepdiff_norm = np.linalg.norm(armjnts_new - armjnts, ord=1)
-                    if stepdiff_norm > 300:
-                        print(stepdiff_norm, armjnts_new)
-                        print("******fail******")
-                        path_mask[i] = False
-                        continue
-                    path_new.append(armjnts_new)
-                    success_cnt += 1
-                else:
-                    path_mask[i] = False
-
-        print("Success point:", success_cnt, "of", len(path))
-        print("time cost(refine by pos diff):", time.time() - time_start)
-
-        return path_new, path_mask
-
-    def refine_continuouspath_lft(self, path, stop_id, objrelpos, objrelrot, n0, grasp, objcm):
-        path_res = path[stop_id:]
-        pos1 = self.get_world_objmat4(objrelpos, objrelrot, path[stop_id - 5])[:3, 3]
-        self.ah.show_armjnts(armjnts=path_res[0], rgba=(1, 0, 0, .5))
-        for i, armjnts in enumerate(path_res):
-            objmat4 = self.get_world_objmat4(objrelpos, objrelrot, armjnts)
-            n = objmat4[:3, 0]
-            if np.degrees(rm.angle_between_vectors(n, n0)) > 15:
-                pos2 = objmat4[:3, 3]
-                posdiff = pos1 - pos2
-                # posdiff[1] = posdiff[1] - 6
-                print('posdiff:', posdiff)
-                path_res, _ = \
-                    self.refine_continuouspath_by_posdiff(objrelpos, objrelrot, path_res[i:], grasp, objcm, posdiff)
-                # self.ah.show_armjnts(armjnts=armjnts, rgba=(0, 1, 0, .5))
-                self.ah.show_armjnts_with_obj(armjnts, objcm, objrelpos, objrelrot, rgba=(0, 1, 0, .5))
-                break
-        return path_res
-
-    def refine_continuouspath_rgt(self, path, stop_id, objrelpos, objrelrot, f, grasp, objcm):
-        path_pre = path[:stop_id][::-1]
-        path_res = path[stop_id:]
-        path_mid = []
-        posdiff = [0, 0, 0]
-        self.ah.show_armjnts_with_obj(path[stop_id], objcm, objrelpos, objrelrot, rgba=(0, 1, 0, .5))
-        spos = self.get_world_objmat4(objrelpos, objrelrot, path[stop_id])[:3, 3]
-        gm.gen_arrow(spos=spos, epos=spos + 10 * f)
-
-        for i, armjnts in enumerate(path_pre):
-            objmat4 = self.get_world_objmat4(objrelpos, objrelrot, armjnts)
-            n = objmat4[:3, 0]
-            print(np.degrees(rm.angle_between_vectors(n, f)))
-            if rm.angle_between_vectors(n, np.asarray(f)) < np.radians(1):
-                self.ah.show_armjnts(armjnts=armjnts, rgba=(1, 0, 0, .5))
-                pos1 = objmat4[:3, 3]
-                pos2 = self.get_world_objmat4(objrelpos, objrelrot, path_pre[i + 2])[:3, 3]
-                posdiff = pos1 - pos2
-
-                print(posdiff)
-                objmat4_new = np.eye(4)
-                objmat4_new[:3, :3] = objmat4[:3, :3]
-                path_mid = [armjnts]
-                for cnt in range(1, 16):
-                    posdiff[1] = posdiff[1] + 1
-                    objmat4_new[:3, 3] = pos1 + posdiff
-                    path_mid.append(self.get_armjnts_by_objmat4ngrasp(grasp, objcm, objmat4_new, msc=armjnts))
-                path_res = path[(stop_id - i):]
-                self.ah.show_armjnts(armjnts=path_mid[-1], rgba=(1, 1, 0, .5))
-                break
-        path_res, _ = self.refine_continuouspath_by_posdiff(objrelpos, objrelrot, path_res, grasp, objcm, posdiff)
-
-        return path_mid + path_res
-
     def goto_posrot(self, eepos, eerot):
         # armjnts = self.rbt.numik(eepos, eerot, self.armname)
         armjnts = self.get_numik(eepos, eerot)
         if armjnts is not None:
-            self.rbt.movearmfk(armjnts, self.armname)
+            self.rbth.goto_armjnts(armjnts)
             return armjnts
         else:
             print("No IK solution for the given pos, rot.")
@@ -1179,7 +1018,7 @@ class MotionPlanner(object):
     def goto_posrot_msc(self, eepos, eerot, msc):
         armjnts = self.get_numik(eepos, eerot, msc=msc)
         if armjnts is not None:
-            self.rbt.movearmfk(armjnts, self.armname)
+            self.rbth.goto_armjnts(armjnts)
             return armjnts
         else:
             print("No IK solution for the given pos, rot.")
@@ -1193,13 +1032,33 @@ class MotionPlanner(object):
         objmat4 = rm.homomat_from_posrot(objpos, objrot)
         return objmat4
 
-    def get_moveup_path(self, start, obj, objrelpos, objrelrot, direction=[0, 0, 1], length=20):
-        return self.ctcallback.getLinearPrimitive(start, direction, length, [obj], [[objrelpos, objrelrot]], [],
-                                                  type="source")
+    def get_linear_path_from(self, start, direction=np.asarray([0, 0, 1]), length=.05):
+        path = self.inik_slvr.gen_rel_linear_motion_with_given_conf(self.armname, start,
+                                                                    direction=direction,
+                                                                    distance=length,
+                                                                    obstacle_list=[],
+                                                                    granularity=0.03,
+                                                                    seed_jnt_values=None,
+                                                                    type='source',
+                                                                    toggle_debug=False)
+        if path is not None:
+            return path
+        else:
+            return []
 
-    def get_movedown_path(self, start, obj, objrelpos, objrelrot, direction=[0, 0, 1], length=20):
-        return self.ctcallback.getLinearPrimitive(start, direction, length, [obj], [[objrelpos, objrelrot]], [],
-                                                  type="sink")
+    def get_linear_path_to(self, goal, direction=np.asarray([0, 0, 1]), length=.05):
+        path = self.inik_slvr.gen_rel_linear_motion_with_given_conf(self.armname, goal,
+                                                                    direction=-direction,
+                                                                    distance=length,
+                                                                    obstacle_list=[],
+                                                                    granularity=0.03,
+                                                                    seed_jnt_values=None,
+                                                                    type='source',
+                                                                    toggle_debug=False)
+        if path is not None:
+            return path[::-1]
+        else:
+            return []
 
     def homomat2vec(self, objrelpos, objrelrot):
         rotation = Rotation.from_dcm(objrelrot)
@@ -1219,14 +1078,73 @@ class MotionPlanner(object):
         return cost
 
     def is_grasp_available(self, grasp, obj, objmat4):
-        prejawwidth, prehndfc, prehndmat4 = grasp
-        hndmat4 = np.dot(objmat4, prehndmat4)
-        eepos = rm.homotransformpoint(objmat4, prehndfc)[:3]
-        eerot = hndmat4[:3, :3]
+        eepos, eerot = self.get_ee_by_objmat4(grasp, objmat4)
         armjnts = self.get_numik(eepos, eerot)
-        obj.sethomomat(objmat4)
-
+        obj.set_homomat(objmat4)
         if armjnts is not None:
             if not self.rbth.is_selfcollided(armjnts):
                 return True
         return False
+
+
+if __name__ == '__main__':
+    import numpy as np
+
+    import utils.phoxi as phoxi
+    import utils.phoxi_locator as pl
+    import basis.robot_math as rm
+    from utils.run_script_utils import *
+
+    '''
+    set up env and param
+    '''
+    base, env = el.loadEnv_wrs()
+    rbt = el.loadUr3e()
+    # rbtx = el.loadUr3ex(rbt)
+    # rbtx.lft_arm_hnd.open_gripper()
+    # rbtx.rgt_arm_hnd.open_gripper()
+
+    pen = el.loadObj(config.PEN_STL_F_NAME)
+
+    '''
+    init class
+    '''
+    mp_rgt = MotionPlanner(env, rbt, armname="rgt_arm")
+    mp_lft = MotionPlanner(env, rbt, armname="lft_arm")
+
+    phxilocator = pl.PhxiLocator(phoxi, amat_f_name=config.AMAT_F_NAME)
+    # mp_lft.ah.show_armjnts(toggleendcoord=True)
+
+    # mp_x_lft.goto_init_x()
+    # mp_x_rgt.goto_init_x()
+    import math
+
+    glist = mp_lft.load_all_grasp(config.PEN_STL_F_NAME.split('.stl')[0])
+    objmat4_init = rm.homomat_from_posrot(np.asarray([.9, .4, .9]), rm.rotmat_from_axangle((0, 1, 0), -math.pi / 4))
+    objmat4_goal = rm.homomat_from_posrot(np.asarray([.9, .3, .9]), rm.rotmat_from_axangle((0, 1, 0), -math.pi / 4))
+
+
+    # mp_lft.ah.show_objmat4(pen, objmat4_init, rgba=(1, 0, 1, .5), showlocalframe=True)
+    # mp_lft.ah.show_objmat4(pen, objmat4_goal, rgba=(0, 1, 1, .5), showlocalframe=True)
+
+    # path = mp_lft.get_linear_path_from(jnts)
+    # path = mp_lft.get_linear_path_to(jnts)
+    # mp_lft.ah.show_animation(path)
+    # mp_lft.ah.show_armjnts(armjnts=jnts, rgba=(1, 1, 0, .5))
+    # mp_lft.ah.show_armjnts(armjnts=path[-1], rgba=(1, 0, 0, .5))
+    gripper = rtqhe.RobotiqHE()
+    for grasp in glist:
+        print('------------------------')
+        # path = mp_lft.plan_picknplace(grasp, [objmat4_init, objmat4_goal], pen)
+        # if path is not None:
+        #     mp_lft.ah.show_animation(path)
+        #     base.run()
+        eepos_initial, eerot_initial = mp_lft.get_ee_by_objmat4(grasp, objmat4_init)
+        start = mp_lft.get_numik(eepos_initial, eerot_initial)
+        eepos_final, eerot_final = mp_lft.get_ee_by_objmat4(grasp, objmat4_goal)
+        goal = mp_lft.get_numik(eepos_final, eerot_final, msc=start)
+        if start is not None and goal is not None:
+            path = mp_lft.plan_start2end(end=goal, start=start)
+            if path is not None:
+                mp_lft.ah.show_animation(path)
+                base.run()

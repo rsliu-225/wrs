@@ -51,14 +51,16 @@ def oneclasssvm_pcd(pcd_train, pcd_test):
     # print(Counter(pre))
 
 
-def load_frame_seq(folder_name, root_path=os.path.join(config.DATA_PATH, 'raw_img/rs/seq/')):
+def load_frame_seq(folder_name=None, root_path=os.path.join(config.DATA_PATH, 'raw_img/rs/seq/'), path=None):
+    if path is None:
+        path = os.path.join(root_path, folder_name)
     depthimg_list = []
     rgbimg_list = []
     pcd_list = []
-    for f in sorted(os.listdir(os.path.join(root_path, folder_name))):
+    for f in sorted(os.listdir(path)):
         if f[-3:] != 'pkl':
             continue
-        tmp = pickle.load(open(os.path.join(root_path, folder_name, f), 'rb'))
+        tmp = pickle.load(open(os.path.join(path, f), 'rb'))
         if tmp[0].shape[-1] == 3:
             depthimg_list.append(tmp[1])
             rgbimg_list.append(tmp[0])
@@ -125,12 +127,8 @@ def get_depth_diff(depth_img_bg, depth_img, threshold=2):
 
 def get_tgt_maskseq(rgbimg_list, folder_name=None, label=0, start_id=30, toggledebug=False, dilation=False):
     if folder_name is not None:
-        dump_path = f'{config.DATA_PATH}/inf_result/{folder_name}/'
-        if not os.path.exists(dump_path):
-            os.makedirs(dump_path)
-        else:
-            shutil.rmtree(dump_path)
-            os.makedirs(dump_path)
+        create_path(f'{config.DATA_PATH}/inf_result/{folder_name}/')
+        create_path(f'{config.DATA_PATH}/mask/{folder_name}/hand/')
     mask_list = []
     predictor = DetectronPredictor()
 
@@ -170,12 +168,8 @@ def get_bg_maskseq(depthimg_list, threshold=10, bg_inxs=range(20), folder_name=N
     bg_list = np.asarray(depthimg_list)[bg_inxs]
     mask_list = []
     if folder_name is not None:
-        dump_path = f'{config.DATA_PATH}/bg/{folder_name}/'
-        if not os.path.exists(dump_path):
-            os.makedirs(dump_path)
-        else:
-            shutil.rmtree(dump_path)
-            os.makedirs(dump_path)
+        create_path(f'{config.DATA_PATH}/bg/{folder_name}/')
+        create_path(f'{config.DATA_PATH}/mask/{folder_name}/bg/')
 
     for inx, depthimg in enumerate(depthimg_list):
         if inx in bg_inxs:
@@ -206,13 +200,7 @@ def filter_by_maskseq(maskseq, depthimg_list, rgbimg_list, corr_id_list=None, ex
     print('img seq length', len(depthimg_list))
     depthimg_list_res, rgbimg_list_res = [], []
     if folder_name is not None:
-        dump_path = f'{config.DATA_PATH}/filter_result/{folder_name}/'
-        if not os.path.exists(dump_path):
-            os.makedirs(dump_path)
-        else:
-            shutil.rmtree(dump_path)
-            os.makedirs(dump_path)
-
+        create_path(f'{config.DATA_PATH}/filter_result/{folder_name}/')
     for i in range(len(maskseq)):
         mask = maskseq[i].astype(np.bool)
         if not exclude:
@@ -632,7 +620,7 @@ def get_strokes_from_img(f_name):
     return stroke_list
 
 
-def get_dp_components(depthimg, epdelta=5, minsize=300, toggledebug=False):
+def get_dp_components(depthimg, epdelta=5, minsize=100, toggledebug=False):
     """
     finds the next connected components whose area is larger than minsize
     region grow using the given seed
@@ -736,7 +724,7 @@ def get_dp_components(depthimg, epdelta=5, minsize=300, toggledebug=False):
     return components_list
 
 
-def find_closest_dpcomponent(components_list, seed):
+def find_closest_dpcomponent(components_list, seed, dist_threshold=50):
     min_dist = np.inf
     result = None
     center = (0, 0)
@@ -753,6 +741,9 @@ def find_closest_dpcomponent(components_list, seed):
                 center = tmp_center
     result = result.reshape(result.shape[:2])
     print(seed, min_dist)
+    if min_dist > dist_threshold:
+        print('skip')
+        return None, seed
     return result, center
 
 
@@ -799,6 +790,13 @@ def find_largest_dpcomponent(components_list):
 #         k = cv2.waitKey(30) & 0xff
 #         if k == 27:
 #             break
+
+def create_path(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+    else:
+        shutil.rmtree(path)
+        os.makedirs(path)
 
 
 if __name__ == '__main__':

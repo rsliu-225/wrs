@@ -67,7 +67,7 @@ def get_obj_from_phoxiinfo_withmodel_rmbg(phxilocator, stl_f_name, load_f_name=N
 
     objpcd = pcdu.trans_pcd(pcdu.remove_pcd_zeros(vu.map_depth2pcd(obj_depth, pcd)), phxilocator.amat)
     objmat4 = phxilocator.match_pcdncm(objpcd, objcm, match_rotz=match_filp)
-    objcm.sethomomat(objmat4)
+    objcm.set_homomat(objmat4)
 
     return item.Item(objcm=objcm, pcd=objpcd, objmat4=objmat4)
 
@@ -77,7 +77,7 @@ def get_obj_from_phoxiinfo_withmodel(phxilocator, stl_f_name, objpcd_list=None, 
                                      match_rotz=False, resolution=1, eps=5, use_rmse=True):
     if stl_f_name[-3:] != 'stl':
         stl_f_name += '.stl'
-    objcm = cm.CollisionModel(objinit=os.path.join(config.ROOT + '/obstacles/' + stl_f_name))
+    objcm = cm.CollisionModel(initor=os.path.join(config.ROOT + '/obstacles/' + stl_f_name))
     if objpcd_list is None:
         grayimg, depthnparray_float32, pcd = load_phxiinfo(phoxi_f_name=phoxi_f_name, load=load)
         objpcd_list = phxilocator.find_objpcd_list_by_pos(pcd, x_range=x_range, y_range=y_range, z_range=z_range,

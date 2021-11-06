@@ -17,8 +17,8 @@ if __name__ == '__main__':
     '''
     init planner
     '''
-    motion_planner_rgt = m_planner.MotionPlanner(env, rbt, rbtmg, rbtball, armname='rgt')
-    mp_lft = m_planner.MotionPlanner(env, rbt, rbtmg, rbtball, armname='lft')
+    motion_planner_rgt = m_planner.MotionPlanner(env, rbt, armname='rgt')
+    mp_lft = m_planner.MotionPlanner(env, rbt, armname='lft')
     phxilocator = pl.PhxiLocator(phoxi, amat_f_name=amat_f_name)
 
     '''
@@ -72,8 +72,6 @@ if __name__ == '__main__':
     # setting_real_simple(phoxi_f_name, phxilocator.amat)
     setting_real(phxilocator, phoxi_f_name, config.PEN_STL_F_NAME, paintingobj_stl_f_name, resolution)
     # setting_sim(stl_f_name=paintingobj_stl_f_name, pos=(800, 100, 780))
-
-    objrelpos, objrelrot, path = load_motion_seq(motion_seq, folder_name, id_list)
 
     _, _, path_gotopick = load_motion_sgl('gotopick_pen', folder_name, id_list)
     _, _, path_pick2cam_pen = load_motion_sgl('pick2cam_pen', folder_name, id_list)

@@ -107,7 +107,7 @@ def show_pcdseq_withrgb(pcdseq, rgbasseq, time_sleep=.1):
     pcldnp = [None]
     print(f'num of frames: {len(pcdseq)}')
     taskMgr.doMethodLater(time_sleep, __update, 'update',
-                          extraArgs=[pcldnp, counter, np.asarray(pcdseq), np.asarray(rgbasseq)],
+                          extraArgs=[pcldnp, counter, np.asarray(pcdseq), np.asarray(rgbasseq,dtype=object)],
                           appendTask=True)
 
 

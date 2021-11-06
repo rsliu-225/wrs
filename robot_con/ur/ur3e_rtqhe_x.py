@@ -118,7 +118,7 @@ class UR3ERtqHE():
     def clear_ftsensor_values(self):
         self._ftsensor_values = []
 
-    def move_jnts(self, jnt_values, radius=0.01):
+    def move_jnts(self, jnt_values, radius=0.01, wait=True):
         """
         :param jnt_values: a 1-by-6 list in degree
         :param arm_name:
@@ -127,8 +127,8 @@ class UR3ERtqHE():
         date: 20170411
         """
         jointsrad = [math.radians(angdeg) for angdeg in jnt_values]
-        self._arm.movej(jointsrad, acc=1, vel=1, wait=True)
-        # targetarm.movejr(jointsrad, acc = 1, vel = 1, radius = radius, wait = False)
+        self._arm.movej(jointsrad, acc=1, vel=1, wait=wait)
+        # targetarm.movejr(jointsrad, acc=1, vel=1, radius=radius, wait=False)
 
     def regulate_jnts_pmpi(self):
         """
@@ -192,5 +192,5 @@ if __name__ == '__main__':
 
     base = wd.World(cam_pos=[3, 1, 2], lookat_pos=[0, 0, 0])
     u3erhe_x = UR3ERtqHE(robot_ip='10.0.2.2', pc_ip='10.2.0.91')
-    u3erhe_x.opengripper()
+    u3erhe_x.open_gripper()
     base.run()

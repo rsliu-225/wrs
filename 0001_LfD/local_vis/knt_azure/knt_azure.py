@@ -15,7 +15,7 @@ import open3d as o3d
 
 
 class KinectAzura(object):
-    def __init__(self,online=True):
+    def __init__(self, online=True):
         self.root = config.DATA_PATH
         if online:
             self.knt = pk.PyKinectAzure()
@@ -27,9 +27,9 @@ class KinectAzura(object):
                          'height': self.knt.image_get_height_pixels(depth_image_handle),
                          'fx': depth_param.fx, 'fy': depth_param.fy,
                          'cx': depth_param.cx, 'cy': depth_param.cy}
-            pickle.dump(self.intr, open(f'{config.ROOT}/local_vis/knt_azura/knt_azura_intr.pkl', 'wb'))
+            pickle.dump(self.intr, open(f'{config.ROOT}/local_vis/knt_azure/knt_azure_intr.pkl', 'wb'))
         else:
-            self.intr = pickle.load(open(f'{config.ROOT}/local_vis/knt_azura/knt_azura_intr.pkl', 'rb'))
+            self.intr = pickle.load(open(f'{config.ROOT}/local_vis/knt_azure/knt_azure_intr.pkl', 'rb'))
 
     def view(self):
         while True:
@@ -112,7 +112,7 @@ class KinectAzura(object):
             o3d.visualization.draw_geometries([pcd])
         return pcd
 
-    def show_rgbdseq(self, depthimg_list, rgbimg_list,win_name=''):
+    def show_rgbdseq(self, depthimg_list, rgbimg_list, win_name=''):
         pointcloud = o3d.geometry.PointCloud()
         vis = o3d.visualization.Visualizer()
         vis.create_window(win_name, width=1280, height=720)
@@ -144,16 +144,25 @@ class KinectAzura(object):
         vis.destroy_window()
         del vis
 
+    def show_rgbdseq_p3d(self, depthimg_list, rgbimg_list):
+        cluster_o3d_list = []
+        print(f"num of frames: {len(depthimg_list)}")
+        for i in range(len(depthimg_list)):
+            pcd_o3d = self.rgbd2pcd(depthimg_list[i], rgbimg_list[i])
+            cluster_o3d_list.append(pcd_o3d)
+        pcdu.show_pcdseq_withrgb(pcdseq=[o3d.points for o3d in cluster_o3d_list],
+                                 rgbasseq=[o3d.colors for o3d in cluster_o3d_list], time_sleep=.5)
+
 
 if __name__ == '__main__':
-    folder_name = 'glue'
+    folder_name = 'templ'
     base = wd.World(cam_pos=[2, 0, 1], lookat_pos=[0, 0, 0])
     knt = KinectAzura()
     # knt.view()
     knt.dump_frameseq(folder_name, time_interval=0)
-    # depthimg_list, rgbimg_list, pcd_list = \
-    #     du.load_frame_seq(folder_name, root_path=os.path.join(config.DATA_PATH, 'raw_img/k4a/seq/'))
+    depthimg_list, rgbimg_list, pcd_list = \
+        du.load_frame_seq(folder_name, root_path=os.path.join(config.DATA_PATH, 'raw_img/k4a/seq/'))
     # knt.show_frameseq(depthimg_list, rgbimg_list)
     # knt.show_rgbdseq(depthimg_list, rgbimg_list)
-    # pcdu.show_pcdseq(pcd_list)
-    # base.run()
+    pcdu.show_pcdseq(pcd_list)
+    base.run()

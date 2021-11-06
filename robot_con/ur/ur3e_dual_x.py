@@ -6,6 +6,7 @@ import numpy as np
 import robot_con.ur.program_builder as pb
 import robot_con.ur.ur3e_rtqhe_x as u3erhex
 
+
 class Ur3EDualUrx(object):
     """
     urx 50, right arm 51, left arm 52
@@ -21,8 +22,8 @@ class Ur3EDualUrx(object):
         author: weiwei
         date: 20191014 osaka
         """
-        self._lft_arm_hnd = u3erhex.UR3Rtq85X(robot_ip=lft_robot_ip, pc_ip=pc_ip)
-        self._rgt_arm_hnd = u3erhex.UR3Rtq85X(robot_ip=rgt_robot_ip, pc_ip=pc_ip)
+        self._lft_arm_hnd = u3erhex.UR3ERtqHE(robot_ip=lft_robot_ip, pc_ip=pc_ip)
+        self._rgt_arm_hnd = u3erhex.UR3ERtqHE(robot_ip=rgt_robot_ip, pc_ip=pc_ip)
 
     @property
     def lft_arm_hnd(self):
@@ -98,15 +99,15 @@ class Ur3EDualUrx(object):
             pc_server_socket.send(buf)
             pc_server_socket.close()
         elif component_name in ["lft_arm", "lft_hnd"]:
-            self._lft_arm_hnd.move_jspace_path(path=path,
-                                               control_frequency=control_frequency,
-                                               interval_time=interval_time,
-                                               interpolation_method=interpolation_method)
+            self._lft_arm_hnd.arm.move_jspace_path(path=path,
+                                                   control_frequency=control_frequency,
+                                                   interval_time=interval_time,
+                                                   interpolation_method=interpolation_method)
         elif component_name in ["rgt_arm", "rgt_hnd"]:
-            self._rgt_arm_hnd.move_jspace_path(path=path,
-                                               control_frequency=control_frequency,
-                                               interval_time=interval_time,
-                                               interpolation_method=interpolation_method)
+            self._rgt_arm_hnd.arm.move_jspace_path(path=path,
+                                                   control_frequency=control_frequency,
+                                                   interval_time=interval_time,
+                                                   interpolation_method=interpolation_method)
         else:
             raise ValueError("Component_name must be in ['all', 'lft_arm', 'rgt_arm']!")
 
@@ -133,7 +134,7 @@ if __name__ == '__main__':
     import manipulation.grip.robotiqhe.robotiqhe as rtqhe
     import robot_sim.ur3edual.ur3edual as robot
 
-    base = pc.World(camp=[3000, 0, 3000], lookatp=[0, 0, 700])
+    base = pc.World(camp=[3, 0, 3], lookatp=[0, 0, .7])
 
     ur3edualrobot = u3ed.Ur3EDualRobot()
     ur3edualrobot.goinitpose()
@@ -146,8 +147,8 @@ if __name__ == '__main__':
     # robot_s = robot_s.Ur3EDualRobot(rgthnd, lfthnd)
     # robot_s.goinitpose()
     # ur3eu.attachfirm(robot_s, upthreshold=10, arm_name='lft')
-    ur3eu.opengripper(armname="lft", forcepercentage=0, distance=23)
-    ur3eu.opengripper(armname="lft", forcepercentage=0, distance=80)
+    ur3eu.open_gripper(armname="lft", forcepercentage=0, distance=23)
+    ur3eu.open_gripper(armname="lft", forcepercentage=0, distance=80)
     # ur3eu.closegripper(arm_name="lft")
     # initpose = ur3dualrobot.initjnts
     # initrgt = initpose[3:9]

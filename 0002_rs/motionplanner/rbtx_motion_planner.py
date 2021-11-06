@@ -3,7 +3,7 @@ import time
 import pickle
 import basis.robot_math as rm
 from forcecontrol.force_controller import ForceController
-from motion.rrt import rrtconnect as rrtc
+import motion.probabilistic.rrt_connect as rrtc
 from motionplanner.motion_planner import MotionPlanner
 import utils.run_utils as ru
 
@@ -13,43 +13,37 @@ class MotionPlannerRbtX(MotionPlanner):
         MotionPlanner.__init__(self, env, rbt, armname)
         self.rbtx = rbtx
         self.force_controller = ForceController(self.rbt, self.rbtx, armname)
-        self.arm = self.rbtx.rgtarm if armname == "rgt" else self.rbtx.lftarm
+        self.arm = self.rbtx.rgt_arm_hnd if armname == "rgt_arm" else self.rbtx.lft_arm_hnd
 
     def movepath(self, path):
         print("--------------move path---------------")
 
-        self.rbtx.movejntssgl_cont(path, self.armname, wait=True)
-        time.sleep(.5)
-        while self.arm.is_program_running():
-            time.sleep(1)
-        time.sleep(1)
+        self.rbtx.move_jnts(path, self.armname, wait=True)
 
     def get_armjnts(self):
-        return self.rbtx.getjnts(armname=self.armname)
+        return self.rbtx.get_jnt_values(component_name=self.armname)
 
     def goto_init_x(self):
-        start = self.rbtx.getjnts(armname=self.armname)
-        if self.armname == "lft":
+        start = self.rbtx.get_jnt_values(component_name=self.armname)
+        if self.armname == "lft_arm":
             goal = self.rbt.initlftjnts
         else:
             goal = self.rbt.initrgtjnts
 
         print("--------------go to init(rrt)---------------")
-        planner = rrtc.RRTConnect(start=start, goal=goal, checker=self.ctcallback,
-                                  starttreesamplerate=30, goaltreesamplerate=30, expanddis=10, maxiter=500,
-                                  maxtime=100.0)
-        path_gotoinit, samples = planner.planning(self.obscmlist)
-
+        planner = rrtc.RRTConnect(self.rbt)
+        path_gotoinit = planner.plan(component_name=self.armname, start_conf=start, goal_conf=goal,
+                                     obstacle_list=self.obscmlist, ext_dist=.2, max_time=200)
         if path_gotoinit is not None:
-            self.rbtx.movejntssgl_cont(path_gotoinit, self.armname, wait=False)
+            self.rbtx.move_jntspace_path(path_gotoinit, self.armname, wait=False)
             time.sleep(.5)
             while self.arm.is_program_running():
                 pass
             time.sleep(.5)
 
     def goto_init_hold_x(self, grasp, objcm, objrelpos, objrelrot):
-        start = self.rbtx.getjnts(armname=self.armname)
-        if self.armname == "lft":
+        start = self.rbtx.get_jnt_values(component_name=self.armname)
+        if self.armname == "lft_arm":
             goal = self.rbt.initlftjnts
         else:
             goal = self.rbt.initrgtjnts
@@ -68,8 +62,8 @@ class MotionPlannerRbtX(MotionPlanner):
 
     def move_up_x(self, obj, objrelpos, objrelrot, direction=[0, 0, 1], length=20):
         print(f"--------------move up {length}---------------")
-        path_up = self.get_moveup_path(self.get_armjnts(), obj, objrelpos, objrelrot, length=length,
-                                       direction=direction)
+        path_up = self.get_linear_path_from(self.get_armjnts(), obj, objrelpos, objrelrot, length=length,
+                                            direction=direction)
         self.rbtx.movejntssgl_cont(path_up, self.armname, wait=True)
         while self.arm.is_program_running():
             time.sleep(1)
@@ -121,8 +115,8 @@ class MotionPlannerRbtX(MotionPlanner):
                                                        load=load, phoxi_f_name=phoxi_f_name,
                                                        showicp=showicp, showcluster=showcluster)
         objmat4_real = obj_inhand_item.objmat4
-        rot_x = rm.euler_from_matrix(objmat4_sim[:3, :3])[0] - rm.euler_from_matrix(objmat4_real[:3, :3])[0]
-        objmat4_real[:3, :3] = np.dot(objmat4_real[:3, :3], rm.rodrigues((1, 0, 0), rot_x))
+        rot_x = rm.rotmat_to_euler(objmat4_sim[:3, :3])[0] - rm.rotmat_to_euler(objmat4_real[:3, :3])[0]
+        objmat4_real[:3, :3] = np.dot(objmat4_real[:3, :3], rm.rotmat_from_axangle((1, 0, 0), rot_x))
         if toggledubug:
             self.ah.show_armjnts(armjnts=armjnts, jawwidth=15, rgba=(1, 1, 0, .5))
             pcdu.show_pcd(obj_inhand_item.pcd, rgba=(0, 1, 0, 1))
@@ -149,24 +143,6 @@ class MotionPlannerRbtX(MotionPlanner):
 
         return transmat
 
-    # def passive_move(self, path, toolrelpose):
-    #     armjnts_list_flatten = []
-    #     path_inp = []
-    #     traj = trajectory.Trajectory(type="quintic")
-    #
-    #     for i in range(len(path) - 1):
-    #         diff = np.linalg.norm(path[i] - path[i + 1])
-    #         if diff < 2:
-    #             path_inp.append(path[i])
-    #         else:
-    #             path_temp = traj.piecewiseinterpolation([path[i], path[i + 1]], sampling=np.floor(diff/2))
-    #             path_inp.extend(path_temp[:-1])
-    #     # self.plot_armjnts(traj.piecewiseinterpolation(path, sampling=100))
-    #     for armjnts in path:
-    #         armjnts_rad = np.deg2rad(armjnts)
-    #         armjnts_list_flatten += armjnts_rad.tolist()
-    #     self.force_controller.passive_move(armjnts_list_flatten, toolrelpose)
-
     def get_lower_path(self, objrelpos, objrelrot, path, objcm, grasp, distance=2):
         success_cnt = 0
         path_new = []
@@ -192,13 +168,16 @@ class MotionPlannerRbtX(MotionPlanner):
     def goto_armjnts_x(self, armjnts):
         start = self.get_armjnts()
         print("--------------goto_armjnts_x(rrt)---------------")
-        planner = rrtc.RRTConnect(start=start, goal=armjnts, checker=self.ctcallback,
-                                  starttreesamplerate=30, goaltreesamplerate=30, expanddis=10, maxiter=500,
-                                  maxtime=100.0)
-        path, _ = planner.planning(self.obscmlist)
+        # planner = rrtc.RRTConnect(start=start, goal=armjnts, checker=self.ctcallback,
+        #                           starttreesamplerate=30, goaltreesamplerate=30, expanddis=10, maxiter=500,
+        #                           maxtime=100.0)
+        # path, _ = planner.planning(self.obscmlist)
+        planner = rrtc.RRTConnect(self.rbt)
+        path = planner.plan(component_name=self.armname, start_conf=start, goal_conf=armjnts,
+                            obstacle_list=self.obscmlist, ext_dist=.2, max_time=300)
 
         if path is not None:
-            self.rbtx.movejntssgl_cont(path, self.armname, wait=True)
+            self.rbtx.move_jnts(self.armname, path)
             time.sleep(.5)
             while self.arm.is_program_running():
                 pass
@@ -215,7 +194,7 @@ class MotionPlannerRbtX(MotionPlanner):
         path = self.plan_start2end_hold(grasp, [objmat4_start, objmat4_goal], objcm, objrelpos, objrelrot, start=start,
                                         use_msc=False)
         if path is not None:
-            self.rbtx.movejntssgl_cont(path, self.armname, wait=True)
+            self.rbtx.move_jnts(self.armname, path)
             time.sleep(.5)
             while self.arm.is_program_running():
                 pass
@@ -228,7 +207,7 @@ class MotionPlannerRbtX(MotionPlanner):
         path = self.plan_start2end_hold(grasp, [objmat4_start, objmat4_goal], objcm, objrelpos, objrelrot,
                                         start=self.get_armjnts())
         if path is not None:
-            self.rbtx.movejntssgl_cont(path, self.armname, wait=True)
+            self.rbtx.move_jnts(self.armname, path)
             while self.arm.is_program_running():
                 pass
             time.sleep(.5)
@@ -243,9 +222,9 @@ if __name__ == '__main__':
     base, env = el.loadEnv_wrs()
     rbt, rbtmg, rbtball = el.loadUr3e()
     rbtx = el.loadUr3ex(rbt)
-    rbt.opengripper(armname="rgt")
-    rbt.opengripper(armname="lft")
-    mp_x_lft = MotionPlannerRbtX(env, rbt, rbtmg, rbtball, rbtx, armname="lft")
+    rbt.opengripper(armname="rgt_arm")
+    rbt.opengripper(armname="lft_arm")
+    mp_x_lft = MotionPlannerRbtX(env, rbt, rbtx, armname="lft_arm")
     armjnts = mp_x_lft.get_armjnts()
     mp_x_lft.ah.show_armjnts(armjnts=armjnts, toggleendcoord=True)
     base.run()

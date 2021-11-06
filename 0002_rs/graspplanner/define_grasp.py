@@ -42,6 +42,6 @@ if __name__ == '__main__':
     stl_f_name = "pentip.stl"
     obj = grasp_planner.load_objcm(stl_f_name)
     grasp_list = grasp_planner.load_pregrasp(stl_f_name)
-    grasp_planner.show_grasp(grasp_list[:30], obj, rgba=None)
+    grasp_planner.show_grasp(grasp_list[:30], obj, rgba=None, toggle_tcpcs=False, toggle_jntscs=False)
 
     base.run()

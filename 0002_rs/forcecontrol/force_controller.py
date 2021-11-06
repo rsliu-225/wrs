@@ -17,7 +17,7 @@ class ForceController(object):
         self.rbtx = rbtx
         self.rbt = rbt
         self.armname = armname
-        self.arm = self.rbtx.rgtarm if self.armname == "rgt" else self.rbtx.lftarm
+        self.arm = self.rbtx.rgt_arm_hnd.arm if self.armname == "rgt" else self.rbtx.lft_arm_hnd.arm
         self.__scriptpath = os.path.dirname(__file__)
         self.__programbuilder = pb.ProgramBuilder()
         self.__rrx = 90
@@ -28,24 +28,17 @@ class ForceController(object):
 
     def write_force(self, force_log):
         time.sleep(.5)
-        if self.armname == "lft":
-            print("rbt is running", self.rbtx.lftarm.is_program_running())
-            while self.rbtx.lftarm.is_program_running():
-                with open(force_log, "wb") as f:
-                    f.writelines([self.rbtx.lftarm.get_tcp_force(), time.time()])
-                print("force:", self.rbtx.lftarm.get_tcp_force(), time.time())
-        else:
-            print("rbt is running", self.rbtx.rgtarm.is_program_running())
-            while self.rbtx.rgtarm.is_program_running():
-                with open(force_log, "wb") as f:
-                    f.writelines([self.rbtx.lftarm.get_tcp_force(), time.time()])
-                print("force:", self.rbtx.rgtarm.get_tcp_force(), time.time())
+        print("rbt is running", self.arm.is_program_running())
+        while self.arm.is_program_running():
+            with open(force_log, "wb") as f:
+                f.writelines([self.arm.get_tcp_force(), time.time()])
+            print("force:", self.arm.get_tcp_force(), time.time())
 
     def get_force(self):
         force = None
-        # print("rbt is running", self.rbtx.lftarm.is_program_running())
+        # print("rbt is running", self.arm.is_program_running())
         try:
-            force = self.rbtx.getinhandtcpforce(armname=self.armname)
+            force = self.arm.get_tcp_force()
             print(force)
         except:
             print("fail to get force")
@@ -53,9 +46,6 @@ class ForceController(object):
         return force
 
     def linearandspiralsearch(self, direction=np.array([0, 0, -1]), forcethreshold=8, armname="rgt"):
-        arm = self.rbtx.rgtarm
-        if armname == "lft":
-            arm = self.rbtx.lftarm
 
         jntangles = self.rbtx.getjnts(armname)
         self.rbt.movearmfk(jntangles, armname=armname)
@@ -99,15 +89,12 @@ class ForceController(object):
             rotationmatrix[1][0], rotationmatrix[1][1], rotationmatrix[1][2],
             rotationmatrix[2][0], rotationmatrix[2][1], rotationmatrix[2][2]
         ))
-        arm.send_program(prog)
+        self.arm.send_program(prog)
         time.sleep(.5)
-        while arm.is_program_running():
+        while self.arm.is_program_running():
             pass
 
     def impedance_control(self, toolframe, direction=np.array([0, 0, -1]), distance=0.01, force=7):
-        arm = self.rbtx.rgtarm
-        if self.armname == "lft":
-            arm = self.rbtx.lftarm
         self.__programbuilder.loadprog(self.__scriptpath + "/urscripts/impctl.script")
         prog = self.__programbuilder.ret_program_to_run()
         # direction p[x,x,x,x,x,x]
@@ -117,16 +104,16 @@ class ForceController(object):
                             f"{distance}")
         prog = prog.replace("parameter_force",
                             f"[{direction[0] * force},{direction[1] * force},{direction[2] * force},0,0,0]")
-        arm.send_program(prog)
+        self.arm.send_program(prog)
         time.sleep(.5)
-        while arm.is_program_running():
+        while self.arm.is_program_running():
             time.sleep(1)
         time.sleep(.5)
 
     def attachfirm(self, direction=np.array([0, 0, -1]), forcethreshold=10):
         print(self.arm.is_running())
         armjnts = self.rbtx.getjnts(self.armname)
-        self.rbt.movearmfk(armjnts, armname=self.armname)
+        self.rbt.fk(armjnts, armname=self.armname)
         tcppos = self.rbt.gettcp(armname=self.armname)[1]
 
         # the vector z-axis of obj in the world coordinate [:3,2]
@@ -143,7 +130,6 @@ class ForceController(object):
                             "%f" % forcethreshold)
         print("The value of vector_tip is ", vector_tip)
         self.arm.send_program(prog)
-        # print(arm.is_running())
         time.sleep(.5)
         while self.arm.is_program_running():
             pass
@@ -284,9 +270,9 @@ if __name__ == "__main__":
     import pandaplotutils.pandactrl as pandactrl
     import robotcon.ur3edual as ur3ex
 
-    base = pandactrl.World(camp=[3000, 0, 3000], lookatpos=[0, 0, 700])
+    base = pandactrl.World(camp=[3, 0, 3], lookatpos=[0, 0, .7])
     rbt = ur3e.Ur3EDualRobot()
-    rbtx = ur3ex.Ur3EDualUrx(rbt)
+    rbtx = ur3ex.Ur3EDualUrx()
 
     fc = ForceController(rbt, rbtx)
     fc.attachfirm(forcethreshold=1)
@@ -296,9 +282,9 @@ if __name__ == "__main__":
 
     fc.attachfirm(forcethreshold=1)
     time.sleep(.5)
-    print(rbtx.lftarm.is_program_running())
-    while rbtx.lftarm.is_program_running():
-        print(rbtx.lftarm.get_tcp_force())
+    print(rbtx.lft_arm_hnd.is_program_running())
+    while rbtx.lft_arm_hnd.is_program_running():
+        print(rbtx.lft_arm_hnd.get_tcp_force())
     print("==========================================")
     time.sleep(.5)
-    print(rbtx.lftarm.get_tcp_force())
+    print(rbtx.lft_arm_hnd.get_tcp_force())

@@ -217,14 +217,10 @@ class Item(object):
         # self.__objcm = pcdu.reconstruct_surface(vs, radii=[5])
 
     def show_objcm(self, rgba=(1, 1, 1, 1), show_localframe=False):
-        # import copy
-        # objmat4 = copy.deepcopy(self.objmat4)
-        # objmat4[:3, :3] = np.eye(3)
-        # self.__objcm.sethomomat(objmat4)
-        self.__objcm.sethomomat(self.objmat4)
-        self.__objcm.setColor(rgba[0], rgba[1], rgba[2], rgba[3])
+        self.__objcm.set_homomat(self.objmat4)
+        self.__objcm.set_rgba(rgba)
         if show_localframe:
-            self.__objcm.showlocalframe()
+            self.__objcm.show_localframe()
         self.__objcm.attach_to(base)
 
     def show_objpcd(self, rgba=(1, 1, 1, 1)):

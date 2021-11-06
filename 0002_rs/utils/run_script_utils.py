@@ -111,119 +111,11 @@ def load_motion_sgl(motion, folder_name, id_list, root=config.MOTIONSCRIPT_REL_P
     return objrelpos, objrelrot, path
 
 
-def get_script_id_dict_multiplepen(folder_name, root=config.MOTIONSCRIPT_REL_PATH):
-    id_list = []
-    f_dict = load_motion_f(folder_name, "cam2place_pen.pkl", root=root)
-    for k, v in f_dict.items():
-        print(k, list(v.keys()))
-
-    id = int(input("Select a grasp id from above:"))
-    id_list.append(id)
-
-    id = int(input("Select a objmat4 id from above:"))
-    id_list.append(id)
-
-    return id_list
-
-
-def load_motion_seq(motion_seq, folder_name, id_list, armname=None, root=config.MOTIONSCRIPT_REL_PATH):
-    path = []
-    objrelpos = None
-    objrelrot = None
-    for motion in motion_seq:
-        try:
-            if armname is None:
-                path_dict_path = root + folder_name + motion + ".pkl"
-            else:
-                path_dict_path = root + folder_name + "_".join([armname, motion]) + ".pkl"
-            path_dict = pickle.load(open(path_dict_path, "rb"))
-            for id in id_list:
-                try:
-                    path_dict = path_dict[id]
-                except:
-                    continue
-            objrelpos, objrelrot, path_temp = path_dict
-            # print(motion, path_temp)
-            path.extend(path_temp)
-        except:
-            print(motion, "failed!")
-            continue
-    return objrelpos, objrelrot, path
-
-
-def input_script_id(folder_name, armname=None, root=config.MOTIONSCRIPT_REL_PATH):
-    def __have_dict(dict_list):
-        bool = False
-        for item in dict_list:
-            if type(item) == dict:
-                bool = True
-                break
-        return bool
-
-    def __get_common_key(dict_list):
-        key_list = []
-        dict_cnt = 0
-        for item in dict_list:
-            try:
-                key_list.extend(list(item.keys()))
-                dict_cnt += 1
-            except:
-                continue
-        return [key for key, cnt in Counter(key_list).items() if cnt == dict_cnt]
-
-    def __dict_list_update(dict_list, id):
-        new_dict_list = []
-        for path_dict in dict_list:
-            try:
-                v = path_dict[id]
-            except:
-                v = path_dict
-            new_dict_list.append(v)
-        return new_dict_list
-
-    id_list = []
-    path_dict_list = []
-
-    for f_name in os.listdir(os.path.join(root, folder_name)):
-        if f_name[:4] == "draw" or f_name[:4] == "time":
-            continue
-        if armname is None:
-            path_dict_list.append(load_motion_f(folder_name, f_name, root=root))
-        else:
-            if f_name[:3] == armname:
-                path_dict_list.append(load_motion_f(folder_name, f_name, root=root))
-
-    while __have_dict(dict_list=path_dict_list):
-        print(__get_common_key(path_dict_list))
-        id = int(input("Select a id from the list above:"))
-        id_list.append(id)
-        path_dict_list = __dict_list_update(path_dict_list, id)
-    return id_list
-
-
 def setting_sim(stl_f_name, pos=(600, 0, 780)):
     if stl_f_name[-3:] != 'stl':
         stl_f_name += '.stl'
     objcm = el.loadObj(stl_f_name, pos=pos, rot=(0, 0, 0))
-    objcm.reparentTo(base.render)
-
-
-def setting_hand(phxilocator, pcd_f_name="/dataset/pcd/a_lft_0.pkl"):
-    amat = phxilocator.amat
-    hand_pcd = pickle.load(open(config.ROOT + pcd_f_name, "rb"))
-    hand_pcd = pcdu.trans_pcd(pcdu.remove_pcd_zeros(hand_pcd), amat)
-    hand = pcdu.reconstruct_surface(hand_pcd)
-
-    pen_pos = (800, 400, 880)
-    pen_pcd = el.loadObjpcd('pen.stl', pos=pen_pos, rot=(30, -90, 0), toggledebug=False)
-    # base.pg.genpointcloudnp(pen_pcd).reparentTo(base.render)
-    pen, pen_w, pen_h, pen_origin_pos, pen_rot_angle = pcdu.get_std_convexhull(pen_pcd, origin="tip", color=(1, 1, 0),
-                                                                               toggledebug=False, toggleransac=False)
-    hand.reparentTo(base.render)
-    pen.reparentTo(base.render)
-    base.pggen.plotSphere(base.render, pen_origin_pos, radius=5, rgba=(0, 1, 0, 1))
-
-    return pen
+    objcm.attach_to(base)
 
 
 def setting_real_simple(phoxi_f_path, amat):
@@ -248,27 +140,3 @@ def setting_real(phxilocator, phoxi_f_path, pen_stl_f_name, paintingobj_stl_f_na
     # objmat4[:3, 3] = objmat4[:3, 3] + np.asarray([5, 5, 0])
     # paintingobj_item.set_objmat4(objmat4)
     pen_item.show_objcm(rgba=(0, 1, 0, 1))
-
-
-def show_drawmotion(motion_planner, pen_cm, motion_f_path, grasp_id_list, jawwidth=20):
-    draw_dict = pickle.load(open(motion_f_path, "rb"))
-    objrelpos, objrelrot = None, None
-
-    for grasp_id in grasp_id_list:
-        try:
-            objrelpos, objrelrot, path = draw_dict[grasp_id]
-            motion_planner.ah.show_animation_hold(path, copy.deepcopy(pen_cm), objrelpos, objrelrot, jawwidth=jawwidth)
-        except:
-            path = []
-            if grasp_id not in draw_dict.keys():
-                continue
-            for stroke_key, v in draw_dict[grasp_id].items():
-                print("------", stroke_key, "--------")
-                objrelpos, objrelrot, path_stroke = v
-                if path != []:
-                    path_gotodraw = motion_planner.plan_start2end(start=path[-1], end=path_stroke[0])
-                else:
-                    path_gotodraw = []
-                path_up = motion_planner.get_moveup_path(path_stroke[-1], pen_cm, objrelpos, objrelrot, length=30)
-                path.extend(path_gotodraw + path_stroke + path_up)
-            motion_planner.ah.show_animation_hold(path, copy.deepcopy(pen_cm), objrelpos, objrelrot, jawwidth=jawwidth)

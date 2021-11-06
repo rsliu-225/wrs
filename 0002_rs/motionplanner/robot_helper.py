@@ -13,84 +13,17 @@ class RobotHelper(object):
         self.obscmlist = env.getstationaryobslist() + env.getchangableobslist()
         self.armname = armname
         self.initjnts = self.rbt.get_jnt_values(self.armname)
-        # self.armlj = self.rbt.get_jnt_values
-
-    def jacobian(self, releemat4=np.eye(4), scale=1.0):
-        """
-        compute the jacobian matrix of the targetjoints of rgt or lft arm
-
-        :param scale:
-        :param releemat4:
-        :return: armjac a 6-by-x matrix
-
-        """
-
-        # TODO: fix releemat4 error
-        armjac = np.zeros((6, len(self.rbt.targetjoints)))
-        counter = 0
-
-        endmat4 = np.dot(rm.homomat_from_posrot(self.armlj[self.rbt.targetjoints[-1]]["linkpos"],
-                                                self.armlj[self.rbt.targetjoints[-1]]["rotmat"]), releemat4)
-        endpos = endmat4[:3, 3]
-        for i in self.rbt.targetjoints:
-            if i != self.rbt.targetjoints[-1]:
-                a = np.dot(self.armlj[i]["rotmat"], self.armlj[i]["rotax"])
-            else:
-                a = np.dot(endmat4[:3, :3], self.armlj[i]["rotax"])
-            armjac[:, counter] = np.append(np.cross(a, endpos - self.armlj[i]["linkpos"]) * scale, a)
-            counter += 1
-
-        # for i in self.rbt.targetjoints:
-        #     a = np.dot(self.armlj[i]["rotmat"], self.armlj[i]["rotax"])
-        #     armjac[:, counter] = np.append(
-        #         np.cross(a, self.armlj[self.rbt.targetjoints[-1]]["linkpos"] - self.armlj[i]["linkpos"]) * scale, a)
-        #     counter += 1
-
-        return armjac
-
-    def manipulability(self, releemat4=np.eye(4), armjnts=None):
-        if armjnts is not None:
-            self.goto_armjnts(armjnts)
-        armjac = self.jacobian(releemat4=releemat4, scale=1.0)
-        return np.sqrt(np.linalg.det(np.dot(armjac, armjac.transpose())))
-
-    def manipulability_axmat(self, releemat4=np.eye(4), armjnts=None):
-        if armjnts is not None:
-            self.goto_armjnts(armjnts)
-        armjac = self.jacobian(releemat4=releemat4, scale=1.0)
-        jjt = np.dot(armjac, armjac.T)
-        pcv, pcaxmat = np.linalg.eig(jjt)
-        # only keep translation
-        axmat = np.eye(3)
-        axmat[:, 0] = np.sqrt(pcv[0]) * pcaxmat[:3, 0]
-        axmat[:, 1] = np.sqrt(pcv[1]) * pcaxmat[:3, 1]
-        axmat[:, 2] = np.sqrt(pcv[2]) * pcaxmat[:3, 2]
-        return axmat
-
-    def tcperror(self, tgtpos, tgtrot, releemat4=np.eye(4), scale=1.0):
-        """
-        compute the error of a specified (rgt or lft) tool point center to its goal
-
-        :param tgtpos: the position of the goal
-        :param tgtrot: the rotation of the goal
-        :param releemat4:
-        :param scale:
-        :return: a 1-by-6 vector where the first three indicates the displacement in pos,
-                    the second three indictes the displacement in rot
-        """
-        eepos = copy.deepcopy(self.armlj[self.rbt.targetjoints[-1]]["linkend"])
-        eerot = copy.deepcopy(self.armlj[self.rbt.targetjoints[-1]]["rotmat"])
-        eemat4 = np.dot(rm.homomat_from_posrot(eepos, eerot), releemat4)
-        eepos = eemat4[:3, 3]
-        eerot = eemat4[:3, :3]
-        deltapos = (tgtpos - eepos) * scale
-        deltaw = rm.deltaw_between_rotmat(tgtrot, eerot.T)
-        return np.append(deltapos, deltaw)
 
     def is_selfcollided(self, armjnts=None):
         if armjnts is not None:
             self.rbt.fk(self.armname, armjnts)
-        return self.rbt.is_collided(obstacle_list=self.obscmlist)
+        flag, cps = self.rbt.is_collided(obstacle_list=self.obscmlist, toggle_contact_points=True)
+        # if len(cps) > 0:
+        #     for p in cps:
+        #         gm.gen_sphere(p, radius=.01).attach_to(base)
+        #     if min([p[2] for p in cps]) > 7:
+        #         return False
+        return flag
 
     def is_objcollided(self, obj, armjnts=None):
         if armjnts is not None:
@@ -109,7 +42,7 @@ class RobotHelper(object):
     def get_ee(self, armjnts=None, releemat4=np.eye(4)):
         if armjnts is not None:
             self.goto_armjnts(armjnts)
-        eepos, eerot = self.rbt.getee(armname=self.armname)
+        eepos, eerot = self.rbt.get_gl_tcp(armname=self.armname)
         eemat4 = np.dot(rm.homomat_from_posrot(eepos, eerot), releemat4)
         return eemat4[:3, 3], eemat4[:3, :3]
 
@@ -165,7 +98,7 @@ class RobotHelper(object):
     def plot_rot_diff(self, mat4_list, label=""):
         angle_list = []
         for i in range(1, len(mat4_list)):
-            angle = rm.degree_betweenvector(mat4_list[i - 1][:3, 0], mat4_list[i][:3, 0])
+            angle = rm.angle_between_vectors(mat4_list[i - 1][:3, 0], mat4_list[i][:3, 0])
             angle_list.append(angle)
         plt.plot(np.asarray(angle_list), label=label)
         plt.legend()
@@ -207,4 +140,3 @@ if __name__ == '__main__':
 
     rbt = el.loadUr3e(showrbt=False)
     rbth = RobotHelper(env, rbt, "lft_arm")
-    print(rbth.manipulability())

@@ -20,7 +20,7 @@ if __name__ == '__main__':
     set up env and param
     '''
     base, env = el.loadEnv_wrs()
-    rbt, rbtmg, rbtball = el.loadUr3e()
+    rbt = el.loadUr3e()
     rbt.opengripper(armname='rgt')
     rbt.opengripper(armname='lft')
 
@@ -124,7 +124,7 @@ if __name__ == '__main__':
     '''
     get draw path
     '''
-    objmat4_draw_list = mp_lft.__objmat4_list_inp(
+    objmat4_draw_list = mp_lft.objmat4_list_inp(
         ru.get_pen_objmat4_list_by_drawpath(drawpath, paintingobj_item, drawrec_size=drawrec_size,
                                             color=(1, 0, 0), mode='bp', direction=prj_direction), max_inp=max_inp)
     mp_lft.ah.show_objmat4_list(objmat4_draw_list, objcm=pen_item.objcm, fromrgba=(0, 1, 0, .5), torgba=(1, 1, 0, .5))
@@ -193,8 +193,8 @@ if __name__ == '__main__':
         print(f'---------------go to draw {str(i)}---------------')
         mp_lft.init_obs()
         path_gotodraw = \
-            mp_lft.plan_start2end_hold(grasp, [objmat4_final, objmat4_draw_list[0]], pen_item.objcm, objrelpos,
-                                       objrelrot, start=copy.deepcopy(path_picknplace[-1]))
+            mp_lft.plan_start2end_hold(grasp, [objmat4_final, objmat4_draw_list[0]], pen_item.objcm,
+                                       start=copy.deepcopy(path_picknplace[-1]))
         if path_gotodraw is None:
             time_cost_dict_mp[i] = {'flag': False, 'time_cost': time.time() - time_start_tmp}
             continue

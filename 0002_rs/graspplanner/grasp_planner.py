@@ -67,10 +67,13 @@ class GraspPlanner(object):
 
         return effect_grasp
 
-    def show_grasp(self, grasp_list, obj, rgba=None):
+    def show_grasp(self, grasp_list, obj, rgba=None, toggle_tcpcs=False, toggle_jntscs=False, mode='mesh'):
         obj.attach_to(base)
         for grasp in grasp_list:
             self.gripper_s.jaw_to(grasp[0])
             self.gripper_s.fix_to(grasp[3], grasp[4])
-            # self.gripper_s.gen_meshmodel(rgba=rgba, toggle_tcpcs=True, toggle_jntscs=True).attach_to(base)
-            self.gripper_s.gen_stickmodel(toggle_tcpcs=True, toggle_jntscs=False).attach_to(base)
+            if mode == 'mesh':
+                self.gripper_s.gen_meshmodel(rgba=rgba, toggle_tcpcs=toggle_tcpcs,
+                                             toggle_jntscs=toggle_jntscs).attach_to(base)
+            else:
+                self.gripper_s.gen_stickmodel(toggle_tcpcs=toggle_tcpcs, toggle_jntscs=toggle_jntscs).attach_to(base)

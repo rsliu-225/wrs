@@ -4,7 +4,7 @@ import numpy as np
 import visualization.panda.world as wd
 import utils.pcd_utils as pcdu
 import local_vis.realsense.realsense as rs
-import local_vis.knt_azura.knt_azura as k4a
+import local_vis.knt_azure.knt_azure as k4a
 import basis.o3dhelper as o3dhelper
 import detection_utils as du
 import utils.vision_utils as vu
@@ -18,8 +18,7 @@ import copy
 
 def extract_component_o3d(camera, depthimg_list, rgbimg_list, folder_name=None, seed=None, toggledebug=False):
     if folder_name is not None:
-        if not os.path.exists(f'{config.DATA_PATH}/seg_result/{folder_name}/pcd/'):
-            os.makedirs(f'{config.DATA_PATH}/seg_result/{folder_name}/pcd/')
+        du.create_path(f'{config.DATA_PATH}/seg_result/{folder_name}/pcd/')
     cluster_o3d_list = []
     pcd_list = []
 
@@ -59,11 +58,10 @@ def extract_component_o3d(camera, depthimg_list, rgbimg_list, folder_name=None, 
 
 def extract_component_rg(depthimg_list, rgbimg_list, folder_name=None, seed=None, toggledebug=False):
     if folder_name is not None:
-        if not os.path.exists(f'{config.DATA_PATH}/seg_result/{folder_name}/rg/'):
-            os.makedirs(f'{config.DATA_PATH}/seg_result/{folder_name}/rg/')
-        if not os.path.exists(f'{config.DATA_PATH}/mask/{folder_name}/obj/'):
-            os.makedirs(f'{config.DATA_PATH}/mask/{folder_name}/obj/')
-    result_list = []
+        du.create_path(f'{config.DATA_PATH}/seg_result/{folder_name}/rg/')
+        du.create_path(f'{config.DATA_PATH}/mask/{folder_name}/obj/')
+    res_depthimg_list = []
+    res_rgbimg_list = []
     for i in range(len(depthimg_list)):
         try:
             components_list = du.get_dp_components(depthimg_list[i], toggledebug=False)
@@ -75,12 +73,16 @@ def extract_component_rg(depthimg_list, rgbimg_list, folder_name=None, seed=None
             mask, seed = du.find_largest_dpcomponent(components_list)
         else:
             mask, seed = du.find_closest_dpcomponent(components_list, seed)
+        if mask is None:
+            print('skip')
+            continue
         mask[mask == 255] = 1
         depthimg = copy.deepcopy(depthimg_list[i])
         rgbimg = copy.deepcopy(rgbimg_list[i])
         depthimg[mask == 0] = 0
         rgbimg = rgbimg * np.repeat(mask[:, :, np.newaxis], 3, axis=2)
-        result_list.append([depthimg, rgbimg])
+        res_depthimg_list.append(depthimg)
+        res_rgbimg_list.append(rgbimg)
         # cv2.imshow('result', mask)
         # cv2.imshow('depth', du.scale_depth_img(depthimg))
         # cv2.imshow('rgb', rgbimg)
@@ -90,7 +92,7 @@ def extract_component_rg(depthimg_list, rgbimg_list, folder_name=None, seed=None
                         open(f'{config.DATA_PATH}/seg_result/{folder_name}/rg/{str(i).zfill(4)}.pkl', 'wb'))
             cv2.imwrite(f'{config.DATA_PATH}/mask/{folder_name}/obj/{str(i).zfill(4)}.png', mask * 255)
 
-    return result_list
+    return res_depthimg_list, res_rgbimg_list
 
 
 def registration_rgbd(source, target, current_transformation=np.identity(4)):
@@ -263,7 +265,7 @@ def graphcut(image, init_mask, itercont=10):
 
 
 if __name__ == '__main__':
-    folder_name = 'glue'
+    folder_name = 'templ'
     base = wd.World(cam_pos=[2, 0, 1], lookat_pos=[0, 0, 0])
     # camera = rs.RealSense()
     camera = k4a.KinectAzura(online=False)
@@ -273,32 +275,32 @@ if __name__ == '__main__':
     '''
     # depthimg_list, rgbimg_list, _ = du.load_frame_seq(folder_name,
     #                                                   root_path=os.path.join(config.DATA_PATH, 'raw_img/k4a/seq/'))
-    # # camera.show_rgbdseq(depthimg_list, rgbimg_list)
-    # # depthimg_list = depthimg_list[:80]
-    # # rgbimg_list = rgbimg_list[:80]
-    # # bgmask_list = du.get_bg_maskseq(depthimg_list, bg_inxs=range(30), threshold=100, folder_name=folder_name,
+    # # # camera.show_rgbdseq(depthimg_list, rgbimg_list)
+    # # bgmask_list = du.get_bg_maskseq(depthimg_list, bg_inxs=range(20), threshold=100, folder_name=folder_name,
     # #                                 toggledebug=False)
-    # # hndmask_list = du.get_tgt_maskseq(rgbimg_list, start_id=70, folder_name=folder_name, toggledebug=False)
-    # # depthimg_list, rgbimg_list = du.filter_by_maskseq(bgmask_list, depthimg_list, rgbimg_list, folder_name,
-    # #                                                   toggledebug=False)
-    # # depthimg_list, rgbimg_list = du.filter_by_maskseq(hndmask_list, depthimg_list, rgbimg_list, folder_name,
-    # #                                                   toggledebug=False)
-    # # camera.show_rgbdseq(depthimg_list, rgbimg_list)
+    # # hndmask_list = du.get_tgt_maskseq(rgbimg_list, start_id=50, folder_name=folder_name, toggledebug=False)
+    # # depthimg_list, rgbimg_list, _ = du.load_frame_seq(folder_name,
+    # #                                                   root_path=os.path.join(config.DATA_PATH, 'filter_result/'))
+    # # camera.show_frameseq(depthimg_list, rgbimg_list)
     #
     # bgmask_list, bg_id_list = du.load_mask(folder_name, 'bg')
     # hndmask_list, hnd_id_list = du.load_mask(folder_name, 'hand')
     # ls, id_list = du.get_list_inersection_by_id([bgmask_list, hndmask_list], [bg_id_list, hnd_id_list])
     # bgmask_list, hndmask_list = ls
     # hndmask_list = [np.logical_and(~bgmask_list[i], hndmask_list[i]) for i in range(len(id_list))]
-    #
-    # hnd_depthimg_list, hnd_rgbimg_list = \
-    #     du.filter_by_maskseq(hndmask_list, depthimg_list, rgbimg_list, id_list, exclude=False, toggledebug=False)
-    # front_depthimg_list, front_rgbimg_list = \
-    #     du.filter_by_maskseq(bgmask_list, depthimg_list, rgbimg_list, id_list, exclude=True, toggledebug=False)
+    # objmask_list = [np.logical_and(~bgmask_list[i], ~hndmask_list[i]) for i in range(len(id_list))]
+    # obj_depthimg_list, obj_rgbimg_list = \
+    #     du.filter_by_maskseq(objmask_list, depthimg_list, rgbimg_list, id_list, folder_name=folder_name, exclude=False,
+    #                          toggledebug=False)
+    # camera.show_frameseq(obj_depthimg_list, obj_rgbimg_list)
+    # # hnd_depthimg_list, hnd_rgbimg_list = \
+    # #     du.filter_by_maskseq(hndmask_list, depthimg_list, rgbimg_list, id_list, exclude=False, toggledebug=False)
+    # # camera.show_frameseq(hnd_depthimg_list, hnd_rgbimg_list)
+    # # front_depthimg_list, front_rgbimg_list = \
+    # #     du.filter_by_maskseq(bgmask_list, depthimg_list, rgbimg_list, id_list, exclude=True, toggledebug=False)
+    # # camera.show_frameseq(front_depthimg_list, front_rgbimg_list)
     #
     # for i, f_name in enumerate(hnd_id_list):
-    #     if i < 100:
-    #         continue
     #     # init_mask = np.asarray(np.logical_not(bgmask_list[i]), dtype='uint8')
     #     init_mask = np.asarray(hndmask_list[i], dtype='uint8')
     #     graphcut(front_rgbimg_list[int(f_name)], init_mask)
@@ -317,20 +319,26 @@ if __name__ == '__main__':
     '''
     extract main cluster
     '''
-    depthimg_list, rgbimg_list, _ = \
-        du.load_frame_seq(folder_name, root_path=os.path.join(config.DATA_PATH, 'filter_result/'))
+    # depthimg_list, rgbimg_list, _ = \
+    #     du.load_frame_seq(folder_name, root_path=os.path.join(config.DATA_PATH, 'filter_result/'))
     # camera.show_frameseq(depthimg_list, rgbimg_list)
     # camera.show_rgbdseq(depthimg_list, rgbimg_list)
 
-    seed = np.asarray([0, .1, -.25])
+    # seed = np.asarray([0, .1, -.25])
     # cluster_o3d_list = extract_component_o3d(camera, depthimg_list, rgbimg_list, folder_name=folder_name,
     #                                          seed=None, toggledebug=True)
-    components_list = extract_component_rg(depthimg_list, rgbimg_list, folder_name=folder_name, toggledebug=True)
-    camera.show_rgbdseq([c[0] for c in components_list], [c[1] for c in components_list], win_name='hnd')
     # o3dpcd_list = du.load_o3dpcd_seq(folder_name)
     # pcdu.show_pcdseq_withrgb(pcdseq=[o3d.points for o3d in o3dpcd_list],
     #                          rgbasseq=[o3d.colors for o3d in o3dpcd_list], time_sleep=.1)
     # base.run()
+
+    # comp_depthimg_list, comp_rgbimg_list = \
+    #     extract_component_rg(depthimg_list, rgbimg_list, folder_name=folder_name, toggledebug=True)
+    comp_depthimg_list, comp_rgbimg_list, _ = \
+        du.load_frame_seq(path=os.path.join(config.DATA_PATH, 'seg_result', folder_name, 'rg'))
+    # camera.show_rgbdseq(comp_depthimg_list, comp_rgbimg_list, win_name='hnd')
+    camera.show_rgbdseq_p3d(comp_depthimg_list, comp_rgbimg_list)
+
     '''
     icp
     '''
