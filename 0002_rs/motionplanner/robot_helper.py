@@ -18,11 +18,11 @@ class RobotHelper(object):
         if armjnts is not None:
             self.rbt.fk(self.armname, armjnts)
         flag, cps = self.rbt.is_collided(obstacle_list=self.obscmlist, toggle_contact_points=True)
-        # if len(cps) > 0:
-        #     for p in cps:
-        #         gm.gen_sphere(p, radius=.01).attach_to(base)
-        #     if min([p[2] for p in cps]) > 7:
-        #         return False
+        if len(cps) > 0:
+            for p in cps:
+                gm.gen_sphere(p, radius=.01).attach_to(base)
+            if min([p[2] for p in cps]) > 7:
+                return False
         return flag
 
     def is_objcollided(self, obj, armjnts=None):
@@ -82,20 +82,22 @@ class RobotHelper(object):
         if show:
             plt.show()
 
-    def plot_nodepath(self, node_path, label=None, title="node path"):
+    def plot_nodepath(self, node_path, label=None, title="node path", show=True):
         x = range(len(node_path))
         plt.plot(x, [int(node.split("_")[1]) for node in node_path], label=label)
         if title is not None:
             plt.title(title)
-        # plt.show()
+        if show:
+            plt.show()
 
-    def plot_vlist(self, vlist, label=None, title=None):
+    def plot_vlist(self, vlist, label=None, title=None, show=True):
         plt.plot(range(len(vlist)), vlist, label=label)
         if title is not None:
             plt.title(title)
-        # plt.show()
+        if show:
+            plt.show()
 
-    def plot_rot_diff(self, mat4_list, label=""):
+    def plot_rot_diff(self, mat4_list, label="", show=True):
         angle_list = []
         for i in range(1, len(mat4_list)):
             angle = rm.angle_between_vectors(mat4_list[i - 1][:3, 0], mat4_list[i][:3, 0])
@@ -105,7 +107,8 @@ class RobotHelper(object):
         plt.title("rotation difference")
         plt.xlabel("id")
         plt.ylabel("degree")
-        plt.show()
+        if show:
+            plt.show()
 
     def show_armjnts(self, rgba=None, armjnts=None, toggleendcoord=False, jawwidth=50, genmnp=True):
         if armjnts is not None:

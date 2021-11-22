@@ -246,6 +246,9 @@ class MotionPlanner(object):
         if start is None:
             print("Cannot reach init position!")
             return None
+        objcm_hold = obj.copy()
+        objcm_hold.set_homomat(objmat4_pair[0])
+        _, _ = self.rbt.hold(objcm_hold, hnd_name=self.hnd_name, jaw_width=.02)
 
         if use_msc:
             goal = self.get_numik(end_grasp[0], end_grasp[1], msc=start)
@@ -264,15 +267,19 @@ class MotionPlanner(object):
             print("rrt failed!")
         return None
 
-    def plan_start2end_hold_armj(self, armj_pair, obj):
+    def plan_start2end_hold_armj(self, armj_pair, obj, objrelpos, objrelrot):
         start = armj_pair[0]
         goal = armj_pair[1]
+        self.rbt.fk(component_name=self.armname, jnt_values=start)
+        objcm_hold = obj.copy()
+        objcm_hold.set_homomat(self.get_world_objmat4(objrelpos, objrelrot, start))
+        _, _ = self.rbt.hold(objcm_hold, hnd_name=self.hnd_name, jaw_width=.02)
 
         print("--------------rrt---------------")
         planner = rrtc.RRTConnect(self.rbt)
         path = planner.plan(component_name=self.armname, start_conf=start, goal_conf=goal,
                             obstacle_list=self.obscmlist, ext_dist=.02, max_time=300)
-
+        self.rbt.release(self.hnd_name, objcm_hold)
         if path is None:
             print("rrt failed!")
         return None
@@ -296,7 +303,7 @@ class MotionPlanner(object):
         print("--------------rrt---------------")
         planner = rrtc.RRTConnect(self.rbt)
         path = planner.plan(component_name=self.armname, start_conf=start, goal_conf=pickupprim[0],
-                            obstacle_list=self.obscmlist, ext_dist=.02, max_time=300)
+                            obstacle_list=[self.obscmlist, obj], ext_dist=.02, max_time=300)
 
         if path is not None:
             path = path + pickupprim
@@ -314,11 +321,10 @@ class MotionPlanner(object):
             print("Cannot reach init position!")
             return None
         self.rbt.fk(component_name=self.armname, jnt_values=start)
-        objcm_copy = obj.copy()
-        objcm_copy.set_homomat(objmat4_pair[0])
-        objrelpos, objrelrot = self.rbt.hold(objcm_copy, hnd_name=self.hnd_name, jaw_width=.02)
+        obj_hold = obj.copy()
+        obj_hold.set_homomat(objmat4_pair[0])
+        _, _ = self.rbt.hold(obj_hold, hnd_name=self.hnd_name, jaw_width=.02)
         self.rbt.gen_meshmodel().attach_to(base)
-
         eepos_final, eerot_final = self.get_ee_by_objmat4(grasp, objmat4_pair[1])
         if use_msc:
             goal = self.get_numik(eepos_final, eerot_final, msc=start)
@@ -359,7 +365,7 @@ class MotionPlanner(object):
         planner = rrtc.RRTConnect(self.rbt)
         path = planner.plan(component_name=self.armname, start_conf=pickupprim[-1], goal_conf=placedownprim[0],
                             obstacle_list=self.obscmlist, ext_dist=.02, max_time=300)
-        self.rbt.release(self.hnd_name, obj)
+        self.rbt.release(self.hnd_name, obj_hold)
         if path is not None:
             path = pickupprim + path + placedownprim
             return path
@@ -754,257 +760,6 @@ class MotionPlanner(object):
         # base.run()
         return armjnts_path
 
-    def get_continuouspath_opt2(self, grasp, grasp_id, objmat4_list, sample_range, msc=None):
-        def __update(G, gtsp_dict, node_path, grasp, msc):
-            print("msc", msc)
-            for node in node_path:
-                k, inx = node.split("_")
-                objmat4 = gtsp_dict[int(k)]["objmat4_list"][int(inx)]
-                armjnts = gtsp_dict[int(k)]["armjnts_list"][int(inx)]
-                if armjnts is None:
-                    eepos, eerot = self.get_ee_by_objmat4(grasp, objmat4)
-                    armjnts = self.get_numik(eepos, eerot, msc)
-                if armjnts is None:
-                    print("remove", node)
-                    G.remove_node(node)
-                    break
-                else:
-                    gtsp_dict[int(k)]["armjnts_list"][int(inx)] = armjnts
-                    # msc = copy.deepcopy(armjnts)
-
-        msc, start_id = self.__find_start_config(objmat4_list[0], grasp, sample_range)
-        print(msc, start_id)
-        # start_id = sample_range.index((0, 0, 0))
-        if msc is None:
-            return None
-
-        time_start_1 = time.time()
-        gtsp_dict = {}
-        end = len(objmat4_list) - 1
-
-        for key, objmat4 in enumerate(objmat4_list):
-            gtsp_dict[key] = {"main": objmat4, "eemat4_list": [], "objmat4_list": [], "armjnts_list": []}
-            gm.gen_arrow(spos=objmat4[:3, 3], epos=objmat4[:3, 3] + 10 * objmat4[:3, 0],
-                         rgba=(1, 0, 0, 0.2), thickness=1)
-            cnt = 0
-            for r, p, y in sample_range:
-                cnt += 1
-                rot = np.dot(rm.rotmat_from_axangle(objmat4[:3, 0], r),
-                             np.dot(rm.rotmat_from_axangle(objmat4[:3, 2], p),
-                                    rm.rotmat_from_axangle(objmat4[:3, 1], y)))
-                objmat4_new = np.eye(4)
-                objmat4_new[:3, :3] = np.dot(rot, objmat4[:3, :3])
-                objmat4_new[:3, 3] = objmat4[:3, 3]
-                eepos, eerot = self.get_ee_by_objmat4(grasp, objmat4_new)
-                gtsp_dict[key]["eemat4_list"].append(rm.homomat_from_posrot(eepos, eerot))
-                gtsp_dict[key]["objmat4_list"].append(objmat4_new)
-                gtsp_dict[key]["armjnts_list"].append(None)
-
-        G = nx.DiGraph()
-        N = len(sample_range)
-
-        for k, v in list(gtsp_dict.items())[:-1]:
-            for i in range(N):
-                for j in range(N):
-                    eemat4_1 = gtsp_dict[k]["eemat4_list"][i]
-                    eemat4_2 = gtsp_dict[k + 1]["eemat4_list"][j]
-                    diff, _ = rm.degree_betweenrotmat(eemat4_1[:3, :3], eemat4_2[:3, :3])
-                    G.add_weighted_edges_from([(f"{str(k)}_{str(i)}", f"{str(k + 1)}_{str(j)}", diff)])
-
-        print("number of nodes:", len(G))
-        print("build graph time cost:", time.time() - time_start_1)
-
-        time_start_2 = time.time()
-
-        armjnts_path = [None]
-        iteration = 0
-
-        while any(v is None for v in armjnts_path):
-            if iteration > 50:
-                return None
-            source_list = [n for n in list(G.nodes) if str(n)[:2] == "0_"]
-            target_list = [n for n in list(G.nodes) if str(n).split("_")[0] == str(end)]
-            if len(source_list) == 0:
-                return None
-            print(f"---------------iteration {iteration}---------------")
-            if G.has_node(f"0_{start_id}"):
-                best_dist, best_path = gh.multi_target_shortest_path(G, f"0_{start_id}", target_list)
-            else:
-                best_dist, best_path = gh.multi_target_shortest_path(G, source_list[0], target_list)
-
-            print("min cost:", best_dist)
-            print("best path:", best_path)
-
-            if best_path is None:
-                return None
-
-            __update(G, gtsp_dict, best_path, grasp, msc)
-            armjnts_path = gh.get_nodes_value(gtsp_dict, best_path, "armjnts_list")
-            objmat4_list = gh.get_nodes_value(gtsp_dict, best_path, "objmat4_list")
-            iteration += 1
-
-        print("search time cost:", time.time() - time_start_2)
-        for objmat4 in objmat4_list:
-            gm.gen_arrow(spos=objmat4[:3, 3], epos=objmat4[:3, 3] + 10 * objmat4[:3, 0],
-                         rgba=(0, 1, 0, 1), thickness=1)
-
-        cost = self.get_path_cost(armjnts_path)
-        fig = plt.figure(1, figsize=(12.8, 4.8))
-        plt.ion()
-        plt.subplot(121)
-        self.rbth.plot_nodepath(best_path, title="node path")
-        plt.subplot(122)
-        self.rbth.plot_armjnts(armjnts_path)
-        f_name = f"./log/path/discrete/" \
-                 f"m2_{grasp_id}_{round(cost, 3)}_{round(time.time() - time_start_1, 3)}_{len(G)}"
-        plt.savefig(f"{f_name}.png")
-        plt.close(fig)
-        pickle.dump(armjnts_path, open(f"{f_name}.pkl", "wb"))
-        # self.show_animation(armjnts_path)
-        # base.run()
-        return armjnts_path
-
-    def get_continuouspath_opt3(self, grasp, grasp_id, objmat4_list, sample_range, msc=None):
-        def __get_candidate_nodes(k_len, inx_len, step=60, limit=None, seed=None):
-            if seed is None:
-                inx_list = [i for i in range(inx_len) if i % step == 0]
-                candidate_nodes = [inx_list] * k_len
-            else:
-                candidate_nodes = []
-                for s in seed:
-                    k, inx = [int(v) for v in s.split("_")]
-                    inx_list = [i for i in range(inx - limit, inx + limit) if i % step == 0 and i >= 0 and i != inx]
-                    candidate_nodes.append(inx_list)
-            return candidate_nodes
-
-        def __get_candidate_nodes_random(gtsp_dict, num=5, seed=None):
-            candidate_nodes = []
-            inx_len = len(gtsp_dict[0]["armjnts_list"])
-            k_len = len(gtsp_dict)
-            pool_all = [range(inx_len)] * k_len
-            pool_partial = copy.deepcopy(pool_all)
-            if seed is not None:
-                for s in seed:
-                    pool_partial.append(range(int(s.split("_")[1]) - 5, int(s.split("_")[1]) + 5))
-
-            for k, v in gtsp_dict.items():
-                if all(v is None for v in v["armjnts_list"]):
-                    candidate_nodes.append(random.choices(pool_all[k], k=int(np.ceil(num))))
-                else:
-                    candidate_nodes.append(random.choices(pool_all[k], k=int(np.ceil(num / 2))) +
-                                           random.choices(pool_partial[k], k=int(np.ceil(num / 2))))
-
-            return candidate_nodes
-
-        def __update_dict(gtsp_dict, candidate_nodes, grasp, msc):
-            for k, inx_list in enumerate(candidate_nodes):
-                for inx in inx_list:
-                    objmat4 = gtsp_dict[int(k)]["objmat4_list"][int(inx)]
-                    armjnts = gtsp_dict[int(k)]["armjnts_list"][int(inx)]
-                    if armjnts is None:
-                        eepos, eerot = self.get_ee_by_objmat4(grasp, objmat4)
-                        armjnts = self.get_numik(eepos, eerot, msc)
-                        if armjnts is not None:
-                            gtsp_dict[int(k)]["armjnts_list"][int(inx)] = armjnts
-                            # msc = copy.deepcopy(armjnts)
-
-        def __update_graph(G, gtsp_dict, candidate_nodes):
-            for k in range(len(gtsp_dict) - 1):
-                for i in candidate_nodes[k]:
-                    for j in candidate_nodes[k + 1]:
-                        armjnts_1 = gtsp_dict[k]["armjnts_list"][i]
-                        armjnts_2 = gtsp_dict[k + 1]["armjnts_list"][j]
-                        if armjnts_1 is None or armjnts_2 is None:
-                            continue
-                        diff = np.linalg.norm(armjnts_2 - armjnts_1, ord=1)
-                        G.add_weighted_edges_from([(f"{str(k)}_{str(i)}", f"{str(k + 1)}_{str(j)}", diff)])
-            print("number of nodes:", len(G))
-
-        # start_id = sample_range.index((0, 0, 0))
-        msc, start_id = self.__find_start_config(objmat4_list[0], grasp, sample_range)
-        print(msc, start_id)
-        if msc is None:
-            return None
-
-        time_start_1 = time.time()
-        gtsp_dict = {}
-        G = nx.DiGraph()
-        end = len(objmat4_list) - 1
-
-        for key, objmat4 in enumerate(objmat4_list):
-            gtsp_dict[key] = {"main": objmat4, "objmat4_list": [], "armjnts_list": []}
-            gm.gen_arrow(spos=objmat4[:3, 3], epos=objmat4[:3, 3] + 10 * objmat4[:3, 0],
-                         rgba=(1, 0, 0, 0.2), thickness=1)
-            cnt = 0
-            for r, p, y in sample_range:
-                cnt += 1
-                rot = np.dot(rm.rotmat_from_axangle(objmat4[:3, 0], r),
-                             np.dot(rm.rotmat_from_axangle(objmat4[:3, 2], p),
-                                    rm.rotmat_from_axangle(objmat4[:3, 1], y)))
-                objmat4_new = np.eye(4)
-                objmat4_new[:3, :3] = np.dot(rot, objmat4[:3, :3])
-                objmat4_new[:3, 3] = objmat4[:3, 3]
-                gtsp_dict[key]["objmat4_list"].append(objmat4_new)
-                gtsp_dict[key]["armjnts_list"].append(None)
-                # gm.gen_arrow(spos=objmat4_new[:3, 3],
-                #                      epos=objmat4_new[:3, 3] + 10 * objmat4_new[:3, 0],
-                #                      rgba=(1, 1, 0, 0.2), thickness=1)
-
-        iteration = 0
-        fig = plt.figure(1, figsize=(12.8, 4.8))
-        best_path = None
-        while iteration < 5:
-            print(f"---------------iteration {iteration}---------------")
-            iteration += 1
-            # candidate_nodes = __get_candidate_nodes(len(objmat4_list), len(sample_range), step=5, limit=None, seed=None)
-            candidate_nodes = __get_candidate_nodes_random(gtsp_dict, num=5, seed=None)
-            print(Counter([len(l) for l in candidate_nodes]))
-            __update_dict(gtsp_dict, candidate_nodes, grasp, msc)
-            __update_graph(G, gtsp_dict, candidate_nodes)
-
-            source_list = [n for n in list(G.nodes) if str(n)[:2] == "0_"]
-            target_list = [n for n in list(G.nodes) if str(n).split("_")[0] == str(end)]
-
-            if len(source_list) == 0:
-                continue
-
-            if G.has_node(f"0_{start_id}"):
-                best_dist, best_path = gh.multi_target_shortest_path(G, f"0_{start_id}", target_list)
-            else:
-                best_dist, best_path = gh.multi_target_shortest_path(G, source_list[0], target_list)
-            if best_path is None:
-                continue
-            plt.subplot(121)
-            self.rbth.plot_nodepath(best_path, label=str(iteration), title="node path")
-            print("min cost:", best_dist)
-            print("best path:", best_path)
-
-        if best_path is None:
-            return None
-
-        plt.ion()
-        armjnts_path = []
-        for node in best_path:
-            k, objmat4_id = node.split("_")
-            objmat4 = gtsp_dict[int(k)]["objmat4_list"][int(objmat4_id)]
-            # self.show_armjnts(rgba=(0, 1, 0, 0.5), armjnts=gtsp_dict[int(k)]["armjnts_list"][int(objmat4_id)])
-            armjnts_path.append(gtsp_dict[int(k)]["armjnts_list"][int(objmat4_id)])
-            gm.gen_arrow(spos=objmat4[:3, 3], epos=objmat4[:3, 3] + 10 * objmat4[:3, 0],
-                         rgba=(0, 1, 0, 1), thickness=1)
-        print("time cost:", time.time() - time_start_1)
-
-        plt.subplot(122)
-        self.rbth.plot_armjnts(armjnts_path)
-        plt.show()
-        f_name = f"./log/path/discrete/" \
-                 f"m3_{grasp_id}_{round(best_dist, 3)}_{round(time.time() - time_start_1, 3)}_{len(G)}"
-        plt.savefig(f"{f_name}.png")
-        plt.close(fig)
-        pickle.dump(armjnts_path, open(f"{f_name}.pkl", "wb"))
-        # self.show_animation(armjnts_path)
-        # base.run()
-        return armjnts_path
-
     def goto_posrot(self, eepos, eerot):
         # armjnts = self.rbt.numik(eepos, eerot, self.armname)
         armjnts = self.get_numik(eepos, eerot)
@@ -1037,7 +792,7 @@ class MotionPlanner(object):
                                                                     direction=direction,
                                                                     distance=length,
                                                                     obstacle_list=[],
-                                                                    granularity=0.03,
+                                                                    granularity=0.01,
                                                                     seed_jnt_values=None,
                                                                     type='source',
                                                                     toggle_debug=False)
@@ -1051,7 +806,7 @@ class MotionPlanner(object):
                                                                     direction=-direction,
                                                                     distance=length,
                                                                     obstacle_list=[],
-                                                                    granularity=0.03,
+                                                                    granularity=0.01,
                                                                     seed_jnt_values=None,
                                                                     type='source',
                                                                     toggle_debug=False)
@@ -1123,15 +878,9 @@ if __name__ == '__main__':
     objmat4_init = rm.homomat_from_posrot(np.asarray([.9, .4, .9]), rm.rotmat_from_axangle((0, 1, 0), -math.pi / 4))
     objmat4_goal = rm.homomat_from_posrot(np.asarray([.9, .3, .9]), rm.rotmat_from_axangle((0, 1, 0), -math.pi / 4))
 
+    mp_lft.ah.show_objmat4(pen, objmat4_init, rgba=(1, 0, 1, .5), showlocalframe=True)
+    mp_lft.ah.show_objmat4(pen, objmat4_goal, rgba=(0, 1, 1, .5), showlocalframe=True)
 
-    # mp_lft.ah.show_objmat4(pen, objmat4_init, rgba=(1, 0, 1, .5), showlocalframe=True)
-    # mp_lft.ah.show_objmat4(pen, objmat4_goal, rgba=(0, 1, 1, .5), showlocalframe=True)
-
-    # path = mp_lft.get_linear_path_from(jnts)
-    # path = mp_lft.get_linear_path_to(jnts)
-    # mp_lft.ah.show_animation(path)
-    # mp_lft.ah.show_armjnts(armjnts=jnts, rgba=(1, 1, 0, .5))
-    # mp_lft.ah.show_armjnts(armjnts=path[-1], rgba=(1, 0, 0, .5))
     gripper = rtqhe.RobotiqHE()
     for grasp in glist:
         print('------------------------')

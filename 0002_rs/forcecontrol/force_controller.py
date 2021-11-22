@@ -1,15 +1,16 @@
 import time
 import os
 import numpy as np
-import robotcon.programbuilder as pb
-import utiltools.robotmath as rm
+import robot_con.ur.program_builder as pb
+import basis.robot_math as rm
 import time
 import pickle
 import config
 import socket
 import struct
 import math
-import piecewise_poly as pwp
+import motion.trajectory.piecewisepoly as pwp
+
 import matplotlib.pyplot as plt
 
 class ForceController(object):
@@ -76,10 +77,10 @@ class ForceController(object):
         rad = np.arccos(vector_ztip / vector_ztip_norm)
         angle = rad * 180 / np.pi
 
-        rotationmatrix = rm.rodrigues(vector_rotaxis, angle)
+        rotationmatrix = rm.rotmat_from_axangle(vector_rotaxis, angle)
 
-        self.__programbuilder.loadprog(self.__scriptpath + "/urscripts/spiralsearch.script")
-        prog = self.__programbuilder.ret_program_to_run()
+        self.__programbuilder.load_prog(self.__scriptpath + "/urscripts/spiralsearch.script")
+        prog = self.__programbuilder.get_program_to_run()
         prog = prog.replace("parameter_direction",
                             "[%f,%f,%f]" % (vector_tip[0], vector_tip[1], vector_tip[2]))
         prog = prog.replace("parameter_forcethreshold",
@@ -95,8 +96,8 @@ class ForceController(object):
             pass
 
     def impedance_control(self, toolframe, direction=np.array([0, 0, -1]), distance=0.01, force=7):
-        self.__programbuilder.loadprog(self.__scriptpath + "/urscripts/impctl.script")
-        prog = self.__programbuilder.ret_program_to_run()
+        self.__programbuilder.load_prog(self.__scriptpath + "/urscripts/impctl.script")
+        prog = self.__programbuilder.get_program_to_run()
         # direction p[x,x,x,x,x,x]
         prog = prog.replace("parameter_toolframe",
                             f"p[{toolframe[0]},{toolframe[1]},{toolframe[2]},0,0,0]")
@@ -122,8 +123,8 @@ class ForceController(object):
         # the vector in the tip coordinate
         vector_tip = np.dot(np.linalg.inv(tcppos), vector)
         vector_tip = vector_tip / np.linalg.norm(vector_tip)
-        self.__programbuilder.loadprog(self.__scriptpath + "/urscripts/attachfirm.script")
-        prog = self.__programbuilder.ret_program_to_run()
+        self.__programbuilder.load_prog(self.__scriptpath + "/urscripts/attachfirm.script")
+        prog = self.__programbuilder.get_program_to_run()
         prog = prog.replace("parameter_direction",
                             "[%f,%f,%f]" % (vector_tip[0], vector_tip[1], vector_tip[2]))
         prog = prog.replace("parameter_forcethreshold",
@@ -235,8 +236,8 @@ class ForceController(object):
         print("--------------passive move---------------")
         print("path length:", len(jointspath))
         print("path length inp:", len(jointsradlisttimestep))
-        self.__programbuilder.loadprog(self.__scriptpath + "/urscripts/forcemode.script")
-        prog = self.__programbuilder.ret_program_to_run()
+        self.__programbuilder.load_prog(self.__scriptpath + "/urscripts/forcemode.script")
+        prog = self.__programbuilder.get_program_to_run()
         prog = prog.replace("parameter_ip", urx_urmdsocket_ipad[0])
         prog = prog.replace("parameter_port", str(urx_urmdsocket_ipad[1]))
         prog = prog.replace("parameter_jointscaler", str(self.__jointscaler))

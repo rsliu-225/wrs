@@ -9,7 +9,7 @@ import sklearn.cluster as skc
 
 import config
 import modeling.collision_model as cm
-import trimesh.sample as ts
+import basis.trimesh.sample as ts
 import utils.pcd_utils as pcdu
 import utils.phoxi as phoxi
 import utils.vision_utils as vu

@@ -10,12 +10,12 @@ import numpy as np
 # from geomdl import fitting
 # from geomdl.visualization import VisMPL as vis
 from matplotlib import cm
-from scipy.interpolate import RBFInterpolator
+# from scipy.interpolate import RBFInterpolator
 from sklearn.neighbors import KDTree
 
 import config
 import localenv.envloader as el
-import trimesh.intersections as inc
+import basis.trimesh.intersections as inc
 import modeling.geometric_model as gm
 import utils.surface as sfc
 import utils.comformalmapping_utils as cu

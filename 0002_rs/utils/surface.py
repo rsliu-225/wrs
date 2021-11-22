@@ -1,11 +1,11 @@
 import numpy as np
-from scipy.interpolate import RBFInterpolator
+# from scipy.interpolate import RBFInterpolator
 from scipy.linalg import lstsq
 from scipy.optimize import curve_fit
 import scipy.interpolate as si
 
 import modeling.collision_model as cm
-import trimesh as trm
+import basis.trimesh as trm
 
 
 class Surface(object):

@@ -60,10 +60,9 @@ class MotionPlannerRbtX(MotionPlanner):
             return True
         return False
 
-    def move_up_x(self, obj, objrelpos, objrelrot, direction=[0, 0, 1], length=20):
+    def move_up_x(self,  direction=np.array([0, 0, 1]), length=20):
         print(f"--------------move up {length}---------------")
-        path_up = self.get_linear_path_from(self.get_armjnts(), obj, objrelpos, objrelrot, length=length,
-                                            direction=direction)
+        path_up = self.get_linear_path_from(self.get_armjnts(), length=length, direction=direction)
         self.rbtx.movejntssgl_cont(path_up, self.armname, wait=True)
         while self.arm.is_program_running():
             time.sleep(1)
@@ -168,13 +167,9 @@ class MotionPlannerRbtX(MotionPlanner):
     def goto_armjnts_x(self, armjnts):
         start = self.get_armjnts()
         print("--------------goto_armjnts_x(rrt)---------------")
-        # planner = rrtc.RRTConnect(start=start, goal=armjnts, checker=self.ctcallback,
-        #                           starttreesamplerate=30, goaltreesamplerate=30, expanddis=10, maxiter=500,
-        #                           maxtime=100.0)
-        # path, _ = planner.planning(self.obscmlist)
         planner = rrtc.RRTConnect(self.rbt)
         path = planner.plan(component_name=self.armname, start_conf=start, goal_conf=armjnts,
-                            obstacle_list=self.obscmlist, ext_dist=.2, max_time=300)
+                            obstacle_list=self.obscmlist, ext_dist=.02, max_time=300)
 
         if path is not None:
             self.rbtx.move_jnts(self.armname, path)
