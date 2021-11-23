@@ -9,7 +9,7 @@ import modeling.collision_model as cm
 import modeling.geometric_model as gm
 import localenv.item as item
 import robot_sim.end_effectors.grippers.robotiqhe.robotiqhe as rtqhe
-import visualization.panda.world as pc
+import visualization.panda.world as wd
 import robot_con.ur.ur3e_dual_x as ur3ex
 import robot_sim.robots.ur3e_dual.ur3e_dual as ur3edual
 import basis.trimesh.sample as ts
@@ -23,7 +23,7 @@ from basis.trimesh.primitives import Box
 
 
 class Env_wrs(object):
-    def __init__(self, boundingradius=10.0, betransparent=False):
+    def __init__(self, boundingradius=.01, betransparent=False):
         """
         load obstacles model
         separated by category
@@ -108,8 +108,8 @@ def loadEnv_wrs(camp=[4, 0, 1.7], lookatpos=[0, 0, 1]):
     # Table width: 120
     # Table long: 1080
 
-    base = pc.World(cam_pos=camp, lookat_pos=lookatpos)
-    env = Env_wrs(boundingradius=7.0)
+    base = wd.World(cam_pos=camp, lookat_pos=lookatpos)
+    env = Env_wrs(boundingradius=.007)
     env.reparentTo(base)
 
     # phoxi
