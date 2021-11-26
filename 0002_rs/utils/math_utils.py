@@ -199,7 +199,7 @@ def fit_qua_surface(data, axis=2, toggledebug=False):
 
 
 def trans_data_pcv(data, toggledebug=False, random_rot=True):
-    pcv, pcaxmat = rm.computepca(data)
+    pcv, pcaxmat = rm.compute_pca(data)
     inx = sorted(range(len(pcv)), key=lambda k: pcv[k])
 
     x_v = pcaxmat[:, inx[2]]
@@ -207,9 +207,9 @@ def trans_data_pcv(data, toggledebug=False, random_rot=True):
     z_v = pcaxmat[:, inx[0]]
     pcaxmat = np.asarray([y_v, x_v, -z_v]).T
     if random_rot:
-        pcaxmat = np.dot(rm.rodrigues([1, 0, 0], 5), pcaxmat)
-        pcaxmat = np.dot(rm.rodrigues([0, 1, 0], 5), pcaxmat)
-        pcaxmat = np.dot(rm.rodrigues([0, 0, 1], 5), pcaxmat)
+        pcaxmat = np.dot(rm.rotmat_from_axangle([1, 0, 0], 5), pcaxmat)
+        pcaxmat = np.dot(rm.rotmat_from_axangle([0, 1, 0], 5), pcaxmat)
+        pcaxmat = np.dot(rm.rotmat_from_axangle([0, 0, 1], 5), pcaxmat)
     data_tr = np.dot(pcaxmat.T, data.T).T
     if toggledebug:
         center = np.array((np.mean(data[:, 0]), np.mean(data[:, 1]), np.mean(data[:, 2])))
@@ -413,6 +413,33 @@ def get_plane(v1, v2, p, transmat=None, toggledebug=False):
     return f
 
 
+def get_plane_bnrml(n, p, transmat=None, toggledebug=False):
+    if transmat is not None:
+        n = np.dot(transmat, n)
+        p = np.dot(transmat, p)
+
+    coef = [n[0], n[1], n[2], -sum(n * p)]
+    x, y, z = symbols('x, y, z')
+    f = coef[0] * x + coef[1] * y + coef[2] * z + coef[3]
+
+    if toggledebug:
+        x_range = (p[0] - PLOT_EDGE, p[0] + PLOT_EDGE)
+        y_range = (p[1] - PLOT_EDGE, p[1] + PLOT_EDGE)
+        z_range = (p[2] - PLOT_EDGE, p[2] + PLOT_EDGE)
+        ax.scatter([p[0]], [p[1]], [p[2]], c='g', s=10, alpha=1)
+        ax.arrow3D(p[0], p[1], p[2], v1[0], v1[1], v1[2], mutation_scale=10, arrowstyle='->', color='g')
+        ax.arrow3D(p[0], p[1], p[2], v2[0], v2[1], v2[2], mutation_scale=10, arrowstyle='->', color='g')
+        plot_surface_f(ax, f, x_range, y_range, z_range, dense=.5)
+        # plt.show()
+
+    return f
+
+
+def get_cylinder(r, center):
+    x, y, z = symbols('x, y, z')
+    return (x - center[0]) ** 2 + (y - center[1]) ** 2 - r * r
+
+
 def bisection(func, tgt, torlerance, lb, ub, mode='lb'):
     l = lb
     r = ub
@@ -437,6 +464,7 @@ def bisection(func, tgt, torlerance, lb, ub, mode='lb'):
 
 
 def plot_intersc(ax, f, intersc, p, transmat=None, plot_edge=2, c='k', alpha=.5):
+
     xs = []
     ys = []
     zs = []
@@ -678,8 +706,8 @@ if __name__ == '__main__':
     cov = np.array([[1.0, -0.5, 0.8], [-0.5, 1.1, 0.0], [0.8, 0.0, 1.0]])
     data = np.random.multivariate_normal(mean, cov, 50)
 
-    # f_q_base = fit_qua_surface(data, toggledebug=TB)
-    # print(f_q_base)
+    f_q_base = fit_qua_surface(data, toggledebug=TB)
+    print(f_q_base)
 
     data_tr, transmat = trans_data_pcv(data)
     f_q = fit_plane(data_tr, toggledebug=TB)

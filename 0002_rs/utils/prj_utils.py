@@ -183,9 +183,9 @@ def resize_drawpath(drawpath, w, h, space=5):
 
 
 def show_drawpath_on_img(p_list, img):
-    for point in p_list:
-        point = (int(point[0]), int(point[1]))
-        cv2.circle(img, point, radius=1, color=(0, 0, 255), thickness=0)
+    for p in p_list:
+        p = (int(p[0]), int(p[1]))
+        cv2.circle(img, p, radius=1, color=(0, 0, 255), thickness=0)
     cv2.imshow('result', img)
     cv2.waitKey(0)
 

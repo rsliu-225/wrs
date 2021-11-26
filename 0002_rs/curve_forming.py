@@ -1,11 +1,12 @@
 import math
-
 import visualization.panda.world as wd
 import modeling.geometric_model as gm
 import numpy as np
 import basis.robot_math as rm
+import utils.math_utils as mu
+from sympy import symbols, diff, solve, exp
 
-base = wd.World(cam_pos=[0, 0, 10], lookat_pos=[0, 0, 0])
+base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
 
 
 def draw_plane(p, n):
@@ -18,16 +19,46 @@ def draw_plane(p, n):
     gm.gen_box(np.array([.5, .5, .001]), homomat=homomat, rgba=[1, 1, 1, .3]).attach_to(base)
 
 
-def draw_arc(theta, r, spos, sdir):
-    gm.gen_sphere(pos=spos, rgba=[1, 0, 0, 1]).attach_to(base)
-    gm.gen_arrow(spos=spos, epos=spos + sdir).attach_to(base)
-    gm.gen_box()
-    alpha = rm.angle_between_vectors(sdir, np.asarray([1, 1, 0]))
-    p_tmp = [spos[0] + 2 * r * math.sin(theta / 2) * math.cos(alpha - theta / 2),
-             spos[1] + 2 * r * math.sin(theta / 2) * math.sin(alpha - theta / 2), 0]
-    gm.gen_sphere(pos=np.asarray(p_tmp), rgba=[1, 0, 0, 1]).attach_to(base)
-    draw_plane(spos, sdir)
+def draw_arc(center, r, theta, lift_angle):
+    for a in np.arange(0, theta, math.pi / 90):
+        if lift_angle == 0:
+            p = (r * math.cos(a), r * math.sin(a), 0)
+        else:
+            p = (r * math.cos(a), r * math.sin(a), a * r / math.tan(lift_angle))
+        gm.gen_sphere(pos=np.asarray(p), rgba=[1, 0, 0, 1], radius=0.001).attach_to(base)
+    draw_plane(center, np.asarray([0, 0, 1]))
 
 
-draw_arc(theta=math.pi / 2, r=.1, spos=np.array([0, 0, 0]), sdir=np.array([.1, .1, 0]))
+def cal_tail(r_side, r_center, d, m):
+    A = np.mat([[r_side + m, -r_center], [1, 1]])
+    b = np.mat([0, d]).T
+    l_center, l_side = np.asarray(np.linalg.solve(A, b))
+
+    return l_center[0], l_side[0], \
+           np.sqrt(l_center[0] ** 2 - r_center ** 2) + np.sqrt(l_side[0] ** 2 - (r_side + m) ** 2)
+
+
+def cal_safe_margin(r_side, r_base, d):
+    return np.degrees(2 * np.arcsin((r_side + r_base) / (2 * d)))
+
+
+def cal_start_margin(l_center, r_center):
+    return np.degrees(2 * np.arccos(r_center / l_center))
+
+
+# r_side, r_center = 13 / 2, 15 / 2
+# d = 20.5
+# l_center, l_side, l = cal_tail(r_side, r_center, d, 2)
+# print(l)
+# print(l_center, l_side)
+# a = cal_safe_margin(r_side, r_center, d)
+# print(a)
+# b = cal_start_margin(l_center, r_center)
+# print(b)
+
+gm.gen_frame(thickness=.001).attach_to(base)
+gm.gen_stick(spos=np.asarray([0, 0, 0]), epos=np.asarray([0, 0, .2]), thickness=.026, sections=180,
+             rgba=[.7, .7, .7, .5]).attach_to(base)
+draw_arc(center=np.asarray([0, 0, 0]), r=.013, theta=math.pi / 4, lift_angle=math.pi / 3)
 base.run()
+
