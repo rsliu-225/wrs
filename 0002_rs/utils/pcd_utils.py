@@ -36,6 +36,7 @@ def remove_pcd_zeros(pcd):
 
 
 def trans_pcd(pcd, transmat):
+    pcd = np.asarray(pcd)
     homopcd = np.ones((4, len(pcd)))
     homopcd[:3, :] = pcd.T
     realpcd = np.dot(transmat, homopcd).T
