@@ -37,7 +37,7 @@ class BendSim(object):
             self.pseq = [[self.r_center + self.thickness, 0, 0]]
             self.rotseq = [np.eye(3)]
         else:
-            self.pseq = [np.asarray(p)+np.asarray([self.r_center + self.thickness, 0, 0]) for p in pseq]
+            self.pseq = [np.asarray(p) + np.asarray([self.r_center + self.thickness, 0, 0]) for p in pseq]
             self.rotseq = rotseq
         if show:
             gm.gen_frame(thickness=.001, length=.05).attach_to(base)
@@ -164,15 +164,15 @@ class BendSim(object):
 
         return np.asarray(tmp_vertices), np.asarray(tmp_faces)
 
-    def bend(self, rot_angle, lift_angle, insert_l=None):
+    def bend(self, rot_angle, lift_angle, insert_l=None, toggledebug=False):
         bend_r = self.r_center + self.thickness
         tmp_pseq, tmp_rotseq = self.__get_bended_pseq(center=np.asarray([0, 0, 0]), r=bend_r,
                                                       rot_angle=rot_angle, lift_angle=lift_angle)
         rot = np.dot(rm.rotmat_from_axangle((1, 0, 0), lift_angle), rm.rotmat_from_axangle((0, 0, 1), rot_angle))
         if insert_l is not None:
             arc_l = rot_angle * bend_r / np.cos(lift_angle)
-            start_p, start_inx = self.__insert_p(insert_l)
-            end_p, end_inx = self.__insert_p(insert_l + arc_l)
+            start_p, start_inx = self.__insert_p(insert_l, toggledebug=toggledebug)
+            end_p, end_inx = self.__insert_p(insert_l + arc_l, toggledebug=toggledebug)
             init_homomat = rm.homomat_from_posrot([bend_r, 0, 0], np.eye(3))
             start_homomat = rm.homomat_from_posrot(self.pseq[start_inx], self.rotseq[start_inx])
             org_end_homomat = rm.homomat_from_posrot(self.pseq[end_inx], self.rotseq[end_inx])
@@ -206,7 +206,7 @@ class BendSim(object):
         trans_pts = rm.homomat_transform_points(rm.homomat_from_posrot(np.asarray([0, 0, 0]), rot), trans_pts)
         return rm.homomat_transform_points(rm.homomat_from_posrot(-new_orgin, np.eye(3)), trans_pts).tolist()
 
-    def __insert_p(self, insert_l, toggledebug=True):
+    def __insert_p(self, insert_l, toggledebug=False):
         tmp_l = 0
         for i in range(len(self.pseq) - 1):
             p1 = np.asarray(self.pseq[i])
@@ -214,6 +214,8 @@ class BendSim(object):
             r1 = self.rotseq[i]
             r2 = self.rotseq[i + 1]
             tmp_l += np.linalg.norm(p2 - p1)
+            # print(p1, p2)
+            # print(np.linalg.norm(p2 - p1), tmp_l)
             if tmp_l < insert_l:
                 continue
             else:
@@ -225,17 +227,18 @@ class BendSim(object):
                     else:
                         rotmat_list = rm.rotmat_slerp(r1, r2, 10)
                         insert_rot = rotmat_list[int(insert_radio * len(rotmat_list))]
-                        print(len(rotmat_list), int(insert_radio * len(rotmat_list)))
+                        # print(len(rotmat_list), int(insert_radio * len(rotmat_list)))
                     insert_inx = i + 1
                 else:
                     insert_pos = self.pseq[i]
                     insert_rot = self.pseq[i]
                     insert_inx = i
-                print(self.pseq[:i])
-                print(self.pseq[i:])
-                print([insert_pos])
-                self.pseq = self.pseq[:i] + [insert_pos] + self.pseq[i:]
-                self.rotseq = self.rotseq[:i] + [insert_rot] + self.rotseq[i:]
+                # print(i)
+                # print(self.pseq[:i])
+                # print(self.pseq[i:])
+                # print([insert_pos])
+                self.pseq = self.pseq[:i + 1] + [insert_pos] + self.pseq[i + 1:]
+                self.rotseq = self.rotseq[:i + 1] + [insert_rot] + self.rotseq[i + 1:]
                 if toggledebug:
                     gm.gen_sphere(insert_pos, radius=.0004, rgba=(1, 1, 0, 1)).attach_to(base)
                     gm.gen_frame(insert_pos, insert_rot, length=.01, thickness=.0004).attach_to(base)
@@ -308,15 +311,15 @@ if __name__ == '__main__':
                   ['f', (0, .01, 0)],
                   ]
 
-    bs = BendSim(thickness, width)
-    # bs.gen_by_motionseq(motion_seq)
-    # bs.show()
-    # threshold = bs.cal_startp(toggledebug=True)
-    # print(threshold)
-    # threshold = bs.cal_startp(pos_l=.012, toggledebug=True)
-    # print(threshold)
-    # bs.bend(np.radians(90), np.radians(0), insert_l=.012)
-    # bs.show(rgba=(.7, .7, 0, .7))
+    bs = BendSim(thickness, width, show=True)
+    bs.gen_by_motionseq(motion_seq)
+    bs.show()
+    threshold = bs.cal_startp(toggledebug=True)
+    print(threshold)
+    threshold = bs.cal_startp(pos_l=.012, toggledebug=True)
+    print(threshold)
+    bs.bend(np.radians(90), np.radians(0), insert_l=.012)
+    bs.show(rgba=(.7, .7, 0, .7))
 
-    bs.show_ani(motion_seq)
+    # bs.show_ani(motion_seq)
     base.run()
