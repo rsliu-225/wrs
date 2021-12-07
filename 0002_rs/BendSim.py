@@ -30,11 +30,12 @@ class BendSim(object):
         # bending meterial prop
         self.thickness = thickness
         self.width = width
+        self.bend_r = self.r_center + self.thickness
 
         # bending result
         self.objcm = None
         if pseq is None:
-            self.pseq = [[self.r_center + self.thickness, 0, 0]]
+            self.pseq = [[self.bend_r, 0, 0]]
             self.rotseq = [np.eye(3)]
         else:
             self.pseq = [np.asarray(p) + np.asarray([self.r_center + self.thickness, 0, 0]) for p in pseq]
@@ -57,11 +58,10 @@ class BendSim(object):
             self.pillar_moveside.attach_to(base)
             self.pillar_fixside.attach_to(base)
 
-    def pseq(self):
-        return self.pseq
-
-    def reset(self, pseq):
-        self.pseq = pseq
+    def reset(self, pseq,rotseq):
+        self.pseq = [np.asarray(p) + np.asarray([self.r_center + self.thickness, 0, 0]) for p in pseq]
+        self.rotseq = rotseq
+        self.objcm = None
 
     def cal_tail(self):
         A = np.mat([[self.r_side + self.thickness, -self.r_center], [1, 1]])
@@ -202,9 +202,9 @@ class BendSim(object):
         return rm.homomat_transform_points(rm.homomat_from_posrot(np.asarray(pos), np.eye(3)), pts)
 
     def __rot_new_orgin(self, pts, new_orgin, rot):
-        trans_pts = rm.homomat_transform_points(rm.homomat_from_posrot(new_orgin, np.eye(3)), pts)
+        trans_pts = self.__trans_pos(pts, new_orgin)
         trans_pts = rm.homomat_transform_points(rm.homomat_from_posrot(np.asarray([0, 0, 0]), rot), trans_pts)
-        return rm.homomat_transform_points(rm.homomat_from_posrot(-new_orgin, np.eye(3)), trans_pts).tolist()
+        return self.__trans_pos(trans_pts, -new_orgin).tolist()
 
     def __insert_p(self, insert_l, toggledebug=False):
         tmp_l = 0
@@ -226,12 +226,17 @@ class BendSim(object):
                         insert_rot = r1
                     else:
                         rotmat_list = rm.rotmat_slerp(r1, r2, 10)
-                        insert_rot = rotmat_list[int(insert_radio * len(rotmat_list))]
+                        inx = np.floor(insert_radio * len(rotmat_list))-1
+                        if inx>9:
+                            inx=9
+                        # print(tmp_l,insert_l)
+                        # print(insert_radio,inx, int(inx))
+                        insert_rot = rotmat_list[int(inx)]
                         # print(len(rotmat_list), int(insert_radio * len(rotmat_list)))
                     insert_inx = i + 1
                 else:
                     insert_pos = self.pseq[i]
-                    insert_rot = self.pseq[i]
+                    insert_rot = self.rotseq[i]
                     insert_inx = i
                 # print(i)
                 # print(self.pseq[:i])
@@ -243,6 +248,7 @@ class BendSim(object):
                     gm.gen_sphere(insert_pos, radius=.0004, rgba=(1, 1, 0, 1)).attach_to(base)
                     gm.gen_frame(insert_pos, insert_rot, length=.01, thickness=.0004).attach_to(base)
                 return insert_pos, insert_inx
+        print('error', insert_l)
 
     def feed(self, pos_diff):
         pos = np.asarray(pos_diff)
@@ -313,13 +319,23 @@ if __name__ == '__main__':
 
     bs = BendSim(thickness, width, show=True)
     bs.gen_by_motionseq(motion_seq)
-    bs.show()
-    threshold = bs.cal_startp(toggledebug=True)
-    print(threshold)
-    threshold = bs.cal_startp(pos_l=.012, toggledebug=True)
-    print(threshold)
-    bs.bend(np.radians(90), np.radians(0), insert_l=.012)
+    # bs.show()
+    # threshold = bs.cal_startp(toggledebug=True)
+    # print(threshold)
+    # threshold = bs.cal_startp(pos_l=.012, toggledebug=True)
+    # print(threshold)
+    bs.bend(np.radians(100), np.radians(0), insert_l=0)
     bs.show(rgba=(.7, .7, 0, .7))
+    print(bs.pseq)
+
+    init_pseq = [(0, 0, 0), (0, .01, 0), (0, .05, 0)]
+    init_rotseq = [np.eye(3), np.eye(3), np.eye(3)]
+    bs.reset(init_pseq, init_rotseq)
+    bs.show(rgba=(.7, 0, 0, .7))
+    print(bs.pseq)
+
+
+
 
     # bs.show_ani(motion_seq)
     base.run()
