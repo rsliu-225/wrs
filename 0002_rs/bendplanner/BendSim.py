@@ -41,24 +41,29 @@ class BendSim(object):
             self.pseq = [np.asarray(p) + np.asarray([self.r_center + self.thickness, 0, 0]) for p in pseq]
             self.rotseq = rotseq
         if show:
-            gm.gen_frame(thickness=.001, length=.05).attach_to(base)
+            # gm.gen_frame(thickness=.001, length=.05).attach_to(base)
             # gen pillars
             self.pillar_center = gm.gen_stick(spos=np.asarray([0, 0, -.02]), epos=np.asarray([0, 0, .02]),
-                                              thickness=self.r_center * 2, sections=180, rgba=[.7, .7, .7, .5])
-            self.pillar_moveside = gm.gen_stick(spos=np.asarray([self.c2c_dist, 0, -.02]),
-                                                epos=np.asarray([self.c2c_dist, 0, .02]),
-                                                thickness=self.r_side * 2, sections=180, rgba=[.7, .7, .7, .5])
-            a = np.radians(-40)
-            self.pillar_fixside = gm.gen_stick(
-                spos=np.asarray([self.c2c_dist * np.cos(a), self.c2c_dist * np.sin(a), -.02]),
-                epos=np.asarray([self.c2c_dist * np.cos(a), self.c2c_dist * np.sin(a), .02]),
-                thickness=self.r_side * 2, sections=180, rgba=[.7, .7, .7, .5])
-
+                                              thickness=self.r_center * 2, sections=180, rgba=[.7, .7, .7, .7])
             self.pillar_center.attach_to(base)
-            self.pillar_moveside.attach_to(base)
-            self.pillar_fixside.attach_to(base)
 
-    def reset(self, pseq,rotseq):
+            # for a in np.arange(0, 2 * math.pi, math.pi / 90):
+            #     gm.gen_sphere(pos=[self.c2c_dist * math.cos(a), self.c2c_dist * math.sin(a), 0], radius=.0002,
+            #                   rgba=(.7, .7, .7, .7)).attach_to(base)
+            #
+            # self.pillar_moveside = gm.gen_stick(spos=np.asarray([self.c2c_dist, 0, -.02]),
+            #                                     epos=np.asarray([self.c2c_dist, 0, .02]),
+            #                                     thickness=self.r_side * 2, sections=180, rgba=[.7, .7, .7, .7])
+            # self.pillar_moveside.attach_to(base)
+            #
+            # a = np.radians(-40)
+            # self.pillar_fixside = gm.gen_stick(
+            #     spos=np.asarray([self.c2c_dist * np.cos(a), self.c2c_dist * np.sin(a), -.02]),
+            #     epos=np.asarray([self.c2c_dist * np.cos(a), self.c2c_dist * np.sin(a), .02]),
+            #     thickness=self.r_side * 2, sections=180, rgba=[.7, .7, .7, .7])
+            # self.pillar_fixside.attach_to(base)
+
+    def reset(self, pseq, rotseq):
         self.pseq = [np.asarray(p) + np.asarray([self.r_center + self.thickness, 0, 0]) for p in pseq]
         self.rotseq = rotseq
         self.objcm = None
@@ -103,6 +108,9 @@ class BendSim(object):
                                          thickness=.0005).attach_to(base)
                         gm.gen_dashstick(spos=np.asarray((0, 0, 0)),
                                          epos=np.asarray(tmp_p),
+                                         thickness=.0005).attach_to(base)
+                        gm.gen_dashstick(spos=np.asarray((0, 0, 0)),
+                                         epos=np.asarray((self.c2c_dist, 0, 0)),
                                          thickness=.0005).attach_to(base)
 
                     return np.degrees(rm.angle_between_vectors(tmp_p, [self.c2c_dist, 0, 0]))
@@ -226,9 +234,9 @@ class BendSim(object):
                         insert_rot = r1
                     else:
                         rotmat_list = rm.rotmat_slerp(r1, r2, 10)
-                        inx = np.floor(insert_radio * len(rotmat_list))-1
-                        if inx>9:
-                            inx=9
+                        inx = np.floor(insert_radio * len(rotmat_list)) - 1
+                        if inx > 9:
+                            inx = 9
                         # print(tmp_l,insert_l)
                         # print(insert_radio,inx, int(inx))
                         insert_rot = rotmat_list[int(inx)]
@@ -252,18 +260,21 @@ class BendSim(object):
 
     def feed(self, pos_diff):
         pos = np.asarray(pos_diff)
-        self.pseq = [[self.r_center + self.thickness, 0, 0]] + \
-                    rm.homomat_transform_points(rm.homomat_from_posrot(pos, np.eye(3)), self.pseq).tolist()
+        self.pseq =  rm.homomat_transform_points(rm.homomat_from_posrot(pos, np.eye(3)), self.pseq).tolist()
         self.rotseq = [self.rotseq[0]] + self.rotseq
 
     def update_cm(self):
-        vertices, faces = self.gen_surface(self.pseq)
+        pseq = [[self.bend_r, -.015, 0]] + self.pseq
+        vertices, faces = self.gen_surface(pseq)
         self.objcm = self.gen_cm(vertices, faces)
 
-    def show(self, rgba=(1, 1, 1, 1)):
+    def show(self, rgba=(1, 1, 1, 1), show_frame=False):
         self.update_cm()
-        for i in range(len(self.pseq)):
-            gm.gen_frame(self.pseq[i], self.rotseq[i], length=.01, thickness=.0005, alpha=.1).attach_to(base)
+        pseq = [[self.bend_r, -.01, 0]] + self.pseq
+        rotseq = [np.eye(3)] + self.rotseq
+        if show_frame:
+            for i in range(len(pseq)):
+                gm.gen_frame(pseq[i], rotseq[i], length=.005, thickness=.0005, alpha=1).attach_to(base)
         self.objcm.set_rgba(rgba)
         self.objcm.attach_to(base)
 
@@ -310,32 +321,30 @@ if __name__ == '__main__':
     base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
 
     thickness = .0015
+    # thickness = 0
     width = .002
-    motion_seq = [['b', np.radians(60), np.radians(0)],
-                  ['f', (0, .01, 0)],
-                  ['b', np.radians(-60), np.radians(0)],
-                  ['f', (0, .01, 0)],
-                  ]
+    motion_seq = [
+        ['b', np.radians(-60), np.radians(0)],
+        ['f', (0, .015, 0)],
+        ['b', np.radians(60), np.radians(-20)],
+    ]
 
     bs = BendSim(thickness, width, show=True)
     bs.gen_by_motionseq(motion_seq)
-    # bs.show()
+    bs.show(rgba=(.7, .7, 0, .7), show_frame=True)
     # threshold = bs.cal_startp(toggledebug=True)
     # print(threshold)
     # threshold = bs.cal_startp(pos_l=.012, toggledebug=True)
     # print(threshold)
-    bs.bend(np.radians(100), np.radians(0), insert_l=0)
-    bs.show(rgba=(.7, .7, 0, .7))
-    print(bs.pseq)
+    # bs.bend(np.radians(30), np.radians(0), insert_l=.015, toggledebug=True)
+    # bs.show(rgba=(.7, .7, 0, .7))
+    # print(bs.pseq)
 
-    init_pseq = [(0, 0, 0), (0, .01, 0), (0, .05, 0)]
-    init_rotseq = [np.eye(3), np.eye(3), np.eye(3)]
-    bs.reset(init_pseq, init_rotseq)
-    bs.show(rgba=(.7, 0, 0, .7))
-    print(bs.pseq)
-
-
-
+    # init_pseq = [(0, 0, 0), (0, .01, 0), (0, .05, 0)]
+    # init_rotseq = [np.eye(3), np.eye(3), np.eye(3)]
+    # bs.reset(init_pseq, init_rotseq)
+    # bs.show(rgba=(.7, 0, 0, .7))
+    # print(bs.pseq)
 
     # bs.show_ani(motion_seq)
     base.run()

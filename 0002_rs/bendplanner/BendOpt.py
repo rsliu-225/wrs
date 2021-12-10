@@ -9,6 +9,7 @@ from scipy.optimize import minimize
 import basis.o3dhelper as o3dh
 import time
 import random
+import matplotlib.pyplot as plt
 
 
 class BendOptimizer(object):
@@ -19,16 +20,15 @@ class BendOptimizer(object):
         self.init_pseq = init_pseq
         self.init_rotseq = init_rotseq
         self.bs.reset(self.init_pseq, self.init_rotseq)
+        self.total_len = cal_length(goal_pseq)
 
         # self.result = None
         self.cons = []
         # self.rb = (-math.pi / 3, math.pi / 3)
-        self.rb = (0, math.pi / 3)
-        self.lb = (0, cal_length(goal_pseq) - self.bs.bend_r * math.pi)
+        self.rb = (0, math.pi / 2)
+        self.lb = (0, self.total_len - self.bs.bend_r * math.pi)
         self.bnds = (self.rb, self.lb) * self.bend_times
         print(self.bnds)
-
-        self.total_len = cal_length(goal_pseq)
 
     def objctive(self, x):
         self.bs.reset(self.init_pseq, self.init_rotseq)
@@ -81,10 +81,21 @@ class BendOptimizer(object):
         for i in range(self.bend_times):
             init.append(random.uniform(self.rb[0], self.rb[1]))
             init.append(random.uniform(self.lb[0], self.lb[1]))
-        init_pseq = self.bend_x(init)
-        show_pseq(init_pseq, rgba=(0, 0, 1, 1))
+        # init_pseq = self.bend_x(init)
+        # show_pseq(init_pseq, rgba=(0, 0, 1, 1))
 
-        return init
+        return np.asarray(init)
+
+    def equal_init(self):
+        init = []
+        for i in range(self.bend_times):
+            init.append(np.radians(360 / self.bend_times))
+            # init.append(random.uniform(self.rb[0], self.rb[1]))
+            init.append(i * self.total_len / self.bend_times)
+        # init_pseq = self.bend_x(init)
+        # show_pseq(init_pseq, rgba=(0, 0, 1, 1))
+        # self.bs.show(rgba=(0, 0, 1, .5))
+        return np.asarray(init)
 
     def solve(self, method='SLSQP'):
         """
@@ -96,23 +107,37 @@ class BendOptimizer(object):
         :return:
         """
         time_start = time.time()
-        # self.update_known()
         self.addconstraint(self.con_end, condition="ineq")
         self.addconstraint(self.con_avgdist, condition="ineq")
-        init = self.random_init()
+        # init = self.random_init()
+        init = self.equal_init()
         sol = minimize(self.objctive, init, method=method, bounds=self.bnds, constraints=self.cons)
         print("time cost", time.time() - time_start, sol.success)
 
         if sol.success:
+            print(sol.x)
+            ax = plt.axes()
+            ax.grid()
+            ax.scatter([v for i, v in enumerate(sol.x) if i % 2 != 0], [v for i, v in enumerate(sol.x) if i % 2 == 0],
+                       color='red')
+            ax.plot([v for i, v in enumerate(sol.x) if i % 2 != 0], [v for i, v in enumerate(sol.x) if i % 2 == 0],
+                    color='red')
+            ax.scatter([v for i, v in enumerate(init) if i % 2 != 0], [v for i, v in enumerate(init) if i % 2 == 0],
+                       color='blue')
+            ax.plot([v for i, v in enumerate(init) if i % 2 != 0], [v for i, v in enumerate(init) if i % 2 == 0],
+                    color='blue')
+            plt.show()
             return sol.x, sol.fun
         else:
             return None, None
+
 
 def average_distance_between_polylines(pts1, pts2, toggledebug=False):
     def __normed_distance_along_path(polyline_x, polyline_y, polyline_z):
         polyline = np.asarray([polyline_x, polyline_y, polyline_z])
         distance = np.cumsum(np.sqrt(np.sum(np.diff(polyline, axis=1) ** 2, axis=0)))
         return np.insert(distance, 0, 0) / distance[-1]
+
     pts2 = np.asarray(align_pseqs(pts1, pts2))
     x1, y1, z1 = pts1[:, 0], pts1[:, 1], pts1[:, 2]
     x2, y2, z2 = pts2[:, 0], pts2[:, 1], pts2[:, 2]
@@ -125,7 +150,6 @@ def average_distance_between_polylines(pts1, pts2, toggledebug=False):
     node_to_node_distance = np.sqrt(np.sum((xyz1_on_2 - [x2, y2, z2]) ** 2, axis=0))
 
     if toggledebug:
-        import matplotlib.pyplot as plt
         ax = plt.axes(projection='3d')
 
         ax.scatter3D(x1, y1, z1, color='red')
@@ -151,8 +175,16 @@ def gen_circle(r):
 def gen_polygen(n, l):
     pseq = [np.asarray((0, 0, 0))]
     for a in np.linspace(360 / n, 360, n):
-        pseq.append(np.asarray(pseq[-1]) + np.asarray([np.sin(np.radians(a)) * l, np.sin(np.radians(a)) * l, 0]))
-        print(pseq)
+        pseq.append(np.asarray(pseq[-1]) + np.asarray([np.cos(np.radians(a)) * l, np.sin(np.radians(a)) * l, 0]))
+    # import utils.math_utils as mu
+    # inp_pseq = []
+    # for i in range(len(pseq) - 1):
+    #     p1 = pseq[i]
+    #     p2 = pseq[i + 1]
+    #     dist = np.linalg.norm(p1 - p2)
+    #     print(mu.linear_interp_3d(p1, p2, step=.0001))
+    #     inp_pseq.extend(mu.linear_interp_3d(p1, p2, step=.0001))
+
     return pseq
 
 
@@ -168,6 +200,9 @@ def cal_length(pseq):
 def show_pseq(pseq, rgba):
     for p in pseq:
         gm.gen_sphere(pos=np.asarray(p), rgba=rgba, radius=0.0005).attach_to(base)
+    for i in range(0, len(pseq) - 1):
+        gm.gen_stick(spos=np.asarray(pseq[i]), epos=np.asarray(pseq[i + 1]), rgba=rgba, thickness=0.0005).attach_to(
+            base)
 
 
 def align_pseqs(pseq_src, pseq_tgt):
@@ -191,24 +226,24 @@ def align_pseqs_icp(pseq_src, pseq_tgt):
 if __name__ == '__main__':
     base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
 
-    # pseq = gen_polygen(5, .01)
-    # show_pseq(pseq,rgba=(1,0,0,1))
-    # base.run()
+    goal_pseq = gen_polygen(5, .05)
 
-    goal_pseq = gen_circle(.05)
+    # goal_pseq = gen_circle(.05)
+
     length = cal_length(goal_pseq)
     init_pseq = [(0, 0, 0), (0, .01, 0), (0, length, 0)]
     init_rotseq = [np.eye(3), np.eye(3), np.eye(3)]
     bs = BendSim.BendSim(thickness=0.0015, width=.002, pseq=init_pseq, rotseq=init_rotseq)
 
-    opt = BendOptimizer(bs, init_pseq, init_rotseq, goal_pseq, bend_times=10)
+    opt = BendOptimizer(bs, init_pseq, init_rotseq, goal_pseq, bend_times=5)
     res, cost = opt.solve()
     print(res, cost)
     bs.bend(res[0], 0, res[1])
     # res = align_pseqs(bs.pseq, goal_pseq)
     goal_pseq = align_pseqs_icp(goal_pseq, bs.pseq)
-    show_pseq(goal_pseq, rgba=(0, 1, 0, 1))
     show_pseq(bs.pseq, rgba=(1, 0, 0, 1))
-    bs.show()
+    show_pseq(goal_pseq, rgba=(0, 1, 0, 1))
+
+    # bs.show()
     print(bs.pseq)
     base.run()
