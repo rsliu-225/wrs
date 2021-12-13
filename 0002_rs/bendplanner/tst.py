@@ -16,7 +16,7 @@ def normed_distance_along_path(polyline_x, polyline_y, polyline_z):
     return np.insert(distance, 0, 0) / distance[-1]
 
 
-def average_distance_between_polylines(pts1,pts2,toggledebug=False):
+def average_distance_between_polylines(pts1, pts2, toggledebug=False):
     x1, y1, z1 = pts1[:, 0], pts1[:, 1], pts1[:, 2]
     x2, y2, z2 = pts2[:, 0], pts2[:, 1], pts2[:, 2]
     s1 = normed_distance_along_path(x1, y1, z1)
@@ -32,8 +32,8 @@ def average_distance_between_polylines(pts1,pts2,toggledebug=False):
         ax.scatter3D(x1, y1, z1, color='red')
         ax.plot3D(x1, y1, z1, 'red')
 
-        ax.scatter3D(x2, y2, z2 , color='green')
-        ax.plot3D(x2, y2, z2 , 'green')
+        ax.scatter3D(x2, y2, z2, color='green')
+        ax.plot3D(x2, y2, z2, 'green')
 
         ax.scatter3D(xyz1_on_2[0], xyz1_on_2[1], xyz1_on_2[2], color='black')
         ax.plot3D(xyz1_on_2[0], xyz1_on_2[1], xyz1_on_2[2], 'black', linestyle='dotted')
@@ -49,14 +49,14 @@ def gen_circle(r):
     return pts
 
 
-
 pts1 = gen_circle(2)
 pts2 = [[0, 2, 0], [1, 1, 0], [0.5, -1, 0], [-0.5, -1, 0], [-1, 1, 0]]
 
 pts1 = np.asarray(pts1)
 pts2 = np.asarray(pts2)
 
-res, interp_pts = average_distance_between_polylines(pts1, pts2,toggledebug=True)
-print(res)
+# res, interp_pts = average_distance_between_polylines(pts1, pts2, toggledebug=True)
+# print(res)
 
+ax = plt.axes(projection='3d')
 

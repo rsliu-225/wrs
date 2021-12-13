@@ -36,7 +36,8 @@ class BendOptimizer(object):
         # print(x)
         try:
             self.bend_x(x)
-            err, fitness, _ = o3dh.registration_ptpt(np.asarray(bs.pseq), np.asarray(goal_pseq))
+            pseq = linear_inp(bs.pseq)
+            err, fitness, _ = o3dh.registration_ptpt(np.asarray(pseq), np.asarray(goal_pseq))
             # err, _ = average_distance_between_polylines(np.asarray(bs.pseq), np.asarray(goal_pseq), toggledebug=False)
         except:
             err = 1
@@ -89,8 +90,8 @@ class BendOptimizer(object):
     def equal_init(self):
         init = []
         for i in range(self.bend_times):
-            init.append(np.radians(360 / self.bend_times))
-            # init.append(random.uniform(self.rb[0], self.rb[1]))
+            # init.append(np.radians(360 / self.bend_times))
+            init.append(random.uniform(self.rb[0], self.rb[1]))
             init.append(i * self.total_len / self.bend_times)
         # init_pseq = self.bend_x(init)
         # show_pseq(init_pseq, rgba=(0, 0, 1, 1))
@@ -176,16 +177,43 @@ def gen_polygen(n, l):
     pseq = [np.asarray((0, 0, 0))]
     for a in np.linspace(360 / n, 360, n):
         pseq.append(np.asarray(pseq[-1]) + np.asarray([np.cos(np.radians(a)) * l, np.sin(np.radians(a)) * l, 0]))
-    # import utils.math_utils as mu
-    # inp_pseq = []
-    # for i in range(len(pseq) - 1):
-    #     p1 = pseq[i]
-    #     p2 = pseq[i + 1]
-    #     dist = np.linalg.norm(p1 - p2)
-    #     print(mu.linear_interp_3d(p1, p2, step=.0001))
-    #     inp_pseq.extend(mu.linear_interp_3d(p1, p2, step=.0001))
 
     return pseq
+
+
+def gen_ramdom_curve(kp_num=5, length=.5, step=.001):
+    pseq = np.asarray([[0, 0, 0]])
+    for i in range(kp_num - 1):
+        a = random.uniform(-np.pi / 2, np.pi / 2)
+        tmp_p = pseq[-1] + np.asarray((np.cos(a) * length / kp_num, np.sin(a) * length / kp_num, 0))
+        pseq = np.vstack([pseq, tmp_p])
+    # pseq = np.asarray(pseq)
+    print(pseq)
+    inp = interpolate.interp1d(pseq[:, 0], pseq[:, 1], kind='cubic')
+    x = np.linspace(0, pseq[-1][0], int(length / step))
+    y = inp(x)
+    ax = plt.axes(projection='3d')
+    ax.plot3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], color='red')
+    ax.scatter3D(x, y, [0] * len(x), color='green')
+    print(zip(x,y,[0] * len(x)))
+    plt.show()
+
+    return zip(x,y,[0] * len(x))
+
+
+def linear_inp(pseq, step=.001):
+    inp_pseq = []
+    for i in range(len(pseq) - 1):
+        p1 = np.asarray(pseq[i])
+        p2 = np.asarray(pseq[i + 1])
+        diff = p2 - p1
+        inp_num = int(np.linalg.norm(p1 - p2) / step)
+        if inp_num == 0:
+            inp_pseq.append(p1)
+        else:
+            for j in range(inp_num):
+                inp_pseq.append(p1 + j * diff / inp_num)
+    return np.asarray(inp_pseq)
 
 
 def cal_length(pseq):
@@ -197,12 +225,13 @@ def cal_length(pseq):
     return length
 
 
-def show_pseq(pseq, rgba):
+def show_pseq(pseq, rgba=(1, 0, 0, 1), show_stick=False):
     for p in pseq:
         gm.gen_sphere(pos=np.asarray(p), rgba=rgba, radius=0.0005).attach_to(base)
-    for i in range(0, len(pseq) - 1):
-        gm.gen_stick(spos=np.asarray(pseq[i]), epos=np.asarray(pseq[i + 1]), rgba=rgba, thickness=0.0005).attach_to(
-            base)
+    if show_stick:
+        for i in range(0, len(pseq) - 1):
+            gm.gen_stick(spos=np.asarray(pseq[i]), epos=np.asarray(pseq[i + 1]), rgba=rgba, thickness=0.0005).attach_to(
+                base)
 
 
 def align_pseqs(pseq_src, pseq_tgt):
@@ -226,13 +255,14 @@ def align_pseqs_icp(pseq_src, pseq_tgt):
 if __name__ == '__main__':
     base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
 
-    goal_pseq = gen_polygen(5, .05)
+    # goal_pseq = linear_inp(gen_polygen(5, .05), step=.001)
+    goal_pseq = gen_ramdom_curve()
 
     # goal_pseq = gen_circle(.05)
 
     length = cal_length(goal_pseq)
-    init_pseq = [(0, 0, 0), (0, .01, 0), (0, length, 0)]
-    init_rotseq = [np.eye(3), np.eye(3), np.eye(3)]
+    init_pseq = [(0, 0, 0), (0, length, 0)]
+    init_rotseq = [np.eye(3), np.eye(3)]
     bs = BendSim.BendSim(thickness=0.0015, width=.002, pseq=init_pseq, rotseq=init_rotseq)
 
     opt = BendOptimizer(bs, init_pseq, init_rotseq, goal_pseq, bend_times=5)
@@ -241,7 +271,7 @@ if __name__ == '__main__':
     bs.bend(res[0], 0, res[1])
     # res = align_pseqs(bs.pseq, goal_pseq)
     goal_pseq = align_pseqs_icp(goal_pseq, bs.pseq)
-    show_pseq(bs.pseq, rgba=(1, 0, 0, 1))
+    show_pseq(linear_inp(bs.pseq), rgba=(1, 0, 0, 1))
     show_pseq(goal_pseq, rgba=(0, 1, 0, 1))
 
     # bs.show()
