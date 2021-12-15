@@ -74,18 +74,21 @@ class BendOptimizer(object):
         # print(min_dist - self.bs.bend_r)
         return min_dist - self.bs.bend_r
 
+    def addconstraint_sort(self, i):
+        self.cons.append({'type': 'ineq', 'fun': lambda x: x[2 * i + 3] - x[2 * i + 1]})
+
     def addconstraint(self, constraint, condition="ineq"):
         self.cons.append({'type': condition, 'fun': constraint})
 
     def random_init(self):
-        init = []
-        for i in range(self.bend_times):
-            init.append(random.uniform(self.rb[0], self.rb[1]))
-            init.append(random.uniform(self.lb[0], self.lb[1]))
-        # init_pseq = self.bend_x(init)
-        # show_pseq(init_pseq, rgba=(0, 0, 1, 1))
+        pos = [random.uniform(self.rb[0], self.rb[1]) for _ in range(self.bend_times)]
+        pos.sort()
+        rot = [random.uniform(self.lb[0], self.lb[1]) for _ in range(self.bend_times)]
+        init_pseq = self.bend_x(np.asarray(list(zip(pos, rot))).flatten())
+        show_pseq(linear_inp(init_pseq), rgba=(0, 0, 1, 1))
+        # base.run()
 
-        return np.asarray(init)
+        return np.asarray(init_pseq)
 
     def equal_init(self):
         init = []
@@ -93,8 +96,8 @@ class BendOptimizer(object):
             # init.append(np.radians(360 / self.bend_times))
             init.append(random.uniform(self.rb[0], self.rb[1]))
             init.append(i * self.total_len / self.bend_times)
-        # init_pseq = self.bend_x(init)
-        # show_pseq(init_pseq, rgba=(0, 0, 1, 1))
+        init_pseq = self.bend_x(init)
+        show_pseq(linear_inp(init_pseq), rgba=(0, 0, 1, 1))
         # self.bs.show(rgba=(0, 0, 1, .5))
         return np.asarray(init)
 
@@ -110,8 +113,10 @@ class BendOptimizer(object):
         time_start = time.time()
         self.addconstraint(self.con_end, condition="ineq")
         self.addconstraint(self.con_avgdist, condition="ineq")
-        # init = self.random_init()
-        init = self.equal_init()
+        init = self.random_init()
+        # init = self.equal_init()
+        for i in range(int(len(init) / 2) - 1):
+            self.addconstraint_sort(i)
         sol = minimize(self.objctive, init, method=method, bounds=self.bnds, constraints=self.cons)
         print("time cost", time.time() - time_start, sol.success)
 
@@ -181,24 +186,27 @@ def gen_polygen(n, l):
     return pseq
 
 
-def gen_ramdom_curve(kp_num=5, length=.5, step=.001):
+def gen_ramdom_curve(kp_num=5, length=.5, step=.01, toggledebug=False):
     pseq = np.asarray([[0, 0, 0]])
     for i in range(kp_num - 1):
-        a = random.uniform(-np.pi / 2, np.pi / 2)
+        a = random.uniform(-np.pi / 3, np.pi / 3)
         tmp_p = pseq[-1] + np.asarray((np.cos(a) * length / kp_num, np.sin(a) * length / kp_num, 0))
         pseq = np.vstack([pseq, tmp_p])
-    # pseq = np.asarray(pseq)
-    print(pseq)
     inp = interpolate.interp1d(pseq[:, 0], pseq[:, 1], kind='cubic')
     x = np.linspace(0, pseq[-1][0], int(length / step))
     y = inp(x)
-    ax = plt.axes(projection='3d')
-    ax.plot3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], color='red')
-    ax.scatter3D(x, y, [0] * len(x), color='green')
-    print(zip(x,y,[0] * len(x)))
-    plt.show()
+    if toggledebug:
+        ax = plt.axes(projection='3d')
+        ax.plot3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], color='red')
+        ax.scatter3D(x, y, [0] * len(x), color='green')
+        print(list(zip(x, y, [0] * len(x))))
+        plt.show()
+    show_pseq(pseq)
+    pseq = linear_inp(np.asarray(list(zip(x, y, [0] * len(x)))))
+    show_pseq(pseq, rgba=(1, 1, 0, 1))
+    # base.run()
 
-    return zip(x,y,[0] * len(x))
+    return pseq
 
 
 def linear_inp(pseq, step=.001):
@@ -232,6 +240,13 @@ def show_pseq(pseq, rgba=(1, 0, 0, 1), show_stick=False):
         for i in range(0, len(pseq) - 1):
             gm.gen_stick(spos=np.asarray(pseq[i]), epos=np.asarray(pseq[i + 1]), rgba=rgba, thickness=0.0005).attach_to(
                 base)
+
+def plot_pseq(pseq):
+    ax = plt.axes(projection='3d')
+    ax.plot3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], color='red')
+    ax.scatter3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], color='green')
+    ax.grid()
+    plt.show()
 
 
 def align_pseqs(pseq_src, pseq_tgt):
@@ -270,7 +285,7 @@ if __name__ == '__main__':
     print(res, cost)
     bs.bend(res[0], 0, res[1])
     # res = align_pseqs(bs.pseq, goal_pseq)
-    goal_pseq = align_pseqs_icp(goal_pseq, bs.pseq)
+    # goal_pseq = align_pseqs_icp(goal_pseq, bs.pseq)
     show_pseq(linear_inp(bs.pseq), rgba=(1, 0, 0, 1))
     show_pseq(goal_pseq, rgba=(0, 1, 0, 1))
 

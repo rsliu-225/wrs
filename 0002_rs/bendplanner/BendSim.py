@@ -38,7 +38,7 @@ class BendSim(object):
             self.pseq = [[self.bend_r, 0, 0]]
             self.rotseq = [np.eye(3)]
         else:
-            self.pseq = [np.asarray(p) + np.asarray([self.r_center + self.thickness, 0, 0]) for p in pseq]
+            self.pseq = [np.asarray(p) + np.asarray([self.bend_r, 0, 0]) for p in pseq]
             self.rotseq = rotseq
         if show:
             # gm.gen_frame(thickness=.001, length=.05).attach_to(base)
@@ -294,7 +294,7 @@ class BendSim(object):
             motioncounter[0] += 1
         else:
             motioncounter[0] = 0
-            self.reset([])
+            self.reset([], [])
         return task.again
 
     def show_ani(self, motion_seq):
