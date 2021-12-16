@@ -47,21 +47,21 @@ class BendSim(object):
                                               thickness=self.r_center * 2, sections=180, rgba=[.7, .7, .7, .7])
             self.pillar_center.attach_to(base)
 
-            # for a in np.arange(0, 2 * math.pi, math.pi / 90):
-            #     gm.gen_sphere(pos=[self.c2c_dist * math.cos(a), self.c2c_dist * math.sin(a), 0], radius=.0002,
-            #                   rgba=(.7, .7, .7, .7)).attach_to(base)
-            #
-            # self.pillar_moveside = gm.gen_stick(spos=np.asarray([self.c2c_dist, 0, -.02]),
-            #                                     epos=np.asarray([self.c2c_dist, 0, .02]),
-            #                                     thickness=self.r_side * 2, sections=180, rgba=[.7, .7, .7, .7])
-            # self.pillar_moveside.attach_to(base)
-            #
-            # a = np.radians(-40)
-            # self.pillar_fixside = gm.gen_stick(
-            #     spos=np.asarray([self.c2c_dist * np.cos(a), self.c2c_dist * np.sin(a), -.02]),
-            #     epos=np.asarray([self.c2c_dist * np.cos(a), self.c2c_dist * np.sin(a), .02]),
-            #     thickness=self.r_side * 2, sections=180, rgba=[.7, .7, .7, .7])
-            # self.pillar_fixside.attach_to(base)
+            for a in np.arange(0, 2 * math.pi, math.pi / 90):
+                gm.gen_sphere(pos=[self.c2c_dist * math.cos(a), self.c2c_dist * math.sin(a), 0], radius=.0002,
+                              rgba=(.7, .7, .7, .7)).attach_to(base)
+
+            self.pillar_moveside = gm.gen_stick(spos=np.asarray([self.c2c_dist, 0, -.02]),
+                                                epos=np.asarray([self.c2c_dist, 0, .02]),
+                                                thickness=self.r_side * 2, sections=180, rgba=[.7, .7, .7, .7])
+            self.pillar_moveside.attach_to(base)
+
+            a = -np.radians(self.cal_start_margin()/2)
+            self.pillar_fixside = gm.gen_stick(
+                spos=np.asarray([self.c2c_dist * np.cos(a), self.c2c_dist * np.sin(a), -.02]),
+                epos=np.asarray([self.c2c_dist * np.cos(a), self.c2c_dist * np.sin(a), .02]),
+                thickness=self.r_side * 2, sections=180, rgba=[.7, .7, .7, .7])
+            self.pillar_fixside.attach_to(base)
 
     def reset(self, pseq, rotseq):
         self.pseq = [np.asarray(p) + np.asarray([self.r_center + self.thickness, 0, 0]) for p in pseq]
@@ -80,7 +80,8 @@ class BendSim(object):
     def cal_safe_margin(self):
         return np.degrees(2 * np.arcsin((self.r_side + self.r_base) / (2 * self.c2c_dist)))
 
-    def cal_start_margin(self, l_center):
+    def cal_start_margin(self):
+        l_center,_,_=self.cal_tail()
         return np.degrees(2 * np.arccos(self.r_center / l_center))
 
     def cal_startp(self, pos_l=None, toggledebug=False):

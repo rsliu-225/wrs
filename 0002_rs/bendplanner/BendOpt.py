@@ -28,7 +28,6 @@ class BendOptimizer(object):
         self.rb = (0, math.pi / 2)
         self.lb = (0, self.total_len - self.bs.bend_r * math.pi)
         self.bnds = (self.rb, self.lb) * self.bend_times
-        print(self.bnds)
 
     def objctive(self, x):
         self.bs.reset(self.init_pseq, self.init_rotseq)
@@ -84,11 +83,11 @@ class BendOptimizer(object):
         pos = [random.uniform(self.rb[0], self.rb[1]) for _ in range(self.bend_times)]
         pos.sort()
         rot = [random.uniform(self.lb[0], self.lb[1]) for _ in range(self.bend_times)]
-        init_pseq = self.bend_x(np.asarray(list(zip(pos, rot))).flatten())
+        init = np.asarray(list(zip(pos, rot))).flatten()
+        init_pseq = self.bend_x(init)
         show_pseq(linear_inp(init_pseq), rgba=(0, 0, 1, 1))
-        # base.run()
 
-        return np.asarray(init_pseq)
+        return np.asarray(init)
 
     def equal_init(self):
         init = []
@@ -99,6 +98,7 @@ class BendOptimizer(object):
         init_pseq = self.bend_x(init)
         show_pseq(linear_inp(init_pseq), rgba=(0, 0, 1, 1))
         # self.bs.show(rgba=(0, 0, 1, .5))
+
         return np.asarray(init)
 
     def solve(self, method='SLSQP'):
@@ -171,22 +171,23 @@ def average_distance_between_polylines(pts1, pts2, toggledebug=False):
     return node_to_node_distance.mean(), xyz1_on_2
 
 
-def gen_circle(r):
+def gen_circle(r, step=math.pi / 90):
     pts = []
-    for a in np.arange(0, 2 * math.pi, math.pi / 90):
+    for a in np.arange(0, 2 * math.pi, step):
         pts.append([r * math.cos(a), r * math.sin(a), 0])
     return pts
 
 
-def gen_polygen(n, l):
+def gen_polygen(n, l, do_inp=True,):
     pseq = [np.asarray((0, 0, 0))]
     for a in np.linspace(360 / n, 360, n):
         pseq.append(np.asarray(pseq[-1]) + np.asarray([np.cos(np.radians(a)) * l, np.sin(np.radians(a)) * l, 0]))
-
+    if do_inp:
+        pseq = linear_inp(np.asarray(pseq))
     return pseq
 
 
-def gen_ramdom_curve(kp_num=5, length=.5, step=.01, toggledebug=False):
+def gen_ramdom_curve(kp_num=5, length=.5, step=.01, do_inp=True, toggledebug=False):
     pseq = np.asarray([[0, 0, 0]])
     for i in range(kp_num - 1):
         a = random.uniform(-np.pi / 3, np.pi / 3)
@@ -202,7 +203,8 @@ def gen_ramdom_curve(kp_num=5, length=.5, step=.01, toggledebug=False):
         print(list(zip(x, y, [0] * len(x))))
         plt.show()
     show_pseq(pseq)
-    pseq = linear_inp(np.asarray(list(zip(x, y, [0] * len(x)))))
+    if do_inp:
+        pseq = linear_inp(np.asarray(list(zip(x, y, [0] * len(x)))))
     show_pseq(pseq, rgba=(1, 1, 0, 1))
     # base.run()
 
@@ -241,6 +243,7 @@ def show_pseq(pseq, rgba=(1, 0, 0, 1), show_stick=False):
             gm.gen_stick(spos=np.asarray(pseq[i]), epos=np.asarray(pseq[i + 1]), rgba=rgba, thickness=0.0005).attach_to(
                 base)
 
+
 def plot_pseq(pseq):
     ax = plt.axes(projection='3d')
     ax.plot3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], color='red')
@@ -270,9 +273,8 @@ def align_pseqs_icp(pseq_src, pseq_tgt):
 if __name__ == '__main__':
     base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
 
-    # goal_pseq = linear_inp(gen_polygen(5, .05), step=.001)
-    goal_pseq = gen_ramdom_curve()
-
+    goal_pseq = gen_polygen(5, .05)
+    # goal_pseq = gen_ramdom_curve(toggledebug=False)
     # goal_pseq = gen_circle(.05)
 
     length = cal_length(goal_pseq)
@@ -284,9 +286,9 @@ if __name__ == '__main__':
     res, cost = opt.solve()
     print(res, cost)
     bs.bend(res[0], 0, res[1])
-    # res = align_pseqs(bs.pseq, goal_pseq)
+    res = align_pseqs(bs.pseq, goal_pseq)
     # goal_pseq = align_pseqs_icp(goal_pseq, bs.pseq)
-    show_pseq(linear_inp(bs.pseq), rgba=(1, 0, 0, 1))
+    show_pseq(linear_inp(res), rgba=(1, 0, 0, 1))
     show_pseq(goal_pseq, rgba=(0, 1, 0, 1))
 
     # bs.show()
