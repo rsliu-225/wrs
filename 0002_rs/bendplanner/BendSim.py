@@ -49,21 +49,24 @@ class BendSim(object):
             self.rotseq.append(np.eye(3))
 
         # gen pillars
-        self.pillar_center = gm.gen_stick(spos=np.asarray([0, 0, -.02]), epos=np.asarray([0, 0, .02]),
-                                          thickness=self.r_center * 2, sections=180, rgba=[.7, .7, .7, .7])
+        sections = 360
+        self.pillar_center = gm.gen_stick(spos=np.asarray([0, 0, -.02]),
+                                          epos=np.asarray([0, 0, .02]),
+                                          thickness=self.r_center * 2, sections=sections, rgba=[.7, .7, .7, .7])
         self.pillar_dieside = cm.gen_stick(spos=np.asarray([self.c2c_dist, 0, -.02]),
                                            epos=np.asarray([self.c2c_dist, 0, .02]),
-                                           thickness=self.r_side * 2, sections=180, rgba=[.7, .7, .7, .7])
-        self.pillar_punch = cm.gen_stick(spos=np.asarray([0, 0, -.02]), epos=np.asarray([0, 0, .02]),
-                                         thickness=self.r_side * 2, sections=180, rgba=[.7, .7, .7, .7])
+                                           thickness=self.r_side * 2, sections=sections, rgba=[.7, .7, .7, .7])
+        self.pillar_punch = cm.gen_stick(spos=np.asarray([0, 0, -.02]),
+                                         epos=np.asarray([0, 0, .02]),
+                                         thickness=self.r_side * 2, sections=sections, rgba=[.7, .7, .7, .7])
         self.pillar_punch.set_homomat(
             rm.homomat_from_posrot([self.c2c_dist * np.cos(self.punch_pillar_init),
                                     self.c2c_dist * np.sin(self.punch_pillar_init), 0], np.eye(3)))
         if show:
             gm.gen_frame(thickness=.001, length=.05).attach_to(base)
-            for a in np.arange(0, 2 * math.pi, math.pi / 90):
-                gm.gen_sphere(pos=[self.c2c_dist * math.cos(a), self.c2c_dist * math.sin(a), 0], radius=.0002,
-                              rgba=(.7, .7, .7, .7)).attach_to(base)
+            for a in np.arange(0, 2 * math.pi, math.pi / 360):
+                gm.gen_sphere(pos=[self.c2c_dist * math.cos(a), self.c2c_dist * math.sin(a), 0], radius=.0001,
+                              rgba=(.7, .7, .7, .2)).attach_to(base)
             self.pillar_center.attach_to(base)
             self.pillar_dieside.attach_to(base)
             self.pillar_punch.attach_to(base)
@@ -152,17 +155,17 @@ class BendSim(object):
         print('No collided point found (punch pillar & plate)!')
         return None, None, None
 
-    def __get_bended_pseq(self, center, r, rot_angle, lift_angle, toggledebug=False):
+    def __get_bended_pseq(self, center, r, rot_angle, lift_angle, step=math.pi / 180, toggledebug=False):
         tmp_pseq = []
         tmp_rotseq = []
         if rot_angle > 0:
-            rng = (0, rot_angle + math.pi / 90)
+            rng = (0, rot_angle + step)
         else:
-            rng = (rot_angle, math.pi / 90)
+            rng = (rot_angle, step)
             r = -r
             center = center + np.asarray([2 * (self.r_center + self.thickness), 0, 0])
 
-        for a in np.arange(rng[0], rng[1], math.pi / 90):
+        for a in np.arange(rng[0], rng[1], step):
             if lift_angle == 0:
                 p = (r * math.cos(a), r * math.sin(a), 0)
             elif abs(lift_angle) >= 90:
@@ -209,7 +212,7 @@ class BendSim(object):
             new_end_homomat = rm.homomat_from_posrot(pseq_mid[-1], rotseq_mid[-1])
             transmat4_end = np.dot(new_end_homomat, np.linalg.inv(org_end_homomat))
             pseq_end = rm.homomat_transform_points(transmat4_end, self.pseq[end_inx:]).tolist()
-            rotseq_end = [np.dot(rot_end, r) for r in self.rotseq[end_inx:]]
+            rotseq_end = [np.dot(transmat4_end[:3,:3], r) for r in self.rotseq[end_inx:]]
 
             self.pseq = self.pseq[:start_inx] + pseq_mid + pseq_end
             self.rotseq = self.rotseq[:start_inx] + rotseq_mid + rotseq_end
@@ -306,12 +309,10 @@ class BendSim(object):
 
     def show(self, rgba=(1, 1, 1, 1), objmat4=None, show_frame=False, show_pseq=False):
         self.update_cm()
-        # pseq = [[self.bend_r, -.01, 0]] + self.pseq
-        # rotseq = [np.eye(3)] + self.rotseq
         objcm = copy.deepcopy(self.objcm)
         if show_frame:
             for i in range(len(self.pseq)):
-                gm.gen_frame(self.pseq[i], self.rotseq[i], length=.005, thickness=.0005, alpha=1).attach_to(base)
+                gm.gen_frame(self.pseq[i], self.rotseq[i], length=.005, thickness=.0005, alpha=.5).attach_to(base)
         if show_pseq:
             for p in bu.linear_inp3d(self.pseq):
                 gm.gen_sphere(p, radius=.0004, rgba=rgba).attach_to(base)
@@ -388,8 +389,8 @@ class BendSim(object):
 
     def gen_by_bendseq(self, bendseq, toggledebug=False):
         for bend in bendseq:
-            pos, rot, angle = \
-                self.cal_startp(bend[2], dir=0 if bend[0] < 0 else 1, lift_angle=bend[1], toggledebug=toggledebug)
+            # pos, rot, angle = \
+            #     self.cal_startp(bend[2], dir=0 if bend[0] < 0 else 1, lift_angle=bend[1], toggledebug=toggledebug)
             self.bend(bend[0], bend[1], bend[2], toggledebug=toggledebug)
 
     def cal_length(self):
@@ -446,18 +447,16 @@ if __name__ == '__main__':
     #     # [np.radians(20), np.radians(0), .1]
     # ]
     bendseq = pickle.load(open('./tmp_bendseq.pkl', 'rb'))
-    for v in bendseq:
-        print(v)
 
     bs = BendSim(thickness, width, show=True)
     # bs.gen_by_motionseq(motion_seq)
     bs.reset([(0, 0, 0), (0, bendseq[-1][2], 0)], [np.eye(3), np.eye(3)])
     bs.show(rgba=(.7, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
 
-    bs.gen_by_bendseq(bendseq[5:9], toggledebug=True)
+    bs.gen_by_bendseq(bendseq, toggledebug=True)
     # bs.show_ani_bendseq(bendseq)
-
-    bs.show(rgba=(0, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)), show_pseq=True)
+    bs.show(rgba=(0, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)), show_pseq=True,
+            show_frame=True)
     # base.run()
     # threshold = bs.cal_startp(toggledebug=True)
     # print(threshold)

@@ -27,29 +27,29 @@ class BendOptimizer(object):
         self.cons = []
         # self.rb = (-math.pi / 3, math.pi / 3)
         self.rb = (-math.pi / 2, math.pi / 2)
-        self.lb = (0, self.total_len - self.bs.bend_r * math.pi)
+        self.lb = (0, self.total_len + self.bs.bend_r * math.pi)
         self.bnds = (self.rb, self.lb) * self.bend_times
 
     def objctive(self, x):
         self.bs.reset(self.init_pseq, self.init_rotseq)
-        # print('------objective------')
-        # print(x)
         try:
             self.bend_x(x)
             pseq = bu.linear_inp3d(bs.pseq)
-            err, fitness, _ = o3dh.registration_ptpt(np.asarray(pseq), np.asarray(goal_pseq))
-            # err, _ = average_distance_between_polylines(np.asarray(bs.pseq), np.asarray(goal_pseq), toggledebug=False)
+            err, fitness, _ = o3dh.registration_ptpt(np.asarray(pseq), np.asarray(goal_pseq), toggledebug=False)
+            # err, _ = average_distance_between_polylines(np.asarray(pseq), np.asarray(goal_pseq), toggledebug=True)
         except:
             err = 1
         print('cost:', err)
         return err
 
     def bend_x(self, x):
+        print('-----------')
+        print(x)
         for i in range(int(len(x) / 2)):
             # pos, rot, angle = \
             #     bs.cal_startp(x[2 * i + 1], dir=0 if x[2 * i] < 0 else 1, toggledebug=False)
             # if pos is not None:
-            bs.bend(x[2 * i], np.radians(0), x[2 * i + 1])
+            bs.bend(rot_angle=x[2 * i], lift_angle=np.radians(0), insert_l=x[2 * i + 1])
         return self.bs.pseq
 
     def update_known(self):
@@ -120,6 +120,7 @@ class BendOptimizer(object):
         if init_bendseq is None:
             # init_bendseq = self.random_init()
             init_bendseq = self.equal_init()
+        print(init_bendseq)
         for i in range(int(len(init_bendseq) / 2) - 1):
             self.addconstraint_sort(i)
         sol = minimize(self.objctive, init_bendseq, method=method, bounds=self.bnds, constraints=self.cons,
@@ -220,34 +221,40 @@ def iter_fit(pseq, tor=.001, toggledebug=False):
         res_pseq = res_pseq[res_pseq[:, 0].argsort(), :]
         checklist.append(max_inx)
 
+        tangent_pts = []
+        bendseq = []
+        pos = 0
+        for i in range(1, len(res_pseq) - 1):
+            v1 = res_pseq[i - 1] - res_pseq[i]
+            v2 = res_pseq[i] - res_pseq[i + 1]
+            angle = rm.angle_between_vectors(v1, v2)
+            n = np.cross(v1, v2)
+            if n[2] > 0:
+                angle = -angle
+            l = R / np.tan((np.pi - abs(angle)) / 2)
+            ratio_1 = l / np.linalg.norm(res_pseq[i] - res_pseq[i - 1])
+            p1 = res_pseq[i] + (res_pseq[i - 1] - res_pseq[i]) * ratio_1
+            ratio_2 = l / np.linalg.norm(res_pseq[i] - res_pseq[i + 1])
+            p2 = res_pseq[i] + (res_pseq[i + 1] - res_pseq[i]) * ratio_2
+            tangent_pts.append(p1)
+            tangent_pts.append(p2)
+            pos += np.linalg.norm(res_pseq[i] - res_pseq[i - 1])
+            bendseq.append([angle, 0, pos + R * np.pi - l])
         if toggledebug:
             ax = plt.axes()
             bu.plot_pseq_2d(ax, res_pseq_inp)
             bu.plot_pseq_2d(ax, pseq)
             bu.plot_pseq_2d(ax, res_pseq)
-            # plot_pseq_2d(ax, tangent_pts)
+            bu.plot_pseq_2d(ax, tangent_pts)
             plt.show()
-        tangent_pts = []
-        bendseq = []
-        pos = 0
-        for i in range(1, len(res_pseq) - 1):
-            angle = rm.angle_between_vectors(res_pseq[i] - res_pseq[i - 1], res_pseq[i] - res_pseq[i + 1])
-            if (res_pseq[i + 1][1] + res_pseq[i - 1][1]) < res_pseq[i][1]:
-                angle = np.pi - angle
-            else:
-                angle = angle - np.pi
-            # print(np.degrees(angle))
-            pos += np.linalg.norm(res_pseq[i] - res_pseq[i - 1])
-            # l = R / np.tan(angle / 2)
-            # ratio_1 = l / np.linalg.norm(res_pseq[i] - res_pseq[i + 1])
-            # p1 = res_pseq[i] + (res_pseq[i + 1] - res_pseq[i]) * ratio_1
-            # ratio_2 = l / np.linalg.norm(res_pseq[i] - res_pseq[i - 1])
-            # p2 = res_pseq[i] + (res_pseq[i - 1] - res_pseq[i]) * ratio_2
-            # tangent_pts.append(p1)
-            # tangent_pts.append(p2)
-            bendseq.append([angle, 0, pos + R * np.pi])
-    for v in bendseq:
-        print(v)
+    ax = plt.axes()
+    bu.plot_pseq_2d(ax, res_pseq_inp)
+    bu.plot_pseq_2d(ax, pseq)
+    bu.plot_pseq_2d(ax, res_pseq)
+    bu.plot_pseq_2d(ax, tangent_pts)
+    plt.show()
+    # for v in bendseq:
+    #     print(v)
     return bendseq
 
 
@@ -269,21 +276,21 @@ if __name__ == '__main__':
     init_bendseq = iter_fit(goal_pseq, tor=.0005, toggledebug=False)
     pickle.dump(init_bendseq, open('./tmp_bendseq.pkl', 'wb'))
 
-    bs.gen_by_bendseq(init_bendseq, toggledebug=True)
+    bs.gen_by_bendseq(init_bendseq, toggledebug=False)
     bs.show(rgba=(0, .7, .7, .7), show_pseq=True)
-
+    goal_pseq = rm.homomat_transform_points(rm.homomat_from_posrot(rot=rm.rotmat_from_axangle((1, 0, 0), np.pi)),
+                                            goal_pseq)
     goal_pseq = align_pseqs_icp(goal_pseq, bs.pseq)
     bu.show_pseq(bu.linear_inp3d(bs.pseq), rgba=(1, 0, 0, 1))
     bu.show_pseq(goal_pseq, rgba=(0, 1, 0, 1))
 
     # opt = BendOptimizer(bs, init_pseq, init_rotseq, goal_pseq, bend_times=len(init_bendseq))
-    # res, cost = opt.solve(init_bendseq=[[v[2], v[0]] for v in init_bendseq])
+    # res, cost = opt.solve(init_bendseq=np.asarray([[v[0], v[2]] for v in init_bendseq]).flatten())
     # print(res, cost)
     # bs.bend(res[0], 0, res[1])
     # res = align_pseqs(bs.pseq, goal_pseq)
     # # goal_pseq = align_pseqs_icp(goal_pseq, bs.pseq)
     # bu.show_pseq(bu.linear_inp3d(res), rgba=(1, 0, 0, 1))
-    # bu.show_pseq(goal_pseq, rgba=(0, 1, 0, 1))
 
     # bs.show()
     # print(bs.pseq)
