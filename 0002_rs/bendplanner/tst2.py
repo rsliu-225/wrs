@@ -1,49 +1,32 @@
+from scipy.interpolate import LinearNDInterpolator
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy.spatial.distance import euclidean
 
+# sample array for field components
+Ex1 = np.array([8.84138516e+01, 8.84138516e+01, 7.77498363e+01, 5.77080432e+01])
+Ey1 = np.array([1.54844696e+02, 1.54844696e+02, 1.36168141e+02, 1.01067698e+02])
+Ez1 = np.array([-2.45922135e+03 - 2.45922135e+03 - 2.45922135e+03 - 2.45922135e+03])
 
-def dist_ponto_cj(ponto, lista):
-    return [euclidean(ponto, lista[j]) for j in range(len(lista))]
+# sample array for position
+x = np.array([1.94871844, 5.61111111, 8.59672097, 10.54543941])
+y = np.array([8.84138516e+01, 8.84138516e+01, 7.77498363e+01, 5.77080432e+01])
+z = np.array([30.55555556, 30.55555556, 30.55555556, 30.55555556])
 
+# linear interpolation of Ex1, Ey1, Ez1
+Exf = LinearNDInterpolator((x, y, z), Ex1)
+Eyf = LinearNDInterpolator((x, y, z), Ey1)
+Ezf = LinearNDInterpolator((x, y, z), Ez1)
 
-def ponto_mais_longe(lista_ds):
-    ds_max = max(lista_ds)
-    idx = lista_ds.index(ds_max)
-    return pts[idx]
+# array of new point
+x1 = np.linspace(0, 5, 10)
+y1 = np.linspace(0, 7, 10)
+z1 = np.linspace(0, 10, 10)
 
+# creating array([x1,y1,z1],[x2,y2,z2],....) for new grids
+X = np.dstack((x1, y1, z1))
+points = np.array(X)
 
-N = 80
-K = 40
-farthest_pts = [0] * K
-print('N = %d, K = %d' % (N, K))
-
-# x=[ np.random.randint(1,N) for p in range(N)]
-# y=[ np.random.randint(1,N) for p in range(N)]
-x = np.random.random_sample((N,))
-y = np.random.random_sample((N,))
-pts = [[x[i], y[i]] for i in range(N)]
-
-P0 = pts[np.random.randint(0, N)]
-farthest_pts[0] = P0
-ds0 = dist_ponto_cj(P0, pts)
-
-ds_tmp = ds0
-# print ds_tmp
-for i in range(1, K):
-    # PML =
-    farthest_pts[i] = ponto_mais_longe(ds_tmp)
-    ds_tmp2 = dist_ponto_cj(farthest_pts[i], pts)
-    ds_tmp = [min(ds_tmp[j], ds_tmp2[j]) for j in range(len(ds_tmp))]
-    print('P[%d]: %s' % (i, farthest_pts[i]))
-
-# print farthest_pts
-
-xf = [farthest_pts[j][0] for j in range(len(farthest_pts))]
-yf = [farthest_pts[j][1] for j in range(len(farthest_pts))]
-
-fig, ax = plt.subplots()
-plt.grid(False)
-plt.scatter(x, y, c='k', s=4)
-plt.scatter(xf, yf, c='r', s=4)
-plt.show()
+# Field at new grids after linear interpolation
+fEx = Exf(points)
+fEy = Eyf(points)
+fEz = Ezf(points)
+print(fEx, fEy, fEz)

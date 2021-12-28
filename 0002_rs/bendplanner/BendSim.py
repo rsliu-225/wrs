@@ -43,7 +43,7 @@ class BendSim(object):
             self.rotseq = [np.eye(3)]
         else:
             self.pseq = pseq
-            self.pseq.append((0, self.pseq[-1][1] + 2 * np.pi * self.bend_r, 0))
+            self.pseq.append((0, self.pseq[-1][1] + 2 * bu.INIT_L, 0))
             self.pseq = [np.asarray(p) + np.asarray([self.bend_r, 0, 0]) for p in self.pseq]
             self.rotseq = rotseq
             self.rotseq.append(np.eye(3))
@@ -72,10 +72,10 @@ class BendSim(object):
             self.pillar_punch.attach_to(base)
 
     def reset(self, pseq, rotseq):
-        self.pseq = pseq
+        self.pseq = copy.deepcopy(pseq)
         self.pseq.append((0, self.pseq[-1][1] + 2 * np.pi * self.bend_r, 0))
         self.pseq = [np.asarray(p) + np.asarray([self.bend_r, 0, 0]) for p in self.pseq]
-        self.rotseq = rotseq
+        self.rotseq = copy.deepcopy(rotseq)
         self.rotseq.append(np.eye(3))
         self.objcm = None
 
@@ -150,8 +150,10 @@ class BendSim(object):
                                      epos=np.asarray((self.c2c_dist, 0, 0)),
                                      rgba=[0, .7, .7, .7],
                                      thickness=.0005).attach_to(base)
-                print(plate_angle, rm.angle_between_vectors(tmp_p, [-self.c2c_dist, 0, 0]))
-                return self.pseq[0], self.rotseq[0], rm.angle_between_vectors(tmp_p, [-self.c2c_dist, 0, 0])
+                # print(plate_angle, rm.angle_between_vectors(tmp_p, [-self.c2c_dist, 0, 0]))
+                # print(rm.angle_between_vectors(tmp_p, [-self.c2c_dist, 0, 0]), i,
+                #       rm.angle_between_vectors(tmp_p, [-self.c2c_dist, 0, 0]) - i)
+                return self.pseq[0], self.rotseq[0], np.pi - abs(i) if i > 0 else abs(i) - np.pi
         print('No collided point found (punch pillar & plate)!')
         return None, None, None
 
@@ -184,11 +186,11 @@ class BendSim(object):
             return tmp_pseq, tmp_rotseq
 
     def bend(self, rot_angle, lift_angle, insert_l=None, toggledebug=False):
-        # rot_end = np.dot(rm.rotmat_from_axangle((1, 0, 0), lift_angle), rm.rotmat_from_axangle((0, 0, 1), rot_angle))
-        rot_end = rm.rotmat_from_axangle((0, 0, 1), rot_angle)
+        rot_end = np.dot(rm.rotmat_from_axangle((1, 0, 0), lift_angle), rm.rotmat_from_axangle((0, 0, 1), rot_angle))
+        # rot_end = rm.rotmat_from_axangle((0, 0, 1), rot_angle)
         if insert_l is not None:
             tmp_pseq, tmp_rotseq = self.__get_bended_pseq(center=np.asarray([0, 0, 0]), r=self.bend_r,
-                                                          rot_angle=rot_angle, lift_angle=0)
+                                                          rot_angle=rot_angle, lift_angle=lift_angle)
             arc_l = abs(rot_angle * self.bend_r / np.cos(lift_angle))
             start_inx = self.__insert_p(insert_l, toggledebug=False)
             end_inx = self.__insert_p(insert_l + arc_l, toggledebug=False)
@@ -212,7 +214,7 @@ class BendSim(object):
             new_end_homomat = rm.homomat_from_posrot(pseq_mid[-1], rotseq_mid[-1])
             transmat4_end = np.dot(new_end_homomat, np.linalg.inv(org_end_homomat))
             pseq_end = rm.homomat_transform_points(transmat4_end, self.pseq[end_inx:]).tolist()
-            rotseq_end = [np.dot(transmat4_end[:3,:3], r) for r in self.rotseq[end_inx:]]
+            rotseq_end = [np.dot(transmat4_end[:3, :3], r) for r in self.rotseq[end_inx:]]
 
             self.pseq = self.pseq[:start_inx] + pseq_mid + pseq_end
             self.rotseq = self.rotseq[:start_inx] + rotseq_mid + rotseq_end
@@ -314,7 +316,7 @@ class BendSim(object):
             for i in range(len(self.pseq)):
                 gm.gen_frame(self.pseq[i], self.rotseq[i], length=.005, thickness=.0005, alpha=.5).attach_to(base)
         if show_pseq:
-            for p in bu.linear_inp3d(self.pseq):
+            for p in bu.linear_inp3d_by_step(self.pseq):
                 gm.gen_sphere(p, radius=.0004, rgba=rgba).attach_to(base)
             # gm.gen_sphere(self.pseq[0], radius=.0004, rgba=(1, 0, 0, 1)).attach_to(base)
             # gm.gen_sphere(self.pseq[-1], radius=.0004, rgba=(0, 1, 0, 1)).attach_to(base)
@@ -389,9 +391,16 @@ class BendSim(object):
 
     def gen_by_bendseq(self, bendseq, toggledebug=False):
         for bend in bendseq:
-            # pos, rot, angle = \
-            #     self.cal_startp(bend[2], dir=0 if bend[0] < 0 else 1, lift_angle=bend[1], toggledebug=toggledebug)
+            print('------------')
+            print(bend)
+            pos, rot, angle = \
+                self.cal_startp(bend[2], dir=0 if bend[0] < 0 else 1, lift_angle=bend[1], toggledebug=toggledebug)
             self.bend(bend[0], bend[1], bend[2], toggledebug=toggledebug)
+            if toggledebug:
+                # hndmat4 = rm.homomat_from_posrot(pos, rot)
+                gm.gen_frame(pos, rot, length=.01, thickness=.001).attach_to(base)
+            print("motor init:", np.degrees(angle))
+            print("motor finish:", np.degrees(angle) + np.degrees(bend[0]))
 
     def cal_length(self):
         length = 0
@@ -433,20 +442,20 @@ if __name__ == '__main__':
     width = .002
     motion_seq = [
         ['f', (0, .01, 0)],
-        ['b', np.radians(-60), np.radians(0)],
+        ['b', np.radians(-60), np.radians(10)],
         ['f', (0, .01, 0)],
         ['b', np.radians(60), np.radians(-20)],
         ['f', (0, .02, 0)],
-        ['b', np.radians(1), np.radians(0)],
+        ['b', np.radians(1), np.radians(10)],
     ]
-    # bendseq = [
-    #     [np.radians(-60), np.radians(0), .02],
-    #     [np.radians(60), np.radians(0), .025],
-    #     # [np.radians(40), np.radians(0), .06],
-    #     # [np.radians(-15), np.radians(0), .08],
-    #     # [np.radians(20), np.radians(0), .1]
-    # ]
-    bendseq = pickle.load(open('./tmp_bendseq.pkl', 'rb'))
+    bendseq = [
+        [np.radians(-60), np.radians(10), .02],
+        [np.radians(60), np.radians(-10), .04],
+        # [np.radians(40), np.radians(0), .06],
+        # [np.radians(-15), np.radians(0), .08],
+        # [np.radians(20), np.radians(0), .1]
+    ]
+    # bendseq = pickle.load(open('./tmp_bendseq.pkl', 'rb'))
 
     bs = BendSim(thickness, width, show=True)
     # bs.gen_by_motionseq(motion_seq)
@@ -457,7 +466,7 @@ if __name__ == '__main__':
     # bs.show_ani_bendseq(bendseq)
     bs.show(rgba=(0, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)), show_pseq=True,
             show_frame=True)
-    # base.run()
+
     # threshold = bs.cal_startp(toggledebug=True)
     # print(threshold)
     # threshold = bs.cal_startp(pos_l=.02, toggledebug=True)
