@@ -9,9 +9,7 @@ import basis.o3dhelper as o3dh
 import time
 import random
 import matplotlib.pyplot as plt
-
-R = .01 + 0.0015
-INIT_L = R * np.pi
+import bender_config as bconfig
 
 
 def gen_circle(r, step=math.pi / 90):

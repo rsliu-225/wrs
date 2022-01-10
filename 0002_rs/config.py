@@ -35,20 +35,3 @@ GRASPMAP_REL_PATH = ROOT + "/graspplanner/graspmap/"
 # GRASPMAP_REL_PATH = ROOT + "/graspplanner/graspmap/temp/"
 MOTIONSCRIPT_REL_PATH = ROOT + "/motionscript/"
 PENPOSE_REL_PATH = ROOT + "/log/penpose/"
-
-'''
-robot
-'''
-STATE = {}
-state_template = {
-    "objname": None,
-    "obstaclecmlist": None,
-    "assembly_pos": None,
-    "startmat4": None,
-    "goalmat4": None,
-    "planned": None,
-    "objmsmp": None,
-    "numikrmsmp": None,
-    "jawwidthmp": None,
-    "planner": None,
-}

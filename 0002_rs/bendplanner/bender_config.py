@@ -1,0 +1,12 @@
+import numpy as np
+
+R_SIDE = .013 / 2
+R_CENTER = .02 / 2
+R_BASE = .015 / 2
+C2C_DIST = .0235
+
+THICKNESS = 0.0015
+WIDTH = .002
+
+R_BEND = R_CENTER + THICKNESS
+INIT_L = R_BEND * np.pi

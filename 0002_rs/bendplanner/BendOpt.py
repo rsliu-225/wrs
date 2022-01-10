@@ -12,6 +12,7 @@ import time
 import random
 import matplotlib.pyplot as plt
 import bend_utils as bu
+import bender_config as bconfig
 
 
 class BendOptimizer(object):
@@ -35,7 +36,7 @@ class BendOptimizer(object):
         self.bs.reset(self.init_pseq, self.init_rotseq)
         try:
             self.bend_x(x)
-            self.bs.move_to_org(bu.INIT_L)
+            self.bs.move_to_org(bconfig.INIT_L)
             # pseq = bu.linear_inp3d_by_step(bs.pseq)
             # err, fitness, _ = o3dh.registration_ptpt(np.asarray(pseq), np.asarray(goal_pseq), toggledebug=False)
             err, _ = avg_distance_between_polylines(np.asarray(self.bs.pseq[1:-2]), np.asarray(goal_pseq),
@@ -52,7 +53,7 @@ class BendOptimizer(object):
             # pos, rot, angle = \
             #     bs.cal_startp(x[2 * i + 1], dir=0 if x[2 * i] < 0 else 1, toggledebug=False)
             # if pos is not None:
-            bs.bend(rot_angle=x[2 * i], lift_angle=np.radians(0), insert_l=x[2 * i + 1])
+            bs.bend(bend_angle=x[2 * i], lift_angle=np.radians(0), insert_l=x[2 * i + 1])
         return self.bs.pseq
 
     def update_known(self):
@@ -165,8 +166,8 @@ def avg_distance_between_polylines(pts1, pts2, toggledebug=False):
 
     if toggledebug:
         ax = plt.axes(projection='3d')
-        z_max = max([abs(np.max(z1)), abs(np.max(z2))])
-        ax.set_zlim([-z_max, z_max])
+        # z_max = max([abs(np.max(z1)), abs(np.max(z2))])
+        # ax.set_zlim([-z_max, z_max])
         ax.scatter3D(x1, y1, z1, color='red')
         ax.plot3D(x1, y1, z1, 'red')
         ax.scatter3D(x2, y2, z2, color='green')
@@ -254,10 +255,9 @@ def pseq2bendseq(res_pseq):
         lift_a = rm.angle_between_vectors(v3, [v3[0], v3[1], 0])
         if v3[2] < 0:
             lift_a = -lift_a
-        l = (bu.R / np.tan((np.pi - abs(rot_a)) / 2)) / np.cos(abs(lift_a))
-        arc = abs(rot_a) * bu.R
-        bendseq.append([rot_a, lift_a, pos + bu.INIT_L - l - sum(diff_list)])
-
+        l = (bconfig.R_BEND / np.tan((np.pi - abs(rot_a)) / 2)) / np.cos(abs(lift_a))
+        arc = abs(rot_a) * bconfig.R_BEND
+        bendseq.append([rot_a, lift_a, pos + bconfig.INIT_L - l - sum(diff_list)])
         diff_list.append(2 * l - arc)
 
         ratio_1 = l / np.linalg.norm(res_pseq[i] - res_pseq[i - 1])
@@ -276,85 +276,21 @@ def pseq2bendseq(res_pseq):
     return bendseq
 
 
-# def iter_fit(pseq, tor=.001, toggledebug=False):
-#     pseq = np.asarray(pseq)
-#     max_err = np.inf
-#     res_pseq = np.asarray([pseq[0], pseq[-1]])
-#     checklist = []
-#     while max_err > tor:
-#         res_pseq_inp = np.zeros((1, 3))
-#         diff = np.linalg.norm(np.diff(res_pseq), axis=1)
-#         for i, v in enumerate(diff):
-#             if v == 0:
-#                 continue
-#             pseq_range = (list(pseq[:, 0]).index(res_pseq[i - 1][0]), list(pseq[:, 0]).index(res_pseq[i][0]))
-#             res_3d = bu.linear_inp3d(res_pseq[i - 1:i + 1], pseq[pseq_range[0]:pseq_range[1], 0])
-#             res_pseq_inp = np.vstack((res_pseq_inp, res_3d))
-#         err_narry = np.linalg.norm(np.asarray(res_pseq_inp) - pseq, axis=1)
-#         max_err = np.max(err_narry)
-#         max_inx = list(err_narry).index(max_err)
-#         if max_inx in checklist:
-#             break
-#         res_pseq = np.unique(np.vstack((res_pseq, pseq[max_inx])), axis=0)
-#         res_pseq = res_pseq[res_pseq[:, 0].argsort(), :]
-#         checklist.append(max_inx)
-#         if toggledebug:
-#             ax = plt.axes(projection='3d')
-#             bu.plot_pseq(ax, res_pseq_inp)
-#             bu.plot_pseq(ax, pseq)
-#             bu.plot_pseq(ax, res_pseq)
-#             plt.show()
-#
-#     tangent_pts = []
-#     bendseq = []
-#     pos = 0
-#     for i in range(1, len(res_pseq) - 1):
-#         v1 = res_pseq[i - 1] - res_pseq[i]
-#         v2 = res_pseq[i] - res_pseq[i + 1]
-#         rot_a = rm.angle_between_vectors([v1[0], v1[1], 0], [v2[0], v2[1], 0])
-#         rot_n = np.cross([v1[0], v1[1], 0], [v2[0], v2[1], 0])
-#         if rot_n[2] > 0:
-#             rot_a = -rot_a
-#         # ratio_1 = l / np.linalg.norm(res_pseq[i] - res_pseq[i - 1])
-#         # p1 = res_pseq[i] + (res_pseq[i - 1] - res_pseq[i]) * ratio_1
-#         # ratio_2 = l / np.linalg.norm(res_pseq[i] - res_pseq[i + 1])
-#         # p2 = res_pseq[i] + (res_pseq[i + 1] - res_pseq[i]) * ratio_2
-#         # tangent_pts.append(p1)
-#         # tangent_pts.append(p2)
-#         pos += np.linalg.norm(res_pseq[i] - res_pseq[i - 1])
-#         v3 = res_pseq[i - 1] - res_pseq[i + 1]
-#         lift_a = rm.angle_between_vectors(v3, [v3[0], v3[1], 0])
-#         l = (bu.R / np.tan((np.pi - abs(rot_a)) / 2)) / np.cos(abs(lift_a))
-#
-#         if v3[2] > 0:
-#             lift_a = -lift_a
-#         bendseq.append([rot_a, lift_a, pos + bu.INIT_L - l])
-#
-#     ax = plt.axes(projection='3d')
-#     bu.plot_pseq(ax, pseq)
-#     bu.plot_pseq(ax, bu.linear_inp3d_by_step(res_pseq))
-#     bu.plot_pseq(ax, res_pseq)
-#     # bu.plot_pseq(ax, tangent_pts)
-#     plt.show()
-#     for v in bendseq:
-#         print(v)
-#     return bendseq
-
-
 if __name__ == '__main__':
     import pickle
 
     base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
     gm.gen_frame(thickness=.0005, alpha=.1, length=.01).attach_to(base)
-    goal_pseq = bu.gen_polygen(5, .05)
-    # goal_pseq = bu.gen_ramdom_curve(length=.1, step=.0005, toggle_z=True, toggledebug=False)
+
+    # goal_pseq = bu.gen_polygen(5, .05)
+    goal_pseq = bu.gen_ramdom_curve(length=.1, step=.0005, toggle_z=True, toggledebug=False)
     # goal_pseq = bu.gen_circle(.05)
 
     init_pseq = [(0, 0, 0), (0, bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
-    bs = BendSim.BendSim(thickness=0.0015, width=.002, pseq=init_pseq, rotseq=init_rotseq)
+    bs = BendSim.BendSim(pseq=init_pseq, rotseq=init_rotseq)
 
-    fit_pseq = iter_fit(goal_pseq, tor=.0005, toggledebug=False)
+    fit_pseq = iter_fit(goal_pseq, tor=.0005, toggledebug=True)
     init_bendseq = pseq2bendseq(fit_pseq)
     pickle.dump(init_bendseq, open('./tmp_bendseq.pkl', 'wb'))
 
@@ -373,5 +309,4 @@ if __name__ == '__main__':
     # bu.show_pseq(bu.linear_inp3d_by_step(res), rgba=(1, 0, 0, 1))
 
     bs.show()
-    print(bs.pseq)
     base.run()
