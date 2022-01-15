@@ -243,22 +243,23 @@ def pseq2bendseq(res_pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L):
     bendseq = []
     pos = 0
     diff_list = []
+    n_pre = np.asarray([0, 0, -1])
     for i in range(1, len(res_pseq) - 1):
         v1 = res_pseq[i - 1] - res_pseq[i]
         v2 = res_pseq[i] - res_pseq[i + 1]
         bend_a = rm.angle_between_vectors(v1, v2)
         rot_n = np.cross(v1, v2)
-        if rot_n[2] > 0:
-            bend_a = -bend_a
-
+        # if rot_n[2] > 0:
+        #     bend_a = -bend_a
         pos += np.linalg.norm(res_pseq[i] - res_pseq[i - 1])
         v3 = res_pseq[i - 1] - res_pseq[i + 1]
-        n = np.cross(v1, v2)
         # lift_a = rm.angle_between_vectors(v3, [v3[0], v3[1], 0])
-        # if v3[2] < 0:
-        #     lift_a = -lift_a
-        rot_a = rm.angle_between_vectors(np.asarray([0, 0, 1]), n)-np.pi
+        rot_a = rm.angle_between_vectors(n_pre, rot_n)
+        n_pre = rot_n
         lift_a = 0
+        # if v3[2] > 0:
+        #     rot_a = -rot_a
+
         l = (bend_r / np.tan((np.pi - abs(bend_a)) / 2)) / np.cos(abs(lift_a))
         arc = abs(bend_a) * bend_r
         bendseq.append([bend_a, lift_a, rot_a, pos + init_l - l - sum(diff_list)])
@@ -289,7 +290,7 @@ if __name__ == '__main__':
     # goal_pseq = bu.gen_polygen(5, .05)
     # goal_pseq = bu.gen_ramdom_curve(length=.1, step=.0005, z_max=.01, toggledebug=False)
     # goal_pseq = bu.gen_circle(.05)
-    goal_pseq = np.asarray([(0, 0, 0), (0, .02, 0), (.02, .02, 0), (.02, .03, .02)])
+    goal_pseq = np.asarray([(0, 0, 0), (0, .02, 0), (.02, .02, 0), (.02, .03, .02), (0, .03, 0)])
 
     init_pseq = [(0, 0, 0), (0, bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
