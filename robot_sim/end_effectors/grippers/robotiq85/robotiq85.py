@@ -2,6 +2,7 @@ import os
 import math
 import numpy as np
 import modeling.model_collection as mc
+import modeling.geometric_model as gm
 import robot_sim._kinematics.jlchain as jl
 import basis.robot_math as rm
 import robot_sim.end_effectors.grippers.gripper_interface as gp
@@ -197,6 +198,7 @@ class Robotiq85(gp.GripperInterface):
             raise ValueError(f"Jawwidth must be {self.jawwidth_rng[0]}mm~{self.jawwidth_rng[1]}mm!")
         motion_val = math.asin((self.jawwidth_rng[1] / 2.0 + .0064 - .0306011) / 0.055) - math.asin((jaw_width / 2.0 + .0064 - .0306011) / 0.055)
         self.fk(motion_val)
+        # TODO dynamically change jaw center
 
     def gen_stickmodel(self,
                        tcp_jntid=None,
@@ -254,8 +256,8 @@ class Robotiq85(gp.GripperInterface):
                                      toggle_jntscs=toggle_jntscs,
                                      rgba=rgba).attach_to(mm_collection)
         if toggle_tcpcs:
-            jaw_center_gl_pos = self.rotmat.dot(grpr.jaw_center_pos) + self.pos
-            jaw_center_gl_rotmat = self.rotmat.dot(grpr.jaw_center_rotmat)
+            jaw_center_gl_pos = self.rotmat.dot(self.jaw_center_pos) + self.pos
+            jaw_center_gl_rotmat = self.rotmat.dot(self.jaw_center_rotmat)
             gm.gen_dashstick(spos=self.pos,
                              epos=jaw_center_gl_pos,
                              thickness=.0062,

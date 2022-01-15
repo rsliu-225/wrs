@@ -39,8 +39,6 @@ def rotmat_from_axangle(axis, angle):
     date: 20161220
     """
     axis = unit_vector(axis)
-    if angle > 2 * math.pi:
-        angle = angle % 2 * math.pi
     a = math.cos(angle / 2.0)
     b, c, d = -axis * math.sin(angle / 2.0)
     aa, bb, cc, dd = a * a, b * b, c * c, d * d
@@ -66,6 +64,13 @@ def rotmat_from_quaternion(quaternion):
         [q[1, 3] - q[2, 0], q[2, 3] + q[1, 0], 1.0 - q[1, 1] - q[2, 2], 0.0],
         [0.0, 0.0, 0.0, 1.0]])
 
+def rotmat_to_quaternion(rotmat):
+    """
+    convert a rotmat to quaternion
+    :param rotmat:
+    :return:
+    """
+    pass
 
 def rotmat_from_normal(surfacenormal):
     '''
@@ -782,6 +787,19 @@ def get_rgba_from_cmap(id):
     return cm(id % 20)
 
 
+def consecutive(nparray1d, stepsize=1):
+    """
+    find consecutive sequences from an array
+    example:
+    a = np.array([0, 47, 48, 49, 50, 97, 98, 99])
+    consecutive(a)
+    returns [array([0]), array([47, 48, 49, 50]), array([97, 98, 99])]
+    :param nparray1d:
+    :param stepsize:
+    :return:
+    """
+    return np.split(nparray1d, np.where(np.diff(nparray1d) != stepsize)[0] + 1)
+
 # The following code is from Gohlke
 #
 #
@@ -1113,7 +1131,7 @@ def rotation_from_matrix(matrix):
     else:
         sina = (R[2, 1] + (cosa - 1.0) * direction[1] * direction[2]) / direction[0]
     angle = math.atan2(sina, cosa)
-    return angle, direction, point
+    return angle, direction, pint
 
 
 def scale_matrix(factor, origin=None, direction=None):

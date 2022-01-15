@@ -4,7 +4,7 @@ import time
 import numpy as np
 import robot_con.xarm_shuidi.xarm_shuidi_pb2 as aa_msg
 import robot_con.xarm_shuidi.xarm_shuidi_pb2_grpc as aa_rpc
-import motion.trajectory.piecewisepoly as pwp
+import motion.trajectory.piecewisepoly_toppra as pwp
 
 
 class XArmShuidiClient(object):
@@ -39,10 +39,9 @@ class XArmShuidiClient(object):
 
     def arm_move_jspace_path(self,
                              path,
-                             max_jntspeed=math.pi,
-                             method='linear',
-                             start_frame_id=1,
-                             toggle_debug=False):
+                             max_jntvel=None,
+                             max_jntacc=None,
+                             start_frame_id=1):
         """
         TODO: make speed even
         :param path: [jnt_values0, jnt_values1, ...], results of motion planning
@@ -53,30 +52,9 @@ class XArmShuidiClient(object):
         if not path or path is None:
             raise ValueError("The given is incorrect!")
         control_frequency = .005
-        tpply = pwp.PiecewisePoly(method=method)
-        interpolated_path, interpolated_spd, interpolated_acc, interpolated_x = \
-            tpply.interpolate(path=path, control_frequency=.005, time_interval=.1)
-            # tpply.interpolate_by_max_jntspeed(path=path,
-            #                                   control_frequency=control_frequency,
-            #                                   max_jntspeed=max_jntspeed)
-        if toggle_debug:
-            import matplotlib.pyplot as plt
-            # plt.plot(interplated_path)
-            plt.subplot(311)
-            for i in range(len(path)):
-                plt.axvline(x=i)
-            plt.plot(interpolated_path)
-            plt.subplot(312)
-            for i in range(len(path)):
-                plt.axvline(x=i)
-            plt.plot(interpolated_spd)
-            plt.subplot(313)
-            for i in range(len(path)):
-                plt.axvline(x=i)
-            plt.plot(interpolated_acc)
-            plt.show()
-            import pickle
-            pickle.dump([interpolated_path, interpolated_spd, interpolated_acc], open("interpolated_traj.pkl", "wb"))
+        tpply = pwp.PiecewisePolyTOPPRA()
+        interpolated_path = tpply.interpolate_by_max_spdacc(path=path, control_frequency=control_frequency,
+                                                            max_jntvel=max_jntvel, max_jntacc=max_jntacc)
         interpolated_path = interpolated_path[start_frame_id:]
         path_msg = aa_msg.Path(length=len(interpolated_path),
                                njnts=len(interpolated_path[0]),
@@ -143,7 +121,7 @@ if __name__ == "__main__":
     rbt_s.jaw_to(jawwidth=jawwidth)
     rbt_s.gen_meshmodel().attach_to(base)
     # base.run()
-    # rbt_x.agv_move(agv_linear_speed=-.1, agv_angular_speed=.1, time_interval=5)
+    # rbt_x.agv_move(agv_linear_speed=-.1, agv_angular_speed=.1, time_intervals=5)
     agv_linear_speed = .2
     agv_angular_speed = .5
     arm_linear_speed = .02
@@ -270,7 +248,7 @@ if __name__ == "__main__":
         #     rbt_s.fk(jnt_values=new_jnt_values)
         #     toc = time.time()
         #     start_frame_id = math.ceil((toc - tic) / .01)
-        #     rbt_x.arm_move_jspace_path([last_jnt_values, new_jnt_values], time_interval=.1, start_frame_id=start_frame_id)
+        #     rbt_x.arm_move_jspace_path([last_jnt_values, new_jnt_values], time_intervals=.1, start_frame_id=start_frame_id)
 
 # path = [[0, 0, 0, 0, 0, 0, 0]]wwwwwwwwwwww
 # rbt_x.move_jspace_path(path)
