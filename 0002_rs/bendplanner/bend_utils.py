@@ -28,13 +28,13 @@ def gen_polygen(n, l, do_inp=True, ):
     return pseq
 
 
-def gen_ramdom_curve(kp_num=5, length=.5, step=.005, toggle_z=False, do_inp=True, toggledebug=False):
+def gen_ramdom_curve(kp_num=5, length=.5, step=.005, z_max=False, do_inp=True, toggledebug=False):
     pseq = np.asarray([[0, 0, 0]])
     for i in range(kp_num - 1):
         a = random.uniform(-np.pi / 3, np.pi / 3)
         tmp_p = pseq[-1] + np.asarray((np.cos(a) * length / kp_num,
                                        np.sin(a) * length / kp_num,
-                                       random.uniform(-.002, .002) if toggle_z else 0))
+                                       random.uniform(-z_max, z_max) if z_max else 0))
         pseq = np.vstack([pseq, tmp_p])
     inp = interpolate.interp1d(pseq[:, 0], pseq[:, 1], kind='cubic')
     inp_z = interpolate.interp1d(pseq[:, 0], pseq[:, 2], kind='cubic')
@@ -95,13 +95,13 @@ def cal_length(pseq):
     return length
 
 
-def show_pseq(pseq, rgba=(1, 0, 0, 1), show_stick=False):
+def show_pseq(pseq, rgba=(1, 0, 0, 1), radius=0.0005, show_stick=False):
     for p in pseq:
-        gm.gen_sphere(pos=np.asarray(p), rgba=rgba, radius=0.0005).attach_to(base)
+        gm.gen_sphere(pos=np.asarray(p), rgba=rgba, radius=radius).attach_to(base)
     if show_stick:
         for i in range(0, len(pseq) - 1):
-            gm.gen_stick(spos=np.asarray(pseq[i]), epos=np.asarray(pseq[i + 1]), rgba=rgba, thickness=0.0005).attach_to(
-                base)
+            gm.gen_stick(spos=np.asarray(pseq[i]), epos=np.asarray(pseq[i + 1]), rgba=rgba, thickness=radius) \
+                .attach_to(base)
 
 
 def plot_pseq(ax3d, pseq):
@@ -117,12 +117,12 @@ def plot_pseq_2d(ax, pseq):
     ax.grid()
 
 
-def align_with_goal(bs, goal_pseq):
+def align_with_goal(bs, goal_pseq, init_pos=(bconfig.R_BEND, 0, 0), init_l=bconfig.INIT_L):
     goal_rot = np.dot(
         rm.rotmat_from_axangle((0, 0, 1), rm.angle_between_vectors(goal_pseq[0] - goal_pseq[1], [0, 1, 0])),
         rm.rotmat_from_axangle((1, 0, 0), np.pi))
-    goal_pseq = rm.homomat_transform_points(rm.homomat_from_posrot(rot=goal_rot, pos=(R, 0, 0)), goal_pseq)
-    bs.move_to_org(INIT_L)
+    goal_pseq = rm.homomat_transform_points(rm.homomat_from_posrot(rot=goal_rot, pos=init_pos), goal_pseq)
+    bs.move_to_org(init_l)
     return goal_pseq, np.asarray(bs.pseq)[1:-1]
 
 

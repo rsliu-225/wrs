@@ -313,7 +313,7 @@ class MotionPlanner(object):
         return path
 
     def plan_picknplace(self, grasp, objmat4_pair, obj, use_msc=True, use_pickupprim=True,
-                        use_placedownprim=True, start=None, pickupprim_len=.1, placedownprim_len=.07):
+                        use_placedownprim=True, start=None, pickupprim_len=.1, placedownprim_len=.1):
         eepos_initial, eerot_initial = self.get_ee_by_objmat4(grasp, objmat4_pair[0])
         if start is None:
             start = self.get_numik(eepos_initial, eerot_initial)
@@ -884,16 +884,16 @@ if __name__ == '__main__':
     gripper = rtqhe.RobotiqHE()
     for grasp in glist:
         print('------------------------')
-        # path = mp_lft.plan_picknplace(grasp, [objmat4_init, objmat4_goal], pen)
-        # if path is not None:
-        #     mp_lft.ah.show_animation(path)
-        #     base.run()
-        eepos_initial, eerot_initial = mp_lft.get_ee_by_objmat4(grasp, objmat4_init)
-        start = mp_lft.get_numik(eepos_initial, eerot_initial)
-        eepos_final, eerot_final = mp_lft.get_ee_by_objmat4(grasp, objmat4_goal)
-        goal = mp_lft.get_numik(eepos_final, eerot_final, msc=start)
-        if start is not None and goal is not None:
-            path = mp_lft.plan_start2end(end=goal, start=start)
-            if path is not None:
-                mp_lft.ah.show_animation(path)
-                base.run()
+        path = mp_lft.plan_picknplace(grasp, [objmat4_init, objmat4_goal], pen)
+        if path is not None:
+            mp_lft.ah.show_animation(path)
+            base.run()
+        # eepos_initial, eerot_initial = mp_lft.get_ee_by_objmat4(grasp, objmat4_init)
+        # start = mp_lft.get_numik(eepos_initial, eerot_initial)
+        # eepos_final, eerot_final = mp_lft.get_ee_by_objmat4(grasp, objmat4_goal)
+        # goal = mp_lft.get_numik(eepos_final, eerot_final, msc=start)
+        # if start is not None and goal is not None:
+        #     path = mp_lft.plan_start2end(end=goal, start=start)
+        #     if path is not None:
+        #         mp_lft.ah.show_animation(path)
+        #         base.run()
