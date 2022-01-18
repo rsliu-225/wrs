@@ -19,7 +19,7 @@ def gen_circle(r, step=math.pi / 90):
     return pseq
 
 
-def gen_polygen(n, l, do_inp=True, ):
+def gen_polygen(n, l, do_inp=True):
     pseq = [np.asarray((0, 0, 0))]
     for a in np.linspace(360 / n, 360, n):
         pseq.append(np.asarray(pseq[-1]) + np.asarray([np.cos(np.radians(a)) * l, np.sin(np.radians(a)) * l, 0]))
@@ -49,6 +49,13 @@ def gen_ramdom_curve(kp_num=5, length=.5, step=.005, z_max=False, do_inp=True, t
     if do_inp:
         pseq = linear_inp3d_by_step(np.asarray(list(zip(x, y, z))))
 
+    return pseq
+
+
+def gen_screw_thread(r, lift_a, rot_num, step=math.pi / 90):
+    pseq = []
+    for a in np.arange(0, 2 * math.pi * rot_num, step):
+        pseq.append(np.asarray([r * math.cos(a), r * math.sin(a), r * a * np.tan(lift_a)]))
     return pseq
 
 
@@ -104,10 +111,28 @@ def show_pseq(pseq, rgba=(1, 0, 0, 1), radius=0.0005, show_stick=False):
                 .attach_to(base)
 
 
+def plot_frame(ax, pos, rot):
+    length = .005
+    x = rot[:, 0] * length
+    y = rot[:, 1] * length
+    z = rot[:, 2] * length
+    ax.arrow3D(pos[0], pos[1], pos[2], x[0], x[1], x[2],
+               mutation_scale=10, arrowstyle='->', color='r')
+    ax.arrow3D(pos[0], pos[1], pos[2], y[0], y[1], y[2],
+               mutation_scale=10, arrowstyle='->', color='g')
+    ax.arrow3D(pos[0], pos[1], pos[2], z[0], z[1], z[2],
+               mutation_scale=10, arrowstyle='->', color='b')
+
+
 def plot_pseq(ax3d, pseq):
     pseq = np.asarray(pseq)
-    # ax3d.plot3D(pseq[:, 0], pseq[:, 1], pseq[:, 2])
-    ax3d.scatter3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], s=2)
+    ax3d.plot3D(pseq[:, 0], pseq[:, 1], pseq[:, 2])
+    ax3d.grid()
+
+
+def scatter_pseq(ax3d, pseq, s=2):
+    pseq = np.asarray(pseq)
+    ax3d.scatter3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], s=s)
     ax3d.grid()
 
 
@@ -117,12 +142,18 @@ def plot_pseq_2d(ax, pseq):
     ax.grid()
 
 
-def align_with_goal(bs, goal_pseq, init_pos=(bconfig.R_BEND, 0, 0), init_l=bconfig.INIT_L):
-    goal_rot = np.dot(
-        rm.rotmat_from_axangle((0, 0, 1), rm.angle_between_vectors(goal_pseq[0] - goal_pseq[1], [0, 1, 0])),
-        rm.rotmat_from_axangle((1, 0, 0), np.pi))
-    goal_pseq = rm.homomat_transform_points(rm.homomat_from_posrot(rot=goal_rot, pos=init_pos), goal_pseq)
-    bs.move_to_org(init_l)
+def align_with_goal(bs, goal_pseq, init_rot, init_pos=(bconfig.R_BEND, 0, 0), init_l=bconfig.INIT_L):
+    # goal_rot = np.dot(
+    #     # rm.rotmat_from_axangle((1, 0, 0), -np.pi / 2),
+    #     np.linalg.inv(init_rot),
+    #     rm.rotmat_from_axangle((1, 0, 0), np.pi),
+    #     # rm.rotmat_between_vectors(np.cross(goal_pseq[1] - goal_pseq[0], goal_pseq[2] - goal_pseq[1]), [0, 0, 1]),
+    # )
+    # goal_rot = rm.rotmat_between_vectors(goal_pseq[1] - goal_pseq[0], [0, 1, 0])
+    # goal_pseq = rm.homomat_transform_points(rm.homomat_from_posrot(rot=goal_rot, pos=init_pos), goal_pseq)
+    goal_pseq = rm.homomat_transform_points(rm.homomat_from_posrot(rot=np.linalg.inv(init_rot),
+                                                                   pos=init_pos - goal_pseq[0]), goal_pseq)
+    bs.move_to_org(init_l, cc=False)
     return goal_pseq, np.asarray(bs.pseq)[1:-1]
 
 

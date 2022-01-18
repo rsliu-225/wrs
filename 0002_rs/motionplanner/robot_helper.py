@@ -18,11 +18,6 @@ class RobotHelper(object):
         if armjnts is not None:
             self.rbt.fk(self.armname, armjnts)
         flag, cps = self.rbt.is_collided(obstacle_list=self.obscmlist, toggle_contact_points=True)
-        # if len(cps) > 0:
-        #     for p in cps:
-        #         gm.gen_sphere(p, radius=.01).attach_to(base)
-        #     if min([p[2] for p in cps]) > 7:
-        #         return False
         return flag
 
     def is_objcollided(self, obj, armjnts=None):
