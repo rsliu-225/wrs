@@ -49,20 +49,19 @@ class GraspPlanner(object):
         return effect_grasp
 
     def define_grasp_with_rotation(self, grasp_coordinate, finger_normal, hand_normal, jawwidth, obj,
-                                   rotation_ax=np.array([0, 1, 0]), rotation_interval=15, rotation_range=(-90, 90),
+                                   rot_ax=np.array([0, 1, 0]), rot_interval=15, rot_range=(-90, 90),
                                    toggledebug=False):
         if toggledebug:
-            gm.gen_frame().attach_to(base)
+            gm.gen_frame(thickness=.002).attach_to(base)
         effect_grasp = \
             gau.define_grasp_with_rotation(self.gripper_s, obj,
                                            gl_jaw_center_pos=np.asarray(grasp_coordinate),
                                            gl_jaw_center_z=np.asarray(hand_normal),
                                            gl_jaw_center_y=np.asarray(finger_normal),
                                            jaw_width=jawwidth,
-                                           gl_rotation_ax=rotation_ax,
-                                           rotation_interval=math.radians(rotation_interval),
-                                           rotation_range=(
-                                               math.radians(rotation_range[0]), math.radians(rotation_range[1])),
+                                           gl_rotation_ax=rot_ax,
+                                           rotation_interval=math.radians(rot_interval),
+                                           rotation_range=(math.radians(rot_range[0]), math.radians(rot_range[1] + 1)),
                                            toggle_flip=True, toggle_debug=toggledebug)
 
         return effect_grasp
@@ -77,3 +76,7 @@ class GraspPlanner(object):
                                              toggle_jntscs=toggle_jntscs).attach_to(base)
             else:
                 self.gripper_s.gen_stickmodel(toggle_tcpcs=toggle_tcpcs, toggle_jntscs=toggle_jntscs).attach_to(base)
+
+    def show_hnd(self, rgba=None, toggle_tcpcs=False, toggle_jntscs=False):
+        gm.gen_frame(thickness=.001).attach_to(base)
+        self.gripper_s.gen_meshmodel(rgba=rgba, toggle_tcpcs=toggle_tcpcs, toggle_jntscs=toggle_jntscs).attach_to(base)

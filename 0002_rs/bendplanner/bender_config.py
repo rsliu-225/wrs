@@ -2,8 +2,8 @@ import numpy as np
 
 # R_SIDE = .013 / 2
 # R_CENTER = .02 / 2
-R_SIDE = .02 / 2
-R_CENTER = .01 / 2
+R_SIDE = .015 / 2
+R_CENTER = .015 / 2
 R_BASE = .015 / 2
 C2C_DIST = .0235
 

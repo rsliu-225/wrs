@@ -261,13 +261,12 @@ def pseq2bendseq(res_pseq, mode='rot', bend_r=bconfig.R_BEND, init_l=bconfig.INI
             a = 0
         if mode == 'lift':
             if a > np.pi / 2:
-                a = a - np.pi / 2
+                a = np.pi - a
                 bend_a = -bend_a
-            if n_pre is not None and rm.angle_between_vectors(v1, np.cross(n_pre, rot_n)) > np.pi / 2:
-                lift_a += a
-            else:
-                lift_a -= a
-
+            # if n_pre is not None and rm.angle_between_vectors(v1, np.cross(n_pre, rot_n)) > np.pi / 2:
+            #     lift_a += a
+            # else:
+            #     lift_a -= a
         else:
             if n_pre is not None and rm.angle_between_vectors(v1, np.cross(n_pre, rot_n)) > np.pi / 2:
                 rot_a += a
@@ -295,9 +294,9 @@ def pseq2bendseq(res_pseq, mode='rot', bend_r=bconfig.R_BEND, init_l=bconfig.INI
         if i == 1:
             init_rot = rot
 
-    bu.plot_pseq(ax, bu.linear_inp3d_by_step(res_pseq))
     bu.plot_pseq(ax, res_pseq)
-    bu.plot_pseq(ax, tangent_pts)
+    bu.scatter_pseq(ax, res_pseq, s=5)
+    bu.scatter_pseq(ax, tangent_pts, s=5)
     plt.show()
 
     return bendseq, init_rot
@@ -310,7 +309,7 @@ if __name__ == '__main__':
     gm.gen_frame(thickness=.0005, alpha=.1, length=.01).attach_to(base)
 
     # goal_pseq = bu.gen_polygen(5, .05)
-    goal_pseq = bu.gen_ramdom_curve(kp_num=4, length=.1, step=.0005, z_max=.01, toggledebug=False)
+    goal_pseq = bu.gen_ramdom_curve(kp_num=4, length=.12, step=.0005, z_max=.02, toggledebug=False)
     # goal_pseq = bu.gen_screw_thread(r=.02, lift_a=np.radians(5), rot_num=2)
     # goal_pseq = bu.gen_circle(.05)
     # goal_pseq = np.asarray([(0, 0, 0), (0, .02, 0), (.02, .02, 0), (.02, .03, .02), (0, .03, 0), (0, .03, -.02)])
@@ -319,18 +318,20 @@ if __name__ == '__main__':
     init_rotseq = [np.eye(3), np.eye(3)]
     bs = BendSim.BendSim(pseq=init_pseq, rotseq=init_rotseq, show=True)
 
-    fit_pseq = iter_fit(goal_pseq, tor=.001, toggledebug=False)
+    fit_pseq = iter_fit(goal_pseq, tor=.0005, toggledebug=False)
     init_bendseq, init_rot = pseq2bendseq(fit_pseq, toggledebug=False)
-    pickle.dump(init_bendseq, open('./tmp_bendseq.pkl', 'wb'))
+    # pickle.dump(init_bendseq, open('./tmp_bendseq.pkl', 'wb'))
 
-    is_success = bs.gen_by_bendseq(init_bendseq, cc=True, toggledebug=False)
+    is_success, bendresseq = bs.gen_by_bendseq(init_bendseq, cc=False, toggledebug=False)
     print('Result Flag:', is_success)
 
     goal_pseq, res_pseq = bu.align_with_goal(bs, goal_pseq, init_rot)
     err, _ = avg_distance_between_polylines(res_pseq, goal_pseq, toggledebug=True)
+    # pickle.dump(bendresseq, open('./tmp_bendresseq.pkl', 'wb'))
 
     bu.show_pseq(bs.pseq, rgba=(1, 0, 0, 1))
     bu.show_pseq(bu.linear_inp3d_by_step(goal_pseq), rgba=(0, 1, 0, 1))
+    bs.show(rgba=(.7, .7, .7, .7))
 
     # opt = BendOptimizer(bs, init_pseq, init_rotseq, goal_pseq, bend_times=len(init_bendseq))
     # res, cost = opt.solve(init=np.asarray([[v[0], v[2]] for v in init_bendseq]).flatten())

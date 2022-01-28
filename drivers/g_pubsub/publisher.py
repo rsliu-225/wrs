@@ -16,6 +16,6 @@ for n in range(1, 10):
     data = data.encode("utf-8")
     # When you publish a message, the client returns a future.
     future = publisher.publish(topic_path, data)
-    print(future.result())
+    print(future.bendresseq())
 
 print(f"Published messages to {topic_path}.")

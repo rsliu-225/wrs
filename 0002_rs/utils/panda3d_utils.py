@@ -56,3 +56,19 @@ def zoombase(direction=np.array([1, 1, 1])):
         campos = np.array([center[0], center[1], center[2]]) + direction * distance
         base.cam.setPos(campos[0], campos[1], campos[2])
         base.cam.lookAt(center[0], center[1], center[2])
+
+
+def clearbase(sceneflag=3):
+    print(len(base.render.children))
+    for i in base.render.children:
+        if sceneflag > 0:
+            sceneflag -= 1
+        else:
+            if str(i).split('/')[-1] != 'defaultname':
+                i.removeNode()
+
+
+def clearobj_by_name(namelist):
+    for i in base.render.children:
+        if str(i).split('/')[-1] in namelist:
+            i.removeNode()

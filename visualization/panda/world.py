@@ -22,8 +22,8 @@ class World(ShowBase, object):
                  lookat_pos=np.array([0, 0, 0.25]),
                  up=np.array([0, 0, 1]),
                  fov=40,
-                 w=1920,
-                 h=1080,
+                 w=960,
+                 h=540,
                  lens_type="perspective",
                  toggle_debug=False,
                  auto_cam_rotate=False):

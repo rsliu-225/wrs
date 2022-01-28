@@ -4,11 +4,13 @@ import modeling.geometric_model as gm
 import modeling.collision_model as cm
 import grasping.planning.antipodal as gpa
 import robot_sim.end_effectors.grippers.yumi_gripper.yumi_gripper as yg
+import numpy as np
 
 base = wd.World(cam_pos=[1, 1, 1], lookat_pos=[0, 0, 0])
 gm.gen_frame().attach_to(base)
 # object
-object_tube = cm.CollisionModel("objects/tubebig.stl")
+# object_tube = cm.CollisionModel("objects/tubebig.stl")
+object_tube = cm.gen_stick(epos=np.asarray([0, .1, 0]), thickness=.0015, sections=180, rgba=(.7, .7, .7, .7))
 object_tube.set_rgba([.9, .75, .35, .3])
 object_tube.attach_to(base)
 # hnd_s
