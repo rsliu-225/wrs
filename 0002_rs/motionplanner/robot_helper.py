@@ -20,10 +20,10 @@ class RobotHelper(object):
         flag, cps = self.rbt.is_collided(obstacle_list=self.obscmlist, toggle_contact_points=True)
         return flag
 
-    def is_objcollided(self, obj, armjnts=None):
+    def is_objcollided(self, obslist, armjnts=None):
         if armjnts is not None:
             self.rbt.fk(self.armname, armjnts)
-        return self.rbt.is_collided(obstacle_list=self.obscmlist + [obj])
+        return self.rbt.is_collided(obstacle_list=self.obscmlist + obslist)
 
     def goto_armjnts(self, armjnts):
         self.rbt.fk(self.armname, armjnts)

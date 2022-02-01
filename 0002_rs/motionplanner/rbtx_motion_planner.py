@@ -156,7 +156,7 @@ class MotionPlannerRbtX(MotionPlanner):
             objpos_new = objpos + distance * pentip_direction
             objmat4_new = rm.homomat_from_posrot(objpos_new, objrot)
             # print("pos diff:", np.linalg.norm(objpos - objpos_new))
-            armjnts = self.get_armjnts_by_objmat4ngrasp(grasp, objcm, objmat4_new, armjnts)
+            armjnts = self.get_armjnts_by_objmat4ngrasp(grasp, [objcm], objmat4_new, armjnts)
 
             if armjnts is not None:
                 path_new.append(armjnts)

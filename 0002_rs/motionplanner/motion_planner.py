@@ -49,6 +49,7 @@ class MotionPlanner(object):
         self.graspplanner = gp.GraspPlanner(self.gripper)
         self.rbth = rbt_helper.RobotHelper(self.env, self.rbt, self.armname)
         self.ah = ani_helper.AnimationHelper(self.env, self.rbt, self.armname)
+        self.init_obs()
 
     def add_obs(self, obs):
         self.obscmlist.append(obs)
@@ -77,9 +78,9 @@ class MotionPlanner(object):
 
     def get_numik_nlopt(self, tgtpos, tgtrot=None, seedjntagls="default", releemat4=np.eye(4), col_ps=None,
                         roll_limit=1e-2, pos_limit=1e-2, movedir=None, toggledebug=False):
-        return self.iksolver.solve_numik4(tgtpos, tgtrot, seedjntagls=seedjntagls, releemat4=releemat4,
-                                          col_ps=col_ps, roll_limit=roll_limit, pos_limit=pos_limit,
-                                          movedir=movedir, toggledebug=toggledebug)
+        return self.iksolver.solve_numik_nlopt(tgtpos, tgtrot, seedjntagls=seedjntagls, releemat4=releemat4,
+                                               col_ps=col_ps, roll_limit=roll_limit, pos_limit=pos_limit,
+                                               movedir=movedir, toggledebug=toggledebug)
 
     def load_grasp(self, model_name, grasp_id):
         return pickle.load(open(config.PREGRASP_REL_PATH + model_name + "_pregrasps.pkl", "rb"))[grasp_id]
@@ -108,15 +109,17 @@ class MotionPlanner(object):
                 result.append(self.load_objmat4(model_name, k))
         return result
 
-    def get_armjnts_by_objmat4ngrasp(self, grasp, obj, objmat4, msc=None):
+    def get_armjnts_by_objmat4ngrasp(self, grasp, obslist, objmat4, msc=None):
         eepos, eerot = self.get_ee_by_objmat4(grasp, objmat4)
         armjnts = self.get_numik(eepos, eerot, msc=msc)
         if armjnts is None:
             print("No ik solution")
             return None
-        if (not self.rbth.is_selfcollided(armjnts=armjnts)) and (not self.rbth.is_objcollided(obj, armjnts=armjnts)):
+        if (not self.rbth.is_selfcollided(armjnts=armjnts)) \
+                and (not self.rbth.is_objcollided(obslist, armjnts=armjnts)):
             return armjnts
         else:
+            self.rbth.show_armjnts(armjnts=armjnts, rgba=(.7, 0, 0, .7))
             print("Collided")
         return None
 
@@ -181,7 +184,7 @@ class MotionPlanner(object):
 
                 if armjnts is not None:
                     if (not self.rbth.is_selfcollided(armjnts=armjnts)) \
-                            and (not self.rbth.is_objcollided(obj, armjnts=armjnts)):
+                            and (not self.rbth.is_objcollided([obj], armjnts=armjnts)):
                         msc = armjnts
                         success_cnt += 1
                         continue
@@ -203,12 +206,6 @@ class MotionPlanner(object):
         prehndmat4 = rm.homomat_from_posrot(gl_jaw_center_pos, gl_jaw_center_rotmat)
         hndmat4 = np.dot(objmat4, prehndmat4)
         return [hndmat4[:3, 3], hndmat4[:3, :3]]
-
-    def get_eeseq_by_objmat4seq(self, grasp, objmat4_list):
-        graspseq = []
-        for objmat4 in objmat4_list:
-            graspseq.append(self.get_ee_by_objmat4(grasp, objmat4))
-        return graspseq
 
     def get_rel_posrot(self, grasp, objpos, objrot):
         eepos, eerot = self.get_ee_by_objmat4(grasp, rm.homomat_from_posrot(objpos, objrot))
@@ -374,7 +371,7 @@ class MotionPlanner(object):
 
         return None
 
-    def __inp(self, objmat4_list, max_inp=30):
+    def objmat4_list_inp(self, objmat4_list, max_inp=30):
         inp_mat4_list = []
         for i, objmat4 in enumerate(objmat4_list):
             if i > 0:
@@ -401,62 +398,11 @@ class MotionPlanner(object):
 
         return inp_mat4_list
 
-    def objmat4_list_inp(self, objmat4_list_ms, max_inp=30):
+    def objmat4_list_inp_ms(self, objmat4_list_ms, max_inp=30):
         inp_mat4_list_ms = []
         for objmat4_list in objmat4_list_ms:
-            inp_mat4_list_ms.append(self.__inp(objmat4_list, max_inp=max_inp))
+            inp_mat4_list_ms.append(self.objmat4_list_inp(objmat4_list, max_inp=max_inp))
         return inp_mat4_list_ms
-
-    def get_continuouspath(self, msc, grasp, objmat4_list, grasp_id=0, threshold=1, toggledebug=False,
-                           dump_f_name=None):
-        """
-        plan init armjnts to first drawpath armjnts, append all the others armjnts in the drawpath.
-
-        :param graspseq:
-        :param obj:
-        :param objrelpos:
-        :param objrelrot:
-        :param threshold: 0-1
-        :return: armjnts list
-        """
-        print(f"--------------get continuous path {grasp_id}---------------")
-        success_cnt = 0
-        path = []
-        graspseq = self.get_eeseq_by_objmat4seq(grasp, objmat4_list)
-        # init_msc = msc
-        time_start_1 = time.time()
-        for i in range(len(graspseq)):
-            eepos = graspseq[i][0]
-            eerot = graspseq[i][1]
-            armjnts = self.get_numik(eepos, eerot, msc)
-            if armjnts is not None:
-                # stepdiff_norm = np.linalg.norm(armjnts - msc, ord=1)
-                # if stepdiff_norm > 150:
-                #     print(stepdiff_norm, armjnts)
-                #     # armjnts = self.get_armjnts_by_eeposrot(eepos, eerot, init_msc)
-                #     # print(armjnts)
-                #     print("***************")
-                #     continue
-                path.append(armjnts)
-                msc = copy.deepcopy(armjnts)
-                success_cnt += 1
-            else:
-                return None
-        print("Success point:", success_cnt, "of", len(graspseq))
-        if success_cnt >= len(graspseq) * threshold - 1:
-            if toggledebug:
-                cost = self.get_path_cost(path)
-                fig = plt.figure(1, figsize=(6.4, 4.8))
-                plt.ion()
-                self.rbth.plot_armjnts(path)
-                plt.show()
-                if dump_f_name is not None:
-                    plt.savefig(
-                        f"./log/path/{dump_f_name}_{grasp_id}_{round(cost, 3)}_{round(time.time() - time_start_1, 3)}_{len(objmat4_list)}.png")
-                    plt.close(fig)
-            return path
-
-        return None
 
     def get_continuouspath_ik(self, msc, grasp, objmat4_list, grasp_id=0, threshold=1, toggledebug=False,
                               dump_f_name=None):
@@ -621,7 +567,7 @@ class MotionPlanner(object):
                     self.ah.show_armjnts(armjnts=armjnts, rgba=(1, 1, 0, .2))
                     # self.rbth.draw_axis(objmat4_new[:3, 3], objmat4_new[:3, :3], rgba=(1, 1, 0, .5))
                     # self.rbth.draw_axis_uneven(objmat4_new[:3, 3], axmat,scale=.5)
-                    print(score)
+                    # print(score)
 
                 if score > best_score:
                     best_config = armjnts
@@ -837,8 +783,7 @@ class MotionPlanner(object):
         armjnts = self.get_numik(eepos, eerot)
         obj.set_homomat(objmat4)
         if armjnts is not None:
-            if not self.rbth.is_selfcollided(armjnts):
-                return True
+            return True
         return False
 
 
@@ -882,8 +827,8 @@ if __name__ == '__main__':
     mp_lft.ah.show_objmat4(pen, objmat4_goal, rgba=(0, 1, 1, .5), showlocalframe=True)
 
     gripper = rtqhe.RobotiqHE()
-    for grasp in glist:
-        print('------------------------')
+    for i,grasp in enumerate(glist):
+        print(f'-----------{i}-------------')
         path = mp_lft.plan_picknplace(grasp, [objmat4_init, objmat4_goal], pen)
         if path is not None:
             mp_lft.ah.show_animation(path)

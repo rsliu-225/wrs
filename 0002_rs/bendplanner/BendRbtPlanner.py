@@ -13,7 +13,6 @@ import robot_sim.end_effectors.grippers.robotiqhe.robotiqhe as rtqhe
 import motionplanner.motion_planner as m_planner
 import bendplanner.BendSim as b_sim
 import utils.panda3d_utils as p3u
-import motionplanner.motion_planner as m_planner
 
 
 class BendRbtPlanner(object):
@@ -22,27 +21,54 @@ class BendRbtPlanner(object):
         self.rbt = motionplanner.rbt
         self.mp = motionplanner
 
-    def gen_rbtpose(self, bendresseq, grasp, max_fail=np.inf):
+    def cal_rbtik(self, bendresseq, grasp, transmat4, max_fail=np.inf):
         armjntsseq = []
         fail_cnt = 0
+        relpos, relrot = None, None
+        self.bs.move_posrot(transmat4)
         for bendres in bendresseq:
             init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendres
             pseq_init = rm.homomat_transform_points(transmat4, pseq_init).tolist()
             rotseq_init = np.asarray([transmat4[:3, :3].dot(r) for r in rotseq_init])
             self.bs.reset(pseq_init, rotseq_init, extend=False)
             objcm_init = copy.deepcopy(self.bs.objcm)
+            pseq_end = rm.homomat_transform_points(transmat4, pseq_end).tolist()
+            rotseq_end = np.asarray([transmat4[:3, :3].dot(r) for r in rotseq_end])
+            self.bs.reset(pseq_end, rotseq_end, extend=False)
+            objcm_end = copy.deepcopy(self.bs.objcm)
             objpos = pseq_init[0]
             objrot = rotseq_init[0]
-            armjnts = self.mp.get_armjnts_by_objmat4ngrasp(grasp, objcm_init, rm.homomat_from_posrot(objpos, objrot))
+            armjnts = self.mp.get_armjnts_by_objmat4ngrasp(grasp, [objcm_init, objcm_end] + self.bs.staticobs_list(),
+                                                           rm.homomat_from_posrot(objpos, objrot))
+            # is_collided = self.rbt.lft_hnd.is_mesh_collided([objcm_init, objcm_end] + self.bs.staticobs_list())
+            # print(is_collided)
+            # if is_collided:
+            #     self.mp.ah.show_armjnts()
+            #     base.run()
+
             if armjnts is None:
                 fail_cnt += 1
                 if fail_cnt > max_fail:
                     break
-            #     self.mp.ah.show_armjnts(armjnts=armjnts)
-            #     objcm_init.set_rgba((1, 1, 0, 1))
-            #     objcm_init.attach_to(base)
+            if relpos is None:
+                relpos, relrot = self.mp.get_rel_posrot(grasp, objpos, objrot)
             armjntsseq.append(armjnts)
-        return armjntsseq
+        return relpos, relrot, armjntsseq
+
+    def grasp_reasoning(self, g_list, transmat4=np.eye(4)):
+        min_fail = np.inf
+        relpos, relrot, armjntsseq = None, None, None
+        for i, g in enumerate(g_list):
+            print(f'----------grasp_id: {i}----------')
+            relpos, relrot, armjntsseq_tmp = brp.cal_rbtik(bendresseq, g, transmat4, max_fail=min_fail)
+            fail_cnt = [str(v) for v in armjntsseq_tmp].count('None')
+            print(min_fail, fail_cnt)
+            if fail_cnt < min_fail:
+                min_fail = fail_cnt
+                armjntsseq = armjntsseq_tmp
+            if fail_cnt == 0:
+                return relpos, relrot, armjntsseq
+        return relpos, relrot, armjntsseq
 
     def load_bendresseq(self, f_name='./tmp_bendresseq.pkl'):
         return pickle.load(open(f_name, 'rb'))
@@ -126,7 +152,6 @@ class BendRbtPlanner(object):
                 rotseq_init = np.asarray([transmat4[:3, :3].dot(r) for r in rotseq_init])
                 pseq_end = rm.homomat_transform_points(transmat4, pseq_end).tolist()
                 rotseq_end = np.asarray([transmat4[:3, :3].dot(r) for r in rotseq_end])
-                gm.gen_frame(pseq_init[0], rotseq_init[0], length=.02, thickness=.001).attach_to(base)
 
                 self.bs.reset(pseq_init, rotseq_init, extend=False)
                 objcm_init = copy.deepcopy(self.bs.objcm)
@@ -170,22 +195,12 @@ if __name__ == '__main__':
     transmat4 = rm.homomat_from_posrot((.8, .3, .78 + 0.15175), np.eye(3))
     bendresseq = pickle.load(open('./tmp_bendresseq.pkl', 'rb'))
 
-    grasp_list = mp_lft.load_all_grasp('stick')
+    grasp_list = mp_lft.load_all_grasp('stick')[300:]
     print(len(grasp_list))
-    # min_fail = np.inf
-    # for i, grasp in enumerate(grasp_list):
-    #     print('-' * 10)
-    #     print('grasp_id:', i)
-    #     armjntsseq_tmp = brp.gen_rbtpose(bendresseq, grasp, max_fail=min_fail)
-    #     fail_cnt = [str(v) for v in armjntsseq_tmp].count('None')
-    #     print(min_fail, fail_cnt)
-    #     if fail_cnt < min_fail:
-    #         min_fail = fail_cnt
-    #         armjntsseq = armjntsseq_tmp
-    #     if fail_cnt == 0:
-    #         break
-    # pickle.dump(armjntsseq, open('./tmp_armjntsseq.pkl', 'wb'))
-    armjntsseq = pickle.load(open('./tmp_armjntsseq.pkl', 'rb'))
+
+    relpos, relrot, armjntsseq = brp.grasp_reasoning(grasp_list, transmat4)
+    pickle.dump([relpos, relrot, armjntsseq], open('./tmp_armjntsseq.pkl', 'wb'))
+    relpos, relrot, armjntsseq = pickle.load(open('./tmp_armjntsseq.pkl', 'rb'))
     brp.show_bendresseq_withrbt(bendresseq, transmat4, armjntsseq)
 
     base.run()

@@ -792,8 +792,8 @@ class IkSolver(object):
             self.__debug(np.inf, dqbefore, dqnull, dqcorrected, ajpath)
         return None
 
-    def solve_numik4(self, tgtpos, tgtrot=None, seedjntagls="default", releemat4=np.eye(4), method="SLSQP",
-                     toggledebug=False, col_ps=None, roll_limit=1e-2, pos_limit=1e-2, movedir=None):
+    def solve_numik_nlopt(self, tgtpos, tgtrot=None, seedjntagls="default", releemat4=np.eye(4), method="SLSQP",
+                          toggledebug=False, col_ps=None, roll_limit=1e-2, pos_limit=1e-2, movedir=None):
         """
 
         :param tgtpos:
@@ -914,8 +914,8 @@ if __name__ == '__main__':
     objitem = el.loadObjitem("bowl.stl", pos=(850, 100, 780), sample_num=1000)
     objitem.show_objcm()
     movedir = np.asarray((0, 1, 0))
-    q = iks_lft.solve_numik4(tgtpos_2, tgtrot, seedjntagls=msc, releemat4=releemat4, toggledebug=True,
-                             col_ps=objitem.pcd, movedir=movedir)
+    q = iks_lft.solve_numik_nlopt(tgtpos_2, tgtrot, seedjntagls=msc, releemat4=releemat4, toggledebug=True,
+                                  col_ps=objitem.pcd, movedir=movedir)
     if q is not None:
         eepos, eerot = rbth.get_ee(armjnts=q, releemat4=releemat4)
         rbth.draw_axis(eepos, eerot, rgba=(1, 0, 0, .5))
