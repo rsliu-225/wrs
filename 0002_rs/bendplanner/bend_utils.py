@@ -174,3 +174,52 @@ def align_pseqs_icp(pseq_src, pseq_tgt):
     pseq_src = rm.homomat_transform_points(transmat4, pseq_src)
     print(rmse, fitness)
     return pseq_src
+
+
+def avg_mindist_between_polylines(pts1, pts2, toggledebug=True):
+    pts1 = linear_inp3d_by_step(pts1)
+    pts2 = linear_inp3d_by_step(pts2)
+
+    if toggledebug:
+        x1, y1, z1 = pts1[:, 0], pts1[:, 1], pts1[:, 2]
+        x2, y2, z2 = pts2[:, 0], pts2[:, 1], pts2[:, 2]
+        ax = plt.axes(projection='3d')
+        ax.set_zlim([-.1, .1])
+        ax.scatter3D(x1, y1, z1, color='red')
+        ax.plot3D(x1, y1, z1, 'red')
+        ax.scatter3D(x2, y2, z2, color='green')
+        ax.plot3D(x2, y2, z2, 'green')
+        plt.show()
+
+
+def avg_distance_between_polylines(pts1, pts2, toggledebug=False):
+    def __normed_distance_along_path(polyline_x, polyline_y, polyline_z):
+        polyline = np.asarray([polyline_x, polyline_y, polyline_z])
+        distance = np.cumsum(np.sqrt(np.sum(np.diff(polyline, axis=1) ** 2, axis=0)))
+        return np.insert(distance, 0, 0) / distance[-1]
+
+    x1, y1, z1 = pts1[:, 0], pts1[:, 1], pts1[:, 2]
+    x2, y2, z2 = pts2[:, 0], pts2[:, 1], pts2[:, 2]
+
+    s1 = __normed_distance_along_path(x1, y1, z1)
+    s2 = __normed_distance_along_path(x2, y2, z2)
+
+    interpol_xyz1 = interpolate.interp1d(s1, [x1, y1, z1])
+    xyz1_on_2 = interpol_xyz1(s2)
+
+    node_to_node_distance = np.sqrt(np.sum((xyz1_on_2 - [x2, y2, z2]) ** 2, axis=0))
+
+    if toggledebug:
+        ax = plt.axes(projection='3d')
+        # z_max = max([abs(np.max(z1)), abs(np.max(z2))])
+        # ax.set_zlim([-z_max, z_max])
+        ax.scatter3D(x1, y1, z1, color='red')
+        ax.plot3D(x1, y1, z1, 'red')
+        ax.scatter3D(x2, y2, z2, color='green')
+        ax.plot3D(x2, y2, z2, 'green')
+        ax.scatter3D(xyz1_on_2[0], xyz1_on_2[1], xyz1_on_2[2], color='black')
+        ax.plot3D(xyz1_on_2[0], xyz1_on_2[1], xyz1_on_2[2], 'black')
+        plt.show()
+    err = node_to_node_distance.mean()
+    print('Avg. distance between polylines:', err)
+    return err, xyz1_on_2

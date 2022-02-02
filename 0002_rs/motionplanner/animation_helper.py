@@ -174,7 +174,7 @@ class AnimationHelper(object):
         hnd.sethomomat(hndmat4)
         hnd.attach_to(base)
 
-    def show_animation(self, path):
+    def show_ani(self, path):
         rbtmnp = [None, None]
         motioncounter = [0]
         taskMgr.doMethodLater(0.05, self.__update, "update",

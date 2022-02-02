@@ -643,44 +643,4 @@ def gen_seq(num):
     return itertools.permutations(range(num), r=None)
 
 
-if __name__ == '__main__':
-    import pickle
 
-    base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
-    bendseq = [
-        [np.radians(225), np.radians(0), np.radians(0), .04],
-        [np.radians(-90), np.radians(0), np.radians(0), .08],
-        [np.radians(90), np.radians(0), np.radians(0), .1],
-        [np.radians(-45), np.radians(0), np.radians(0), .12],
-        # [np.radians(40), np.radians(0), np.radians(0), .06],
-        # [np.radians(-15), np.radians(0), np.radians(0), .08],
-        # [np.radians(20), np.radians(0), np.radians(0), .1]
-    ]
-    # bendseq = pickle.load(open('./tmp_bendseq.pkl', 'rb'))
-
-    bs = BendSim(show=True)
-    bs.reset([(0, 0, 0), (0, bendseq[-1][3], 0)], [np.eye(3), np.eye(3)])
-    # bs.show(rgba=(.7, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
-    # bs.show(rgba=(.7, .7, .7, .7), show_frame=True)
-
-    for seq in gen_seq(len(bendseq)):
-        print(seq)
-        bendseq_tmp = [bendseq[i] for i in seq]
-        is_success, bendresseq = bs.gen_by_bendseq(bendseq_tmp, cc=True, toggledebug=False)
-        print(is_success)
-        if all(is_success):
-            pickle.dump(bendresseq, open('./tmp_bendresseq.pkl', 'wb'))
-            bs.show_bendresseq(bendresseq)
-            base.run()
-        bs.reset([(0, 0, 0), (0, bendseq[-1][3], 0)], [np.eye(3), np.eye(3)])
-
-    # is_success, bendresseq = bs.gen_by_bendseq(bendseq, cc=True, toggledebug=False)
-    # # pickle.dump(bendresseq, open('./tmp_bendresseq.pkl', 'wb'))
-    # # bendresseq = pickle.load(open('./tmp_bendresseq.pkl', 'rb'))
-    #
-    # bs.show_bendresseq(bendresseq)
-    # print('Success:', is_success)
-    # # bs.show(rgba=(0, 0, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1)), show_pseq=True, show_frame=True)
-    # bs.show(rgba=(0, 0, .7, .7), show_pseq=True, show_frame=True)
-    #
-    base.run()

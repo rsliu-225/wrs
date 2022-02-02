@@ -5,7 +5,6 @@ import modeling.geometric_model as gm
 import visualization.panda.world as wd
 import basis.robot_math as rm
 import BendSim
-from scipy import interpolate
 from scipy.optimize import minimize
 import basis.o3dhelper as o3dh
 import time
@@ -149,189 +148,13 @@ class BendOptimizer(object):
             return None, None
 
 
-def avg_distance_between_polylines(pts1, pts2, toggledebug=False):
-    def __normed_distance_along_path(polyline_x, polyline_y, polyline_z):
-        polyline = np.asarray([polyline_x, polyline_y, polyline_z])
-        distance = np.cumsum(np.sqrt(np.sum(np.diff(polyline, axis=1) ** 2, axis=0)))
-        return np.insert(distance, 0, 0) / distance[-1]
-
-    x1, y1, z1 = pts1[:, 0], pts1[:, 1], pts1[:, 2]
-    x2, y2, z2 = pts2[:, 0], pts2[:, 1], pts2[:, 2]
-
-    s1 = __normed_distance_along_path(x1, y1, z1)
-    s2 = __normed_distance_along_path(x2, y2, z2)
-
-    interpol_xyz1 = interpolate.interp1d(s1, [x1, y1, z1])
-    xyz1_on_2 = interpol_xyz1(s2)
-
-    node_to_node_distance = np.sqrt(np.sum((xyz1_on_2 - [x2, y2, z2]) ** 2, axis=0))
-
-    if toggledebug:
-        ax = plt.axes(projection='3d')
-        # z_max = max([abs(np.max(z1)), abs(np.max(z2))])
-        # ax.set_zlim([-z_max, z_max])
-        ax.scatter3D(x1, y1, z1, color='red')
-        ax.plot3D(x1, y1, z1, 'red')
-        ax.scatter3D(x2, y2, z2, color='green')
-        ax.plot3D(x2, y2, z2, 'green')
-        ax.scatter3D(xyz1_on_2[0], xyz1_on_2[1], xyz1_on_2[2], color='black')
-        ax.plot3D(xyz1_on_2[0], xyz1_on_2[1], xyz1_on_2[2], 'black')
-        plt.show()
-    err = node_to_node_distance.mean()
-    print('Avg. distance between polylines:', err)
-    return err, xyz1_on_2
-
-
-def avg_mindist_between_polylines(pts1, pts2, toggledebug=True):
-    pts1 = bu.linear_inp3d_by_step(pts1)
-    pts2 = bu.linear_inp3d_by_step(pts2)
-
-    if toggledebug:
-        x1, y1, z1 = pts1[:, 0], pts1[:, 1], pts1[:, 2]
-        x2, y2, z2 = pts2[:, 0], pts2[:, 1], pts2[:, 2]
-        ax = plt.axes(projection='3d')
-        ax.set_zlim([-.1, .1])
-        ax.scatter3D(x1, y1, z1, color='red')
-        ax.plot3D(x1, y1, z1, 'red')
-        ax.scatter3D(x2, y2, z2, color='green')
-        ax.plot3D(x2, y2, z2, 'green')
-        plt.show()
-
-
-def __ps2seg_max_dist(p1, p2, ps):
-    p1_p = np.asarray([p1] * len(ps)) - np.asarray(ps)
-    p2_p = np.asarray([p2] * len(ps)) - np.asarray(ps)
-    p1_p_norm = np.linalg.norm(p1_p, axis=1)
-    p2_p_norm = np.linalg.norm(p2_p, axis=1)
-    p2_p1 = np.asarray([p2 - p1] * len(ps))
-    dist_list = abs(np.linalg.norm(np.cross(p2_p1, p1_p), axis=1) / np.linalg.norm(p2 - p1))
-
-    l1 = np.arccos(np.sum((p1_p / p1_p_norm.reshape((len(ps), 1))) * (p2_p1 / np.linalg.norm(p2 - p1)), axis=1))
-    l2 = np.arccos(np.sum((p2_p / p2_p_norm.reshape((len(ps), 1))) * (p2_p1 / np.linalg.norm(p2 - p1)), axis=1))
-    l1 = (l1[:] < math.pi / 2).astype(int)
-    l2 = (l2[:] > math.pi / 2).astype(int)
-
-    dist_list = np.multiply(p1_p_norm, l1) + np.multiply(p2_p_norm, l2) + np.multiply(dist_list, 1 - l1 - l2)
-    max_dist = max(dist_list)
-
-    return max_dist, list(dist_list).index(max_dist)
-
-
-def iter_fit(pseq, tor=.001, toggledebug=False):
-    pseq = np.asarray(pseq)
-    res_pids = [0, len(pseq) - 1]
-    ptr = 0
-    while ptr < len(res_pids) - 1:
-        max_err, max_inx = __ps2seg_max_dist(pseq[res_pids[ptr]], pseq[res_pids[ptr + 1]],
-                                             pseq[res_pids[ptr]:res_pids[ptr + 1]])
-        if max_err > tor:
-            res_pids.append(max_inx + res_pids[ptr])
-            res_pids = sorted(res_pids)
-        else:
-            ptr += 1
-        if toggledebug:
-            ax = plt.axes(projection='3d')
-            bu.plot_pseq(ax, pseq)
-            bu.plot_pseq(ax, bu.linear_inp3d_by_step(pseq[res_pids]))
-            bu.plot_pseq(ax, pseq[res_pids])
-            plt.show()
-    print('Num. of fitting result:', len(res_pids))
-    return pseq[res_pids]
-
-
-def pseq2bendseq(res_pseq, mode='rot', bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggledebug=False):
-    ax = plt.axes(projection='3d')
-    ax.set_box_aspect((1, 1, 1))
-    tangent_pts = []
-    bendseq = []
-    pos = 0
-    diff_list = []
-    n_pre = None
-    rot_a = 0
-    lift_a = 0
-    for i in range(1, len(res_pseq) - 1):
-        v1 = res_pseq[i] - res_pseq[i - 1]
-        v2 = res_pseq[i + 1] - res_pseq[i]
-        pos += np.linalg.norm(v1)
-        rot_n = np.cross(rm.unit_vector(v1), rm.unit_vector(v2))
-        bend_a = rm.angle_between_vectors(v1, v2)
-        if n_pre is not None:
-            a = rm.angle_between_vectors(n_pre, rot_n)
-        else:
-            a = 0
-        if mode == 'lift':
-            if a > np.pi / 2:
-                a = np.pi - a
-                bend_a = -bend_a
-            # if n_pre is not None and rm.angle_between_vectors(v1, np.cross(n_pre, rot_n)) > np.pi / 2:
-            #     lift_a += a
-            # else:
-            #     lift_a -= a
-        else:
-            if n_pre is not None and rm.angle_between_vectors(v1, np.cross(n_pre, rot_n)) > np.pi / 2:
-                rot_a += a
-            else:
-                rot_a -= a
-
-        n_pre = rot_n
-        l = (bend_r / np.tan((np.pi - abs(bend_a)) / 2)) / np.cos(abs(lift_a))
-        arc = abs(bend_a) * bend_r
-        bendseq.append([bend_a, lift_a, rot_a, pos + init_l - l - sum(diff_list)])
-        diff_list.append(2 * l - arc)
-
-        ratio_1 = l / np.linalg.norm(res_pseq[i] - res_pseq[i - 1])
-        p1 = res_pseq[i] + (res_pseq[i - 1] - res_pseq[i]) * ratio_1
-        ratio_2 = l / np.linalg.norm(res_pseq[i] - res_pseq[i + 1])
-        p2 = res_pseq[i] + (res_pseq[i + 1] - res_pseq[i]) * ratio_2
-        tangent_pts.append(p1)
-        tangent_pts.append(p2)
-
-        x = np.cross(v1, rot_n)
-        rot = np.asarray([rm.unit_vector(x), rm.unit_vector(v1), rm.unit_vector(rot_n)]).T
-        if toggledebug:
-            gm.gen_frame(res_pseq[i - 1], rot, length=.02, thickness=.001).attach_to(base)
-        bu.plot_frame(ax, res_pseq[i - 1], rot)
-        if i == 1:
-            init_rot = rot
-
-    bu.plot_pseq(ax, res_pseq)
-    bu.scatter_pseq(ax, res_pseq, s=5)
-    bu.scatter_pseq(ax, tangent_pts, s=5)
-    plt.show()
-
-    return bendseq, init_rot
-
-
 if __name__ == '__main__':
     import pickle
 
     base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
     gm.gen_frame(thickness=.0005, alpha=.1, length=.01).attach_to(base)
 
-    # goal_pseq = bu.gen_polygen(5, .05)
-    goal_pseq = bu.gen_ramdom_curve(kp_num=4, length=.12, step=.0005, z_max=.02, toggledebug=False)
-    # goal_pseq = bu.gen_screw_thread(r=.02, lift_a=np.radians(5), rot_num=2)
-    # goal_pseq = bu.gen_circle(.05)
-    # goal_pseq = np.asarray([(0, 0, 0), (0, .02, 0), (.02, .02, 0), (.02, .03, .02), (0, .03, 0), (0, .03, -.02)])
 
-    init_pseq = [(0, 0, 0), (0, bu.cal_length(goal_pseq), 0)]
-    init_rotseq = [np.eye(3), np.eye(3)]
-    bs = BendSim.BendSim(pseq=init_pseq, rotseq=init_rotseq, show=True)
-
-    fit_pseq = iter_fit(goal_pseq, tor=.0005, toggledebug=False)
-    init_bendseq, init_rot = pseq2bendseq(fit_pseq, toggledebug=False)
-    # pickle.dump(init_bendseq, open('./tmp_bendseq.pkl', 'wb'))
-
-    is_success, bendresseq = bs.gen_by_bendseq(init_bendseq, cc=False, toggledebug=False)
-    print('Result Flag:', is_success)
-
-    goal_pseq, res_pseq = bu.align_with_goal(bs, goal_pseq, init_rot)
-    err, _ = avg_distance_between_polylines(res_pseq, goal_pseq, toggledebug=True)
-    # pickle.dump(bendresseq, open('./tmp_bendresseq.pkl', 'wb'))
-
-    bu.show_pseq(bs.pseq, rgba=(1, 0, 0, 1))
-    bu.show_pseq(bu.linear_inp3d_by_step(goal_pseq), rgba=(0, 1, 0, 1))
-    bs.show(rgba=(.7, .7, .7, .7))
 
     # opt = BendOptimizer(bs, init_pseq, init_rotseq, goal_pseq, bend_times=len(init_bendseq))
     # res, cost = opt.solve(init=np.asarray([[v[0], v[2]] for v in init_bendseq]).flatten())

@@ -119,7 +119,7 @@ class MotionPlanner(object):
                 and (not self.rbth.is_objcollided(obslist, armjnts=armjnts)):
             return armjnts
         else:
-            self.rbth.show_armjnts(armjnts=armjnts, rgba=(.7, 0, 0, .7))
+            # self.rbth.show_armjnts(armjnts=armjnts, rgba=(.7, 0, 0, .7))
             print("Collided")
         return None
 
@@ -310,7 +310,7 @@ class MotionPlanner(object):
         return path
 
     def plan_picknplace(self, grasp, objmat4_pair, obj, use_msc=True, use_pickupprim=True,
-                        use_placedownprim=True, start=None, pickupprim_len=.1, placedownprim_len=.1):
+                        use_placedownprim=True, start=None, goal=None, pickupprim_len=.1, placedownprim_len=.1):
         eepos_initial, eerot_initial = self.get_ee_by_objmat4(grasp, objmat4_pair[0])
         if start is None:
             start = self.get_numik(eepos_initial, eerot_initial)
@@ -321,26 +321,27 @@ class MotionPlanner(object):
         obj_hold = obj.copy()
         obj_hold.set_homomat(objmat4_pair[0])
         _, _ = self.rbt.hold(obj_hold, hnd_name=self.hnd_name, jaw_width=.02)
-        self.rbt.gen_meshmodel().attach_to(base)
         eepos_final, eerot_final = self.get_ee_by_objmat4(grasp, objmat4_pair[1])
-        if use_msc:
-            goal = self.get_numik(eepos_final, eerot_final, msc=start)
-            if goal is None:
-                print("get_picknplace_goal msc failed!")
-                goal = self.get_numik(eepos_final, eerot_final)
-        else:
-            goal = self.get_numik(eepos_final, eerot_final, msc=start)
+        if goal is None:
+            if use_msc:
+                goal = self.get_numik(eepos_final, eerot_final, msc=start)
+                if goal is None:
+                    print("get_picknplace_goal msc failed!")
+                    goal = self.get_numik(eepos_final, eerot_final)
+            else:
+                goal = self.get_numik(eepos_final, eerot_final, msc=start)
 
         if goal is None:
             print("Cannot reach final position!")
+            self.rbt.release(hnd_name=self.hnd_name, objcm=obj_hold)
             return None
-        self.rbt.gen_meshmodel().attach_to(base)
 
         # planning
         if use_pickupprim:
             pickupprim = self.get_linear_path_from(start=start, length=pickupprim_len)
             if pickupprim == []:
                 print("Cannot reach init primitive position!")
+                self.rbt.release(hnd_name=self.hnd_name, objcm=obj_hold)
                 return None
         else:
             pickupprim = [start]
@@ -349,26 +350,28 @@ class MotionPlanner(object):
             placedownprim = self.get_linear_path_from(start=goal, length=placedownprim_len)[::-1]
             if placedownprim == []:
                 print("Cannot reach final primitive position!")
+                self.rbt.release(hnd_name=self.hnd_name, objcm=obj_hold)
                 return None
         else:
             placedownprim = [goal]
 
-        self.ah.show_armjnts(armjnts=pickupprim[-1], rgba=[1, 0, 1, .5])
-        self.ah.show_armjnts(armjnts=pickupprim[0], rgba=[1, 0, 0, .5])
-        self.ah.show_armjnts(armjnts=placedownprim[0], rgba=[0, 1, 1, .5])
-        self.ah.show_armjnts(armjnts=placedownprim[-1], rgba=[0, 0, 1, .5])
-
+        # self.ah.show_armjnts(armjnts=pickupprim[-1], rgba=[1, 0, 1, .5])
+        # self.ah.show_armjnts(armjnts=pickupprim[0], rgba=[1, 0, 0, .5])
+        # self.ah.show_armjnts(armjnts=placedownprim[0], rgba=[0, 1, 1, .5])
+        # self.ah.show_armjnts(armjnts=placedownprim[-1], rgba=[0, 0, 1, .5])
+        # base.run()
         print("--------------rrt---------------")
         planner = rrtc.RRTConnect(self.rbt)
         path = planner.plan(component_name=self.armname, start_conf=pickupprim[-1], goal_conf=placedownprim[0],
-                            obstacle_list=self.obscmlist, ext_dist=.02, max_time=300)
-        self.rbt.release(self.hnd_name, obj_hold)
+                            obstacle_list=self.obscmlist, ext_dist=.1, max_time=500)
         if path is not None:
             path = pickupprim + path + placedownprim
+            self.rbt.release(hnd_name=self.hnd_name, objcm=obj_hold)
             return path
         else:
             print("rrt failed!")
 
+        self.rbt.release(hnd_name=self.hnd_name, objcm=obj_hold)
         return None
 
     def objmat4_list_inp(self, objmat4_list, max_inp=30):
@@ -559,7 +562,7 @@ class MotionPlanner(object):
             objmat4_new[:3, 3] = objmat4[:3, 3]
             eepos, eerot = self.get_ee_by_objmat4(grasp, objmat4_new)
             armjnts = self.get_numik(eepos, eerot)
-            relpos, relrot = rm.rel_pose(eepos, eerot, objmat4_new[:3, 3], objmat4_new[:3, :3])
+            # relpos, relrot = rm.rel_pose(eepos, eerot, objmat4_new[:3, 3], objmat4_new[:3, :3])
             if armjnts is not None:
                 score = self.rbt.manipulability(component_name=self.armname)
                 if toggledebug:
@@ -702,7 +705,7 @@ class MotionPlanner(object):
         plt.savefig(f"{f_name}.png")
         plt.close(fig)
         pickle.dump([relpos, relrot, armjnts_path], open(f"{f_name}.pkl", "wb"))
-        # self.show_animation(armjnts_path)
+        # self.show_ani(armjnts_path)
         # base.run()
         return armjnts_path
 
@@ -827,11 +830,15 @@ if __name__ == '__main__':
     mp_lft.ah.show_objmat4(pen, objmat4_goal, rgba=(0, 1, 1, .5), showlocalframe=True)
 
     gripper = rtqhe.RobotiqHE()
-    for i,grasp in enumerate(glist):
+    for i, grasp in enumerate(glist):
         print(f'-----------{i}-------------')
         path = mp_lft.plan_picknplace(grasp, [objmat4_init, objmat4_goal], pen)
         if path is not None:
-            mp_lft.ah.show_animation(path)
+            mp_lft.rbt.fk(component_name=mp_lft.armname, jnt_values=path[0])
+            obj_hold = pen.copy()
+            obj_hold.set_homomat(objmat4_init)
+            _, _ = mp_lft.rbt.hold(obj_hold, hnd_name=mp_lft.hnd_name, jaw_width=.02)
+            mp_lft.ah.show_ani(path)
             base.run()
         # eepos_initial, eerot_initial = mp_lft.get_ee_by_objmat4(grasp, objmat4_init)
         # start = mp_lft.get_numik(eepos_initial, eerot_initial)
@@ -840,5 +847,5 @@ if __name__ == '__main__':
         # if start is not None and goal is not None:
         #     path = mp_lft.plan_start2end(end=goal, start=start)
         #     if path is not None:
-        #         mp_lft.ah.show_animation(path)
+        #         mp_lft.ah.show_ani(path)
         #         base.run()

@@ -82,12 +82,47 @@ class PTree:
 
         return result
 
+    def output_sgl(self, seq=None):
+        # output the remained leaves whose depth equals to max_depth
+        if seq is None:
+            seq = []
 
-x = PTree(5)
-x.prune([0, 1])
-print(x.output())
-x.prune([0, 2])
-print(x.output(seq=[0, 2]))
+        result = []
 
+        # if given a sequence, go to the end of seq first
+        curr = self.root
+        curr_depth = 0
+        for i, node_id in enumerate(seq):
+            children_ids = [node.id for node in curr.children]
+            if node_id not in children_ids:
+                print(f"The sequence is not valid at {seq[i]} in {seq}")
+                return result
+            curr = curr.children[children_ids.index(node_id)]
+            curr_depth += 1
 
+        # use BFS to traversal the tree
+        queue = deque([(node, seq[:curr_depth]) for node in curr.children])
+        curr_depth += 1
 
+        while queue:
+            q_len = len(queue)
+            for _ in range(q_len):
+                node, prev_node_ids = queue.popleft()
+                curr_node_ids = deepcopy(prev_node_ids)
+                curr_node_ids.append(node.id)
+                if curr_depth == self.max_depth:
+                    return curr_node_ids
+                else:
+                    for child_node in node.children:
+                        queue.append((child_node, curr_node_ids))
+            curr_depth += 1
+
+        return result
+
+if __name__ == '__main__':
+    x = PTree(5)
+    print(x.output_sgl())
+    x.prune([0, 1])
+    print(x.output_sgl())
+    x.prune([0, 2])
+    print(x.output_sgl(seq=[0, 2]))

@@ -107,21 +107,21 @@ class RobotHelper(object):
 
     def show_armjnts(self, rgba=None, armjnts=None, toggleendcoord=False, jawwidth=50, genmnp=True):
         if armjnts is not None:
-            self.rbt.movearmfk(armjnts, self.armname)
+            self.rbt.fk(self.armname, armjnts)
         if genmnp:
             self.__genmnp_by_armname(rgba=rgba, toggleendcoord=toggleendcoord, jawwidth=jawwidth)
         else:
             self.__gensnp_by_armname(rgba=rgba, toggleendcoord=toggleendcoord)
 
     def __genmnp_by_armname(self, rgba, toggleendcoord=False, jawwidth=50):
-        self.rbt.closegripper(armname=self.armname, jawwidth=jawwidth)
+        # self.rbt.closegripper(armname=self.armname, jawwidth=jawwidth)
         if self.armname == "lft_arm":
             self.rbt.gen_meshmodel(toggle_tcpcs=toggleendcoord, rgba=rgba).attach_to(base)
         else:
             self.rbt.gen_meshmodel(toggle_tcpcs=toggleendcoord, rgba=rgba).attach_to(base)
 
     def __gensnp_by_armname(self, rgba, toggleendcoord=False):
-        self.rbt.closegripper(armname=self.armname)
+        # self.rbt.closegripper(armname=self.armname)
         if self.armname == "lft_arm":
             self.rbt.gen_stickmodel(toggle_jntscs=False, toggle_tcpcs=toggleendcoord).attach_to(base)
         else:
