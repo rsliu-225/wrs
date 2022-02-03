@@ -3,8 +3,8 @@ import visualization.panda.world as wd
 import modeling.geometric_model as gm
 import modeling.collision_model as cm
 import grasping.planning.antipodal as gpa
-import robot_sim.end_effectors.grippers.yumi_gripper.yumi_gripper as yg
 import numpy as np
+import robot_sim.end_effectors.gripper.yumi_gripper.yumi_gripper as yg
 
 base = wd.World(cam_pos=[1, 1, 1], lookat_pos=[0, 0, 0])
 gm.gen_frame().attach_to(base)
