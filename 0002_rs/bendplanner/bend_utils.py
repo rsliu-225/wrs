@@ -223,3 +223,44 @@ def avg_distance_between_polylines(pts1, pts2, toggledebug=False):
     err = node_to_node_distance.mean()
     print('Avg. distance between polylines:', err)
     return err, xyz1_on_2
+
+
+def __ps2seg_max_dist(p1, p2, ps):
+    p1_p = np.asarray([p1] * len(ps)) - np.asarray(ps)
+    p2_p = np.asarray([p2] * len(ps)) - np.asarray(ps)
+    p1_p_norm = np.linalg.norm(p1_p, axis=1)
+    p2_p_norm = np.linalg.norm(p2_p, axis=1)
+    p2_p1 = np.asarray([p2 - p1] * len(ps))
+    dist_list = abs(np.linalg.norm(np.cross(p2_p1, p1_p), axis=1) / np.linalg.norm(p2 - p1))
+
+    l1 = np.arccos(np.sum((p1_p / p1_p_norm.reshape((len(ps), 1))) * (p2_p1 / np.linalg.norm(p2 - p1)), axis=1))
+    l2 = np.arccos(np.sum((p2_p / p2_p_norm.reshape((len(ps), 1))) * (p2_p1 / np.linalg.norm(p2 - p1)), axis=1))
+    l1 = (l1[:] < math.pi / 2).astype(int)
+    l2 = (l2[:] > math.pi / 2).astype(int)
+
+    dist_list = np.multiply(p1_p_norm, l1) + np.multiply(p2_p_norm, l2) + np.multiply(dist_list, 1 - l1 - l2)
+    max_dist = max(dist_list)
+
+    return max_dist, list(dist_list).index(max_dist)
+
+
+def iter_fit(pseq, tor=.001, toggledebug=False):
+    pseq = np.asarray(pseq)
+    res_pids = [0, len(pseq) - 1]
+    ptr = 0
+    while ptr < len(res_pids) - 1:
+        max_err, max_inx = __ps2seg_max_dist(pseq[res_pids[ptr]], pseq[res_pids[ptr + 1]],
+                                             pseq[res_pids[ptr]:res_pids[ptr + 1]])
+        if max_err > tor:
+            res_pids.append(max_inx + res_pids[ptr])
+            res_pids = sorted(res_pids)
+        else:
+            ptr += 1
+        if toggledebug:
+            ax = plt.axes(projection='3d')
+            plot_pseq(ax, pseq)
+            plot_pseq(ax, linear_inp3d_by_step(pseq[res_pids]))
+            plot_pseq(ax, pseq[res_pids])
+            plt.show()
+    print('Num. of fitting result:', len(res_pids))
+    return pseq[res_pids]

@@ -26,6 +26,7 @@ class PTree:
             self._build_permutation_tree(child_node, child_available)
 
     def prune(self, seq=None):
+        print(f'prune {seq}')
         # prune the subtree by failed sequence
         if seq is None:
             seq = []
@@ -120,7 +121,7 @@ class PTree:
         return result
 
 if __name__ == '__main__':
-    x = PTree(5)
+    x = PTree(9)
     print(x.output_sgl())
     x.prune([0, 1])
     print(x.output_sgl())

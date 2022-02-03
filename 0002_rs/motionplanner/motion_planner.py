@@ -113,7 +113,7 @@ class MotionPlanner(object):
         eepos, eerot = self.get_ee_by_objmat4(grasp, objmat4)
         armjnts = self.get_numik(eepos, eerot, msc=msc)
         if armjnts is None:
-            print("No ik solution")
+            # print("No ik solution")
             return None
         if (not self.rbth.is_selfcollided(armjnts=armjnts)) \
                 and (not self.rbth.is_objcollided(obslist, armjnts=armjnts)):
@@ -203,7 +203,13 @@ class MotionPlanner(object):
 
     def get_ee_by_objmat4(self, grasp, objmat4):
         _, gl_jaw_center_pos, gl_jaw_center_rotmat, hnd_pos, hnd_rotmat = grasp
-        prehndmat4 = rm.homomat_from_posrot(gl_jaw_center_pos, gl_jaw_center_rotmat)
+        preeemat4 = rm.homomat_from_posrot(gl_jaw_center_pos, gl_jaw_center_rotmat)
+        eemat4 = np.dot(objmat4, preeemat4)
+        return [eemat4[:3, 3], eemat4[:3, :3]]
+
+    def get_hnd_by_objmat4(self, grasp, objmat4):
+        _, _, _, hnd_pos, hnd_rotmat = grasp
+        prehndmat4 = rm.homomat_from_posrot(hnd_pos, hnd_rotmat)
         hndmat4 = np.dot(objmat4, prehndmat4)
         return [hndmat4[:3, 3], hndmat4[:3, :3]]
 
@@ -318,9 +324,12 @@ class MotionPlanner(object):
             print("Cannot reach init position!")
             return None
         self.rbt.fk(component_name=self.armname, jnt_values=start)
-        obj_hold = obj.copy()
-        obj_hold.set_homomat(objmat4_pair[0])
-        _, _ = self.rbt.hold(obj_hold, hnd_name=self.hnd_name, jaw_width=.02)
+        obj_copy = obj.copy()
+        obj_copy.set_homomat(objmat4_pair[0])
+        # self.ah.show_armjnts(rgba=(1, 0, 0, .5), armjnts=start)
+        # obj_copy.attach_to(base)
+        # base.run()
+        _, _ = self.rbt.hold(obj_copy, hnd_name=self.hnd_name, jaw_width=.02)
         eepos_final, eerot_final = self.get_ee_by_objmat4(grasp, objmat4_pair[1])
         if goal is None:
             if use_msc:
@@ -333,7 +342,7 @@ class MotionPlanner(object):
 
         if goal is None:
             print("Cannot reach final position!")
-            self.rbt.release(hnd_name=self.hnd_name, objcm=obj_hold)
+            self.rbt.release(hnd_name=self.hnd_name, objcm=obj_copy)
             return None
 
         # planning
@@ -341,7 +350,7 @@ class MotionPlanner(object):
             pickupprim = self.get_linear_path_from(start=start, length=pickupprim_len)
             if pickupprim == []:
                 print("Cannot reach init primitive position!")
-                self.rbt.release(hnd_name=self.hnd_name, objcm=obj_hold)
+                self.rbt.release(hnd_name=self.hnd_name, objcm=obj_copy)
                 return None
         else:
             pickupprim = [start]
@@ -350,7 +359,7 @@ class MotionPlanner(object):
             placedownprim = self.get_linear_path_from(start=goal, length=placedownprim_len)[::-1]
             if placedownprim == []:
                 print("Cannot reach final primitive position!")
-                self.rbt.release(hnd_name=self.hnd_name, objcm=obj_hold)
+                self.rbt.release(hnd_name=self.hnd_name, objcm=obj_copy)
                 return None
         else:
             placedownprim = [goal]
@@ -366,12 +375,12 @@ class MotionPlanner(object):
                             obstacle_list=self.obscmlist, ext_dist=.1, max_time=500)
         if path is not None:
             path = pickupprim + path + placedownprim
-            self.rbt.release(hnd_name=self.hnd_name, objcm=obj_hold)
+            self.rbt.release(hnd_name=self.hnd_name, objcm=obj_copy)
             return path
         else:
             print("rrt failed!")
 
-        self.rbt.release(hnd_name=self.hnd_name, objcm=obj_hold)
+        self.rbt.release(hnd_name=self.hnd_name, objcm=obj_copy)
         return None
 
     def objmat4_list_inp(self, objmat4_list, max_inp=30):
