@@ -1,3 +1,4 @@
+import time
 from collections import deque
 from copy import deepcopy
 
@@ -13,17 +14,17 @@ class PTreeNode:
 class PTree:
     def __init__(self, num):
         self.root = PTreeNode()
-        self._build_permutation_tree(self.root, list(range(num)))
+        self.__build_permutation_tree(self.root, list(range(num)))
         self.max_depth = num
 
-    def _build_permutation_tree(self, node, available_child_ids):
+    def __build_permutation_tree(self, node, available_child_ids):
         # clean up the node's children
         node.children = []
         for i, node_id in enumerate(available_child_ids):
             child_node = PTreeNode(node_id)
             node.children.append(child_node)
             child_available = [cid for ci, cid in enumerate(available_child_ids) if ci != i]
-            self._build_permutation_tree(child_node, child_available)
+            self.__build_permutation_tree(child_node, child_available)
 
     def prune(self, seq=None):
         print(f'prune {seq}')
@@ -120,10 +121,14 @@ class PTree:
 
         return result
 
+
 if __name__ == '__main__':
-    x = PTree(9)
-    print(x.output_sgl())
+    ts = time.time()
+    x = PTree(10)
+    print('build tree:', time.time() - ts)
+    path = x.output()
+    print('iterate:', time.time() - ts)
+    sgl = x.output_sgl()
+    print('get first:', time.time() - ts)
     x.prune([0, 1])
-    print(x.output_sgl())
-    x.prune([0, 2])
-    print(x.output_sgl(seq=[0, 2]))
+    print('prune [0, 1]:', time.time() - ts)

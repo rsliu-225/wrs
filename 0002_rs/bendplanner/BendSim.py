@@ -1,16 +1,15 @@
 import copy
 import math
-import visualization.panda.world as wd
 import modeling.geometric_model as gm
 import numpy as np
 import basis.robot_math as rm
 import basis.trimesh as trm
 import modeling.collision_model as cm
-import bend_utils as bu
-import bender_config as bconfig
+import bendplanner.bend_utils as bu
+import bendplanner.bender_config as bconfig
 import time
 from panda3d.core import *
-import robot_sim.end_effectors.grippers.robotiqhe.robotiqhe as rtqhe
+import robot_sim.end_effectors.gripper.robotiqhe.robotiqhe as rtqhe
 import utils.panda3d_utils as p3u
 import itertools
 

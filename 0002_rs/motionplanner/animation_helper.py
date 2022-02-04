@@ -2,7 +2,7 @@ import copy
 
 import numpy as np
 
-import robot_sim.end_effectors.grippers.robotiqhe.robotiqhe as rtqhe
+import robot_sim.end_effectors.gripper.robotiqhe.robotiqhe as rtqhe
 import motionplanner.robot_helper as rbt_helper
 import basis.robot_math as rm
 import modeling.geometric_model as gm

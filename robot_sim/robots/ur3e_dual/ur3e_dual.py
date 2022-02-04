@@ -508,13 +508,11 @@ class UR3EDual(ri.RobotInterface):
             objcm = obj_info['collisionmodel']
             objcm.set_pos(obj_info['gl_pos'])
             objcm.set_rotmat(obj_info['gl_rotmat'])
-            objcm.set_rgba(rgba=rgba)
             objcm.copy().attach_to(mm_collection)
         for obj_info in self.rgt_oih_infos:
             objcm = obj_info['collisionmodel']
             objcm.set_pos(obj_info['gl_pos'])
             objcm.set_rotmat(obj_info['gl_rotmat'])
-            objcm.set_rgba(rgba=rgba)
             objcm.copy().attach_to(mm_collection)
         return mm_collection
 

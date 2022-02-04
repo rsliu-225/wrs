@@ -11,7 +11,7 @@ from scipy.spatial.transform import Rotation, Slerp
 
 import config
 import graspplanner.grasp_planner as gp
-import robot_sim.end_effectors.grippers.robotiqhe.robotiqhe as rtqhe
+import robot_sim.end_effectors.gripper.robotiqhe.robotiqhe as rtqhe
 import motionplanner.animation_helper as ani_helper
 import motionplanner.ik_solver as iks
 import motionplanner.robot_helper as rbt_helper
@@ -315,7 +315,7 @@ class MotionPlanner(object):
 
         return path
 
-    def plan_picknplace(self, grasp, objmat4_pair, obj, use_msc=True, use_pickupprim=True,
+    def plan_picknplace(self, grasp, objmat4_pair, obj, use_msc=True, use_pickupprim=True, ext_dist=.1,
                         use_placedownprim=True, start=None, goal=None, pickupprim_len=.1, placedownprim_len=.1):
         eepos_initial, eerot_initial = self.get_ee_by_objmat4(grasp, objmat4_pair[0])
         if start is None:
@@ -372,7 +372,7 @@ class MotionPlanner(object):
         print("--------------rrt---------------")
         planner = rrtc.RRTConnect(self.rbt)
         path = planner.plan(component_name=self.armname, start_conf=pickupprim[-1], goal_conf=placedownprim[0],
-                            obstacle_list=self.obscmlist, ext_dist=.1, max_time=500)
+                            obstacle_list=self.obscmlist, ext_dist=ext_dist, max_time=500)
         if path is not None:
             path = pickupprim + path + placedownprim
             self.rbt.release(hnd_name=self.hnd_name, objcm=obj_copy)
@@ -841,7 +841,7 @@ if __name__ == '__main__':
     gripper = rtqhe.RobotiqHE()
     for i, grasp in enumerate(glist):
         print(f'-----------{i}-------------')
-        path = mp_lft.plan_picknplace(grasp, [objmat4_init, objmat4_goal], pen)
+        path = mp_lft.plan_picknplace(grasp, [objmat4_init, objmat4_goal], pen, ext_dist=.02)
         if path is not None:
             mp_lft.rbt.fk(component_name=mp_lft.armname, jnt_values=path[0])
             obj_hold = pen.copy()

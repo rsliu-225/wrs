@@ -8,7 +8,7 @@ import config
 import modeling.collision_model as cm
 import modeling.geometric_model as gm
 import localenv.item as item
-import robot_sim.end_effectors.grippers.robotiqhe.robotiqhe as rtqhe
+import robot_sim.end_effectors.gripper.robotiqhe.robotiqhe as rtqhe
 import visualization.panda.world as wd
 import robot_con.ur.ur3e_dual_x as ur3ex
 import robot_sim.robots.ur3e_dual.ur3e_dual as ur3edual
