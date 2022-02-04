@@ -285,10 +285,10 @@ class UR3EDual(ri.RobotInterface):
         else:
             raise NotImplementedError
 
-    def hold(self, objcm, jaw_width=None, hnd_name='lft_hnd'):
+    def hold(self, objcm, jawwidth=None, hnd_name='lft_hnd'):
         """
         the objcm is added as a part of the robot_s to the cd checker
-        :param jaw_width:
+        :param jawwidth:
         :param objcm:
         :return:
         """
@@ -322,8 +322,8 @@ class UR3EDual(ri.RobotInterface):
             self.rgt_oih_infos.append(self.cc.add_cdobj(objcm, rel_pos, rel_rotmat, intolist))
         else:
             raise ValueError("hnd_name must be lft_hnd or rgt_hnd!")
-        if jaw_width is not None:
-            self.jaw_to(hnd_name, jaw_width)
+        if jawwidth is not None:
+            self.hnd_dict[hnd_name].jaw_to(jawwidth)
         return rel_pos, rel_rotmat
 
     def get_loc_pose_from_hio(self, hio_pos, hio_rotmat, component_name='lft_arm'):
@@ -427,10 +427,10 @@ class UR3EDual(ri.RobotInterface):
             if obj_info['collisionmodel'] is objcm:
                 return rm.homomat_from_posrot(obj_info['rel_pos']), obj_info['rel_rotmat']
 
-    def release(self, hnd_name, objcm, jaw_width=None):
+    def release(self, hnd_name, objcm, jawwidth=None):
         """
         the objcm is added as a part of the robot_s to the cd checker
-        :param jaw_width:
+        :param jawwidth:
         :param objcm:
         :param hnd_name:
         :return:
@@ -441,8 +441,8 @@ class UR3EDual(ri.RobotInterface):
             oih_infos = self.rgt_oih_infos
         else:
             raise ValueError("hnd_name must be lft_hnd or rgt_hnd!")
-        if jaw_width is not None:
-            self.jaw_to(hnd_name, jaw_width)
+        if jawwidth is not None:
+            self.hnd_dict[hnd_name].jaw_to(jawwidth)
         for obj_info in oih_infos:
             if obj_info['collisionmodel'] is objcm:
                 self.cc.delete_cdobj(obj_info)
@@ -563,6 +563,6 @@ if __name__ == '__main__':
     # u3ed.fk(.85)
     u3ed_meshmodel = u3ed.gen_meshmodel(toggle_tcpcs=True)
     u3ed_meshmodel.attach_to(base)
-    # u3ed_meshmodel.show_cdprimit()
+    u3ed_meshmodel.show_cdprimit()
     u3ed.gen_stickmodel().attach_to(base)
     base.run()

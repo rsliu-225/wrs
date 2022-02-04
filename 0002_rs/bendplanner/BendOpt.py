@@ -37,7 +37,7 @@ class BendOptimizer(object):
         self.bs.reset(self.init_pseq, self.init_rotseq)
         try:
             self.bend_x(x)
-            _ = self.bs.move_to_org(self.init_l)
+            self.bs.move_to_org(self.init_l)
             # pseq = bu.linear_inp3d_by_step(bs.pseq)
             # err, fitness, _ = o3dh.registration_ptpt(np.asarray(pseq), np.asarray(goal_pseq), toggledebug=False)
             err, _ = avg_distance_between_polylines(np.asarray(self.bs.pseq[1:-2]), np.asarray(goal_pseq),

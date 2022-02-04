@@ -119,7 +119,10 @@ class MotionPlanner(object):
                 and (not self.rbth.is_objcollided(obslist, armjnts=armjnts)):
             return armjnts
         else:
-            # self.rbth.show_armjnts(armjnts=armjnts, rgba=(.7, 0, 0, .7))
+            if self.rbth.is_selfcollided(armjnts=armjnts):
+                self.rbth.show_armjnts(armjnts=armjnts, rgba=(.7, 0, 0, .7))
+            else:
+                self.rbth.show_armjnts(armjnts=armjnts, rgba=(.7, .7, 0, .7))
             print("Collided")
         return None
 
@@ -251,7 +254,7 @@ class MotionPlanner(object):
             return None
         objcm_hold = obj.copy()
         objcm_hold.set_homomat(objmat4_pair[0])
-        _, _ = self.rbt.hold(objcm_hold, hnd_name=self.hnd_name, jaw_width=.02)
+        _, _ = self.rbt.hold(objcm_hold, hnd_name=self.hnd_name, jawwidth=.02)
 
         if use_msc:
             goal = self.get_numik(end_grasp[0], end_grasp[1], msc=start)
@@ -276,7 +279,7 @@ class MotionPlanner(object):
         self.rbt.fk(component_name=self.armname, jnt_values=start)
         objcm_hold = obj.copy()
         objcm_hold.set_homomat(self.get_world_objmat4(objrelpos, objrelrot, start))
-        _, _ = self.rbt.hold(objcm_hold, hnd_name=self.hnd_name, jaw_width=.02)
+        _, _ = self.rbt.hold(objcm_hold, hnd_name=self.hnd_name, jawwidth=.02)
 
         print("--------------rrt---------------")
         planner = rrtc.RRTConnect(self.rbt)
@@ -329,7 +332,7 @@ class MotionPlanner(object):
         # self.ah.show_armjnts(rgba=(1, 0, 0, .5), armjnts=start)
         # obj_copy.attach_to(base)
         # base.run()
-        _, _ = self.rbt.hold(obj_copy, hnd_name=self.hnd_name, jaw_width=.02)
+        _, _ = self.rbt.hold(obj_copy, hnd_name=self.hnd_name, jawwidth=.02)
         eepos_final, eerot_final = self.get_ee_by_objmat4(grasp, objmat4_pair[1])
         if goal is None:
             if use_msc:
@@ -834,19 +837,28 @@ if __name__ == '__main__':
     glist = mp_lft.load_all_grasp(config.PEN_STL_F_NAME.split('.stl')[0])
     objmat4_init = rm.homomat_from_posrot(np.asarray([.9, .4, .9]), rm.rotmat_from_axangle((0, 1, 0), -math.pi / 4))
     objmat4_goal = rm.homomat_from_posrot(np.asarray([.9, .3, .9]), rm.rotmat_from_axangle((0, 1, 0), -math.pi / 4))
+    objmat4_obs = rm.homomat_from_posrot(np.asarray([.85, .35, 1]), rm.rotmat_from_axangle((0, 1, 0), -math.pi / 4))
 
     mp_lft.ah.show_objmat4(pen, objmat4_init, rgba=(1, 0, 1, .5), showlocalframe=True)
     mp_lft.ah.show_objmat4(pen, objmat4_goal, rgba=(0, 1, 1, .5), showlocalframe=True)
+    # obs = pen.copy()
+    # obs.set_homomat(objmat4_obs)
+    # obs.attach_to(base)
+    # mp_lft.add_obs(obs)
 
     gripper = rtqhe.RobotiqHE()
+    i = 0
     for i, grasp in enumerate(glist):
         print(f'-----------{i}-------------')
         path = mp_lft.plan_picknplace(grasp, [objmat4_init, objmat4_goal], pen, ext_dist=.02)
         if path is not None:
             mp_lft.rbt.fk(component_name=mp_lft.armname, jnt_values=path[0])
-            obj_hold = pen.copy()
-            obj_hold.set_homomat(objmat4_init)
-            _, _ = mp_lft.rbt.hold(obj_hold, hnd_name=mp_lft.hnd_name, jaw_width=.02)
+            while i < 29:
+                i += 1
+                obj_hold = pen.copy()
+                obj_hold.set_homomat(objmat4_init)
+                _, _ = mp_lft.rbt.hold(obj_hold, hnd_name=mp_lft.hnd_name, jawwidth=.02)
+                mp_lft.rbt.release(hnd_name=mp_lft.hnd_name, objcm=obj_hold)
             mp_lft.ah.show_ani(path)
             base.run()
         # eepos_initial, eerot_initial = mp_lft.get_ee_by_objmat4(grasp, objmat4_init)

@@ -143,8 +143,17 @@ class BendSim(object):
         return 2 * np.arccos(self.r_center / l_center)
 
     def cal_start(self, dir=1, toggledebug=False):
-        plate_angle = None
-        objcm_bend = None
+        plate_angle = self.cal_plate_die_angle(dir, toggledebug)
+        if plate_angle is None:
+            print('No collided point found (die & plate)!')
+            return None, None
+        punch_sangle = self.cal_punch_angle(dir, copy.deepcopy(self.objcm), toggledebug)
+        if punch_sangle is None:
+            print('No collided point found (punch & plate)!')
+            return None, None
+        return punch_sangle, plate_angle
+
+    def cal_plate_die_angle(self, dir, toggledebug=False):
         range_plate = np.linspace(0, np.pi, 360) if dir == 1 else np.linspace(0, -np.pi, 360)
         step_plate = range_plate[1] - range_plate[0]
         for i in range_plate:
@@ -157,7 +166,6 @@ class BendSim(object):
             objcm_bend = copy.deepcopy(self.objcm)
             is_collided, collided_pts = self.pillar_dieside.is_mcdwith(objcm_bend, toggle_contacts=True)
             if is_collided:
-                plate_angle = i
                 if toggledebug:
                     bu.show_pseq(collided_pts, radius=.0004)
                     objcm_bend.set_rgba(rgba=[0, 0, 1, .7])
@@ -166,19 +174,17 @@ class BendSim(object):
                                      epos=np.asarray(tmp_p),
                                      rgba=[.7, .7, .7, .7],
                                      thickness=.0005).attach_to(base)
-                break
-        if plate_angle is None:
-            print('No collided point found (die pillar & plate)!')
-            return None, None, None, None
-        print('plate angle:', np.degrees(plate_angle))
+                return i
+        return None
 
-        range_punch = np.linspace(self.punch_pillar_init, np.pi, 360) if dir == 1 \
-            else np.linspace(-self.punch_pillar_init, -np.pi, 360)
+    def cal_punch_angle(self, dir, objcm, toggledebug=False):
+        range_punch = np.linspace(self.punch_pillar_init, 2 * np.pi - self.punch_pillar_init, 360) if dir == 1 \
+            else np.linspace(-self.punch_pillar_init, -2 * np.pi + - self.punch_pillar_init, 360)
         for i in range_punch:
             tmp_p = np.asarray([self.c2c_dist * math.cos(i), self.c2c_dist * math.sin(i), 0])
             self.pillar_punch.set_homomat(rm.homomat_from_posrot(tmp_p, np.eye(3)))
             self.pillar_punch.set_rgba(rgba=[0, .7, .7, .7])
-            is_collided, collided_pts = self.pillar_punch.is_mcdwith(objcm_bend, toggle_contacts=True)
+            is_collided, collided_pts = self.pillar_punch.is_mcdwith(objcm, toggle_contacts=True)
             if is_collided:
                 if toggledebug:
                     bu.show_pseq(collided_pts, radius=.0004)
@@ -195,10 +201,8 @@ class BendSim(object):
                                      epos=np.asarray((self.c2c_dist, 0, 0)),
                                      rgba=[0, .7, .7, .7],
                                      thickness=.0005).attach_to(base)
-
-                return self.pseq[0], self.rotseq[0], i, plate_angle
-        print('No collided point found (punch pillar & plate)!')
-        return None, None, None, None
+                return i
+        return None
 
     def __insert(self, pos, pseq, rotseq):
         tmp_l = 0
@@ -308,18 +312,18 @@ class BendSim(object):
         self.rotseq = self.rotseq[:start_inx] + rotseq_mid + rotseq_end
         self.update_cm()
         objcm = copy.deepcopy(self.objcm)
-        if cc:
-            for obj in self.__staticobslist:
-                is_collided, collided_pts = obj.is_mcdwith(objcm, toggle_contacts=True)
-                if is_collided:
-                    bu.show_pseq(collided_pts, radius=.0004)
-                    print('Bend result collid with center pillar!')
-                    self.show(rgba=(.7, 0, 0, .7))
-                    self.pseq, self.rotseq = org_pseq, org_rotseq
-                    self.update_cm()
-                    # base.run()
-                    return False
-        return True
+        # if cc:
+        #     for obj in self.__staticobslist:
+        #         is_collided, collided_pts = obj.is_mcdwith(objcm, toggle_contacts=True)
+        #         if is_collided:
+        #             bu.show_pseq(collided_pts, radius=.0004)
+        #             print('Bend result collid with center pillar!')
+        #             self.show(rgba=(.7, 0, 0, .7))
+        #             self.pseq, self.rotseq = org_pseq, org_rotseq
+        #             self.update_cm()
+        #             # base.run()
+        #             return False
+        # return True
 
     def __trans_pos(self, pts, pos):
         return rm.homomat_transform_points(rm.homomat_from_posrot(np.asarray(pos), np.eye(3)), pts)
@@ -405,51 +409,75 @@ class BendSim(object):
         taskMgr.doMethodLater(2, self.__update, "update",
                               extraArgs=[motioncounter, bendresseq], appendTask=True)
 
-    def show_bendresseq(self, bendresseq):
+    def show_bendresseq(self, bendresseq, is_success=None):
         motioncounter = [0]
+        if is_success is None:
+            is_success = [True] * len(bendresseq)
         taskMgr.doMethodLater(.05, self.__update_press, "update",
-                              extraArgs=[motioncounter, bendresseq], appendTask=True)
+                              extraArgs=[motioncounter, bendresseq, is_success], appendTask=True)
 
     def gen_by_bendseq(self, bendseq, cc=True, prune=False, toggledebug=False):
         is_success = [False] * len(bendseq)
         result = [[None]] * len(bendseq)
         for i, bend in enumerate(bendseq):
+            bend_dir = 0 if bend[0] < 0 else 1
             # bend_angle, lift_angle, rot_angle, bend_pos
-            flag = self.move_to_org(bend[3], dir=0 if bend[0] < 0 else 1, lift_angle=bend[1], rot_angle=bend[2],
-                                    cc=cc, toggledebug=toggledebug)
-            if flag:
+            self.move_to_org(bend[3], dir=bend_dir, lift_angle=bend[1], rot_angle=bend[2], toggledebug=toggledebug)
+            pseq_init, rotseq_init = copy.deepcopy(self.pseq), copy.deepcopy(self.rotseq)
+            if cc:
+                motor_sa, plate_a = self.cal_start(dir=0 if bend[0] < 0 else 1, toggledebug=toggledebug)
                 pseq_init, rotseq_init = copy.deepcopy(self.pseq), copy.deepcopy(self.rotseq)
-                if cc:
-                    pos, rot, motor_a, plate_a = self.cal_start(dir=0 if bend[0] < 0 else 1, toggledebug=toggledebug)
-                    pseq_init, rotseq_init = copy.deepcopy(self.pseq), copy.deepcopy(self.rotseq)
-                    if pos is not None:
-                        if toggledebug:
-                            # hndmat4 = rm.homomat_from_posrot(pos, rot)
-                            gm.gen_frame(pos, rot, length=.01, thickness=.001).attach_to(base)
-                        print(bend)
-                        print("motor init:", np.degrees(motor_a))
-                        print("motor finish:", np.degrees(motor_a) + np.degrees(bend[0]))
-                        print('------------')
-                        bend_flag = self.bend(bend[0], bend[1], bend[2], bend[3], cc=cc, toggledebug=toggledebug)
-                        is_success[i] = bend_flag
-                        result[i] = [motor_a, motor_a + bend[0], plate_a,
-                                     pseq_init, rotseq_init,
-                                     copy.deepcopy(self.pseq), copy.deepcopy(self.rotseq)]
-                else:
-                    bend_flag = self.bend(bend[0], bend[1], bend[2], bend[3], cc=cc, toggledebug=toggledebug)
-                    is_success[i] = bend_flag
-                    result[i] = [None, None, None,
-                                 pseq_init, rotseq_init,
-                                 copy.deepcopy(self.pseq), copy.deepcopy(self.rotseq)]
-                if prune and not is_success[i]:
-                    break
+                objcm_init = copy.deepcopy(self.objcm)
+                if motor_sa is None:
+                    if prune:
+                        break
+
+                self.bend(bend[0], bend[1], bend[2], bend[3], cc=cc, toggledebug=toggledebug)
+                pseq_end, rotseq_end = copy.deepcopy(self.pseq), copy.deepcopy(self.rotseq)
+                motor_eangle = self.cal_punch_angle(bend_dir, copy.deepcopy(self.objcm), toggledebug)
+                if motor_eangle is None:
+                    print('No collided point found (punch end & plate)!')
+                    self.reset(pseq_init, rotseq_init, extend=False)
+                    if prune:
+                        break
+
+                collided_pts = self.bender_cc([objcm_init, self.objcm.copy()])
+                if len(collided_pts) != 0:
+                    self.reset(pseq_init, rotseq_init, extend=False)
+                    if prune:
+                        break
+
+                if motor_sa is not None and motor_eangle is not None and len(collided_pts) == 0:
+                    is_success[i] = True
+                    print(bend)
+                    print('plate angle:', np.degrees(plate_a))
+                    print("motor init:", np.degrees(motor_sa))
+                    print("motor finish:", np.degrees(motor_eangle))
+                print('------------')
+                result[i] = [motor_sa, motor_eangle, plate_a,
+                             pseq_init, rotseq_init, pseq_end, rotseq_end]
             else:
-                if prune:
-                    break
-                continue
+                bend_flag = self.bend(bend[0], bend[1], bend[2], bend[3], cc=cc, toggledebug=toggledebug)
+                is_success[i] = bend_flag
+                result[i] = [0, self.punch_pillar_init, self.punch_pillar_init,
+                             pseq_init, rotseq_init,
+                             copy.deepcopy(self.pseq), copy.deepcopy(self.rotseq)]
         return is_success, result
 
-    def move_to_org(self, l, dir=1, lift_angle=0, rot_angle=0, cc=True, toggledebug=False):
+    def bender_cc(self, objcm_list):
+        collided_pts_all = []
+        for objcm in objcm_list:
+            for obj in self.__staticobslist:
+                is_collided, collided_pts = obj.is_mcdwith(objcm, toggle_contacts=True)
+                if is_collided:
+                    collided_pts_all.extend(collided_pts)
+        if len(collided_pts_all) !=0:
+            bu.show_pseq(collided_pts_all, radius=.0004)
+            print('Collide with bender')
+            self.show(rgba=(.7, 0, 0, .7))
+        return collided_pts_all
+
+    def move_to_org(self, l, dir=1, lift_angle=0, rot_angle=0, toggledebug=False):
         inx = self.__insert_p(l, toggledebug=False)
         init_homomat = rm.homomat_from_posrot([self.bend_r, 0, 0], np.eye(3))
         goal_homomat = rm.homomat_from_posrot(self.pseq[inx], self.rotseq[inx])
@@ -466,21 +494,10 @@ class BendSim(object):
         if lift_angle != 0:
             self.__lift(lift_angle)
         self.update_cm()
-        objcm = copy.deepcopy(self.objcm)
-        if cc:
-            for stobj in self.__staticobslist:
-                is_collided, collided_pts = stobj.is_mcdwith(objcm, toggle_contacts=True)
-                if is_collided:
-                    print('Bend init pos collid with center pillar!')
-                    bu.show_pseq(collided_pts, radius=.0004)
-                    self.show(rgba=(.7, 0, 0, .7))
-                    # base.run()
-                    return False
         if toggledebug:
             gm.gen_sphere(self.pseq[inx], radius=.0004, rgba=(1, 1, 0, 1)).attach_to(base)
             gm.gen_frame(self.pseq[inx], self.rotseq[inx], length=.01, thickness=.0004).attach_to(base)
             self.show(rgba=(.7, .7, 0, .7), show_frame=True)
-        return True
 
     def __cal_length(self):
         length = 0
@@ -596,37 +613,42 @@ class BendSim(object):
             motioncounter[0] = 0
         return task.again
 
-    def __update_press(self, motioncounter, bendresseq, task):
+    def __update_press(self, motioncounter, bendresseq, is_success, task):
         if base.inputmgr.keymap['space']:
             p3u.clearobj_by_name(['obj'])
             if motioncounter[0] < len(bendresseq):
                 print('-------------')
-                if bendresseq[motioncounter[0]][0] is None:
-                    print('Failed')
-                    motioncounter[0] += 1
-                    return task.again
+                flag = is_success[motioncounter[0]]
                 init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendresseq[motioncounter[0]]
-                print(np.degrees(init_a), np.degrees(end_a), np.degrees(plate_a))
+                # print(np.degrees(init_a), np.degrees(end_a), np.degrees(plate_a))
 
                 self.reset(pseq_init, rotseq_init, extend=False)
                 objcm_init = copy.deepcopy(self.objcm)
-                objcm_init.set_rgba((.7, .7, 0, .7))
+                if flag:
+                    objcm_init.set_rgba((.7, .7, 0, .7))
+                else:
+                    objcm_init.set_rgba((.7, 0, .7, .7))
                 objcm_init.attach_to(base)
 
                 self.reset(pseq_end, rotseq_end, extend=False)
                 objcm_end = copy.deepcopy(self.objcm)
-                objcm_end.set_rgba((0, .7, 0, .7))
+                if flag:
+                    objcm_end.set_rgba((0, .7, 0, .7))
+                else:
+                    objcm_end.set_rgba((.7, 0, 0, .7))
                 objcm_end.attach_to(base)
 
-                tmp_p = np.asarray([self.c2c_dist * math.cos(init_a), self.c2c_dist * math.sin(init_a), 0])
-                self.pillar_punch.set_homomat(rm.homomat_from_posrot(tmp_p, np.eye(3)))
-                self.pillar_punch.set_rgba(rgba=[.7, 0, 0, .7])
-                self.pillar_punch.attach_to(base)
+                if init_a is not None:
+                    tmp_p = np.asarray([self.c2c_dist * math.cos(init_a), self.c2c_dist * math.sin(init_a), 0])
+                    self.pillar_punch.set_homomat(rm.homomat_from_posrot(tmp_p, np.eye(3)))
+                    self.pillar_punch.set_rgba(rgba=[.7, .7, 0, .7])
+                    self.pillar_punch.attach_to(base)
 
-                tmp_p = np.asarray([self.c2c_dist * math.cos(end_a), self.c2c_dist * math.sin(end_a), 0])
-                self.pillar_punch_end.set_homomat(rm.homomat_from_posrot(tmp_p, np.eye(3)))
-                self.pillar_punch_end.set_rgba(rgba=[0, .7, 0, .7])
-                self.pillar_punch_end.attach_to(base)
+                if end_a is not None:
+                    tmp_p = np.asarray([self.c2c_dist * math.cos(end_a), self.c2c_dist * math.sin(end_a), 0])
+                    self.pillar_punch_end.set_homomat(rm.homomat_from_posrot(tmp_p, np.eye(3)))
+                    self.pillar_punch_end.set_rgba(rgba=[0, .7, 0, .7])
+                    self.pillar_punch_end.attach_to(base)
                 motioncounter[0] += 1
             else:
                 motioncounter[0] = 0
@@ -636,6 +658,3 @@ class BendSim(object):
 
 def gen_seq(num):
     return itertools.permutations(range(num), r=None)
-
-
-

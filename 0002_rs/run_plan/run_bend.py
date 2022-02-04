@@ -52,9 +52,12 @@ if __name__ == '__main__':
         bendseq = [bendset[i] for i in seqs[0]]
         is_success, bendresseq = bs.gen_by_bendseq(bendseq, cc=True, toggledebug=False)
         print(is_success)
+        if all(is_success[:3]):
+            bs.show_bendresseq(bendresseq, is_success)
+            base.run()
         if all(is_success):
             pickle.dump(bendresseq, open('./tmp_bendresseq.pkl', 'wb'))
-            bs.show_bendresseq(bendresseq)
+            bs.show_bendresseq(bendresseq, is_success)
             base.run()
         bs.reset([(0, 0, 0), (0, bendseq[-1][3], 0)], [np.eye(3), np.eye(3)])
         dummy_ptree.prune(seqs[0][:is_success.index(False) + 1])
