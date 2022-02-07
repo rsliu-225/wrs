@@ -374,9 +374,9 @@ class BendSim(object):
     def update_cm(self, type='stick'):
         # ts = time.time()
         if type == 'stick':
-            vertices, faces = self.__gen_stick()
+            vertices, faces = self.__gen_stick(self.pseq[::-1], self.rotseq[::-1])
         else:
-            vertices, faces = self.__gen_surface()
+            vertices, faces = self.__gen_surface(self.pseq[::-1], self.rotseq[::-1])
         objtrm = trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces))
         self.objcm = cm.CollisionModel(initor=objtrm, btwosided=True, name='obj')
         # print('time cost(update cm):', time.time() - ts)
@@ -471,7 +471,7 @@ class BendSim(object):
                 is_collided, collided_pts = obj.is_mcdwith(objcm, toggle_contacts=True)
                 if is_collided:
                     collided_pts_all.extend(collided_pts)
-        if len(collided_pts_all) !=0:
+        if len(collided_pts_all) != 0:
             bu.show_pseq(collided_pts_all, radius=.0004)
             print('Collide with bender')
             self.show(rgba=(.7, 0, 0, .7))
@@ -517,11 +517,10 @@ class BendSim(object):
         self.pseq = self.__rot_new_orgin(self.pseq, np.asarray((-self.bend_r, 0, 0)), rot)
         self.rotseq = np.asarray([rot.dot(r) for r in self.rotseq])
 
-    def __gen_surface(self, toggledebug=False):
+    def __gen_surface(self, pseq, rotseq, toggledebug=False):
         tmp_vertices = []
         tmp_faces = []
-        pseq = self.pseq[::-1]
-        rotseq = self.rotseq[::-1]
+
         for i, p in enumerate(pseq):
             tmp_vertices.append(p + rotseq[i][:, 0] * self.thickness / 2 + rotseq[i][:, 2] * self.width / 2)
             tmp_vertices.append(p + rotseq[i][:, 0] * self.thickness / 2 - rotseq[i][:, 2] * self.width / 2)
@@ -552,11 +551,9 @@ class BendSim(object):
     #         vertices.extend(tmp_cm.objtrm.vertices)
     #     return np.array(vertices), np.array(faces)
 
-    def __gen_stick(self, section=8, toggledebug=False):
+    def __gen_stick(self, pseq, rotseq, section=8, toggledebug=False):
         tmp_vertices = []
         tmp_faces = []
-        pseq = self.pseq[::-1]
-        rotseq = self.rotseq[::-1]
         for i, p in enumerate(pseq):
             for a in np.linspace(-np.pi, np.pi, section + 1):
                 tmp_vertices.append(p + rotseq[i][:, 0] * self.thickness / 2 * np.sin(a)
@@ -655,6 +652,84 @@ class BendSim(object):
             base.inputmgr.keymap['space'] = False
         return task.again
 
+    def gen_cc_bound(self, p, rot, h=.005, l=.05):
+        w = self.c2c_dist - self.r_center - self.r_side - .001
 
-def gen_seq(num):
-    return itertools.permutations(range(num), r=None)
+        vertices = []
+        vertices.append(p + rot[:3, 0] * w / 2 + np.asarray((0, 0, h)))
+        vertices.append(p - rot[:3, 0] * w / 2 + np.asarray((0, 0, h)))
+        vertices.append(p + rot[:3, 0] * w / 2 - np.asarray((0, 0, h)))
+        vertices.append(p - rot[:3, 0] * w / 2 - np.asarray((0, 0, h)))
+
+        vertices.append(p + rot[:3, 0] * w / 2 + np.asarray((0, 0, h)) + rot[:3, 1] * l)
+        vertices.append(p - rot[:3, 0] * w / 2 + np.asarray((0, 0, h)) + rot[:3, 1] * l)
+        vertices.append(p + rot[:3, 0] * w / 2 - np.asarray((0, 0, h)) + rot[:3, 1] * l)
+        vertices.append(p - rot[:3, 0] * w / 2 - np.asarray((0, 0, h)) + rot[:3, 1] * l)
+
+        faces = [[0, 4, 6], [0, 6, 2],
+                 [2, 7, 6], [2, 3, 7],
+                 [1, 5, 7], [1, 7, 3]]
+        cctrm = trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces))
+        return cm.CollisionModel(initor=cctrm, btwosided=True, name='obj')
+
+    def pull(self, sl, el):
+        s_inx = self.__insert_p(sl)
+        e_inx = self.__insert_p(el)
+        pseq = self.pseq[s_inx:e_inx+1]
+        rotseq = self.rotseq[s_inx:e_inx+1]
+        gm.gen_frame(self.pseq[s_inx], self.rotseq[s_inx], thickness=.001, length=.01).attach_to(base)
+        gm.gen_frame(self.pseq[e_inx], self.rotseq[e_inx], thickness=.001, length=.01).attach_to(base)
+        cccm = self.gen_cc_bound(pseq[s_inx], rotseq[s_inx])
+        i = 1
+        j = 1
+        key_pseq = []
+        key_rotseq = []
+        key_idx = []
+        while i < len(pseq)-1:
+            print(range(i, len(pseq)-1))
+            for j in range(i, len(pseq)-1):
+                vertices, faces = \
+                    self.__gen_stick(np.asarray([pseq[j - 1], pseq[j+1]]), np.asarray([rotseq[j - 1], rotseq[j+1]]),section=3)
+                strm = trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces))
+                scm = cm.CollisionModel(initor=strm, btwosided=True, name='obj')
+                # scm.attach_to(base)
+                is_collided, collided_pts = scm.is_mcdwith(cccm, toggle_contacts=True)
+                if is_collided:
+                    p = np.average(collided_pts, axis=0)
+                    rot = rotseq[j]
+                    key_pseq.append(p)
+                    key_rotseq.append(rot)
+                    key_idx.append(j)
+                    # gm.gen_frame(p, rot, thickness=.001, length=.01).attach_to(base)
+                    bu.show_pseq(collided_pts)
+                    cccm = self.gen_cc_bound(p, rot)
+                    cccm_show = self.gen_cc_bound(pseq[i], rotseq[i], l=np.linalg.norm(pseq[i]-p))
+                    cccm_show.attach_to(base)
+                    break
+            i = j+1
+        bu.show_pseq([self.pseq[i] for i in key_idx], rgba=(1, 1, 0, 1))
+        bu.show_pseq(key_pseq, rgba=(0, 1, 1, 1))
+
+
+if __name__ == '__main__':
+    import visualization.panda.world as wd
+
+    base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
+    bendset = [
+        [np.radians(225), np.radians(0), np.radians(0), .04],
+        [np.radians(-90), np.radians(0), np.radians(0), .08],
+        [np.radians(90), np.radians(0), np.radians(0), .1],
+        [np.radians(-45), np.radians(0), np.radians(0), .12],
+        # [np.radians(40), np.radians(0), np.radians(0), .06],
+        # [np.radians(-15), np.radians(0), np.radians(0), .08],
+        # [np.radians(20), np.radians(0), np.radians(0), .1]
+    ]
+    # bendseq = pickle.load(open('./tmp_bendseq.pkl', 'rb'))
+
+    bs = BendSim(show=True)
+    bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
+    is_success, bendresseq = bs.gen_by_bendseq(bendset, cc=False, toggledebug=False)
+    # bs.show(rgba=(.7, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
+    bs.show(rgba=(.7, .7, .7, .2), show_frame=False)
+    bs.pull(.04, .12)
+    base.run()

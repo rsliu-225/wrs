@@ -13,7 +13,8 @@ import robot_sim.end_effectors.gripper.robotiqhe.robotiqhe as rtqhe
 import motionplanner.motion_planner as m_planner
 import bendplanner.BendSim as b_sim
 import utils.panda3d_utils as p3u
-import PremutationTree as p_tree
+import bendplanner.PremutationTree as p_tree
+import bendplanner.InvalidPermutationTree as ip_tree
 from scipy import interpolate
 import matplotlib.pyplot as plt
 
@@ -32,6 +33,8 @@ class BendRbtPlanner(object):
         self.obslist = self.env.getstationaryobslist() + self.env.getchangableobslist()
 
         self.ptree = p_tree.PTree(0)
+        self.iptree = ip_tree.IPTree(0)
+
         self.bendset = []
         self.grasp_list = []
         self.transmat4 = np.eye(4)
@@ -40,7 +43,8 @@ class BendRbtPlanner(object):
         self.bs.reset(pseq, rotseq, extend)
 
     def set_up(self, bendset, grasp_list, transmat4):
-        self.ptree = p_tree.PTree(len(bendset))
+        # self.ptree = p_tree.PTree(len(bendset))
+        self.iptree = ip_tree.IPTree(len(bendset))
         self.bendset = bendset
         self.grasp_list = grasp_list
         self.transmat4 = transmat4
@@ -412,7 +416,7 @@ class BendRbtPlanner(object):
             base.inputmgr.keymap['space'] = False
         return task.again
 
-    def run(self):
+    def run_pt(self):
         # self.pre_grasp_reasoning()
         dummy_ptree = copy.deepcopy(self.ptree)
         seqs = dummy_ptree.output()
@@ -447,6 +451,40 @@ class BendRbtPlanner(object):
             print(f'success {seqs[0]}')
             dummy_ptree.prune(seqs[0])
             seqs = dummy_ptree.output()
+            self.show_motion_withrbt(bendresseq, self.transmat4, pathseq_list[0][1])
+            base.run()
+
+        print(self.ptree.output())
+
+    def run(self):
+        seqs = self.iptree.get_potential_valid()
+        while len(seqs) != 0:
+            bendseq = [self.bendset[i] for i in seqs]
+            print(seqs[0])
+            self.reset_bs(self.init_pseq, self.init_rotseq)
+            is_success, bendresseq = bs.gen_by_bendseq(bendseq, cc=True, prune=True, toggledebug=False)
+            pickle.dump(bendresseq, open('./tmp_bendresseq.pkl', 'wb'))
+            if not all(is_success):
+                self.iptree.add_invalid_seq(seqs[:is_success.index(False) + 1])
+                seqs = self.iptree.get_potential_valid()
+                continue
+            fail_index, armjntsseq_list = self.check_ik(bendresseq)
+            if fail_index != -1:
+                self.iptree.add_invalid_seq(seqs[:fail_index + 1])
+                seqs = self.iptree.get_potential_valid()
+                continue
+            pickle.dump(armjntsseq_list, open('./tmp_armjntsseq.pkl', 'wb'))
+            bendresseq = pickle.load(open('./tmp_bendresseq.pkl', 'rb'))
+            armjntsseq_list = pickle.load(open('./tmp_armjntsseq.pkl', 'rb'))
+            fail_index, pathseq_list = self.check_motion(bendresseq, armjntsseq_list)
+            # print(fail_index, pathseq_list)
+            if fail_index != -1:
+                self.iptree.add_invalid_seq(seqs[:fail_index + 1])
+                seqs = self.iptree.get_potential_valid()
+                continue
+            pickle.dump(armjntsseq_list, open('./tmp_pathseq.pkl', 'wb'))
+            print(f'success {seqs[0]}')
+            seqs = self.iptree.get_potential_valid()
             self.show_motion_withrbt(bendresseq, self.transmat4, pathseq_list[0][1])
             base.run()
 
