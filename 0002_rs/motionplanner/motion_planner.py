@@ -326,13 +326,11 @@ class MotionPlanner(object):
         if start is None:
             print("Cannot reach init position!")
             return None
-        self.rbt.fk(component_name=self.armname, jnt_values=start)
-        obj_copy = obj.copy()
-        obj_copy.set_homomat(objmat4_pair[0])
-        # self.ah.show_armjnts(rgba=(1, 0, 0, .5), armjnts=start)
-        # obj_copy.attach_to(base)
+
+        # u3ed_meshmodel = self.rbt.gen_meshmodel(toggle_tcpcs=True)
+        # u3ed_meshmodel.attach_to(base)
+        # u3ed_meshmodel.show_cdprimit()
         # base.run()
-        _, _ = self.rbt.hold(obj_copy, hnd_name=self.hnd_name, jawwidth=.02)
         eepos_final, eerot_final = self.get_ee_by_objmat4(grasp, objmat4_pair[1])
         if goal is None:
             if use_msc:
@@ -345,7 +343,7 @@ class MotionPlanner(object):
 
         if goal is None:
             print("Cannot reach final position!")
-            self.rbt.release(hnd_name=self.hnd_name, objcm=obj_copy)
+            # self.rbt.release(hnd_name=self.hnd_name, objcm=obj_copy)
             return None
 
         # planning
@@ -353,7 +351,7 @@ class MotionPlanner(object):
             pickupprim = self.get_linear_path_from(start=start, length=pickupprim_len)
             if pickupprim == []:
                 print("Cannot reach init primitive position!")
-                self.rbt.release(hnd_name=self.hnd_name, objcm=obj_copy)
+                # self.rbt.release(hnd_name=self.hnd_name, objcm=obj_copy)
                 return None
         else:
             pickupprim = [start]
@@ -362,20 +360,27 @@ class MotionPlanner(object):
             placedownprim = self.get_linear_path_from(start=goal, length=placedownprim_len)[::-1]
             if placedownprim == []:
                 print("Cannot reach final primitive position!")
-                self.rbt.release(hnd_name=self.hnd_name, objcm=obj_copy)
+                # self.rbt.release(hnd_name=self.hnd_name, objcm=obj_copy)
                 return None
         else:
             placedownprim = [goal]
-
+        self.rbt.fk(component_name=self.armname, jnt_values=start)
+        obj_copy = obj.copy()
+        obj_copy.set_homomat(objmat4_pair[0])
+        _, _ = self.rbt.hold(obj_copy, hnd_name=self.hnd_name, jawwidth=.01)
         # self.ah.show_armjnts(armjnts=pickupprim[-1], rgba=[1, 0, 1, .5])
         # self.ah.show_armjnts(armjnts=pickupprim[0], rgba=[1, 0, 0, .5])
         # self.ah.show_armjnts(armjnts=placedownprim[0], rgba=[0, 1, 1, .5])
         # self.ah.show_armjnts(armjnts=placedownprim[-1], rgba=[0, 0, 1, .5])
+        # u3ed_meshmodel = self.rbt.gen_meshmodel(toggle_tcpcs=True)
+        # u3ed_meshmodel.attach_to(base)
+        # u3ed_meshmodel.show_cdprimit()
         # base.run()
+
         print("--------------rrt---------------")
         planner = rrtc.RRTConnect(self.rbt)
         path = planner.plan(component_name=self.armname, start_conf=pickupprim[-1], goal_conf=placedownprim[0],
-                            obstacle_list=self.obscmlist, ext_dist=ext_dist, max_time=500)
+                            obstacle_list=self.obscmlist, ext_dist=ext_dist, max_iter=10000,max_time=100)
         if path is not None:
             path = pickupprim + path + placedownprim
             self.rbt.release(hnd_name=self.hnd_name, objcm=obj_copy)
@@ -386,27 +391,50 @@ class MotionPlanner(object):
         self.rbt.release(hnd_name=self.hnd_name, objcm=obj_copy)
         return None
 
+    # def objmat4_list_inp(self, objmat4_list, max_inp=30):
+    #     inp_mat4_list = []
+    #     for i, objmat4 in enumerate(objmat4_list):
+    #         if i > 0:
+    #             inp_mat4_list.append(objmat4_list[i - 1])
+    #             _, angle = rm.axangle_between_rotmat(objmat4_list[i - 1][:3, :3], objmat4[:3, :3])
+    #             if angle < 1.0:
+    #                 continue
+    #             cnt = int(angle) if int(angle) < max_inp else max_inp
+    #             times = [1 / cnt * n for n in range(1, cnt)]
+    #             # print(angle, cnt, times)
+    #
+    #             p1 = objmat4_list[i - 1][:3, 3]
+    #             p2 = objmat4[:3, 3]
+    #
+    #             rots = Rotation.from_matrix([objmat4_list[i - 1][:3, :3], objmat4[:3, :3]])
+    #             slerp = Slerp([0, 1], rots)
+    #
+    #             interp_r_list = slerp(times)
+    #             interp_p_list = [p1 + (p2 - p1) * t for t in times]
+    #             interp_rot_list = [interp_r.as_matrix() for interp_r in interp_r_list]
+    #
+    #             inp_mat4_list.extend([rm.homomat_from_posrot(p, rot) for p, rot in zip(interp_p_list, interp_rot_list)])
+    #     print("length of interpolation result:", len(inp_mat4_list))
+    #
+    #     return inp_mat4_list
+
     def objmat4_list_inp(self, objmat4_list, max_inp=30):
         inp_mat4_list = []
         for i, objmat4 in enumerate(objmat4_list):
             if i > 0:
                 inp_mat4_list.append(objmat4_list[i - 1])
                 _, angle = rm.axangle_between_rotmat(objmat4_list[i - 1][:3, :3], objmat4[:3, :3])
-                if angle < 1.0:
-                    continue
-                cnt = int(angle) if int(angle) < max_inp else max_inp
+                if angle < np.pi / 180:
+                    inp_mat4_list.append(objmat4_list[i])
+                cnt = int(np.degrees(angle)) if int(np.degrees(angle)) < max_inp else max_inp
                 times = [1 / cnt * n for n in range(1, cnt)]
                 # print(angle, cnt, times)
 
-                p1 = objmat4_list[i - 1][:3, 3]
-                p2 = objmat4[:3, 3]
+                p1, p2 = objmat4_list[i - 1][:3, 3], objmat4[:3, 3]
+                r1, r2 = objmat4_list[i - 1][:3, :3], objmat4[:3, :3]
 
-                rots = Rotation.from_matrix([objmat4_list[i - 1][:3, :3], objmat4[:3, :3]])
-                slerp = Slerp([0, 1], rots)
-
-                interp_r_list = slerp(times)
+                interp_rot_list = rm.rotmat_slerp(r1, r2, cnt)
                 interp_p_list = [p1 + (p2 - p1) * t for t in times]
-                interp_rot_list = [interp_r.as_matrix() for interp_r in interp_r_list]
 
                 inp_mat4_list.extend([rm.homomat_from_posrot(p, rot) for p, rot in zip(interp_p_list, interp_rot_list)])
         print("length of interpolation result:", len(inp_mat4_list))
@@ -481,7 +509,7 @@ class MotionPlanner(object):
         # self.rbth.show_armjnts(armjnts=msc)
         return msc
 
-    def get_continuouspath_nlopt(self, msc, grasp, objmat4_list, grasp_id=0, threshold=1, col_ps=None, roll_limit=1e-2,
+    def get_continuouspath_nlopt(self, msc, grasp, objmat4_list, threshold=1, col_ps=None, roll_limit=1e-2,
                                  pos_limit=1e-2, add_mvcon=False, dump_f_name=None, toggledebug=False):
         """
         plan init armjnts to first drawpath armjnts, append all the others armjnts in the drawpath.
@@ -493,7 +521,7 @@ class MotionPlanner(object):
         :param threshold: 0-1
         :return: armjnts list
         """
-        print(f"--------------get continuous path(nlopt) {grasp_id}---------------")
+        print(f"--------------get continuous path(nlopt)---------------")
         success_cnt = 0
         path = []
         time_start_1 = time.time()
@@ -538,7 +566,7 @@ class MotionPlanner(object):
             cost = self.get_path_cost(path)
             if dump_f_name is not None:
                 f_name = f"./log/path/nlopt/{dump_f_name}_" \
-                         f"{grasp_id}_{round(cost, 3)}_{round(time.time() - time_start_1, 3)}_{len(path)}"
+                         f"_{round(cost, 3)}_{round(time.time() - time_start_1, 3)}_{len(path)}"
                 pickle.dump([relpos, relrot, path], open(f"{f_name}.pkl", "wb"))
             return path
 
@@ -601,7 +629,7 @@ class MotionPlanner(object):
 
         return best_config, best_inx
 
-    def get_continuouspath_opt1(self, grasp, grasp_id, objmat4_list, sample_range, msc=None):
+    def get_continuouspath_gopt_smp(self, grasp, objmat4_list, sample_range, dump_f_name=None, msc=None):
         msc, start_id = self.__find_start_config(objmat4_list[0], grasp, sample_range)
         print(msc, start_id)
         init = copy.deepcopy(msc)
@@ -712,11 +740,107 @@ class MotionPlanner(object):
         plt.subplot(122)
         self.rbth.plot_armjnts(armjnts_path)
         plt.show()
-        f_name = f"./log/path/discrete/" \
-                 f"m1w5_ik3_{grasp_id}_{round(best_dist, 3)}_{round(time.time() - time_start_1, 3)}_{len(G)}"
-        plt.savefig(f"{f_name}.png")
-        plt.close(fig)
-        pickle.dump([relpos, relrot, armjnts_path], open(f"{f_name}.pkl", "wb"))
+        if dump_f_name is not None:
+            f_name = f"./log/path/discrete/" \
+                     f"{dump_f_name}_{round(best_dist, 3)}_{round(time.time() - time_start_1, 3)}_{len(G)}"
+            plt.savefig(f"{f_name}.png")
+            plt.close(fig)
+            pickle.dump([relpos, relrot, armjnts_path], open(f"{f_name}.pkl", "wb"))
+        # self.show_ani(armjnts_path)
+        # base.run()
+        return armjnts_path
+
+    def get_continuouspath_gopt(self, grasp, objmat4_map, dump_f_name=None):
+        time_start_1 = time.time()
+        gtsp_dict = {}
+        end = len(objmat4_map) - 1
+
+        for key, objmat4_list in enumerate(objmat4_map):
+            gtsp_dict[key] = {"objmat4_list": objmat4_list}
+
+        for k, v in gtsp_dict.items():
+            armjnts_list = []
+            node_success = False
+            for i, objmat4 in enumerate(v["objmat4_list"]):
+                eepos, eerot = self.get_ee_by_objmat4(grasp, objmat4)
+                armjnts = self.get_numik(eepos, eerot)
+                if armjnts is not None:
+                    armjnts_list.append(armjnts)
+                    # msc = copy.deepcopy(armjnts)
+                    node_success = True
+                else:
+                    # print(k, i, objmat4)
+                    armjnts_list.append(armjnts)
+                    armjnts_list.append(armjnts)
+            if not node_success:
+                # print(k, "node failed!", armjnts_list)
+                return None
+            print(k, f"{len([v for v in armjnts_list if v is not None])} of {len(v['objmat4_list'])}")
+            gtsp_dict[k]["armjnts_list"] = armjnts_list
+
+        G = nx.DiGraph()
+        for k, v in list(gtsp_dict.items())[:-1]:
+            for i in range(len(gtsp_dict[k])):
+                for j in range(len(gtsp_dict[k + 1])):
+                    armjnts_1 = gtsp_dict[k]["armjnts_list"][i]
+                    armjnts_2 = gtsp_dict[k + 1]["armjnts_list"][j]
+                    if armjnts_1 is None or armjnts_2 is None:
+                        continue
+                    diff = np.linalg.norm(armjnts_2 - armjnts_1, ord=1)
+                    G.add_weighted_edges_from([(f"{str(k)}_{str(i)}", f"{str(k + 1)}_{str(j)}", diff)])
+        print("number of nodes:", len(G))
+        print("build graph time cost:", time.time() - time_start_1)
+
+        time_start_2 = time.time()
+        best_dist = np.inf
+        best_path = None
+        # for i in range(len(gtsp_dict[0]["objmat4_list"])):
+        #     dist_dict, path_dict = nx.algorithms.shortest_paths.weighted.single_source_dijkstra(G, source=f"0_{i}")
+        if G.has_node(f"0_0"):
+            dist_dict, path_dict = \
+                nx.algorithms.shortest_paths.weighted.single_source_dijkstra(G, source=f"0_0")
+        else:
+            source_list = [n for n in list(G.nodes) if str(n)[:2] == "0_"]
+            if source_list is []:
+                return None
+            dist_dict, path_dict = \
+                nx.algorithms.shortest_paths.weighted.single_source_dijkstra(G, source=source_list[0])
+        if path_dict is None:
+            return None
+
+        target_list = [n for n in list(G.nodes) if str(n).split("_")[0] == str(end)]
+        for target in target_list:
+            dist = dist_dict[target]
+            path = path_dict[target]
+            if dist < best_dist:
+                best_dist = dist
+                best_path = path
+
+        print("search time cost:", time.time() - time_start_2)
+        print("min cost:", best_dist)
+        print("best path:", best_path)
+        armjnts_path = []
+        for node in best_path:
+            k, objmat4_id = node.split("_")
+            objmat4 = gtsp_dict[int(k)]["objmat4_list"][int(objmat4_id)]
+            # self.show_armjnts(rgba=(0, 1, 0, 0.5), armjnts=gtsp_dict[int(k)]["armjnts_list"][int(objmat4_id)])
+            armjnts_path.append(gtsp_dict[int(k)]["armjnts_list"][int(objmat4_id)])
+            gm.gen_arrow(spos=objmat4[:3, 3], epos=objmat4[:3, 3] + 10 * objmat4[:3, 0],
+                         rgba=(0, 1, 0, 1), thickness=1)
+
+        fig = plt.figure(1, figsize=(12.8, 4.8))
+        plt.ion()
+        plt.subplot(121)
+        self.rbth.plot_nodepath(best_path, title="node path")
+        plt.subplot(122)
+        self.rbth.plot_armjnts(armjnts_path)
+        plt.show()
+        if dump_f_name is not None:
+            f_name = f"./log/path/discrete/" \
+                     f"{dump_f_name}_{round(best_dist, 3)}_{round(time.time() - time_start_1, 3)}_{len(G)}"
+            plt.savefig(f"{f_name}.png")
+            plt.close(fig)
+            pickle.dump([armjnts_path], open(f"{f_name}.pkl", "wb"))
         # self.show_ani(armjnts_path)
         # base.run()
         return armjnts_path

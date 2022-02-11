@@ -24,7 +24,7 @@ class IPTree:
 
             node_id = "-" + '-'.join(str_seq[:idx + 1])
             if not self.tree.get_node(node_id):
-                parent_node_id = node_id[:-len(str_seq[idx])-1]
+                parent_node_id = node_id[:-len(str_seq[idx]) - 1]
                 parent_node_id = parent_node_id if parent_node_id else "root"
                 self.tree.create_node(
                     seq[idx], node_id, parent_node_id, seq[idx],
@@ -69,35 +69,26 @@ class IPTree:
                 print("Invalid sequence!")
                 return []
 
-        stack = [
-            (
-                pre_node_ids + '-' + str(idx),
-                [x for x in available_child_ids if x != idx],
-            )
-            for idx in available_child_ids
-        ]
+        stack = [(pre_node_ids + '-' + str(idx), [x for x in available_child_ids if x != idx])
+                 for idx in available_child_ids]
 
         while stack:
+            # print(stack)
             node_id, child_ids = stack.pop()
-            seq_invalid = self.tree.get_node(node_id) and \
-                self.tree.get_node(node_id).is_leaf()
+            # print(node_id, child_ids)
+            seq_invalid = self.tree.get_node(node_id) and self.tree.get_node(node_id).is_leaf()
             if not seq_invalid:
                 if not child_ids:
                     return [int(x) for x in node_id.split('-')[1:]]
                 for idx in child_ids:
-                    stack.append(
-                        (
-                            node_id + '-' + str(idx),
-                            [x for x in child_ids if x != idx],
-                        )
-                    )
+                    stack.append((node_id + '-' + str(idx), [x for x in child_ids if x != idx]))
 
         print("Can not find any potentially valid sequence!")
         return []
 
-if __name__ == '__main__':
 
-    tree = IPTree(5)
+if __name__ == '__main__':
+    tree = IPTree(15)
     tree.add_invalid_seq([0])
     tree.add_invalid_seq([1, 2, 0])
     tree.add_invalid_seq([1, 3, 4])
@@ -105,8 +96,5 @@ if __name__ == '__main__':
     tree.add_invalid_seq([1, 2, 4])
     tree.tree.show()
     print(tree.get_potential_valid())
-    print(tree.whether_valid([0]))
-    print(tree.whether_valid([1]))
-    print(tree.whether_valid([1, 2]))
-    print(tree.get_potential_valid([1,2]))
 
+    print(tree.get_potential_valid([1]))

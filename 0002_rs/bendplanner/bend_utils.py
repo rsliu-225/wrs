@@ -264,3 +264,27 @@ def iter_fit(pseq, tor=.001, toggledebug=False):
             plt.show()
     print('Num. of fitting result:', len(res_pids))
     return pseq[res_pids]
+
+
+def objmat4_list_inp(objmat4_list, max_inp=30):
+    inp_mat4_list = []
+    for i, objmat4 in enumerate(objmat4_list):
+        if i > 0:
+            inp_mat4_list.append(objmat4_list[i - 1])
+            _, angle = rm.axangle_between_rotmat(objmat4_list[i - 1][:3, :3], objmat4[:3, :3])
+            if angle < np.pi/180:
+                continue
+            cnt = int(np.degrees(angle)) if int(np.degrees(angle)) < max_inp else max_inp
+            times = [1 / cnt * n for n in range(1, cnt)]
+            # print(angle, cnt, times)
+
+            p1, p2 = objmat4_list[i - 1][:3, 3], objmat4[:3, 3]
+            r1, r2 = objmat4_list[i - 1][:3, :3], objmat4[:3, :3]
+
+            interp_rot_list = rm.rotmat_slerp(r1, r2, 10)
+            interp_p_list = [p1 + (p2 - p1) * t for t in times]
+
+            inp_mat4_list.extend([rm.homomat_from_posrot(p, rot) for p, rot in zip(interp_p_list, interp_rot_list)])
+    print("length of interpolation result:", len(inp_mat4_list))
+
+    return inp_mat4_list

@@ -40,7 +40,7 @@ class BendOptimizer(object):
             self.bs.move_to_org(self.init_l)
             # pseq = bu.linear_inp3d_by_step(bs.pseq)
             # err, fitness, _ = o3dh.registration_ptpt(np.asarray(pseq), np.asarray(goal_pseq), toggledebug=False)
-            err, _ = avg_distance_between_polylines(np.asarray(self.bs.pseq[1:-2]), np.asarray(goal_pseq),
+            err, _ = bu.avg_distance_between_polylines(np.asarray(self.bs.pseq[1:-2]), np.asarray(goal_pseq),
                                                     toggledebug=False)
         except:
             err = 1
@@ -54,7 +54,7 @@ class BendOptimizer(object):
             # pos, rot, angle = \
             #     bs.cal_startp(x[2 * i + 1], dir=0 if x[2 * i] < 0 else 1, toggledebug=False)
             # if pos is not None:
-            bs.bend(bend_angle=x[2 * i], lift_angle=np.radians(0), bend_pos=x[2 * i + 1])
+            self.bs.bend(bend_angle=x[2 * i], lift_angle=np.radians(0), bend_pos=x[2 * i + 1])
         return self.bs.pseq
 
     def update_known(self):

@@ -152,6 +152,7 @@ class AnimationHelper(object):
     def show_armjnts(self, rgba=None, armjnts=None, toggleendcoord=False, jawwidth=50, genmnp=True):
         if armjnts is not None:
             self.rbt.fk(self.armname, armjnts)
+
         if genmnp:
             self.__genmnp_by_armname(rgba=rgba, toggleendcoord=toggleendcoord, jawwidth=jawwidth)
         else:
@@ -177,7 +178,7 @@ class AnimationHelper(object):
     def show_ani(self, path):
         rbtmnp = [None, None]
         motioncounter = [0]
-        taskMgr.doMethodLater(0.05, self.__update, "update",
+        taskMgr.doMethodLater(0.5, self.__update, "update",
                               extraArgs=[rbtmnp, motioncounter, self.rbt, path, self.armname],
                               appendTask=True)
 
@@ -217,6 +218,7 @@ class AnimationHelper(object):
             armjnts = path[motioncounter[0]]
             rbt.fk(armname, armjnts)
             rbtmnp[0] = rbt.gen_meshmodel()
+            rbtmnp[0].show_cdprimit()
             rbtmnp[0].attach_to(base)
             motioncounter[0] += 1
         else:
