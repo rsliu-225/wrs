@@ -663,8 +663,7 @@ class BendSim(object):
         cccm = self.__gen_cc_bound(pseq[s_inx], rotseq[s_inx])
         i = 1
         j = 1
-        key_pseq = []
-        key_rotseq = []
+        key_pseq, key_rotseq = [pseq[s_inx]], [rotseq[s_inx]]
         key_idx = []
         while i < len(pseq) - 1:
             print(range(i, len(pseq) - 1))
@@ -688,14 +687,17 @@ class BendSim(object):
                     cccm_show.set_rgba((1, 1, 1, .5))
                     cccm_show.attach_to(base)
                     break
+
                 j = len(pseq) - 1
             i = j + 1
         if toggledebug:
             for i in range(len(key_pseq)):
                 gm.gen_frame(key_pseq[i], key_rotseq[i], thickness=.001, length=.01).attach_to(base)
+        key_pseq.append(pseq[e_inx])
+        key_rotseq.append(rotseq[e_inx])
         return key_pseq, key_rotseq
 
-    def pull(self, key_pseq, key_rotseq):
+    def pull_sample(self, key_pseq, key_rotseq):
         self.add_staticobs(self.pillar_punch)
         goal_p = np.asarray([(self.slot_w / 2 + self.r_center) * np.cos(self.punch_pillar_init / 2),
                              (self.slot_w / 2 + self.r_center) * np.sin(self.punch_pillar_init / 2), 0])
@@ -730,6 +732,37 @@ class BendSim(object):
 
         return resseq
 
+    def pull(self, key_pseq, key_rotseq):
+        self.add_staticobs(self.pillar_punch)
+        goal_p = np.asarray([(self.slot_w / 2 + self.r_center) * np.cos(self.punch_pillar_init / 2),
+                             (self.slot_w / 2 + self.r_center) * np.sin(self.punch_pillar_init / 2), 0])
+        goal_rot = rm.rotmat_from_axangle((0, 0, 1), self.punch_pillar_init / 2)
+        goal_homomat = rm.homomat_from_posrot(goal_p, goal_rot)
+        org_pseq, org_rotseq = self.pseq.copy(), self.rotseq.copy()
+        resseq = []
+        for i in range(len(key_pseq)):
+            init_homomat = rm.homomat_from_posrot(key_pseq[i], key_rotseq[i])
+            transmat4 = np.dot(goal_homomat, np.linalg.inv(init_homomat))
+            self.pseq = rm.homomat_transform_points(transmat4, self.pseq).tolist()
+            self.rotseq = np.asarray([transmat4[:3, :3].dot(r) for r in self.rotseq])
+
+            rot = rm.rotmat_from_axangle(goal_rot[:3, 1], rot_a) \
+                .dot(rm.rotmat_from_axangle(goal_rot[:3, 0], lift_a))
+            self.pseq = self.__rot_new_orgin(self.pseq, -goal_p, rot)
+            self.rotseq = np.asarray([rot.dot(r) for r in self.rotseq])
+            self.update_cm()
+            collided_pts = self.bender_cc([self.objcm.copy()])
+            if len(collided_pts) == 0:
+                resseq.append([self.pseq.copy(), self.rotseq.copy()])
+            else:
+                resseq.append(None)
+            self.reset(org_pseq, org_rotseq, extend=False)
+        self.reset_staticobs()
+        self.show_pullseq(resseq)
+        base.run()
+
+        return resseq
+
 
 if __name__ == '__main__':
     import visualization.panda.world as wd
@@ -752,5 +785,5 @@ if __name__ == '__main__':
     # bs.show(rgba=(.7, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
     bs.show(rgba=(.7, .7, .7, .2), show_frame=False)
     key_pseq, key_rotseq = bs.get_pull_primitive(.04, .12, toggledebug=True)
-    resseq = bs.pull(key_pseq, key_rotseq)
+    # resseq = bs.pull(key_pseq, key_rotseq)
     base.run()
