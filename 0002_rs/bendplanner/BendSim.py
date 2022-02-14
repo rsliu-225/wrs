@@ -663,7 +663,7 @@ class BendSim(object):
         cccm = self.__gen_cc_bound(pseq[s_inx], rotseq[s_inx])
         i = 1
         j = 1
-        key_pseq, key_rotseq = [pseq[s_inx]], [rotseq[s_inx]]
+        key_pseq, key_rotseq = [self.pseq[s_inx]], [self.rotseq[s_inx]]
         key_idx = []
         while i < len(pseq) - 1:
             print(range(i, len(pseq) - 1))
@@ -693,8 +693,8 @@ class BendSim(object):
         if toggledebug:
             for i in range(len(key_pseq)):
                 gm.gen_frame(key_pseq[i], key_rotseq[i], thickness=.001, length=.01).attach_to(base)
-        key_pseq.append(pseq[e_inx])
-        key_rotseq.append(rotseq[e_inx])
+        key_pseq.append(self.pseq[e_inx])
+        key_rotseq.append(self.rotseq[e_inx])
         return key_pseq, key_rotseq
 
     def pull_sample(self, key_pseq, key_rotseq):
@@ -746,19 +746,19 @@ class BendSim(object):
             self.pseq = rm.homomat_transform_points(transmat4, self.pseq).tolist()
             self.rotseq = np.asarray([transmat4[:3, :3].dot(r) for r in self.rotseq])
 
-            rot = rm.rotmat_from_axangle(goal_rot[:3, 1], rot_a) \
-                .dot(rm.rotmat_from_axangle(goal_rot[:3, 0], lift_a))
-            self.pseq = self.__rot_new_orgin(self.pseq, -goal_p, rot)
-            self.rotseq = np.asarray([rot.dot(r) for r in self.rotseq])
+            self.pseq = self.__rot_new_orgin(self.pseq, -goal_p, goal_rot)
+            self.rotseq = np.asarray([goal_rot.dot(r) for r in self.rotseq])
             self.update_cm()
             collided_pts = self.bender_cc([self.objcm.copy()])
-            if len(collided_pts) == 0:
-                resseq.append([self.pseq.copy(), self.rotseq.copy()])
-            else:
-                resseq.append(None)
+            # if len(collided_pts) == 0:
+            #     resseq.append([self.pseq.copy(), self.rotseq.copy()])
+            # else:
+            #     resseq.append(None)
+            resseq.append([self.pseq.copy(), self.rotseq.copy()])
+
             self.reset(org_pseq, org_rotseq, extend=False)
         self.reset_staticobs()
-        self.show_pullseq(resseq)
+        self.show_pullseq([[r] for r in resseq])
         base.run()
 
         return resseq
@@ -785,5 +785,5 @@ if __name__ == '__main__':
     # bs.show(rgba=(.7, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
     bs.show(rgba=(.7, .7, .7, .2), show_frame=False)
     key_pseq, key_rotseq = bs.get_pull_primitive(.04, .12, toggledebug=True)
-    # resseq = bs.pull(key_pseq, key_rotseq)
+    resseq = bs.pull(key_pseq, key_rotseq)
     base.run()
