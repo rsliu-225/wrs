@@ -86,6 +86,7 @@ class RRTConnect(rrt.RRT):
              ext_dist=2,
              max_iter=300,
              max_time=15.0,
+             rand_rate=None,
              smoothing_iterations=50,
              animation=False):
         self.roadmap.clear()
@@ -93,6 +94,10 @@ class RRTConnect(rrt.RRT):
         self.roadmap_goal.clear()
         self.start_conf = start_conf
         self.goal_conf = goal_conf
+        # for obj in obstacle_list:
+        #     obj.show_cdprimit()
+        #     obj.attach_to(base)
+        # base.run()
         # check start and goal
         # if self._is_collided(component_name, start_conf, obstacle_list, otherrobot_list):
         #     print("The start robot_s configuration is in collision!")

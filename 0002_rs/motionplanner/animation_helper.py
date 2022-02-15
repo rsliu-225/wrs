@@ -218,7 +218,7 @@ class AnimationHelper(object):
             armjnts = path[motioncounter[0]]
             rbt.fk(armname, armjnts)
             rbtmnp[0] = rbt.gen_meshmodel()
-            rbtmnp[0].show_cdprimit()
+            # rbtmnp[0].show_cdprimit()
             rbtmnp[0].attach_to(base)
             motioncounter[0] += 1
         else:

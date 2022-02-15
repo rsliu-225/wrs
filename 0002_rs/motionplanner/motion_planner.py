@@ -380,7 +380,7 @@ class MotionPlanner(object):
         print("--------------rrt---------------")
         planner = rrtc.RRTConnect(self.rbt)
         path = planner.plan(component_name=self.armname, start_conf=pickupprim[-1], goal_conf=placedownprim[0],
-                            obstacle_list=self.obscmlist, ext_dist=ext_dist, max_iter=10000,max_time=100)
+                            obstacle_list=self.obscmlist, ext_dist=ext_dist, max_iter=10000, max_time=100)
         if path is not None:
             path = pickupprim + path + placedownprim
             self.rbt.release(hnd_name=self.hnd_name, objcm=obj_copy)
@@ -424,16 +424,22 @@ class MotionPlanner(object):
             if i > 0:
                 inp_mat4_list.append(objmat4_list[i - 1])
                 _, angle = rm.axangle_between_rotmat(objmat4_list[i - 1][:3, :3], objmat4[:3, :3])
-                if angle < np.pi / 180:
-                    inp_mat4_list.append(objmat4_list[i])
-                cnt = int(np.degrees(angle)) if int(np.degrees(angle)) < max_inp else max_inp
+                dist = np.linalg.norm(objmat4_list[i - 1][:3, 3] - objmat4[:3, 3])
+                # if angle < np.pi / 180:
+                #     inp_mat4_list.append(objmat4_list[i])
+                cnt_a = int(np.degrees(angle))
+                cnt_l = int(dist / .005)
+                cnt = max([cnt_a, cnt_l]) if max([cnt_a, cnt_l]) < max_inp else max_inp
+
                 times = [1 / cnt * n for n in range(1, cnt)]
                 # print(angle, cnt, times)
 
                 p1, p2 = objmat4_list[i - 1][:3, 3], objmat4[:3, 3]
                 r1, r2 = objmat4_list[i - 1][:3, :3], objmat4[:3, :3]
-
-                interp_rot_list = rm.rotmat_slerp(r1, r2, cnt)
+                if cnt_a == 0:
+                    interp_rot_list = [r1 for _ in range(cnt)]
+                else:
+                    interp_rot_list = rm.rotmat_slerp(r1, r2, cnt)
                 interp_p_list = [p1 + (p2 - p1) * t for t in times]
 
                 inp_mat4_list.extend([rm.homomat_from_posrot(p, rot) for p, rot in zip(interp_p_list, interp_rot_list)])

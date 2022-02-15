@@ -87,7 +87,7 @@ class CollisionModel(gm.GeometricModel):
             raise ValueError("Wrong primitive collision model type name!")
         if cdprimitive_type == 'surface_balls':
             if expand_radius is None:
-                expand_radius = 0.015
+                expand_radius = 0.0015
             collision_node = pcd.gen_surfaceballs_cdnp(self.objtrm, name='cdnp_surface_ball', radius=expand_radius)
         else:
             if expand_radius is None:

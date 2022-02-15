@@ -51,7 +51,7 @@ class BendRbtPlanner(object):
         for obs in self.bs.staticobs_list():
             obs.set_homomat(self.transmat4)
             self.obslist.append(obs)
-            obs.show_cdprimit()
+            # obs.show_cdprimit()
             obs.attach_to(base)
             self.mp.add_obs(obs)
 
@@ -221,47 +221,48 @@ class BendRbtPlanner(object):
             pathseq.append(path)
         return pathseq
 
+    #
     # def plan_pull(self, bendseq, bendresseq, grasp, armjntsseq):
     #     print(f'----------plan linear motion----------')
     #     pathseq = [[armjntsseq[0]]]
     #     for i, armjnts in enumerate(armjntsseq[:-1]):
-    #         key_pseq, key_rotseq = self.bs.get_pull_primitive(bendseq[i][0], bendseq[i + 1][0], toggledebug=True)
-    #         resmap = self.bs.pull_sample(key_pseq, key_rotseq)
-    #         objmat4map = []
-    #         for i in range(len(resmap)):
-    #             objmat4seq = []
-    #             for pseq, rotseq in resmap[i]:
-    #                 objmat4seq.append(rm.homomat_from_posrot(pseq[0], rotseq[0]))
-    #             objmat4map.append(objmat4seq)
-    #         if len(objmat4map) != 0:
-    #             path = self.mp.get_continuouspath_gopt(grasp, objmat4map, dump_f_name=None)
-    #         else:
-    #             _, _, _, _, _, pseq_init, rotseq_init = bendresseq[i]
-    #             _, _, _, pseq_end, rotseq_end, _, _ = bendresseq[i + 1]
+    #         # key_pseq, key_rotseq = self.bs.get_pull_primitive(bendseq[i][-1], bendseq[i + 1][-1], toggledebug=True)
+    #         # resmap = self.bs.pull_sample(key_pseq, key_rotseq)
+    #         # objmat4map = []
+    #         # for i in range(len(resmap)):
+    #         #     objmat4seq = []
+    #         #     for pseq, rotseq in resmap[i]:
+    #         #         objmat4seq.append(rm.homomat_from_posrot(pseq[0], rotseq[0]))
+    #         #     objmat4map.append(objmat4seq)
+    #         # if len(objmat4map) != 0:
+    #         #     path = self.mp.get_continuouspath_gopt(grasp, objmat4map, dump_f_name=None)
+    #         # else:
+    #         _, _, _, _, _, pseq_init, rotseq_init = bendresseq[i]
+    #         _, _, _, pseq_end, rotseq_end, _, _ = bendresseq[i + 1]
     #
-    #             pseq_init, rotseq_init = self.transseq(pseq_init, rotseq_init, self.transmat4)
-    #             pseq_end, rotseq_end = self.transseq(pseq_end, rotseq_end, self.transmat4)
+    #         pseq_init, rotseq_init = self.transseq(pseq_init, rotseq_init, self.transmat4)
+    #         pseq_end, rotseq_end = self.transseq(pseq_end, rotseq_end, self.transmat4)
     #
-    #             objmat4_init = rm.homomat_from_posrot(pseq_init[0], rotseq_init[0])
-    #             objmat4_end = rm.homomat_from_posrot(pseq_end[0], rotseq_end[0])
-    #             self.reset_bs(pseq_init, rotseq_init, extend=False)
-    #             objcm = copy.deepcopy(self.bs.objcm)
-    #             path = []
-    #             objmat4_list = self.mp.objmat4_list_inp([objmat4_init, objmat4_end])
-    #             gm.gen_frame(pseq_init[0], rotseq_init[0], length=.01, thickness=.001).attach_to(base)
-    #             gm.gen_frame(pseq_end[0], rotseq_end[0], length=.01, thickness=.001).attach_to(base)
-    #             for objmat4 in objmat4_list:
-    #                 gm.gen_frame(objmat4[:3, 3], objmat4[:3, :3], length=.01, thickness=.001).attach_to(base)
-    #                 armjnts = self.mp.get_armjnts_by_objmat4ngrasp(grasp, [objcm], objmat4,
-    #                                                                msc=path[-1] if len(path) != 0 else None)
-    #                 if armjnts is not None:
-    #                     path.append(armjnts)
-    #                 # objcm_show = self.bs.objcm.copy()
-    #                 # objcm_show.set_homomat(np.linalg.inv(objmat4_init).dot(objmat4))
-    #                 # objcm_show.attach_to(base)
-    #             # base.run()
-    #             if len(path) == 0:
-    #                 path = None
+    #         objmat4_init = rm.homomat_from_posrot(pseq_init[0], rotseq_init[0])
+    #         objmat4_end = rm.homomat_from_posrot(pseq_end[0], rotseq_end[0])
+    #         self.reset_bs(pseq_init, rotseq_init, extend=False)
+    #         objcm = copy.deepcopy(self.bs.objcm)
+    #         path = []
+    #         objmat4_list = self.mp.objmat4_list_inp([objmat4_init, objmat4_end])
+    #         gm.gen_frame(pseq_init[0], rotseq_init[0], length=.01, thickness=.001).attach_to(base)
+    #         gm.gen_frame(pseq_end[0], rotseq_end[0], length=.01, thickness=.001).attach_to(base)
+    #         for objmat4 in objmat4_list:
+    #             gm.gen_frame(objmat4[:3, 3], objmat4[:3, :3], length=.01, thickness=.001).attach_to(base)
+    #             armjnts = self.mp.get_armjnts_by_objmat4ngrasp(grasp, [objcm], objmat4,
+    #                                                            msc=path[-1] if len(path) != 0 else None)
+    #             if armjnts is not None:
+    #                 path.append(armjnts)
+    #             # objcm_show = self.bs.objcm.copy()
+    #             # objcm_show.set_homomat(np.linalg.inv(objmat4_init).dot(objmat4))
+    #             # objcm_show.attach_to(base)
+    #         # base.run()
+    #         if len(path) == 0:
+    #             path = None
     #         pathseq.append(path)
     #     return pathseq
 
@@ -269,31 +270,24 @@ class BendRbtPlanner(object):
         print(f'----------plan linear motion----------')
         pathseq = [[armjntsseq[0]]]
         for i, armjnts in enumerate(armjntsseq[:-1]):
-            key_pseq, key_rotseq = self.bs.get_pull_primitive(bendseq[i][0], bendseq[i + 1][0], toggledebug=True)
-            resseq = self.bs.pull(key_pseq, key_rotseq)
-            objmat4_list = [transmat4.dot(rm.homomat_from_posrot(resseq[0][i], resseq[1][i]))
+            _, _, _, _, _, pseq_init, rotseq_init = bendresseq[i]
+            self.reset_bs(pseq_init, rotseq_init, extend=False)
+            key_pseq, key_rotseq = self.bs.get_pull_primitive(bendseq[i][-1], bendseq[i + 1][-1], toggledebug=True)
+            resseq = self.bs.pull(key_pseq, key_rotseq, bendseq[i][2])
+            objmat4_list = [transmat4.dot(rm.homomat_from_posrot(resseq[i][0][0], resseq[i][1][0]))
                             for i in range(len(resseq))]
-            # _, _, _, _, _, pseq_init, rotseq_init = bendresseq[i]
-            # _, _, _, pseq_end, rotseq_end, _, _ = bendresseq[i + 1]
-            #
-            # pseq_init, rotseq_init = self.transseq(pseq_init, rotseq_init, self.transmat4)
-            # pseq_end, rotseq_end = self.transseq(pseq_end, rotseq_end, self.transmat4)
-            #
-            # objmat4_init = rm.homomat_from_posrot(pseq_init[0], rotseq_init[0])
-            # objmat4_end = rm.homomat_from_posrot(pseq_end[0], rotseq_end[0])
 
-            self.reset_bs(objmat4_list[0][:3, 3], objmat4_list[0][:3, :3], extend=False)
+            # self.reset_bs(resseq[i][0], resseq[i][1], extend=False)
             objcm = copy.deepcopy(self.bs.objcm)
             path = []
-            # objmat4_list = self.mp.objmat4_list_inp([objmat4_init, objmat4_end])
-            gm.gen_frame(objmat4_list[0][:3, 3], objmat4_list[0][:3, :3], length=.01, thickness=.001).attach_to(base)
-            gm.gen_frame(objmat4_list[-1][:3, 3], objmat4_list[-1][:3, :3], length=.01, thickness=.001).attach_to(base)
+            objmat4_list = self.mp.objmat4_list_inp(objmat4_list)
             for objmat4 in objmat4_list:
                 gm.gen_frame(objmat4[:3, 3], objmat4[:3, :3], length=.01, thickness=.001).attach_to(base)
                 armjnts = self.mp.get_armjnts_by_objmat4ngrasp(grasp, [objcm], objmat4,
                                                                msc=path[-1] if len(path) != 0 else None)
                 if armjnts is not None:
                     path.append(armjnts)
+                    self.mp.ah.show_armjnts(armjnts=armjnts)
                 # objcm_show = self.bs.objcm.copy()
                 # objcm_show.set_homomat(np.linalg.inv(objmat4_init).dot(objmat4))
                 # objcm_show.attach_to(base)

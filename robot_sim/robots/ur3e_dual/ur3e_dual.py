@@ -298,7 +298,6 @@ class UR3EDual(ri.RobotInterface):
                         self.lft_arm.lnks[1],
                         self.lft_arm.lnks[2],
                         self.lft_arm.lnks[3],
-                        self.lft_arm.lnks[4],
                         self.rgt_arm.lnks[1],
                         self.rgt_arm.lnks[2],
                         self.rgt_arm.lnks[3],
@@ -317,8 +316,7 @@ class UR3EDual(ri.RobotInterface):
                         self.lft_arm.lnks[6],
                         self.rgt_arm.lnks[1],
                         self.rgt_arm.lnks[2],
-                        self.rgt_arm.lnks[3],
-                        self.rgt_arm.lnks[4]]
+                        self.rgt_arm.lnks[3],]
             self.rgt_oih_infos.append(self.cc.add_cdobj(objcm, rel_pos, rel_rotmat, intolist))
         else:
             raise ValueError("hnd_name must be lft_hnd or rgt_hnd!")
@@ -467,7 +465,6 @@ class UR3EDual(ri.RobotInterface):
         if jaw_width is not None:
             self.jaw_to(hnd_name, jaw_width)
         for obj_info in oih_infos:
-            print(obj_info)
             self.cc.delete_cdobj(obj_info)
         oih_infos.clear()
 

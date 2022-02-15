@@ -41,7 +41,7 @@ class RRT(object):
         """
         nodes_dict = dict(roadmap.nodes(data='conf'))
         nodes_key_list = list(nodes_dict.keys())
-        nodes_value_list = list(nodes_dict.values()) # attention, correspondence is not guanranteed in python
+        nodes_value_list = list(nodes_dict.values())  # attention, correspondence is not guanranteed in python
         # use the following alternative if correspondence is bad (a bit slower), 20210523, weiwei
         # # nodes_value_list = list(nodes_dict.values())
         # nodes_value_list = itemgetter(*nodes_key_list)(nodes_dict)
@@ -151,7 +151,7 @@ class RRT(object):
                                          conf=conf,
                                          obstacle_list=obstacle_list,
                                          otherrobot_list=otherrobot_list)
-                                                 for conf in shortcut):
+                   for conf in shortcut):
                 smoothed_path = smoothed_path[:i] + shortcut + smoothed_path[j + 1:]
             if animation:
                 self.draw_wspace([self.roadmap], self.start_conf, self.goal_conf,
@@ -311,7 +311,7 @@ if __name__ == '__main__':
                 raise ValueError("Only support hnd_name == 'all'!")
             return self.jlc.get_jnt_values()
 
-        def is_collided(self, obstacle_list=[], otherrobot_list=[]):
+        def is_collided(self, obstacle_list=[], otherrobot_list=[], toggle_contact_points=False):
             for (obpos, size) in obstacle_list:
                 dist = np.linalg.norm(np.asarray(obpos) - self.get_jntvalues())
                 if dist <= size / 2.0:
