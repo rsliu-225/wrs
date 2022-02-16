@@ -6,6 +6,7 @@ import visualization.panda.world as wd
 import bendplanner.BendSim as b_sim
 import bendplanner.PremutationTree as p_tree
 import bendplanner.InvalidPermutationTree as ip_tree
+import bendplanner.bend_utils as bu
 # import utils.phoxi as phoxi
 # import utils.phoxi_locator as pl
 import basis.robot_math as rm
@@ -31,6 +32,8 @@ if __name__ == '__main__':
     # phxilocator = pl.PhxiLocator(phoxi, amat_f_name=config.AMAT_F_NAME)
 
     base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
+    bs = b_sim.BendSim(show=True)
+
     bendset = [
         [np.radians(225), np.radians(0), np.radians(0), .04],
         [np.radians(90), np.radians(0), np.radians(180), .08],
@@ -41,8 +44,8 @@ if __name__ == '__main__':
         # [np.radians(20), np.radians(0), np.radians(0), .1]
     ]
     # bendseq = pickle.load(open('./tmp_bendseq.pkl', 'rb'))
+    # bendset = bs.gen_random_bendset(5)
 
-    bs = b_sim.BendSim(show=True)
     bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
     # bs.show(rgba=(.7, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
     # bs.show(rgba=(.7, .7, .7, .7), show_frame=True)
@@ -70,8 +73,10 @@ if __name__ == '__main__':
     seqs = iptree.get_potential_valid()
     while len(seqs) != 0:
         bendseq = [bendset[i] for i in seqs]
-        is_success, bendresseq = bs.gen_by_bendseq(bendseq, cc=True, toggledebug=False)
+        is_success, bendresseq = bs.gen_by_bendseq(bendseq, cc=True, prune=False, toggledebug=False)
         print(is_success)
+        # bs.show_bendresseq(bendresseq, is_success)
+        # base.run()
         if all(is_success):
             pickle.dump(bendresseq, open('./tmp_bendresseq.pkl', 'wb'))
             bs.show_bendresseq(bendresseq, is_success)
