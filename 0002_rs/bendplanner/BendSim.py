@@ -106,7 +106,7 @@ class BendSim(object):
         self.rotseq = copy.deepcopy(rotseq)
         if extend:
             self.pseq.append((0, self.pseq[-1][1] + 2 * np.pi * self.bend_r, 0))
-            self.pseq = [np.asarray(p) + np.asarray([self.bend_r, 0, 0]) for p in self.pseq]
+            # self.pseq = [np.asarray(p) + np.asarray([self.bend_r, 0, 0]) for p in self.pseq]
             self.rotseq.append(np.eye(3))
         self.update_cm()
 
@@ -785,13 +785,13 @@ class BendSim(object):
 
             self.reset(org_pseq, org_rotseq, extend=False)
         self.reset_staticobs()
-        self.show_pullseq([[r] for r in resseq])
-        base.run()
+        # self.show_pullseq([[r] for r in resseq])
+        # base.run()
 
         return resseq
 
     def gen_random_bendset(self, n=5):
-        return [[random.uniform(0, 1) * np.pi, 0, random.uniform(-1, 1) * np.pi, self.bend_r * np.pi * i]
+        return [[random.uniform(-1, 1) * np.pi/2, 0, random.uniform(-1, 1) * np.pi, self.bend_r * np.pi * i]
                 for i in range(1, n + 1)]
 
 
@@ -819,7 +819,7 @@ if __name__ == '__main__':
     is_success, bendresseq = bs.gen_by_bendseq(bendset, cc=False, toggledebug=True)
     # bs.show(rgba=(.7, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
     bs.show(rgba=(.7, .7, .7, .7), show_frame=True, show_pseq=False)
-    base.run()
+    # base.run()
     key_pseq, key_rotseq = bs.get_pull_primitive(.12, .04, toggledebug=True)
     resseq = bs.pull(key_pseq, key_rotseq, np.pi)
     base.run()

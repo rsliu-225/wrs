@@ -367,7 +367,7 @@ class MotionPlanner(object):
         self.rbt.fk(component_name=self.armname, jnt_values=start)
         obj_copy = obj.copy()
         obj_copy.set_homomat(objmat4_pair[0])
-        _, _ = self.rbt.hold(obj_copy, hnd_name=self.hnd_name, jawwidth=.01)
+        # _, _ = self.rbt.hold(obj_copy, hnd_name=self.hnd_name, jawwidth=.01)
         # self.ah.show_armjnts(armjnts=pickupprim[-1], rgba=[1, 0, 1, .5])
         # self.ah.show_armjnts(armjnts=pickupprim[0], rgba=[1, 0, 0, .5])
         # self.ah.show_armjnts(armjnts=placedownprim[0], rgba=[0, 1, 1, .5])
@@ -380,7 +380,7 @@ class MotionPlanner(object):
         print("--------------rrt---------------")
         planner = rrtc.RRTConnect(self.rbt)
         path = planner.plan(component_name=self.armname, start_conf=pickupprim[-1], goal_conf=placedownprim[0],
-                            obstacle_list=self.obscmlist, ext_dist=ext_dist, max_iter=10000, max_time=100)
+                            obstacle_list=self.obscmlist, ext_dist=ext_dist, max_iter=1000, max_time=100)
         if path is not None:
             path = pickupprim + path + placedownprim
             self.rbt.release(hnd_name=self.hnd_name, objcm=obj_copy)

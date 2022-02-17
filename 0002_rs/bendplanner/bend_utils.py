@@ -142,7 +142,8 @@ def plot_pseq_2d(ax, pseq):
     ax.grid()
 
 
-def align_with_goal(bs, goal_pseq, init_rot, init_pos=(bconfig.R_BEND, 0, 0), init_l=bconfig.INIT_L):
+def align_with_goal(bs, goal_pseq, init_rot, init_pos=np.asarray((bconfig.R_BEND, 0, 0)), init_l=bconfig.INIT_L):
+    goal_pseq = np.asarray(goal_pseq)
     # goal_rot = np.dot(
     #     # rm.rotmat_from_axangle((1, 0, 0), -np.pi / 2),
     #     np.linalg.inv(init_rot),
@@ -153,7 +154,7 @@ def align_with_goal(bs, goal_pseq, init_rot, init_pos=(bconfig.R_BEND, 0, 0), in
     # goal_pseq = rm.homomat_transform_points(rm.homomat_from_posrot(rot=goal_rot, pos=init_pos), goal_pseq)
     goal_pseq = rm.homomat_transform_points(rm.homomat_from_posrot(rot=np.linalg.inv(init_rot),
                                                                    pos=init_pos - goal_pseq[0]), goal_pseq)
-    bs.move_to_org(init_l, cc=False)
+    bs.move_to_org(init_l)
     return goal_pseq, np.asarray(bs.pseq)[1:-1]
 
 
