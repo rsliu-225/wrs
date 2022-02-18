@@ -111,6 +111,12 @@ class MotionPlanner(object):
 
     def get_armjnts_by_objmat4ngrasp(self, grasp, obslist, objmat4, msc=None):
         eepos, eerot = self.get_ee_by_objmat4(grasp, objmat4)
+        gm.gen_frame(eepos, eerot).attach_to(base)
+        # _, gl_jaw_center_pos, gl_jaw_center_rotmat, hnd_pos, hnd_rotmat = grasp
+        # hndmat4 = np.dot(objmat4, rm.homomat_from_posrot(hnd_pos, hnd_rotmat))
+        # self.gripper.fix_to(hndmat4[:3, 3], hndmat4[:3, :3])
+        # hnd = self.gripper.gen_meshmodel()
+        # hnd.attach_to(base)
         armjnts = self.get_numik(eepos, eerot, msc=msc)
         if armjnts is None:
             # print("No ik solution")

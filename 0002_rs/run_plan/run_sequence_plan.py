@@ -41,25 +41,33 @@ def plan_pt(bendset):
         seqs = dummy_ptree.output()
 
 
-def plan_ipt(bendset):
+def plan_ipt(bs, bendset):
     ts = time.time()
     iptree = ip_tree.IPTree(len(bendset))
+    valid_tree = ip_tree.IPTree(len(bendset))
     seqs = iptree.get_potential_valid()
     while len(seqs) != 0:
         bendseq = [bendset[i] for i in seqs]
         is_success, bendresseq = bs.gen_by_bendseq(bendseq, cc=True, prune=True, toggledebug=False)
         print(is_success)
         if all(is_success):
-            pickle.dump(bendresseq, open('./tmp_bendresseq.pkl', 'wb'))
-            bs.show_bendresseq(bendresseq, is_success)
+            # pickle.dump(bendresseq, open('./tmp_bendresseq.pkl', 'wb'))
+            # bs.show_bendresseq(bendresseq, is_success)
             # base.run()
-            return True, time.time() - ts
+            bs.reset([(0, 0, 0), (0, bendseq[-1][3], 0)], [np.eye(3), np.eye(3)])
+            valid_tree.add_invalid_seq(seqs)
+            iptree.add_invalid_seq(seqs)
+            valid_tree.show()
+            seqs = iptree.get_potential_valid()
+            continue
+            # return True, time.time() - ts
         bs.reset([(0, 0, 0), (0, bendseq[-1][3], 0)], [np.eye(3), np.eye(3)])
         iptree.add_invalid_seq(seqs[:is_success.index(False) + 1])
-        iptree.show()
+        # iptree.show()
         seqs = iptree.get_potential_valid()
         print(seqs)
     print('Failed!')
+    valid_tree.show()
     return False, time.time() - ts
 
 
@@ -78,31 +86,31 @@ if __name__ == '__main__':
     # base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
     bs = b_sim.BendSim(show=True)
 
-    # bendset = [
-    #     [np.radians(225), np.radians(0), np.radians(0), .04],
-    #     [np.radians(90), np.radians(0), np.radians(180), .08],
-    #     [np.radians(90), np.radians(0), np.radians(0), .1],
-    #     [np.radians(45), np.radians(0), np.radians(180), .12],
-    #     # [np.radians(40), np.radians(0), np.radians(0), .06],
-    #     # [np.radians(-15), np.radians(0), np.radians(0), .08],
-    #     # [np.radians(20), np.radians(0), np.radians(0), .1]
-    # ]
+    bendset = [
+        [np.radians(225), np.radians(0), np.radians(0), .04],
+        [np.radians(90), np.radians(0), np.radians(180), .08],
+        [np.radians(90), np.radians(0), np.radians(0), .1],
+        [np.radians(45), np.radians(0), np.radians(180), .12],
+        # [np.radians(40), np.radians(0), np.radians(0), .06],
+        # [np.radians(-15), np.radians(0), np.radians(0), .08],
+        # [np.radians(20), np.radians(0), np.radians(0), .1]
+    ]
     # bendseq = pickle.load(open('./tmp_bendseq.pkl', 'rb'))
     # bendset = bs.gen_random_bendset(5)
-    goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
-                            [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1],
-                            [.1, .1, .1], [.1, .1, .2]]) / 2
-    init_pseq = [(0, 0, 0), (0, .1 + bu.cal_length(goal_pseq), 0)]
-    init_rotseq = [np.eye(3), np.eye(3)]
-    brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp_lft)
-    fit_pseq = bu.iter_fit(goal_pseq, tor=.002, toggledebug=False)
-    bendset = brp.pseq2bendset(fit_pseq, pos=.1, toggledebug=False)
+    # goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
+    #                         [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1],
+    #                         [.1, .1, .1], [.1, .1, .2]]) / 2
+    # init_pseq = [(0, 0, 0), (0, .1 + bu.cal_length(goal_pseq), 0)]
+    # init_rotseq = [np.eye(3), np.eye(3)]
+    # brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp_lft)
+    # fit_pseq = bu.iter_fit(goal_pseq, tor=.002, toggledebug=False)
+    # bendset = brp.pseq2bendset(fit_pseq, pos=.1, toggledebug=False)
 
     bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
     # bs.show(rgba=(.7, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
     # bs.show(rgba=(.7, .7, .7, .7), show_frame=True)
 
-    flag, tc = plan_ipt(bendset)
+    flag, tc = plan_ipt(bs, bendset)
     print(flag, tc)
 
     base.run()

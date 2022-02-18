@@ -106,7 +106,7 @@ class BendSim(object):
         self.rotseq = copy.deepcopy(rotseq)
         if extend:
             self.pseq.append((0, self.pseq[-1][1] + 2 * np.pi * self.bend_r, 0))
-            # self.pseq = [np.asarray(p) + np.asarray([self.bend_r, 0, 0]) for p in self.pseq]
+            self.pseq = [np.asarray(p) + np.asarray([self.bend_r, 0, 0]) for p in self.pseq]
             self.rotseq.append(np.eye(3))
         self.update_cm()
 
@@ -206,39 +206,6 @@ class BendSim(object):
                 return i
         return None
 
-    def __insert(self, pos, pseq, rotseq):
-        tmp_l = 0
-        insert_inx, insert_pos, insert_rot = 0, pseq[0], rotseq[0]
-        if pos == 0:
-            return insert_inx, insert_pos, insert_rot
-        for i in range(len(pseq) - 1):
-            p1 = np.asarray(pseq[i])
-            p2 = np.asarray(pseq[i + 1])
-            r1 = rotseq[i]
-            r2 = rotseq[i + 1]
-            tmp_l += np.linalg.norm(p2[:2] - p1[:2])
-            if tmp_l < pos:
-                continue
-            elif tmp_l > pos:
-                insert_radio = (tmp_l - pos) / np.linalg.norm(p2 - p1)
-                insert_pos = p2 - insert_radio * (p2 - p1)
-                if (r1 == r2).all():
-                    insert_rot = r1
-                else:
-                    rotmat_list = rm.rotmat_slerp(r1, r2, 10)
-                    inx = np.floor(insert_radio * len(rotmat_list)) - 1
-                    if inx > 9:
-                        inx = 9
-                    insert_rot = rotmat_list[int(inx)]
-                insert_inx = i + 1
-                return insert_inx, insert_pos, insert_rot
-            else:
-                insert_pos = pseq[i + 1]
-                insert_rot = rotseq[i + 1]
-                insert_inx = i + 1
-                return insert_inx, insert_pos, insert_rot
-        return -1, pseq[-1], rotseq[-1]
-
     def __get_bended_pseq(self, start_inx, end_inx, bend_angle, toggledebug=False):
         tmp_pseq = []
         tmp_rotseq = []
@@ -258,7 +225,7 @@ class BendSim(object):
         elif bend_angle < 0 and init_a > 0:
             init_a = np.pi - init_a
         for i, a in enumerate(srange):
-            insert_inx, insert_pos, insert_rot = self.__insert(step_l * i, pseq_org, rotseq_org)
+            _, insert_inx, insert_pos, insert_rot = self.get_posrot_by_l(step_l * i, pseq_org, rotseq_org)
             p = np.asarray((self.bend_r * math.cos(init_a + a), self.bend_r * math.sin(init_a + a), insert_pos[2]))
             # print(np.degrees(init_a + a), p)
             tmp_pseq.append(p)
@@ -318,6 +285,39 @@ class BendSim(object):
         trans_pts = rm.homomat_transform_points(rm.homomat_from_posrot(np.asarray([0, 0, 0]), rot), trans_pts)
         return self.__trans_pos(trans_pts, -new_orgin).tolist()
 
+    def get_posrot_by_l(self, pos, pseq, rotseq):
+        tmp_l = 0
+        insert_inx, insert_pos, insert_rot = 0, pseq[0], rotseq[0]
+        if pos == 0:
+            return False, insert_inx, insert_pos, insert_rot
+        for i in range(len(pseq) - 1):
+            p1 = np.asarray(pseq[i])
+            p2 = np.asarray(pseq[i + 1])
+            r1 = rotseq[i]
+            r2 = rotseq[i + 1]
+            tmp_l += np.linalg.norm(p2[:2] - p1[:2])
+            if tmp_l < pos:
+                continue
+            elif tmp_l > pos:
+                insert_radio = (tmp_l - pos) / np.linalg.norm(p2 - p1)
+                insert_pos = p2 - insert_radio * (p2 - p1)
+                if (r1 == r2).all():
+                    insert_rot = r1
+                else:
+                    rotmat_list = rm.rotmat_slerp(r1, r2, 10)
+                    inx = np.floor(insert_radio * len(rotmat_list)) - 1
+                    if inx > 9:
+                        inx = 9
+                    insert_rot = rotmat_list[int(inx)]
+                insert_inx = i + 1
+                return True, insert_inx, insert_pos, insert_rot
+            else:
+                insert_pos = pseq[i + 1]
+                insert_rot = rotseq[i + 1]
+                insert_inx = i + 1
+                return False, insert_inx, insert_pos, insert_rot
+        return False, -1, pseq[-1], rotseq[-1]
+
     def __insert_p(self, pos, toggledebug=False):
         tmp_l = 0
         insert_inx, insert_pos, insert_rot = 0, self.pseq[0], self.rotseq[0]
@@ -354,7 +354,6 @@ class BendSim(object):
             gm.gen_sphere(insert_pos, radius=.0004, rgba=(1, 1, 0, 1)).attach_to(base)
             gm.gen_frame(insert_pos, insert_rot, length=.01, thickness=.0004).attach_to(base)
         return insert_inx
-        # print('error', pos)
 
     def update_cm(self, type='stick'):
         # ts = time.time()
@@ -411,6 +410,8 @@ class BendSim(object):
         is_success = [False] * len(bendseq)
         result = [[None]] * len(bendseq)
         for i, bend in enumerate(bendseq):
+            print('------------')
+            print(bend)
             bend_dir = 0 if bend[0] < 0 else 1
             # bend_angle, lift_angle, rot_angle, bend_pos
             self.move_to_org(bend[3], dir=bend_dir, bend_angle=bend[0], lift_angle=bend[1], rot_angle=bend[2],
@@ -454,11 +455,9 @@ class BendSim(object):
                     self.__reverse()
                 pseq_end, rotseq_end = copy.deepcopy(self.pseq), copy.deepcopy(self.rotseq)
                 is_success[i] = True
-                print(bend)
                 print('plate angle:', np.degrees(plate_a))
                 print("motor init:", np.degrees(motor_sa))
                 print("motor finish:", np.degrees(motor_eangle))
-                print('------------')
                 result[i] = [motor_sa, motor_eangle, plate_a,
                              pseq_init, rotseq_init, pseq_end, rotseq_end]
             else:
@@ -791,7 +790,7 @@ class BendSim(object):
         return resseq
 
     def gen_random_bendset(self, n=5):
-        return [[random.uniform(-1, 1) * np.pi/2, 0, random.uniform(-1, 1) * np.pi, self.bend_r * np.pi * i]
+        return [[random.uniform(-1, 1) * np.pi / 2, 0, random.uniform(-1, 1) * np.pi, self.bend_r * np.pi * i]
                 for i in range(1, n + 1)]
 
 
@@ -802,9 +801,10 @@ if __name__ == '__main__':
     bs = BendSim(show=True)
 
     bendset = [
-        [np.radians(225), np.radians(180), np.radians(0), .04],
+        [np.radians(225), np.radians(0), np.radians(0), .04],
         [np.radians(90), np.radians(0), np.radians(180), .08],
-        # [np.radians(90), np.radians(0), np.radians(0), .1],
+        [np.radians(90), np.radians(0), np.radians(0), .1],
+        [np.radians(45), np.radians(0), np.radians(180), .12],
         # [np.radians(45), np.radians(0), np.radians(180), .12],
         # [np.radians(40), np.radians(0), np.radians(0), .06],
         # [np.radians(-15), np.radians(0), np.radians(0), .08],
@@ -816,10 +816,10 @@ if __name__ == '__main__':
 
     bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
     # bs.show(rgba=(.7, .7, .7, .7), show_frame=True)
-    is_success, bendresseq = bs.gen_by_bendseq(bendset, cc=False, toggledebug=True)
+    is_success, bendresseq = bs.gen_by_bendseq(bendset, cc=True, toggledebug=False)
     # bs.show(rgba=(.7, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
     bs.show(rgba=(.7, .7, .7, .7), show_frame=True, show_pseq=False)
-    # base.run()
+    base.run()
     key_pseq, key_rotseq = bs.get_pull_primitive(.12, .04, toggledebug=True)
     resseq = bs.pull(key_pseq, key_rotseq, np.pi)
     base.run()
