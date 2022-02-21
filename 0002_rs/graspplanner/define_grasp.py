@@ -1,11 +1,12 @@
 import numpy as np
 
 import config
-import robot_sim.end_effectors.grippers.robotiqhe.robotiqhe as rtqhe
+import robot_sim.end_effectors.gripper.robotiqhe.robotiqhe as rtqhe
 import graspplanner.grasp_planner as gp
 import visualization.panda.world as wd
 import modeling.collision_model as cm
 import basis.robot_math as rm
+import modeling.geometric_model as gm
 
 if __name__ == '__main__':
     base = wd.World(cam_pos=[.5, .5, .3], lookat_pos=[0, 0, 0])
@@ -61,14 +62,16 @@ if __name__ == '__main__':
     '''
     stick
     '''
-    obj = cm.gen_stick(epos=np.asarray([0, .1, 0]), thickness=.0015, sections=180, rgba=(.7, .7, .7, .7))
+    gm.gen_frame(length=.5).attach_to(base)
+    obj = cm.gen_stick(epos=np.asarray([0, .01, 0]), thickness=.0015, sections=180, rgba=(.7, .7, .7, .7))
     obj.attach_to(base)
     pregrasp_list = []
     finger_normal = (0, 0, 1)
     hand_normal = (0, 1, 0)
 
-    for i in np.linspace(0, 75, 15):
-        tmp_rotmat = rm.rotmat_from_axangle((1, 0, 0), i)
+    for i in np.linspace(0, 90, 5):
+        print(i)
+        tmp_rotmat = rm.rotmat_from_axangle((1, 0, 0), np.radians(i))
         hand_normal = np.dot(tmp_rotmat, hand_normal)
         finger_normal = np.dot(tmp_rotmat, finger_normal)
         pregrasp_list.extend(grasp_planner.define_grasp_with_rotation(grasp_coordinate=(0, 0, 0),
@@ -76,7 +79,7 @@ if __name__ == '__main__':
                                                                       hand_normal=hand_normal, jawwidth=.01,
                                                                       obj=obj, rot_ax=(0, 1, 0),
                                                                       rot_range=(-180, 180),
-                                                                      rot_interval=15,
+                                                                      rot_interval=360,
                                                                       toggledebug=True))
 
     grasp_planner.write_pregrasps('stick', pregrasp_list)

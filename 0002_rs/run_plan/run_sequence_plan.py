@@ -18,6 +18,9 @@ import pickle
 import copy
 import localenv.envloader as el
 import motionplanner.motion_planner as m_planner
+import modeling.geometric_model as gm
+import matplotlib.pyplot as plt
+import config
 
 
 def plan_pt(bendset):
@@ -41,22 +44,26 @@ def plan_pt(bendset):
         seqs = dummy_ptree.output()
 
 
-def plan_ipt(bs, bendset,mode='all'):
+def plan_ipt(bs, bendset, mode='all', f_name=''):
     ts = time.time()
     iptree = ip_tree.IPTree(len(bendset))
     valid_tree = ip_tree.IPTree(len(bendset))
     seqs = iptree.get_potential_valid()
     result = []
     tc_list = []
+    cnt = 0
     while len(seqs) != 0:
+        bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
         bendseq = [bendset[i] for i in seqs]
         is_success, bendresseq = bs.gen_by_bendseq(bendseq, cc=True, prune=True, toggledebug=False)
         print(is_success)
+        cnt += 1
+        # bs.show_bendresseq(bendresseq, is_success)
+        # base.run()
         if all(is_success):
-            result.append(bendresseq)
+            result.append([bendresseq, seqs])
             tc_list.append(time.time() - ts)
-            if mode=='all':
-                bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
+            if mode == 'all':
                 valid_tree.add_invalid_seq(seqs)
                 iptree.add_invalid_seq(seqs)
                 valid_tree.show()
@@ -64,17 +71,15 @@ def plan_ipt(bs, bendset,mode='all'):
                 continue
             else:
                 bs.show_bendresseq(bendresseq, is_success)
-                base.run()
-                return result, tc_list
-        bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
+                return result, tc_list, cnt, time.time() - ts
         iptree.add_invalid_seq(seqs[:is_success.index(False) + 1])
         # iptree.show()
         seqs = iptree.get_potential_valid()
         print(seqs)
     valid_tree.show()
-    pickle.dump(result, open('./tmp_bendresseq.pkl', 'wb'))
-    return result, tc_list
-
+    pickle.dump([result, tc_list, cnt, time.time() - ts, bendset],
+                open(f'{config.ROOT}/bendplanner/bendresseq/{f_name}.pkl', 'wb'))
+    return result, tc_list, cnt, time.time() - ts
 
 
 if __name__ == '__main__':
@@ -102,10 +107,7 @@ if __name__ == '__main__':
     #     # [np.radians(20), np.radians(0), np.radians(0), .1]
     # ]
     # bendset = pickle.load(open('./tmp_bendseq.pkl', 'rb'))
-    bendset = bs.gen_random_bendset(5)
-    # is_success, bendresseq = bs.gen_by_bendseq(bendset, cc=False, prune=False, toggledebug=False)
-    # bs.show()
-    # base.run()
+    random_cnt = 6
 
     # goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
     #                         [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1],
@@ -116,11 +118,18 @@ if __name__ == '__main__':
     # fit_pseq = bu.iter_fit(goal_pseq, tor=.002, toggledebug=False)
     # bendset = brp.pseq2bendset(fit_pseq, pos=.1, toggledebug=False)
 
-    bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
     # bs.show(rgba=(.7, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
     # bs.show(rgba=(.7, .7, .7, .7), show_frame=True)
-
-    flag, tc = plan_ipt(bs, bendset, mode='first')
-    print(flag, tc)
+    for i in range(3, 10):
+        bendset = bs.gen_random_bendset(random_cnt)
+        bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
+        # is_success, bendresseq = bs.gen_by_bendseq(bendset, cc=False, prune=False, toggledebug=False)
+        # ax = plt.axes(projection='3d')
+        # bu.plot_pseq(ax, bs.pseq, c='k')
+        # bu.scatter_pseq(ax, bs.pseq, c='r')
+        # plt.show()
+        flag, tc, cnt, total_tc = plan_ipt(bs, bendset, mode='all', f_name=f'{str(random_cnt)}_{str(i)}')
+        print(tc, cnt)
+        print(total_tc)
 
     base.run()

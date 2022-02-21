@@ -124,15 +124,15 @@ def plot_frame(ax, pos, rot):
                mutation_scale=10, arrowstyle='->', color='b')
 
 
-def plot_pseq(ax3d, pseq):
+def plot_pseq(ax3d, pseq,c=None):
     pseq = np.asarray(pseq)
-    ax3d.plot3D(pseq[:, 0], pseq[:, 1], pseq[:, 2])
+    ax3d.plot3D(pseq[:, 0], pseq[:, 1], pseq[:, 2],c=c)
     ax3d.grid()
 
 
-def scatter_pseq(ax3d, pseq, s=2):
+def scatter_pseq(ax3d, pseq, s=2,c=None):
     pseq = np.asarray(pseq)
-    ax3d.scatter3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], s=s)
+    ax3d.scatter3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], s=s,c=c)
     ax3d.grid()
 
 

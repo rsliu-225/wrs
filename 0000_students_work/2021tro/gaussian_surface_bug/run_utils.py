@@ -108,12 +108,12 @@ def get_obj_inhand_from_phoxiinfo_withmodel_pcd(phxilocator, stl_f_name, tcp_pos
     :param h:
     :return:
     """
-    objcm = cm.CollisionModel(objinit=os.path.join(config.ROOT + '/obstacles/' + stl_f_name))
+    objcm = cm.CollisionModel(initor=os.path.join(config.ROOT + '/obstacles/' + stl_f_name))
     grayimg, depthnparray_float32, pcd = load_phxiinfo(phoxi_f_name=phoxi_f_name, load=load)
 
     objpcd = phxilocator.find_objinhand_pcd(tcp_pos, pcd, stl_f_name, toggledebug=showcluster)
     objmat4 = phxilocator.match_pcdncm(objpcd, objcm, inithomomat, toggledebug=showicp)
-    objcm.sethomomat(objmat4)
+    objcm.set_homomat(objmat4)
 
     return item.Item(objcm=objcm, pcd=objpcd, objmat4=objmat4, draw_center=tcp_pos)
 

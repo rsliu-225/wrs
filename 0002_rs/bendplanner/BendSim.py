@@ -13,6 +13,7 @@ import robot_sim.end_effectors.gripper.robotiqhe.robotiqhe as rtqhe
 import utils.panda3d_utils as p3u
 import itertools
 import random
+import config
 
 
 def draw_plane(p, n):
@@ -41,7 +42,8 @@ class BendSim(object):
         self.bend_r = self.r_center + self.thickness / 2
         self.punch_pillar_init = self.cal_starta() / 2
         self.slot_w = self.c2c_dist * np.cos(self.punch_pillar_init / 2) - self.r_center - self.r_side - .001
-        self.bender = cm.CollisionModel('../obstacles/bender_smp.stl', cdprimit_type='polygons', name='bender')
+        self.bender = cm.CollisionModel(f'{config.ROOT}/obstacles/bender_smp.stl', cdprimit_type='polygons',
+                                        name='bender')
         self.bender.set_rgba((.5, .5, .5, 1))
 
         # bending result
@@ -58,28 +60,28 @@ class BendSim(object):
 
         # gen pillars
         sections = 90
-        self.pillar_center = cm.gen_stick(spos=np.asarray([0, 0, -.02]),
-                                          epos=np.asarray([0, 0, .02]),
+        self.pillar_center = cm.gen_stick(spos=np.asarray([0, 0, -bconfig.PILLAR_H]),
+                                          epos=np.asarray([0, 0, bconfig.PILLAR_H]),
                                           thickness=self.r_center * 2, sections=sections,
                                           rgba=[.7, .7, .7, 1])
-        self.pillar_center_inner = cm.gen_stick(spos=np.asarray([0, 0, -.02]),
-                                                epos=np.asarray([0, 0, .02]),
+        self.pillar_center_inner = cm.gen_stick(spos=np.asarray([0, 0, -bconfig.PILLAR_H]),
+                                                epos=np.asarray([0, 0, bconfig.PILLAR_H]),
                                                 thickness=self.r_center * 2 - .001, sections=sections,
                                                 rgba=[.7, .7, .7, .7])
-        self.pillar_dieside = cm.gen_stick(spos=np.asarray([self.c2c_dist, 0, -.02]),
-                                           epos=np.asarray([self.c2c_dist, 0, .02]),
+        self.pillar_dieside = cm.gen_stick(spos=np.asarray([self.c2c_dist, 0, -bconfig.PILLAR_H]),
+                                           epos=np.asarray([self.c2c_dist, 0, bconfig.PILLAR_H]),
                                            thickness=self.r_side * 2, sections=sections,
                                            rgba=[.7, .7, .7, 1])
-        self.pillar_dieside_inner = cm.gen_stick(spos=np.asarray([self.c2c_dist, 0, -.02]),
-                                                 epos=np.asarray([self.c2c_dist, 0, .02]),
+        self.pillar_dieside_inner = cm.gen_stick(spos=np.asarray([self.c2c_dist, 0, -bconfig.PILLAR_H]),
+                                                 epos=np.asarray([self.c2c_dist, 0, bconfig.PILLAR_H]),
                                                  thickness=self.r_side * 2 - .001, sections=sections,
                                                  rgba=[.7, .7, .7, .7])
-        self.pillar_punch = cm.gen_stick(spos=np.asarray([0, 0, -.02]),
-                                         epos=np.asarray([0, 0, .02]),
+        self.pillar_punch = cm.gen_stick(spos=np.asarray([0, 0, -bconfig.PILLAR_H]),
+                                         epos=np.asarray([0, 0, bconfig.PILLAR_H]),
                                          thickness=self.r_side * 2, sections=sections,
                                          rgba=[.7, .7, .7, 1])
-        self.pillar_punch_end = cm.gen_stick(spos=np.asarray([0, 0, -.02]),
-                                             epos=np.asarray([0, 0, .02]),
+        self.pillar_punch_end = cm.gen_stick(spos=np.asarray([0, 0, -bconfig.PILLAR_H]),
+                                             epos=np.asarray([0, 0, bconfig.PILLAR_H]),
                                              thickness=self.r_side * 2, sections=sections,
                                              rgba=[.7, .7, 0, .7])
         self.pillar_punch.set_homomat(
@@ -295,7 +297,7 @@ class BendSim(object):
             p2 = np.asarray(pseq[i + 1])
             r1 = rotseq[i]
             r2 = rotseq[i + 1]
-            tmp_l += np.linalg.norm(p2[:2] - p1[:2])
+            tmp_l += np.linalg.norm(p2 - p1)
             if tmp_l < pos:
                 continue
             elif tmp_l > pos:
@@ -563,7 +565,7 @@ class BendSim(object):
     #         vertices.extend(tmp_cm.objtrm.vertices)
     #     return np.array(vertices), np.array(faces)
 
-    def __gen_stick(self, pseq, rotseq, r, section=8, toggledebug=False):
+    def __gen_stick(self, pseq, rotseq, r, section=5, toggledebug=False):
         vertices = []
         faces = []
         for i, p in enumerate(pseq):
@@ -646,20 +648,6 @@ class BendSim(object):
 
     def __gen_cc_bound(self, p, rot, l=.05):
         vertices, faces = self.__gen_stick([p, p + rot[:3, 1] * l], [rot, rot], self.slot_w / 2, section=8)
-        # vertices = []
-        # vertices.append(p + rot[:3, 0] * w / 2 + np.asarray((0, 0, h)))
-        # vertices.append(p - rot[:3, 0] * w / 2 + np.asarray((0, 0, h)))
-        # vertices.append(p + rot[:3, 0] * w / 2 - np.asarray((0, 0, h)))
-        # vertices.append(p - rot[:3, 0] * w / 2 - np.asarray((0, 0, h)))
-        #
-        # vertices.append(p + rot[:3, 0] * w / 2 + np.asarray((0, 0, h)) + rot[:3, 1] * l)
-        # vertices.append(p - rot[:3, 0] * w / 2 + np.asarray((0, 0, h)) + rot[:3, 1] * l)
-        # vertices.append(p + rot[:3, 0] * w / 2 - np.asarray((0, 0, h)) + rot[:3, 1] * l)
-        # vertices.append(p - rot[:3, 0] * w / 2 - np.asarray((0, 0, h)) + rot[:3, 1] * l)
-        #
-        # faces = [[0, 4, 6], [0, 6, 2],
-        #          [2, 7, 6], [2, 3, 7],
-        #          [1, 5, 7], [1, 7, 3]]
         cctrm = trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces))
         return cm.CollisionModel(initor=cctrm, btwosided=True, name='obj')
 
@@ -790,7 +778,10 @@ class BendSim(object):
         return resseq
 
     def gen_random_bendset(self, n=5):
-        return [[random.uniform(-1, 1) * np.pi / 2, 0, random.uniform(-1, 1) * np.pi, self.bend_r * np.pi * i]
+        return [[random.uniform(np.pi / 18, 1) * np.pi * .9 * random.choice([-1, 1]),
+                 random.uniform(-1, 1) * np.pi / 18,
+                 random.uniform(0, 1) * np.pi,
+                 self.bend_r * np.pi * i * random.uniform(1, 2)]
                 for i in range(1, n + 1)]
 
 
@@ -800,26 +791,30 @@ if __name__ == '__main__':
     base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
     bs = BendSim(show=True)
 
-    bendset = [
-        [np.radians(225), np.radians(0), np.radians(0), .04],
-        [np.radians(90), np.radians(0), np.radians(180), .08],
-        [np.radians(90), np.radians(0), np.radians(0), .1],
-        [np.radians(45), np.radians(0), np.radians(180), .12],
-        # [np.radians(45), np.radians(0), np.radians(180), .12],
-        # [np.radians(40), np.radians(0), np.radians(0), .06],
-        # [np.radians(-15), np.radians(0), np.radians(0), .08],
-        # [np.radians(20), np.radians(0), np.radians(0), .1]
-    ]
-    # bendseq = pickle.load(open('./tmp_bendseq.pkl', 'rb'))
-    # bendset = bs.gen_random_bendset(5)
-    # print(bendset)
-
-    bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
-    # bs.show(rgba=(.7, .7, .7, .7), show_frame=True)
-    is_success, bendresseq = bs.gen_by_bendseq(bendset, cc=True, toggledebug=False)
-    # bs.show(rgba=(.7, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
-    bs.show(rgba=(.7, .7, .7, .7), show_frame=True, show_pseq=False)
-    base.run()
-    key_pseq, key_rotseq = bs.get_pull_primitive(.12, .04, toggledebug=True)
-    resseq = bs.pull(key_pseq, key_rotseq, np.pi)
-    base.run()
+    # bendset = [
+    #     [np.radians(225), np.radians(0), np.radians(0), .04],
+    #     [np.radians(90), np.radians(0), np.radians(180), .08],
+    #     [np.radians(90), np.radians(0), np.radians(0), .1],
+    #     [np.radians(45), np.radians(0), np.radians(180), .12],
+    #     # [np.radians(45), np.radians(0), np.radians(180), .12],
+    #     # [np.radians(40), np.radians(0), np.radians(0), .06],
+    #     # [np.radians(-15), np.radians(0), np.radians(0), .08],
+    #     # [np.radians(20), np.radians(0), np.radians(0), .1]
+    # ]
+    # # bendseq = pickle.load(open('./tmp_bendseq.pkl', 'rb'))
+    # # bendset = bs.gen_random_bendset(5)
+    # # print(bendset)
+    #
+    # bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
+    # # bs.show(rgba=(.7, .7, .7, .7), show_frame=True)
+    # is_success, bendresseq = bs.gen_by_bendseq(bendset, cc=True, toggledebug=False)
+    # # bs.show(rgba=(.7, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
+    # bs.show(rgba=(.7, .7, .7, .7), show_frame=True, show_pseq=False)
+    # base.run()
+    # key_pseq, key_rotseq = bs.get_pull_primitive(.12, .04, toggledebug=True)
+    # resseq = bs.pull(key_pseq, key_rotseq, np.pi)
+    # base.run()
+    flag, inx, pos, rot = bs.get_posrot_by_l(.1,
+                                             [[0, 0, 0], [0, 0, .2], [0, 0, .3]],
+                                             [np.eye(3), np.eye(3), np.eye(3)])
+    print(flag, inx, pos, rot)
