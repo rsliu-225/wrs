@@ -118,12 +118,10 @@ class MotionPlanner(object):
             self.gripper.fix_to(hndmat4[:3, 3], hndmat4[:3, :3])
             is_hnd_collided = self.gripper.is_mesh_collided([obj] + self.obscmlist)
             if is_hnd_collided:
-                hnd = self.gripper.gen_meshmodel(rgba=(1, 0, 0, .5))
-                hnd.attach_to(base)
+                # hnd = self.gripper.gen_meshmodel(rgba=(1, 0, 0, .5))
+                # hnd.attach_to(base)
                 print("Hand Obj Collided")
                 return None
-            hnd = self.gripper.gen_meshmodel(rgba=(0, 1, 0, .5))
-            hnd.attach_to(base)
 
         armjnts = self.get_numik(eepos, eerot, msc=msc)
         if armjnts is None:
@@ -131,6 +129,8 @@ class MotionPlanner(object):
             return None
         if (not self.rbth.is_selfcollided(armjnts=armjnts)) \
                 and (not self.rbth.is_objcollided(obslist, armjnts=armjnts)):
+            # hnd = self.gripper.gen_meshmodel(rgba=(0, 1, 0, .5))
+            # hnd.attach_to(base)
             return armjnts
         else:
             # if self.rbth.is_selfcollided(armjnts=armjnts):

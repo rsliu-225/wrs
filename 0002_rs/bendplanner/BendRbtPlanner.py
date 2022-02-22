@@ -156,11 +156,9 @@ class BendRbtPlanner(object):
                 armjntsseq = armjntsseq_tmp
             if fail_cnt == 0:
                 all_result.append([g_tmp, armjntsseq])
-        self.show_bendresseq_withrbt(bendresseq, self.transmat4, armjntsseq)
-        base.run()
         if len(all_result) == 0:
-            # self.show_bendresseq_withrbt(bendresseq, self.transmat4, armjntsseq)
-            # base.run()
+            self.show_bendresseq_withrbt(bendresseq, self.transmat4, armjntsseq)
+            base.run()
             return [str(v) for v in armjntsseq].index('None'), all_result
         # self.show_bendresseq_withrbt(bendresseq, self.transmat4, all_result[0][1])
         # base.run()
@@ -359,7 +357,7 @@ class BendRbtPlanner(object):
                 self.iptree.add_invalid_seq(seqs[:is_success.index(False) + 1])
                 seqs = self.iptree.get_potential_valid()
                 continue
-            fail_index, armjntsseq_list = self.check_ik(bendresseq, grasp_l=.01)
+            fail_index, armjntsseq_list = self.check_ik(bendresseq, grasp_l=.5)
             if fail_index != -1:
                 self.iptree.add_invalid_seq(seqs[:fail_index + 1])
                 seqs = self.iptree.get_potential_valid()
@@ -554,7 +552,7 @@ if __name__ == '__main__':
     bs = b_sim.BendSim(show=True)
     mp = m_planner.MotionPlanner(env, rbt, armname="rgt_arm")
 
-    transmat4 = rm.homomat_from_posrot((.6, -.4, .78 + 0.15175), np.eye(3))
+    transmat4 = rm.homomat_from_posrot((.6, -.4, .78 + bconfig.BENDER_H), np.eye(3))
 
     # goal_pseq = bu.gen_polygen(5, .05)
     # goal_pseq = bu.gen_ramdom_curve(kp_num=4, length=.12, step=.0005, z_max=.005, toggledebug=False)
@@ -565,7 +563,7 @@ if __name__ == '__main__':
     #                         [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1],
     #                         [.1, .1, .1], [.1, .1, .2]]) * .4
     goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
-                            [.1, 0, 0], [.1, .1, 0]]) * .4
+                            [.1, 0, 0], [.1, .1, 0]])
     init_pseq = [(0, 0, 0), (0, .1 + bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
 

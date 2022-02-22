@@ -107,7 +107,7 @@ if __name__ == '__main__':
     #     # [np.radians(20), np.radians(0), np.radians(0), .1]
     # ]
     # bendset = pickle.load(open('./tmp_bendseq.pkl', 'rb'))
-    random_cnt = 6
+    random_cnt = 8
 
     # goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
     #                         [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1],
@@ -132,4 +132,4 @@ if __name__ == '__main__':
         print(tc, cnt)
         print(total_tc)
 
-    base.run()
+    # base.run()
