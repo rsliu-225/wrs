@@ -107,7 +107,7 @@ if __name__ == '__main__':
     #     # [np.radians(20), np.radians(0), np.radians(0), .1]
     # ]
     # bendset = pickle.load(open('./tmp_bendseq.pkl', 'rb'))
-    random_cnt = 8
+    random_cnt = 6
 
     # goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
     #                         [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1],
@@ -122,7 +122,7 @@ if __name__ == '__main__':
     # bs.show(rgba=(.7, .7, .7, .7), show_frame=True)
     for i in range(3, 10):
         bendset = bs.gen_random_bendset(random_cnt)
-        bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
+        # bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
         # is_success, bendresseq = bs.gen_by_bendseq(bendset, cc=False, prune=False, toggledebug=False)
         # ax = plt.axes(projection='3d')
         # bu.plot_pseq(ax, bs.pseq, c='k')

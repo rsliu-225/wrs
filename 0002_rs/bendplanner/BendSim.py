@@ -778,11 +778,19 @@ class BendSim(object):
         return resseq
 
     def gen_random_bendset(self, n=5):
-        return [[random.uniform(np.pi / 18, 1) * np.pi * .9 * random.choice([-1, 1]),
-                 random.uniform(-1, 1) * np.pi / 18,
-                 random.uniform(0, 1) * np.pi,
-                 self.bend_r * np.pi * i * random.uniform(1, 2)]
-                for i in range(1, n + 1)]
+        bendset = []
+        for i in range(n):
+            if i > 0:
+                bendset.append([random.uniform(np.pi / 18, 1) * np.pi * .9 * random.choice([-1, 1]),
+                                random.uniform(0, 1) * np.pi / 18,
+                                random.uniform(0, 1) * np.pi,
+                                bendset[-1][-1] + self.bend_r * np.pi * random.uniform(1, 1.5)])
+            else:
+                bendset.append([random.uniform(np.pi / 18, 1) * np.pi * .9 * random.choice([-1, 1]),
+                                random.uniform(0, 1) * np.pi / 18,
+                                random.uniform(0, 1) * np.pi,
+                                self.bend_r * np.pi * random.uniform(1, 1.5)])
+        return bendset
 
 
 if __name__ == '__main__':
