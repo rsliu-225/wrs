@@ -17,15 +17,17 @@ success_first_tc_list = []
 total_cnt_list = []
 success_cnt = 0
 for f in os.listdir('./'):
-    if f[-3:] == 'pkl' and f[0] == '6':
-        result, tc_list, cnt, total_tc, bendset = pickle.load(open(f, 'rb'))
+    if f[-3:] == 'pkl' and f == '4_0.pkl':
+        print(f)
+        result, tc_list, attemp_cnt_list, total_tc, bendset = pickle.load(open(f, 'rb'))
         print(tc_list)
+        print(attemp_cnt_list)
         if len(result) != 0:
             success_cnt += 1
-            bendresseq, seqs = result[0]
+            bendresseq, seqs = result[3]
             _, _, _, _, _, pseq, _ = bendresseq[-1]
-            # bs.show_bendresseq(result[1], [True] * len(result[1]))
-            # base.run()
+            bs.show_bendresseq(bendresseq, [True] * len(seqs))
+            base.run()
             ax = plt.axes(projection='3d')
             bu.plot_pseq(ax, pseq, c='k')
             bu.scatter_pseq(ax, pseq[1:-2], c='g')
@@ -40,7 +42,7 @@ for f in os.listdir('./'):
             plt.show()
         total_tc_list.append(total_tc)
         success_cnt_list.append(len(tc_list))
-        total_cnt_list.append(cnt)
+        total_cnt_list.append(attemp_cnt_list[-1])
 
 print('Success Cnt:', success_cnt)
 print('Total time cost:', np.average(total_tc_list))

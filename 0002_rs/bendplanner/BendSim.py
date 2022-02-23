@@ -411,6 +411,7 @@ class BendSim(object):
     def gen_by_bendseq(self, bendseq, cc=True, prune=False, toggledebug=False):
         is_success = [False] * len(bendseq)
         result = [[None]] * len(bendseq)
+        fail_reason_list = []
         for i, bend in enumerate(bendseq):
             print('------------')
             print(bend)
@@ -430,6 +431,7 @@ class BendSim(object):
                 if motor_sa is None:
                     print('No collided point found (punch start & plate)!')
                     self.reset(pseq_init, rotseq_init, extend=False)
+                    fail_reason_list.append('unbendable')
                     if prune:
                         break
                     else:
@@ -440,6 +442,7 @@ class BendSim(object):
                 if motor_eangle is None:
                     print('No collided point found (punch end & plate)!')
                     self.reset(pseq_init, rotseq_init, extend=False)
+                    fail_reason_list.append('unbendable')
                     if prune:
                         break
                     else:
@@ -448,6 +451,7 @@ class BendSim(object):
                 collided_pts = self.bender_cc([objcm_init, self.objcm.copy()])
                 if len(collided_pts) != 0:
                     self.reset(pseq_init, rotseq_init, extend=False)
+                    fail_reason_list.append('collided')
                     if prune:
                         break
                     else:
@@ -470,7 +474,7 @@ class BendSim(object):
                 result[i] = [0, self.punch_pillar_init, self.punch_pillar_init,
                              pseq_init, rotseq_init,
                              copy.deepcopy(self.pseq), copy.deepcopy(self.rotseq)]
-        return is_success, result
+        return is_success, result, fail_reason_list
 
     def bender_cc(self, objcm_list):
         collided_pts_all = []
@@ -781,15 +785,16 @@ class BendSim(object):
         bendset = []
         for i in range(n):
             if i > 0:
-                bendset.append([random.uniform(np.pi / 18, 1) * np.pi * .9 * random.choice([-1, 1]),
+                bendset.append([random.uniform(np.pi / 18, 1) * np.pi * random.choice([-1, 1]),
                                 random.uniform(0, 1) * np.pi / 18,
                                 random.uniform(0, 1) * np.pi,
-                                bendset[-1][-1] + self.bend_r * np.pi * random.uniform(1, 1.5)])
+                                bendset[-1][-1] + self.bend_r * abs(bendset[-1][0] / np.cos(bendset[-1][1]))
+                                + random.uniform(0, self.bend_r * np.pi)])
             else:
-                bendset.append([random.uniform(np.pi / 18, 1) * np.pi * .9 * random.choice([-1, 1]),
+                bendset.append([random.uniform(np.pi / 18, 1) * np.pi * random.choice([-1, 1]),
                                 random.uniform(0, 1) * np.pi / 18,
                                 random.uniform(0, 1) * np.pi,
-                                self.bend_r * np.pi * random.uniform(1, 1.5)])
+                                self.bend_r * np.pi])
         return bendset
 
 
