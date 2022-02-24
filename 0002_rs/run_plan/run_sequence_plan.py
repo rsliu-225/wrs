@@ -82,7 +82,8 @@ def plan_ipt(bs, bendset, snum=None, f_name=''):
                 seqs, catch = iptree.get_potential_valid()
                 continue
             else:
-                bs.show_bendresseq(bendresseq, is_success)
+                pickle.dump([result, tc_list, attemp_cnt_list, time.time() - ts, bendset],
+                            open(f'{config.ROOT}/bendplanner/bendresseq/{f_name}.pkl', 'wb'))
                 return result, tc_list, attemp_cnt_list, time.time() - ts
 
         iptree.add_invalid_seq(seqs[:is_success.index(False) + 1],
@@ -146,7 +147,7 @@ if __name__ == '__main__':
     #     # [np.radians(20), np.radians(0), np.radians(0), .1]
     # ]
     # bendset = pickle.load(open('./tmp_bendseq.pkl', 'rb'))
-    random_cnt = 4
+    random_cnt = 6
 
     # goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
     #                         [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1],
@@ -159,19 +160,20 @@ if __name__ == '__main__':
 
     # bs.show(rgba=(.7, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
     # bs.show(rgba=(.7, .7, .7, .7), show_frame=True)
-    for i in range(0, 1):
+    for i in range(5,8):
+        print(i)
         flag = False
         while not flag:
             print('The seq is not feasible!')
             bendset = bs.gen_random_bendset(random_cnt)
-            # bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
-            # is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, prune=False, toggledebug=False)
+            bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
+            is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, prune=False, toggledebug=False)
             # ax = plt.axes(projection='3d')
             # bu.plot_pseq(ax, bs.pseq, c='k')
             # bu.scatter_pseq(ax, bs.pseq, c='r')
             # plt.show()
             flag = inf_bend_check(bs, bendset)
-        flag, tc, attemp_cnt_list, total_tc = plan_ipt(bs, bendset, snum=2, f_name=f'{str(random_cnt)}_{str(i)}')
+        flag, tc, attemp_cnt_list, total_tc = plan_ipt(bs, bendset, snum=10, f_name=f'{str(random_cnt)}_{str(i)}')
         print(tc, attemp_cnt_list)
         print(total_tc)
 

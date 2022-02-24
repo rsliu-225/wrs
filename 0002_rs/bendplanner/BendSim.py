@@ -785,16 +785,16 @@ class BendSim(object):
         bendset = []
         for i in range(n):
             if i > 0:
-                bendset.append([random.uniform(np.pi / 18, 1) * np.pi * random.choice([-1, 1]),
+                bendset.append([random.uniform(.1, .9) * np.pi * random.choice([-1, 1]),
                                 random.uniform(0, 1) * np.pi / 18,
                                 random.uniform(0, 1) * np.pi,
                                 bendset[-1][-1] + self.bend_r * abs(bendset[-1][0] / np.cos(bendset[-1][1]))
-                                + random.uniform(0, self.bend_r * np.pi)])
+                                + random.uniform(self.bend_r*2, self.bend_r * np.pi)])
             else:
-                bendset.append([random.uniform(np.pi / 18, 1) * np.pi * random.choice([-1, 1]),
+                bendset.append([random.uniform(.1, .9) * np.pi * random.choice([-1, 1]),
                                 random.uniform(0, 1) * np.pi / 18,
                                 random.uniform(0, 1) * np.pi,
-                                self.bend_r * np.pi])
+                                self.bend_r * np.pi + .1])
         return bendset
 
 

@@ -10,7 +10,7 @@ class MotorNema23():
         # self.rpm = 6000
         # self.step_per_second = (self.step_per_turn * self.rpm) / 60
         # self.wait = (1 / self.step_per_second) * 1000000
-        self.comm = Communication.Communication("COM4", 9600, .5)
+        self.comm = Communication.Communication("COM3", 9600, .5)
         self.hi()
         self.max_digit = 5
         self.limit = 180
@@ -116,20 +116,26 @@ class MotorNema23():
 
 if __name__ == '__main__':
     motor = MotorNema23()
-    # print(motor.cal_counter(180))
-    motor.goto_pos(-11000)
-    time.sleep(1)
-    motor.goto_pos(-3000)
-    time.sleep(1)
-    motor.goto_pos(-11000)
-    time.sleep(1)
+    print(motor.cal_counter(180))
+    # motor.goto_init()
+
+    # motor.goto_pos(-11000)
+    # time.sleep(1)
+    # motor.goto_pos(-3000)
+    # time.sleep(1)
+    # motor.goto_pos(-11000)
+    # time.sleep(1)
 
     motor.goto_pos(11000)
     time.sleep(1)
-    motor.goto_pos(3000)
-    time.sleep(1)
-    motor.goto_pos(11000)
-    time.sleep(1)
-    # motor.goto_init()
+    # motor.goto_pos(3000)
+    # time.sleep(1)
+    # motor.goto_pos(-11000)
+    # time.sleep(1)
+    # motor.goto_pos(-3000)
+    # time.sleep(1)
+    # motor.goto_pos(11000)
+    # time.sleep(1)
+    # # motor.goto_init()
 
     # motor.rot_degree(clockwise=1, rot_deg=10)
