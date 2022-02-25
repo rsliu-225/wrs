@@ -18,7 +18,7 @@ fail_tc_list = []
 total_cnt_list = []
 success_cnt = 0
 for f in os.listdir('./'):
-    if f[-3:] == 'pkl' and f[0] == '6':
+    if f[-3:] == 'pkl' and f[0] == '7':
         print(f)
         result, tc_list, attemp_cnt_list, total_tc, bendset = pickle.load(open(f, 'rb'))
         print(tc_list)
@@ -41,12 +41,12 @@ for f in os.listdir('./'):
             # base.run()
         else:
             fail_tc_list.append(total_tc)
-            bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
-            bs.gen_by_bendseq(bendset, cc=False)
-            ax = plt.axes(projection='3d')
-            bu.plot_pseq(ax, bs.pseq, c='k')
-            bu.scatter_pseq(ax, bs.pseq[1:-2], c='r')
-            plt.show()
+            # bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
+            # bs.gen_by_bendseq(bendset, cc=False)
+            # ax = plt.axes(projection='3d')
+            # bu.plot_pseq(ax, bs.pseq, c='k')
+            # bu.scatter_pseq(ax, bs.pseq[1:-2], c='r')
+            # plt.show()
         if type(attemp_cnt_list) == type([]):
             total_cnt_list.append(attemp_cnt_list[-1])
         else:

@@ -62,7 +62,7 @@ if __name__ == '__main__':
     '''
     stick
     '''
-    gm.gen_frame(length=.2).attach_to(base)
+    # gm.gen_frame(length=.2).attach_to(base)
     obj = cm.gen_stick(epos=np.asarray([0, .01, 0]), thickness=.0015, sections=180, rgba=(.7, .7, .7, .7))
     obj.attach_to(base)
     pregrasp_list = []

@@ -147,7 +147,7 @@ if __name__ == '__main__':
     #     # [np.radians(20), np.radians(0), np.radians(0), .1]
     # ]
     # bendset = pickle.load(open('./tmp_bendseq.pkl', 'rb'))
-    random_cnt = 6
+    random_cnt = 7
 
     # goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
     #                         [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1],
@@ -160,7 +160,7 @@ if __name__ == '__main__':
 
     # bs.show(rgba=(.7, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
     # bs.show(rgba=(.7, .7, .7, .7), show_frame=True)
-    for i in range(5,8):
+    for i in range(4, 10):
         print(i)
         flag = False
         while not flag:

@@ -133,12 +133,11 @@ class BendRbtPlanner(object):
             _, _, objpos, objrot = self.bs.get_posrot_by_l(grasp_l, pseq_init, rotseq_init)
             armjnts = self.mp.get_armjnts_by_objmat4ngrasp(grasp, self.obslist, rm.homomat_from_posrot(objpos, objrot),
                                                            obj=self.bs.objcm)
-
+            armjntsseq.append(armjnts)
             if armjnts is None:
                 fail_cnt += 1
                 if fail_cnt > max_fail:
                     break
-            armjntsseq.append(armjnts)
         return armjntsseq
 
     def check_ik(self, bendresseq, grasp_l=0.0):
@@ -147,7 +146,7 @@ class BendRbtPlanner(object):
         all_result = []
         for i, g_tmp in enumerate(self.grasp_list):
             print(f'----------grasp_id: {i}  of {len(self.grasp_list)}----------')
-            armjntsseq_tmp = brp.cal_rbtik(bendresseq, g_tmp, grasp_l=grasp_l, max_fail=min_fail)
+            armjntsseq_tmp = brp.cal_rbtik(bendresseq, g_tmp, grasp_l=grasp_l, max_fail=np.inf)
             print(armjntsseq_tmp)
             fail_cnt = [str(v) for v in armjntsseq_tmp].count('None')
             print(min_fail, fail_cnt)
@@ -166,7 +165,7 @@ class BendRbtPlanner(object):
 
     def pre_grasp_reasoning(self):
         print(f'----------pre-grasp reasoning----------')
-        _, bendresseq = bs.gen_by_bendseq(self.bendset, cc=True, toggledebug=False)
+        _, bendresseq, _ = bs.gen_by_bendseq(self.bendset, cc=True, toggledebug=False)
         objmat4_list = []
         for bendres in bendresseq:
             init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendres
@@ -192,8 +191,10 @@ class BendRbtPlanner(object):
     def plan_pnp(self, bendresseq, grasp, armjntsseq):
         print(f'----------plan pick & place----------')
         pathseq = [[armjntsseq[0]]]
-        for i, armjnts in enumerate(armjntsseq[:-1]):
-            if armjnts is None or armjntsseq[i + 1] is None:
+        print(len(bendresseq))
+        for i in range(len(armjntsseq) - 1):
+            print(i)
+            if armjntsseq[i] is None or armjntsseq[i + 1] is None:
                 pathseq.append(None)
                 continue
             _, _, _, _, _, pseq_init, rotseq_init = bendresseq[i]
@@ -206,7 +207,7 @@ class BendRbtPlanner(object):
             self.reset_bs(pseq_init, rotseq_init, extend=False)
             objcm = copy.deepcopy(self.bs.objcm)
             path = self.mp.plan_picknplace(grasp, [np.eye(4), objmat4_end], objcm,
-                                           use_msc=True, start=armjnts, goal=armjntsseq[i + 1],
+                                           use_msc=True, start=armjntsseq[i], goal=armjntsseq[i + 1],
                                            use_pickupprim=True, use_placedownprim=True,
                                            pickupprim_len=.05, placedownprim_len=.05)
             pathseq.append(path)
@@ -225,21 +226,29 @@ class BendRbtPlanner(object):
             objmat4_init = rm.homomat_from_posrot(pseq_init[0], rotseq_init[0])
             objmat4_end = rm.homomat_from_posrot(pseq_end[0], rotseq_end[0])
             self.reset_bs(pseq_init, rotseq_init, extend=False)
+            self.bs.show()
             objcm = copy.deepcopy(self.bs.objcm)
             path = []
+            self.reset_bs(pseq_end, rotseq_end, extend=False)
+            self.bs.show()
             objmat4_list = self.mp.objmat4_list_inp([objmat4_init, objmat4_end])
-            gm.gen_frame(pseq_init[0], rotseq_init[0], length=.01, thickness=.001).attach_to(base)
-            gm.gen_frame(pseq_end[0], rotseq_end[0], length=.01, thickness=.001).attach_to(base)
-            for objmat4 in objmat4_list:
-                gm.gen_frame(objmat4[:3, 3], objmat4[:3, :3], length=.01, thickness=.001).attach_to(base)
+            # gm.gen_frame(pseq_init[0], rotseq_init[0], length=.01, thickness=.001).attach_to(base)
+            # gm.gen_frame(pseq_end[0], rotseq_end[0], length=.01, thickness=.001).attach_to(base)
+            for i, objmat4 in enumerate(objmat4_list):
+                # gm.gen_frame(objmat4[:3, 3], objmat4[:3, :3], length=.01, thickness=.001).attach_to(base)
                 armjnts = self.mp.get_armjnts_by_objmat4ngrasp(grasp, [objcm], objmat4,
                                                                msc=path[-1] if len(path) != 0 else None)
-                if armjnts is not None:
-                    path.append(armjnts)
-                objcm_show = self.bs.objcm.copy()
-                objcm_show.set_homomat(np.linalg.inv(objmat4_init).dot(objmat4))
-                objcm_show.attach_to(base)
-            base.run()
+                if i == 0 or i == len(objmat4_list) - 1:
+                    mp.ah.show_armjnts()
+
+                # if i % 3 == 0:
+                #     mp.ah.show_armjnts(rgba=(0, 1, 0, .4))
+                # if armjnts is not None:
+                #     path.append(armjnts)
+                # objcm_show = self.bs.objcm.copy()
+                # objcm_show.set_homomat(np.linalg.inv(objmat4_init).dot(objmat4))
+                # objcm_show.attach_to(base)
+            # base.run()
             if len(path) == 0:
                 path = None
             pathseq.append(path)
@@ -292,8 +301,13 @@ class BendRbtPlanner(object):
                 pathseq = pathseq_tmp
             if fail_cnt == 0:
                 all_result.append([grasp_tmp, pathseq_tmp])
-                self.show_motion_withrbt(bendresseq, transmat4, pathseq_tmp)
-                base.run()
+                # for p in pathseq_tmp:
+                #     mp.ah.show_armjnts(p[0])
+                #     mp.ah.show_armjnts(p[-1])
+                #     for armjnts in p:
+                #         self.mp.ah.show_armjnts(armjnts=armjnts,rgba=(0, 1, 0, .3))
+                # self.show_motion_withrbt(bendresseq, transmat4, pathseq_tmp)
+                # base.run()
         if len(all_result) == 0:
             return [str(v) for v in pathseq].index('None'), all_result
         return -1, all_result
@@ -343,28 +357,29 @@ class BendRbtPlanner(object):
         return -1, pathseq
 
     def run(self):
-        seqs = self.iptree.get_potential_valid()
+        seqs, _ = self.iptree.get_potential_valid()
+
         while len(seqs) != 0:
             bendseq = [self.bendset[i] for i in seqs]
             self.iptree.show()
             print(seqs)
             self.reset_bs(self.init_pseq, self.init_rotseq)
-            # is_success, bendresseq = self.bs.gen_by_bendseq(bendseq, cc=True, prune=True, toggledebug=False)
-            # pickle.dump([is_success, bendresseq], open('./tmp_bendresseq.pkl', 'wb'))
+            is_success, bendresseq, _ = self.bs.gen_by_bendseq(bendseq, cc=True, prune=True, toggledebug=False)
+            pickle.dump([is_success, bendresseq], open('./tmp_bendresseq.pkl', 'wb'))
             is_success, bendresseq = pickle.load(open('./tmp_bendresseq.pkl', 'rb'))
 
             if not all(is_success):
                 self.iptree.add_invalid_seq(seqs[:is_success.index(False) + 1])
                 seqs = self.iptree.get_potential_valid()
                 continue
-            fail_index, armjntsseq_list = self.check_ik(bendresseq, grasp_l=.5)
+            fail_index, armjntsseq_list = self.check_ik(bendresseq, grasp_l=0)
             if fail_index != -1:
                 self.iptree.add_invalid_seq(seqs[:fail_index + 1])
                 seqs = self.iptree.get_potential_valid()
                 continue
             pickle.dump(armjntsseq_list, open('./tmp_armjntsseq.pkl', 'wb'))
-            # bendresseq = pickle.load(open('./tmp_bendresseq.pkl', 'rb'))
-            # armjntsseq_list = pickle.load(open('./tmp_armjntsseq.pkl', 'rb'))
+            _, bendresseq = pickle.load(open('./tmp_bendresseq.pkl', 'rb'))
+            armjntsseq_list = pickle.load(open('./tmp_armjntsseq.pkl', 'rb'))
             fail_index, pathseq_list = self.check_motion(bendresseq, armjntsseq_list)
             # fail_index, pathseq_list = self.check_pull_motion(bendseq, bendresseq, armjntsseq_list)
             print(fail_index, pathseq_list)
@@ -452,6 +467,8 @@ class BendRbtPlanner(object):
                 armjnts = armjntsseq[motioncounter[0]]
                 if armjnts is not None:
                     rbt.fk(self.mp.armname, armjnts)
+                    # objcm = cm.gen_sphere(pos=np.asarray([-.1, 0, 0]), radius=.001)
+                    # rbt.hold(objcm, jawwidth=.01, hnd_name=self.mp.hnd_name)
                     rbtmnp[0] = rbt.gen_meshmodel()
                     rbtmnp[0].attach_to(base)
 
@@ -523,7 +540,7 @@ class BendRbtPlanner(object):
                 objcm_end.attach_to(base)
 
                 rbt.fk(self.mp.armname, path[-1])
-                _, _ = rbt.hold(objcm_init.copy(), hnd_name=self.mp.hnd_name, jawwidth=.01)
+                # _, _ = rbt.hold(objcm_init.copy(), hnd_name=self.mp.hnd_name, jawwidth=.01)
 
                 tmp_p = np.asarray([self.bs.c2c_dist * math.cos(init_a), self.bs.c2c_dist * math.sin(init_a), 0])
                 self.bs.pillar_punch.set_homomat(np.dot(rm.homomat_from_posrot(tmp_p, np.eye(3)), transmat4))
@@ -546,15 +563,16 @@ if __name__ == '__main__':
     import localenv.envloader as el
 
     gripper = rtqhe.RobotiqHE()
+    # base, env = el.loadEnv_wrs(camp=[.6, -.4, 1.7], lookatpos=[.6, -.4, 1])
     base, env = el.loadEnv_wrs()
     rbt = el.loadUr3e()
 
     bs = b_sim.BendSim(show=True)
     mp = m_planner.MotionPlanner(env, rbt, armname="rgt_arm")
 
-    transmat4 = rm.homomat_from_posrot((.6, -.4, .78 + bconfig.BENDER_H), np.eye(3))
+    transmat4 = rm.homomat_from_posrot((.8, -.2, .78 + bconfig.BENDER_H), np.eye(3))
 
-    # goal_pseq = bu.gen_polygen(5, .05)
+    goal_pseq = bu.gen_polygen(5, .06)
     # goal_pseq = bu.gen_ramdom_curve(kp_num=4, length=.12, step=.0005, z_max=.005, toggledebug=False)
     # goal_pseq = bu.gen_screw_thread(r=.02, lift_a=np.radians(5), rot_num=2)
     # goal_pseq = bu.gen_circle(.05)
@@ -562,8 +580,8 @@ if __name__ == '__main__':
     # goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
     #                         [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1],
     #                         [.1, .1, .1], [.1, .1, .2]]) * .4
-    goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
-                            [.1, 0, 0], [.1, .1, 0]])
+    # goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
+    #                         [.1, 0, 0], [.1, .1, 0]])
     init_pseq = [(0, 0, 0), (0, .1 + bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
 
@@ -572,25 +590,32 @@ if __name__ == '__main__':
     grasp_list = mp.load_all_grasp('stick')
     grasp_list = grasp_list
 
-    # fit_pseq = bu.iter_fit(goal_pseq, tor=.002, toggledebug=False)
-    # bendset = brp.pseq2bendset(fit_pseq, pos=.1, toggledebug=False)
-    # init_rot = brp.get_init_rot(fit_pseq)
-    # pickle.dump(bendset, open('./tmp_bendseq.pkl', 'wb'))
+    fit_pseq = bu.iter_fit(goal_pseq, tor=.002, toggledebug=False)
+    bendset = brp.pseq2bendset(fit_pseq, pos=.1, toggledebug=False)
+    init_rot = brp.get_init_rot(fit_pseq)
+    pickle.dump(bendset, open('./tmp_bendseq.pkl', 'wb'))
     bendset = pickle.load(open('./tmp_bendseq.pkl', 'rb'))
-    for b in bendset:
-        print(b)
 
     brp.set_up(bendset, grasp_list, transmat4)
     brp.run()
 
-    is_success, bendresseq = bs.gen_by_bendseq(bendset, cc=False, toggledebug=False)
-    print('Result Flag:', is_success)
-
-    goal_pseq, res_pseq = bu.align_with_goal(bs, goal_pseq, init_rot)
-    err, _ = bu.avg_distance_between_polylines(res_pseq, goal_pseq, toggledebug=True)
-    # pickle.dump(bendresseq, open('./tmp_bendresseq.pkl', 'wb'))
-
-    bu.show_pseq(bs.pseq, rgba=(1, 0, 0, 1))
-    bu.show_pseq(bu.linear_inp3d_by_step(goal_pseq), rgba=(0, 1, 0, 1))
-    bs.show(rgba=(.7, .7, .7, .7))
+    armjntsseq_list = pickle.load(open('./tmp_armjntsseq.pkl', 'rb'))
+    for g_tmp, armjntsseq in armjntsseq_list:
+        _, gl_jaw_center_pos, gl_jaw_center_rotmat, hnd_pos, hnd_rotmat = g_tmp
+        hndmat4 = rm.homomat_from_posrot(hnd_pos, hnd_rotmat)
+        brp.gripper.fix_to(hndmat4[:3, 3], hndmat4[:3, :3])
+        hnd = brp.gripper.gen_meshmodel(rgba=(0, 1, 0, .4))
+        hnd.attach_to(base)
     base.run()
+
+    # is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, toggledebug=False)
+    # print('Result Flag:', is_success)
+    #
+    # goal_pseq, res_pseq = bu.align_with_goal(bs, goal_pseq, init_rot)
+    # err, _ = bu.avg_distance_between_polylines(res_pseq, goal_pseq, toggledebug=True)
+    # # pickle.dump(bendresseq, open('./tmp_bendresseq.pkl', 'wb'))
+    #
+    # bu.show_pseq(bs.pseq, rgba=(1, 0, 0, 1))
+    # bu.show_pseq(bu.linear_inp3d_by_step(goal_pseq), rgba=(0, 1, 0, 1))
+    # bs.show(rgba=(.7, .7, .7, .7))
+    # base.run()

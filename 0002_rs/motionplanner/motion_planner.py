@@ -111,14 +111,14 @@ class MotionPlanner(object):
 
     def get_armjnts_by_objmat4ngrasp(self, grasp, obslist, objmat4, obj=None, msc=None):
         eepos, eerot = self.get_ee_by_objmat4(grasp, objmat4)
-        gm.gen_frame(eepos, eerot, length=.02, thickness=.001, alpha=.5).attach_to(base)
+        # gm.gen_frame(eepos, eerot, length=.02, thickness=.001, alpha=.5).attach_to(base)
         if obj is not None:
             _, gl_jaw_center_pos, gl_jaw_center_rotmat, hnd_pos, hnd_rotmat = grasp
             hndmat4 = np.dot(objmat4, rm.homomat_from_posrot(hnd_pos, hnd_rotmat))
             self.gripper.fix_to(hndmat4[:3, 3], hndmat4[:3, :3])
             is_hnd_collided = self.gripper.is_mesh_collided([obj] + self.obscmlist)
             if is_hnd_collided:
-                # hnd = self.gripper.gen_meshmodel(rgba=(1, 0, 0, .5))
+                # hnd = self.gripper.gen_meshmodel(rgba=(1, 0, 0, .4))
                 # hnd.attach_to(base)
                 print("Hand Obj Collided")
                 return None
@@ -126,10 +126,12 @@ class MotionPlanner(object):
         armjnts = self.get_numik(eepos, eerot, msc=msc)
         if armjnts is None:
             # print("No ik solution")
+            # hnd = self.gripper.gen_meshmodel(rgba=(1, 1, 0, .4))
+            # hnd.attach_to(base)
             return None
         if (not self.rbth.is_selfcollided(armjnts=armjnts)) \
                 and (not self.rbth.is_objcollided(obslist, armjnts=armjnts)):
-            # hnd = self.gripper.gen_meshmodel(rgba=(0, 1, 0, .5))
+            # hnd = self.gripper.gen_meshmodel(rgba=(0, 1, 0, .4))
             # hnd.attach_to(base)
             return armjnts
         else:
@@ -138,6 +140,8 @@ class MotionPlanner(object):
             # else:
             #     self.rbth.show_armjnts(armjnts=armjnts, rgba=(.7, .7, 0, .7))
             print("Collided")
+            return armjnts
+
         return None
 
     def get_available_graspid_by_objmat4(self, grasp_list, obj, objmat4):
