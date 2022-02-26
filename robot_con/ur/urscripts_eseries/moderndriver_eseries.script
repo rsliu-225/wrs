@@ -6,6 +6,9 @@ def driverProg():
 
 	def set_servo_setpoint(q):
 		enter_critical
+		while cmd_servo_state == SERVO_RUNNING:
+		    sync()
+        end
 		cmd_servo_q = q
 		cmd_servo_state = SERVO_RUNNING
 		exit_critical
@@ -52,7 +55,7 @@ def driverProg():
 				 params_mult[6]/parameter_jointscaler]
 			keepalive = params_mult[7]
 			set_servo_setpoint(q)
-	        sleep(.002) # sync()?
+	        sync()
 		end
 	end
 	sleep(.1)

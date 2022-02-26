@@ -2,10 +2,10 @@ import numpy as np
 
 # R_SIDE = .013 / 2
 # R_CENTER = .02 / 2
-R_SIDE = .015 / 2
+R_SIDE = .02 / 2
 R_CENTER = .015 / 2
-R_BASE = .015 / 2
-C2C_DIST = .0235
+R_BASE = .02 / 2
+C2C_DIST = .0245
 PILLAR_H = .02
 BENDER_H = 0.12375
 

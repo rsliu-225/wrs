@@ -25,19 +25,15 @@ class MotionPlannerRbtX(MotionPlanner):
 
     def goto_init_x(self):
         start = self.rbtx.get_jnt_values(component_name=self.armname)
-        if self.armname == "lft_arm":
-            goal = self.rbt.initlftjnts
-        else:
-            goal = self.rbt.initrgtjnts
-
+        goal = self.rbt.get_jnt_values(self.armname)
         print("--------------go to init(rrt)---------------")
         planner = rrtc.RRTConnect(self.rbt)
         path_gotoinit = planner.plan(component_name=self.armname, start_conf=start, goal_conf=goal,
                                      obstacle_list=self.obscmlist, ext_dist=.2, max_time=200)
         if path_gotoinit is not None:
-            self.rbtx.move_jntspace_path(path_gotoinit, self.armname, wait=False)
+            self.rbtx.move_jntspace_path(path=path_gotoinit, component_name=self.armname)
             time.sleep(.5)
-            while self.arm.is_program_running():
+            while self.arm.arm.is_program_running():
                 pass
             time.sleep(.5)
 
@@ -64,7 +60,7 @@ class MotionPlannerRbtX(MotionPlanner):
         print(f"--------------move up {length}---------------")
         path_up = self.get_linear_path_from(self.get_armjnts(), length=length, direction=direction)
         self.rbtx.movejntssgl_cont(path_up, self.armname, wait=True)
-        while self.arm.is_program_running():
+        while self.arm.arm.is_program_running():
             time.sleep(1)
         return path_up
 
@@ -82,29 +78,6 @@ class MotionPlannerRbtX(MotionPlanner):
         self.force_controller.attachfirm(direction=direction, forcethreshold=forcethreshold)
         time.sleep(5)
 
-    def refine_path_by_attatchfirm(self, objrelpos, objrelrot, path, objcm, grasp, path_mask=None, forcethreshold=2.5):
-        if path_mask is not None:
-            path_mask = [True] * len(path)
-        time.sleep(1)
-        eepos, eerot = self.get_ee(path[0])
-        direction = np.dot(eerot, objrelrot)
-        direction = np.dot(direction, np.array([-1, 0, 0]))
-        print("--------------attach firm---------------")
-        self.zerotcpforce()
-        time.sleep(1)
-        self.attachfirm(direction=direction, forcethreshold=forcethreshold)
-        while self.arm.is_program_running():
-            time.sleep(1)
-        time.sleep(1)
-
-        eepos_real, eerot_real = self.get_ee()
-        print("--------------refine draw path---------------")
-        posdiff = eepos_real - eepos
-        print("pen tip deviation:", posdiff)
-        path_new, path_mask_new = \
-            self.refine_continuouspath_by_posdiff(objrelpos, objrelrot, path, grasp, objcm, posdiff,
-                                                  path_mask=path_mask)
-        return path_new, path_mask_new
 
     def get_objmat4_inhand(self, phxilocator, phoxi_f_name, stl_f_name, objmat4_sim, armjnts=None, load=True,
                            toggledubug=False, showicp=False, showcluster=False):
@@ -186,8 +159,7 @@ class MotionPlannerRbtX(MotionPlanner):
         objmat4_start = self.get_world_objmat4(objrelpos, objrelrot, start)
         objmat4_goal = self.get_world_objmat4(objrelpos, objrelrot, armjnts)
         print("--------------goto_armjnts_hold_x(rrt)---------------")
-        path = self.plan_start2end_hold(grasp, [objmat4_start, objmat4_goal], objcm, objrelpos, objrelrot, start=start,
-                                        use_msc=False)
+        path = self.plan_start2end_hold(grasp, [objmat4_start, objmat4_goal], objcm, start=start, use_msc=False)
         if path is not None:
             self.rbtx.move_jnts(self.armname, path)
             time.sleep(.5)
@@ -199,8 +171,7 @@ class MotionPlannerRbtX(MotionPlanner):
 
     def goto_objmat4_goal_x(self, grasp, objrelpos, objrelrot, objmat4_goal, objcm):
         objmat4_start = self.get_world_objmat4(objrelpos, objrelrot, armjnts=self.get_armjnts())
-        path = self.plan_start2end_hold(grasp, [objmat4_start, objmat4_goal], objcm, objrelpos, objrelrot,
-                                        start=self.get_armjnts())
+        path = self.plan_start2end_hold(grasp, [objmat4_start, objmat4_goal], objcm, start=self.get_armjnts())
         if path is not None:
             self.rbtx.move_jnts(self.armname, path)
             while self.arm.is_program_running():

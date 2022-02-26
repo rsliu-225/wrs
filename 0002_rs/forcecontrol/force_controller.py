@@ -9,7 +9,7 @@ import config
 import socket
 import struct
 import math
-import motion.trajectory.piecewisepoly as pwp
+import motion.trajectory.piecewisepoly_fullcode as pwp
 
 import matplotlib.pyplot as plt
 

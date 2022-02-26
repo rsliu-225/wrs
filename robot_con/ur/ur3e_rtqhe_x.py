@@ -9,6 +9,7 @@ import threading
 import socket
 import struct
 import os
+import random
 import motion.trajectory.piecewisepoly_scl as pwp
 
 
@@ -17,6 +18,7 @@ class UR3ERtqHE():
     author: weiwei
     date: 20180131, 20210401osaka
     """
+
     def __init__(self, robot_ip='10.2.0.50', pc_ip='10.2.0.91'):
         """
         :param robot_ip:
@@ -42,16 +44,16 @@ class UR3ERtqHE():
         self._jointscaler = 1e6
         self._pb = pb.ProgramBuilder()
         script_dir = os.path.dirname(__file__)
-        self._pb.load_prog(os.path.join(script_dir, "urscripts_cbseries/moderndriver_eseries.script"))
+        self._pb.load_prog(os.path.join(script_dir, "urscripts_eseries/moderndriver_eseries.script"))
         self._pc_server_urscript = self._pb.get_program_to_run()
         self._pc_server_urscript = self._pc_server_urscript.replace("parameter_ip", self._pc_server_socket_addr[0])
         self._pc_server_urscript = self._pc_server_urscript.replace("parameter_port",
-                                                                    str(self._pc_server_socket_addr[1]))
+                                                                    str(self._pc_server_socket.getsockname()[1]))
         self._pc_server_urscript = self._pc_server_urscript.replace("parameter_jointscaler",
                                                                     str(self._jointscaler))
         self._ftsensor_thread = None
         self._ftsensor_values = []
-        self.trajt = pwp.PiecewisePoly(method='quintic')
+        self.trajt = pwp.PiecewisePolyScl(method='quintic')
 
     @property
     def arm(self):
@@ -156,9 +158,7 @@ class UR3ERtqHE():
         author: weiwei
         date: 20210331
         """
-        if interpolation_method:
-            self.trajt.change_method(interpolation_method)
-        interpolated_confs, _, _, _ = self.trajt.interpolate_by_time_interval(path, control_frequency, interval_time)
+        interpolated_confs = self.trajt.interpolate_by_max_spdacc(path, control_frequency)
         # upload a urscript to connect to the pc server started by this class
         self._arm.send_program(self._pc_server_urscript)
         # accept arm socket

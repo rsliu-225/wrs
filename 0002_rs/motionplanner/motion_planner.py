@@ -135,14 +135,15 @@ class MotionPlanner(object):
             # hnd.attach_to(base)
             return armjnts
         else:
-            # if self.rbth.is_selfcollided(armjnts=armjnts):
-            #     self.rbth.show_armjnts(armjnts=armjnts, rgba=(.7, 0, 0, .7))
-            # else:
-            #     self.rbth.show_armjnts(armjnts=armjnts, rgba=(.7, .7, 0, .7))
-            print("Collided")
-            return armjnts
+            if self.rbth.is_selfcollided(armjnts=armjnts):
+                print("Self Collided")
+                self.rbth.show_armjnts(armjnts=armjnts, rgba=(.7, 0, 0, .7))
+                return None
+            else:
+                print("Self Obj Collided")
+                self.rbth.show_armjnts(armjnts=armjnts, rgba=(.7, .7, 0, .7))
+                return armjnts
 
-        return None
 
     def get_available_graspid_by_objmat4(self, grasp_list, obj, objmat4):
         remaingrasp_id_list = []

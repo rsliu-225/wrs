@@ -145,8 +145,8 @@ def loadUr3e(showrbt=False):
     return rbt
 
 
-def loadUr3ex(pc_ip='10.2.0.100'):
-    rbtx = ur3ex.Ur3EDualUrx(lft_robot_ip='10.0.2.2', rgt_robot_ip='10.0.2.3', pc_ip=pc_ip)
+def loadUr3ex(pc_ip='10.0.2.11'):
+    rbtx = ur3ex.Ur3EDualUrx(lft_robot_ip='10.0.2.2',rgt_robot_ip='10.0.2.3', pc_ip=pc_ip)
 
     return rbtx
 
