@@ -160,7 +160,7 @@ if __name__ == '__main__':
 
     # bs.show(rgba=(.7, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
     # bs.show(rgba=(.7, .7, .7, .7), show_frame=True)
-    for i in range(4, 10):
+    for i in range(8, 10):
         print(i)
         flag = False
         while not flag:

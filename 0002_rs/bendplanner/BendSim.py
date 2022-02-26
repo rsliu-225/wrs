@@ -615,7 +615,7 @@ class BendSim(object):
                 flag = is_success[motioncounter[0]]
                 init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendresseq[motioncounter[0]]
                 # print(np.degrees(init_a), np.degrees(end_a), np.degrees(plate_a))
-                gm.gen_frame(pseq_init[0], rotseq_init[0], length=.02, thickness=.0005).attach_to(base)
+                # gm.gen_frame(pseq_init[0], rotseq_init[0], length=.02, thickness=.0005).attach_to(base)
 
                 self.reset(pseq_init, rotseq_init, extend=False)
                 objcm_init = copy.deepcopy(self.objcm)
