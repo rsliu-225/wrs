@@ -580,7 +580,7 @@ if __name__ == '__main__':
     #                         [.1, .1, .1], [.1, .1, .2]]) * .4
     # goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
     #                         [.1, 0, 0], [.1, .1, 0]])
-    init_pseq = [(0, 0, 0), (0, .1 + bu.cal_length(goal_pseq), 0)]
+    init_pseq = [(0, 0, 0), (0, .05 + bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
 
     brp = BendRbtPlanner(bs, init_pseq, init_rotseq, mp)
@@ -594,26 +594,26 @@ if __name__ == '__main__':
     pickle.dump(bendset, open('./tmp_bendseq.pkl', 'wb'))
     bendset = pickle.load(open('./tmp_bendseq.pkl', 'rb'))
 
-    brp.set_up(bendset, grasp_list, transmat4)
-    brp.run()
-
-    armjntsseq_list = pickle.load(open('./tmp_armjntsseq.pkl', 'rb'))
-    for g_tmp, armjntsseq in armjntsseq_list:
-        _, gl_jaw_center_pos, gl_jaw_center_rotmat, hnd_pos, hnd_rotmat = g_tmp
-        hndmat4 = rm.homomat_from_posrot(hnd_pos, hnd_rotmat)
-        brp.gripper.fix_to(hndmat4[:3, 3], hndmat4[:3, :3])
-        hnd = brp.gripper.gen_meshmodel(rgba=(0, 1, 0, .4))
-        hnd.attach_to(base)
-    base.run()
-
-    # is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, toggledebug=False)
-    # print('Result Flag:', is_success)
+    # brp.set_up(bendset, grasp_list, transmat4)
+    # brp.run()
     #
-    # goal_pseq, res_pseq = bu.align_with_goal(bs, goal_pseq, init_rot)
-    # err, _ = bu.avg_distance_between_polylines(res_pseq, goal_pseq, toggledebug=True)
-    # # pickle.dump(bendresseq, open('./tmp_bendresseq.pkl', 'wb'))
-    #
-    # bu.show_pseq(bs.pseq, rgba=(1, 0, 0, 1))
-    # bu.show_pseq(bu.linear_inp3d_by_step(goal_pseq), rgba=(0, 1, 0, 1))
-    # bs.show(rgba=(.7, .7, .7, .7))
+    # armjntsseq_list = pickle.load(open('./tmp_armjntsseq.pkl', 'rb'))
+    # for g_tmp, armjntsseq in armjntsseq_list:
+    #     _, gl_jaw_center_pos, gl_jaw_center_rotmat, hnd_pos, hnd_rotmat = g_tmp
+    #     hndmat4 = rm.homomat_from_posrot(hnd_pos, hnd_rotmat)
+    #     brp.gripper.fix_to(hndmat4[:3, 3], hndmat4[:3, :3])
+    #     hnd = brp.gripper.gen_meshmodel(rgba=(0, 1, 0, .4))
+    #     hnd.attach_to(base)
     # base.run()
+
+    is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, toggledebug=False)
+    print('Result Flag:', is_success)
+
+    goal_pseq, res_pseq = bu.align_with_goal(bs, goal_pseq, init_rot)
+    err, _ = bu.avg_distance_between_polylines(res_pseq, goal_pseq, toggledebug=True)
+    # pickle.dump(bendresseq, open('./tmp_bendresseq.pkl', 'wb'))
+
+    bu.show_pseq(bs.pseq, rgba=(1, 0, 0, 1))
+    bu.show_pseq(bu.linear_inp3d_by_step(goal_pseq), rgba=(0, 1, 0, 1))
+    bs.show(rgba=(.7, .7, .7, .7))
+    base.run()
