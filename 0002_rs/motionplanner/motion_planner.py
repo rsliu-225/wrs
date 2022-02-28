@@ -137,11 +137,11 @@ class MotionPlanner(object):
         else:
             if self.rbth.is_selfcollided(armjnts=armjnts):
                 print("Self Collided")
-                self.rbth.show_armjnts(armjnts=armjnts, rgba=(.7, 0, 0, .7))
+                # self.rbth.show_armjnts(armjnts=armjnts, rgba=(.7, 0, 0, .7))
                 return None
             else:
                 print("Self Obj Collided")
-                self.rbth.show_armjnts(armjnts=armjnts, rgba=(.7, .7, 0, .7))
+                # self.rbth.show_armjnts(armjnts=armjnts, rgba=(.7, .7, 0, .7))
                 return armjnts
 
 

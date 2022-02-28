@@ -155,7 +155,7 @@ def align_with_goal(bs, goal_pseq, init_rot, init_pos=np.asarray((bconfig.R_BEND
     goal_pseq = rm.homomat_transform_points(rm.homomat_from_posrot(rot=np.linalg.inv(init_rot),
                                                                    pos=init_pos - goal_pseq[0]), goal_pseq)
     bs.move_to_org(init_l)
-    return goal_pseq, np.asarray(bs.pseq)[1:]
+    return goal_pseq, np.asarray(bs.pseq)[1:-1]
 
 
 def align_pseqs(pseq_src, pseq_tgt):
@@ -213,12 +213,13 @@ def avg_distance_between_polylines(pts1, pts2, toggledebug=False):
     if toggledebug:
         ax = plt.axes(projection='3d')
         # z_max = max([abs(np.max(z1)), abs(np.max(z2))])
-        # ax.set_zlim([-z_max, z_max])
-        ax.scatter3D(x1, y1, z1, color='red')
+        ax.set_xlim([-0.08, 0.03])
+        ax.set_ylim([-0.02, 0.09])
+        # ax.scatter3D(x1, y1, z1, color='red')
         ax.plot3D(x1, y1, z1, 'red')
-        ax.scatter3D(x2, y2, z2, color='black')
+        # ax.scatter3D(x2, y2, z2, color='black')
         ax.plot3D(x2, y2, z2, 'black')
-        ax.scatter3D(xyz1_on_2[0], xyz1_on_2[1], xyz1_on_2[2], color='red')
+        # ax.scatter3D(xyz1_on_2[0], xyz1_on_2[1], xyz1_on_2[2], color='red')
         ax.plot3D(xyz1_on_2[0], xyz1_on_2[1], xyz1_on_2[2], 'red')
         plt.show()
     err = node_to_node_distance.mean()

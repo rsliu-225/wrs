@@ -35,7 +35,7 @@ def plan_pt(bendset):
             bs.show_bendresseq(bendresseq, is_success)
             base.run()
         if all(is_success):
-            pickle.dump(bendresseq, open('./tmp_bendresseq.pkl', 'wb'))
+            pickle.dump(bendresseq, open('./penta_bendresseq.pkl', 'wb'))
             bs.show_bendresseq(bendresseq, is_success)
             base.run()
         bs.reset([(0, 0, 0), (0, bendseq[-1][3], 0)], [np.eye(3), np.eye(3)])
@@ -146,7 +146,7 @@ if __name__ == '__main__':
     #     # [np.radians(-15), np.radians(0), np.radians(0), .08],
     #     # [np.radians(20), np.radians(0), np.radians(0), .1]
     # ]
-    # bendset = pickle.load(open('./tmp_bendseq.pkl', 'rb'))
+    # bendset = pickle.load(open('./penta_bendseq.pkl', 'rb'))
     random_cnt = 7
 
     # goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],

@@ -814,7 +814,7 @@ if __name__ == '__main__':
     #     # [np.radians(-15), np.radians(0), np.radians(0), .08],
     #     # [np.radians(20), np.radians(0), np.radians(0), .1]
     # ]
-    # # bendseq = pickle.load(open('./tmp_bendseq.pkl', 'rb'))
+    # # bendseq = pickle.load(open('./penta_bendseq.pkl', 'rb'))
     # # bendset = bs.gen_random_bendset(5)
     # # print(bendset)
     #

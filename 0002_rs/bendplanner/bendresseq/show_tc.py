@@ -70,9 +70,10 @@ def tst(num):
                 ax = plt.axes(projection='3d')
                 bu.plot_pseq(ax, pseq, c='k')
                 bu.scatter_pseq(ax, pseq[1:-2], c='g')
+                bu.scatter_pseq(ax, pseq[:1], c='r')
                 plt.show()
-                bs.show_bendresseq(bendresseq, [True] * len(seqs))
-                base.run()
+                # bs.show_bendresseq(bendresseq, [True] * len(seqs))
+                # base.run()
             else:
                 fail_tc_list.append(total_tc)
                 # bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
@@ -97,24 +98,27 @@ def tst(num):
 if __name__ == '__main__':
     base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
     bs = b_sim.BendSim(show=True)
+    tst(5)
 
     avg_fail_tc_list = []
-    avg_first_tc_list=[]
+    avg_first_tc_list = []
     avg_top10_tc_list = []
-    avg_attempt_list=[]
+    avg_attempt_list = []
 
     for num in range(3, 8):
-        success_cnt, avg_fail_tc, avg_top10_tc,avg_first_tc, avg_attemps = load_res(num)
+        success_cnt, avg_fail_tc, avg_top10_tc, avg_first_tc, avg_attemps = load_res(num)
         print(f'---------{num}---------')
-        print(success_cnt, avg_fail_tc, avg_top10_tc,avg_first_tc, avg_attemps)
+        print(success_cnt, avg_fail_tc, avg_top10_tc, avg_first_tc, avg_attemps)
         avg_fail_tc_list.append(avg_fail_tc)
         avg_first_tc_list.append(avg_first_tc)
         avg_top10_tc_list.append(avg_top10_tc)
         avg_attempt_list.append(avg_attemps)
 
     ax = plt.axes()
-    ax.plot(np.asarray(range(3,8)), avg_fail_tc_list)
-    ax.plot(np.asarray(range(3,8)), avg_first_tc_list)
-    ax.plot(np.asarray(range(3,8)), avg_top10_tc_list)
-    ax.grid()
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    # ax.plot([str(i) for i in range(3, 8)], avg_fail_tc_list)
+    ax.plot([str(i) for i in range(3, 8)], avg_first_tc_list)
+    ax.plot([str(i) for i in range(3, 8)], avg_top10_tc_list)
+    ax.grid(linestyle='dotted')
     plt.show()

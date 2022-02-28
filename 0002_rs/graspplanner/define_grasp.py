@@ -71,7 +71,7 @@ if __name__ == '__main__':
 
     for i in np.linspace(0, 360, 12):
         print(i)
-        tmp_rotmat = rm.rotmat_from_axangle((1, 0, 0), np.radians(360/12))
+        tmp_rotmat = rm.rotmat_from_axangle((1, 0, 0), np.radians(360 / 12))
         hand_normal = np.dot(tmp_rotmat, hand_normal)
         finger_normal = np.dot(tmp_rotmat, finger_normal)
         pregrasp_list.extend(grasp_planner.define_grasp_with_rotation(grasp_coordinate=(0, 0, 0),
