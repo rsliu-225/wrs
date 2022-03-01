@@ -12,6 +12,8 @@ class RobotiqHE(gp.GripperInterface):
     def __init__(self, pos=np.zeros(3), rotmat=np.eye(3), cdmesh_type='box', name='robotiqhe', enable_cc=True):
         super().__init__(pos=pos, rotmat=rotmat, cdmesh_type=cdmesh_type, name=name)
         this_dir, this_filename = os.path.split(__file__)
+        self.coupling.jnts[1]['loc_pos'] = np.array([0, 0, .0331])
+        self.coupling.reinitialize()
         cpl_end_pos = self.coupling.jnts[-1]['gl_posq']
         cpl_end_rotmat = self.coupling.jnts[-1]['gl_rotmatq']
         # - lft
@@ -36,7 +38,7 @@ class RobotiqHE(gp.GripperInterface):
         self.rgt.lnks[1]['meshfile'] = os.path.join(this_dir, "meshes", "finger2_cvt.stl")
         self.rgt.lnks[1]['rgba'] = [.5, .5, .5, 1]
         # jaw center
-        self.jaw_center_pos = np.array([0,0,.14])
+        self.jaw_center_pos = np.array([0,0,.1731])
         # reinitialize
         self.lft.reinitialize()
         self.rgt.reinitialize()
@@ -163,7 +165,7 @@ if __name__ == '__main__':
     grpr.gen_meshmodel().attach_to(base)
     # grpr.gen_stickmodel(togglejntscs=False).attach_to(base)
     grpr.fix_to(pos=np.array([0, .3, .2]), rotmat=rm.rotmat_from_axangle([1, 0, 0], .05))
-    grpr.gen_meshmodel().attach_to(base)
+    grpr.gen_meshmodel(toggle_tcpcs=True).attach_to(base)
     grpr.show_cdmesh()
     grpr.show_cdprimit()
     base.run()

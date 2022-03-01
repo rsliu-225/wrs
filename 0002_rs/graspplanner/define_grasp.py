@@ -69,9 +69,9 @@ if __name__ == '__main__':
     finger_normal = (0, 0, 1)
     hand_normal = (0, 1, 0)
 
-    for i in np.linspace(0, 360, 12):
+    for i in np.linspace(0, 360, 24):
         print(i)
-        tmp_rotmat = rm.rotmat_from_axangle((1, 0, 0), np.radians(360 / 12))
+        tmp_rotmat = rm.rotmat_from_axangle((1, 0, 0), np.radians(360 / 24))
         hand_normal = np.dot(tmp_rotmat, hand_normal)
         finger_normal = np.dot(tmp_rotmat, finger_normal)
         pregrasp_list.extend(grasp_planner.define_grasp_with_rotation(grasp_coordinate=(0, 0, 0),
@@ -79,7 +79,7 @@ if __name__ == '__main__':
                                                                       hand_normal=hand_normal, jawwidth=.01,
                                                                       obj=obj, rot_ax=(0, 1, 0),
                                                                       rot_range=(-180, 181),
-                                                                      rot_interval=30,
+                                                                      rot_interval=15,
                                                                       toggledebug=True))
 
     grasp_planner.write_pregrasps('stick', pregrasp_list)
