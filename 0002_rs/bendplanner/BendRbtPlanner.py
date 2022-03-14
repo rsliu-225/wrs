@@ -65,66 +65,6 @@ class BendRbtPlanner(object):
     def load_bendresseq(self, f_name='./penta_bendresseq.pkl'):
         return pickle.load(open(f_name, 'rb'))
 
-    def pseq2bendset(self, res_pseq, mode='rot', bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, pos=0.0,
-                     toggledebug=False):
-        ax = plt.axes(projection='3d')
-        # ax.set_box_aspect((1, 1, 1))
-        tangent_pts = []
-        bendseq = []
-        diff_list = []
-        n_pre = None
-        rot_a = 0
-        lift_a = 0
-        for i in range(1, len(res_pseq) - 1):
-            v1 = res_pseq[i] - res_pseq[i - 1]
-            v2 = res_pseq[i + 1] - res_pseq[i]
-            pos += np.linalg.norm(v1)
-            rot_n = np.cross(rm.unit_vector(v1), rm.unit_vector(v2))
-            bend_a = rm.angle_between_vectors(v1, v2)
-            if n_pre is not None:
-                a = rm.angle_between_vectors(n_pre, rot_n)
-                dir_a = rm.angle_between_vectors(v1, np.cross(n_pre, rot_n))
-                if dir_a is None:
-                    dir_a = 0
-                if dir_a > np.pi / 2:
-                    rot_a += a
-                else:
-                    rot_a -= a
-
-            n_pre = rot_n
-            l = (bend_r / np.tan((np.pi - abs(bend_a)) / 2)) / np.cos(abs(lift_a))
-            arc = abs(bend_a) * bend_r
-            bendseq.append([bend_a, lift_a, rot_a, pos + init_l - l - sum(diff_list)])
-            diff_list.append(2 * l - arc)
-
-            ratio_1 = l / np.linalg.norm(res_pseq[i] - res_pseq[i - 1])
-            p1 = res_pseq[i] + (res_pseq[i - 1] - res_pseq[i]) * ratio_1
-            ratio_2 = l / np.linalg.norm(res_pseq[i] - res_pseq[i + 1])
-            p2 = res_pseq[i] + (res_pseq[i + 1] - res_pseq[i]) * ratio_2
-            tangent_pts.append(p1)
-            tangent_pts.append(p2)
-
-            x = np.cross(v1, rot_n)
-            rot = np.asarray([rm.unit_vector(x), rm.unit_vector(v1), rm.unit_vector(rot_n)]).T
-            if toggledebug:
-                gm.gen_frame(res_pseq[i - 1], rot, length=.02, thickness=.001).attach_to(base)
-            bu.plot_frame(ax, res_pseq[i - 1], rot)
-
-        bu.plot_pseq(ax, res_pseq)
-        bu.scatter_pseq(ax, res_pseq, s=5)
-        bu.scatter_pseq(ax, tangent_pts, s=5)
-        plt.show()
-
-        return bendseq
-
-    def get_init_rot(self, pseq):
-        v1 = pseq[1] - pseq[0]
-        v2 = pseq[2] - pseq[1]
-        rot_n = np.cross(rm.unit_vector(v1), rm.unit_vector(v2))
-        x = np.cross(v1, rot_n)
-
-        return np.asarray([rm.unit_vector(x), rm.unit_vector(v1), rm.unit_vector(rot_n)]).T
-
     def cal_rbtik(self, bendresseq, grasp, grasp_l=0.0, max_fail=np.inf):
         armjntsseq = []
         fail_cnt = 0
@@ -134,7 +74,7 @@ class BendRbtPlanner(object):
             self.bs.reset(pseq_init, rotseq_init, extend=False)
             _, _, objpos, objrot = self.bs.get_posrot_by_l(grasp_l, pseq_init, rotseq_init)
             armjnts = self.mp.get_armjnts_by_objmat4ngrasp(grasp, self.obslist, rm.homomat_from_posrot(objpos, objrot),
-                                                           obj=self.bs.objcm,)
+                                                           obj=self.bs.objcm, )
             # msc = armjntsseq[-1] if len(armjntsseq) != 0 else None
             armjntsseq.append(armjnts)
             if armjnts is None:
@@ -255,7 +195,6 @@ class BendRbtPlanner(object):
             pathseq.append(path)
         return pathseq
 
-    #
     # def plan_pull(self, bendseq, bendresseq, grasp, armjntsseq):
     #     print(f'----------plan linear motion----------')
     #     pathseq = [[armjntsseq[0]]]
@@ -431,8 +370,8 @@ class BendRbtPlanner(object):
                 init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendresseq[motioncounter[0]]
                 print(np.degrees(init_a), np.degrees(end_a), np.degrees(plate_a))
 
-                pseq_init, rotseq_init = self.transseq(pseq_init, rotseq_init, self.transmat4)
-                pseq_end, rotseq_end = self.transseq(pseq_end, rotseq_end, self.transmat4)
+                pseq_init, rotseq_init = self.transseq(pseq_init, rotseq_init, transmat4)
+                pseq_end, rotseq_end = self.transseq(pseq_end, rotseq_end, transmat4)
 
                 self.bs.reset(pseq_init, rotseq_init, extend=False)
                 objcm_init = copy.deepcopy(self.bs.objcm)
@@ -445,11 +384,13 @@ class BendRbtPlanner(object):
                 objcm_end.attach_to(base)
 
                 tmp_p = np.asarray([self.bs.c2c_dist * math.cos(init_a), self.bs.c2c_dist * math.sin(init_a), 0])
+                tmp_p = np.dot(transmat4[:3, :3], tmp_p)
                 self.bs.pillar_punch.set_homomat(np.dot(rm.homomat_from_posrot(tmp_p, np.eye(3)), transmat4))
                 self.bs.pillar_punch.set_rgba(rgba=[.7, 0, 0, .7])
                 self.bs.pillar_punch.attach_to(base)
 
                 tmp_p = np.asarray([self.bs.c2c_dist * math.cos(end_a), self.bs.c2c_dist * math.sin(end_a), 0])
+                tmp_p = np.dot(transmat4[:3, :3], tmp_p)
                 self.bs.pillar_punch_end.set_homomat(np.dot(rm.homomat_from_posrot(tmp_p, np.eye(3)), transmat4))
                 self.bs.pillar_punch_end.set_rgba(rgba=[0, .7, 0, .7])
                 self.bs.pillar_punch_end.attach_to(base)
@@ -482,8 +423,8 @@ class BendRbtPlanner(object):
                 init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendresseq[motioncounter[0]]
                 print(np.degrees(init_a), np.degrees(end_a), np.degrees(plate_a))
 
-                pseq_init, rotseq_init = self.transseq(pseq_init, rotseq_init, self.transmat4)
-                pseq_end, rotseq_end = self.transseq(pseq_end, rotseq_end, self.transmat4)
+                pseq_init, rotseq_init = self.transseq(pseq_init, rotseq_init, transmat4)
+                pseq_end, rotseq_end = self.transseq(pseq_end, rotseq_end, transmat4)
                 # gm.gen_frame(pseq_init[0], rotseq_init[0]).attach_to(base)
                 self.bs.reset(pseq_init, rotseq_init, extend=False)
                 objcm_init = copy.deepcopy(self.bs.objcm)
@@ -496,11 +437,13 @@ class BendRbtPlanner(object):
                 objcm_end.attach_to(base)
 
                 tmp_p = np.asarray([self.bs.c2c_dist * math.cos(init_a), self.bs.c2c_dist * math.sin(init_a), 0])
+                tmp_p = np.dot(transmat4[:3, :3], tmp_p)
                 self.bs.pillar_punch.set_homomat(np.dot(rm.homomat_from_posrot(tmp_p, np.eye(3)), transmat4))
                 self.bs.pillar_punch.set_rgba(rgba=[.7, 0, 0, .7])
                 self.bs.pillar_punch.attach_to(base)
 
                 tmp_p = np.asarray([self.bs.c2c_dist * math.cos(end_a), self.bs.c2c_dist * math.sin(end_a), 0])
+                tmp_p = np.dot(transmat4[:3, :3], tmp_p)
                 self.bs.pillar_punch_end.set_homomat(np.dot(rm.homomat_from_posrot(tmp_p, np.eye(3)), transmat4))
                 self.bs.pillar_punch_end.set_rgba(rgba=[0, .7, 0, .7])
                 self.bs.pillar_punch_end.attach_to(base)
@@ -517,7 +460,7 @@ class BendRbtPlanner(object):
             if motioncounter[0] < len(bendresseq):
                 print('-------------')
                 taskMgr.remove('update')
-                self.rbt.release_all(hnd_name=self.mp.hnd_name)
+                rbt.release_all(hnd_name=self.mp.hnd_name)
                 path = pathseq[motioncounter[0]]
                 if path is not None:
                     self.mp.ah.show_ani(path)
@@ -542,8 +485,8 @@ class BendRbtPlanner(object):
                 objcm_end.set_rgba((0, .7, 0, .7))
                 objcm_end.attach_to(base)
 
-                self.rbt.fk(self.mp.armname, path[-1])
-                _, _ = self.rbt.hold(objcm_init.copy(), hnd_name=self.mp.hnd_name, jawwidth=.01)
+                rbt.fk(self.mp.armname, path[-1])
+                _, _ = rbt.hold(objcm_init.copy(), hnd_name=self.mp.hnd_name, jawwidth=.01)
 
                 tmp_p = np.asarray([self.bs.c2c_dist * math.cos(init_a), self.bs.c2c_dist * math.sin(init_a), 0])
                 self.bs.pillar_punch.set_homomat(np.dot(rm.homomat_from_posrot(tmp_p, np.eye(3)), transmat4))
@@ -566,17 +509,17 @@ if __name__ == '__main__':
 
     gripper = rtqhe.RobotiqHE()
     # base, env = el.loadEnv_wrs(camp=[.6, -.4, 1.7], lookatpos=[.6, -.4, 1])
-    # base, env = el.loadEnv_wrs(camp=[0, 0, 1], lookatpos=[0, 0, 0])
-    base, env = el.loadEnv_wrs()
+    base, env = el.loadEnv_wrs(camp=[0, 0, 1], lookatpos=[0, 0, 0])
+    # base, env = el.loadEnv_wrs()
     rbt = el.loadUr3e()
 
     bs = b_sim.BendSim(show=True)
     mp = m_planner.MotionPlanner(env, rbt, armname="rgt_arm")
 
     transmat4 = rm.homomat_from_posrot((.9, -.35, .78 + bconfig.BENDER_H), rm.rotmat_from_axangle((0, 0, 1), np.pi))
-    f_name = 'penta'
-    goal_pseq = bu.gen_polygen(5, .05)
-    # goal_pseq = bu.gen_ramdom_curve(kp_num=5, length=.12, step=.0005, z_max=.005, toggledebug=False)
+    # f_name = 'penta'
+    # goal_pseq = bu.gen_polygen(5, .05)
+    goal_pseq = bu.gen_ramdom_curve(kp_num=5, length=.12, step=.0005, z_max=.005, toggledebug=False)
     # goal_pseq = bu.gen_screw_thread(r=.02, lift_a=np.radians(5), rot_num=2)
     # goal_pseq = bu.gen_circle(.05)
     # goal_pseq = np.asarray([(0, 0, 0), (0, .02, 0), (.02, .02, 0), (.02, .03, .02), (0, .03, 0), (0, .03, -.02)])
@@ -593,13 +536,18 @@ if __name__ == '__main__':
     grasp_list = mp.load_all_grasp('stick')
     grasp_list = grasp_list
 
-    fit_pseq = bu.iter_fit(goal_pseq, tor=.001, toggledebug=False)
-    bendset = brp.pseq2bendset(fit_pseq, pos=.05, toggledebug=False)[::-1]
-    init_rot = brp.get_init_rot(fit_pseq)
-    pickle.dump(bendset, open(f'planres/{f_name}_bendseq.pkl', 'wb'))
-    bendset = pickle.load(open(f'planres/{f_name}_bendseq.pkl', 'rb'))
+    fit_pseq = bu.decimate_pseq(goal_pseq, tor=.001, toggledebug=False)
+    bendset = bu.pseq2bendset(fit_pseq, pos=.05, toggledebug=False)[::-1]
+    init_rot = bu.get_init_rot(fit_pseq)
+    # pickle.dump(bendset, open(f'planres/{f_name}_bendseq.pkl', 'wb'))
+    # bendset = pickle.load(open(f'planres/{f_name}_bendseq.pkl', 'rb'))
     for b in bendset:
         print(b)
+    bs.reset([(0, 0, 0), (0, max(np.asarray(bendset)[:, 3]), 0)], [np.eye(3), np.eye(3)])
+    # bs.show(rgba=(.7, .7, .7, .7), show_frame=True)
+    is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, toggledebug=False)
+    bs.show(rgba=(.7, .7, .7, .7), show_frame=True, show_pseq=False)
+    base.run()
 
     brp.set_up(bendset, grasp_list, transmat4)
     brp.run(f_name=f_name, grasp_l=0)

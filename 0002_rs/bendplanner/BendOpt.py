@@ -41,7 +41,7 @@ class BendOptimizer(object):
             # pseq = bu.linear_inp3d_by_step(bs.pseq)
             # err, fitness, _ = o3dh.registration_ptpt(np.asarray(pseq), np.asarray(goal_pseq), toggledebug=False)
             err, _ = bu.avg_distance_between_polylines(np.asarray(self.bs.pseq[1:-2]), np.asarray(goal_pseq),
-                                                    toggledebug=False)
+                                                       toggledebug=False)
         except:
             err = 1
         print('cost:', err)
@@ -120,8 +120,8 @@ class BendOptimizer(object):
         :return:
         """
         time_start = time.time()
-        self.addconstraint(self.con_end, condition="ineq")
-        self.addconstraint(self.con_avgdist, condition="ineq")
+        # self.addconstraint(self.con_end, condition="ineq")
+        # self.addconstraint(self.con_avgdist, condition="ineq")
         if init is None:
             # init = self.random_init()
             init = self.equal_init()
@@ -150,14 +150,24 @@ class BendOptimizer(object):
 
 if __name__ == '__main__':
     import pickle
+    import bendplanner.BendSim as b_sim
 
     base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
     gm.gen_frame(thickness=.0005, alpha=.1, length=.01).attach_to(base)
+    bs = b_sim.BendSim(show=True)
 
-    # opt = BendOptimizer(bs, init_pseq, init_rotseq, goal_pseq, bend_times=len(init_bendseq))
-    # res, cost = opt.solve(init=np.asarray([[v[0], v[2]] for v in init_bendseq]).flatten())
-    # print(res, cost)
-    # bs.bend(res[0], 0, res[1])
-    # bu.show_pseq(bu.linear_inp3d_by_step(res), rgba=(1, 0, 0, 1))
+    goal_pseq = bu.gen_polygen(5, .05)
+
+    init_pseq = [(0, 0, 0), (0, .05 + bu.cal_length(goal_pseq), 0)]
+    init_rotseq = [np.eye(3), np.eye(3)]
+
+    fit_pseq = bu.decimate_pseq(goal_pseq, tor=.001, toggledebug=False)
+    init_bendseq = bu.pseq2bendset(fit_pseq, pos=.05, toggledebug=False)[::-1]
+
+    opt = BendOptimizer(bs, init_pseq, init_rotseq, goal_pseq, bend_times=len(init_bendseq))
+    res, cost = opt.solve(init=np.asarray([[v[0], v[3]] for v in init_bendseq]).flatten())
+    print(res, cost)
+    bs.bend(bend_angle=res[0], lift_angle=0, bend_pos=res[1])
+    bu.show_pseq(bu.linear_inp3d_by_step(res), rgba=(1, 0, 0, 1))
 
     base.run()

@@ -8,15 +8,10 @@ import basis.trimesh as trm
 import modeling.collision_model as cm
 import bendplanner.bend_utils as bu
 import bendplanner.bender_config as bconfig
-import time
 import robot_sim.end_effectors.gripper.robotiqhe.robotiqhe as rtqhe
 import motionplanner.motion_planner as m_planner
 import bendplanner.BendSim as b_sim
 import bendplanner.BendRbtPlanner as br_planner
-import utils.panda3d_utils as p3u
-import bendplanner.PremutationTree as p_tree
-import bendplanner.InvalidPermutationTree as ip_tree
-from scipy import interpolate
 import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
@@ -32,7 +27,7 @@ if __name__ == '__main__':
     bs = b_sim.BendSim(show=True)
     mp = m_planner.MotionPlanner(env, rbt, armname="rgt_arm")
 
-    transmat4 = rm.homomat_from_posrot((.6, -.4, .82 + bconfig.BENDER_H), np.eye(3))
+    transmat4 = rm.homomat_from_posrot((.9, -.35, .78 + bconfig.BENDER_H), rm.rotmat_from_axangle((0, 0, 1), np.pi))
 
     goal_pseq = bu.gen_polygen(5, .05)
     # goal_pseq = bu.gen_ramdom_curve(kp_num=4, length=.12, step=.0005, z_max=.005, toggledebug=False)
@@ -52,12 +47,12 @@ if __name__ == '__main__':
     grasp_list = mp.load_all_grasp('stick')
     grasp_list = grasp_list[:200]
 
-    fit_pseq = bu.iter_fit(goal_pseq, tor=.002, toggledebug=False)
-    bendset = brp.pseq2bendset(fit_pseq, pos=1, toggledebug=False)
+    # fit_pseq = bu.iter_fit(goal_pseq, tor=.002, toggledebug=False)
+    # bendset = brp.pseq2bendset(fit_pseq, pos=1, toggledebug=False)
     # for b in bendset:
     #     b[3] = b[3]+.1
-    init_rot = brp.get_init_rot(fit_pseq)
-    pickle.dump(bendset, open('planres/penta_bendseq.pkl', 'wb'))
+    # init_rot = brp.get_init_rot(fit_pseq)
+    # pickle.dump(bendset, open('planres/penta_bendseq.pkl', 'wb'))
     bendset = pickle.load(open('planres/penta_bendseq.pkl', 'rb'))
 
     bs = b_sim.BendSim(show=True)
@@ -65,6 +60,7 @@ if __name__ == '__main__':
     armjntsseq_list = pickle.load(open('planres/penta_armjntsseq.pkl', 'rb'))
     is_success, bendresseq = pickle.load(open('planres/penta_bendresseq.pkl', 'rb'))
     brp.show_bendresseq_withrbt(bendresseq, transmat4, armjntsseq_list[0][1])
+    brp.show_bendresseq(bendresseq, transmat4)
     base.run()
     # for g_tmp, armjntsseq in armjntsseq_list:
     #     _, gl_jaw_center_pos, gl_jaw_center_rotmat, hnd_pos, hnd_rotmat = g_tmp

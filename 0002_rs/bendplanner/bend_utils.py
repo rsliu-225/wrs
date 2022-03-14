@@ -124,15 +124,15 @@ def plot_frame(ax, pos, rot):
                mutation_scale=10, arrowstyle='->', color='b')
 
 
-def plot_pseq(ax3d, pseq,c=None):
+def plot_pseq(ax3d, pseq, c=None):
     pseq = np.asarray(pseq)
-    ax3d.plot3D(pseq[:, 0], pseq[:, 1], pseq[:, 2],c=c)
+    ax3d.plot3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], c=c)
     ax3d.grid()
 
 
-def scatter_pseq(ax3d, pseq, s=2,c=None):
+def scatter_pseq(ax3d, pseq, s=2, c=None):
     pseq = np.asarray(pseq)
-    ax3d.scatter3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], s=s,c=c)
+    ax3d.scatter3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], s=s, c=c)
     ax3d.grid()
 
 
@@ -156,18 +156,6 @@ def align_with_goal(bs, goal_pseq, init_rot, init_pos=np.asarray((bconfig.R_BEND
                                                                    pos=init_pos - goal_pseq[0]), goal_pseq)
     bs.move_to_org(init_l)
     return goal_pseq, np.asarray(bs.pseq)[1:-1]
-
-
-def align_pseqs(pseq_src, pseq_tgt):
-    # v1 = np.asarray(pseq_src[1]) - np.asarray(pseq_src[0])
-    # v2 = np.asarray(pseq_tgt[1]) - np.asarray(pseq_tgt[0])
-    # rot = rm.rotmat_between_vectors(v1, v2)
-    # pseq_tgt = [np.dot(rot, np.asarray(p)) for p in pseq_tgt]
-
-    p1 = np.asarray(pseq_src[0])
-    p2 = np.asarray(pseq_tgt[0])
-    pseq_src = [np.asarray(p) - (p1 - p2) for p in pseq_src]
-    return pseq_src
 
 
 def align_pseqs_icp(pseq_src, pseq_tgt):
@@ -246,7 +234,16 @@ def __ps2seg_max_dist(p1, p2, ps):
     return max_dist, list(dist_list).index(max_dist)
 
 
-def iter_fit(pseq, tor=.001, toggledebug=False):
+def get_init_rot(pseq):
+    v1 = pseq[1] - pseq[0]
+    v2 = pseq[2] - pseq[1]
+    rot_n = np.cross(rm.unit_vector(v1), rm.unit_vector(v2))
+    x = np.cross(v1, rot_n)
+
+    return np.asarray([rm.unit_vector(x), rm.unit_vector(v1), rm.unit_vector(rot_n)]).T
+
+
+def decimate_pseq(pseq, tor=.001, toggledebug=False):
     pseq = np.asarray(pseq)
     res_pids = [0, len(pseq) - 1]
     ptr = 0
@@ -268,25 +265,58 @@ def iter_fit(pseq, tor=.001, toggledebug=False):
     return pseq[res_pids]
 
 
-def objmat4_list_inp(objmat4_list, max_inp=30):
-    inp_mat4_list = []
-    for i, objmat4 in enumerate(objmat4_list):
-        if i > 0:
-            inp_mat4_list.append(objmat4_list[i - 1])
-            _, angle = rm.axangle_between_rotmat(objmat4_list[i - 1][:3, :3], objmat4[:3, :3])
-            if angle < np.pi/180:
-                continue
-            cnt = int(np.degrees(angle)) if int(np.degrees(angle)) < max_inp else max_inp
-            times = [1 / cnt * n for n in range(1, cnt)]
-            # print(angle, cnt, times)
+def pseq2bendset(res_pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, pos=0.0, toggledebug=False):
+    ax = plt.axes(projection='3d')
+    # ax.set_box_aspect((1, 1, 1))
+    tangent_pts = []
+    bendseq = []
+    diff_list = []
+    n_pre = None
+    rot_a = 0
+    lift_a = 0
+    for i in range(1, len(res_pseq) - 1):
+        v1 = res_pseq[i] - res_pseq[i - 1]
+        v2 = res_pseq[i + 1] - res_pseq[i]
+        pos += np.linalg.norm(v1)
+        rot_n = np.cross(rm.unit_vector(v1), rm.unit_vector(v2))
+        vj_xy = v2 - v2 * rot_n
+        vj_yz = v2 - v2 * (v1 / np.linalg.norm(v1))
+        vj_xz = v2 - v2 * (np.cross(rot_n, (v1 / np.linalg.norm(v1))))
+        bend_a = rm.angle_between_vectors(v1, vj_xy)
+        # lift_a = rm.angle_between_vectors(v1, vj_xz)
+        if n_pre is not None:
+            a = rm.angle_between_vectors(n_pre, rot_n)
+            # a = np.arccos(np.cross(n_pre, v1).dot(vj_yz) / (np.linalg.norm(v1) * np.linalg.norm(vj_yz)))
+            dir_a = rm.angle_between_vectors(v1, np.cross(n_pre, rot_n))
+            if dir_a is None:
+                dir_a = 0
+            if dir_a > np.pi / 2:
+                rot_a += a
+            else:
+                rot_a -= a
 
-            p1, p2 = objmat4_list[i - 1][:3, 3], objmat4[:3, 3]
-            r1, r2 = objmat4_list[i - 1][:3, :3], objmat4[:3, :3]
+        n_pre = rot_n
+        l = (bend_r / np.tan((np.pi - abs(bend_a)) / 2)) / np.cos(abs(lift_a))
+        arc = abs(bend_a) * bend_r
+        bendseq.append([bend_a, lift_a, rot_a, pos + init_l - l - sum(diff_list)])
+        diff_list.append(2 * l - arc)
 
-            interp_rot_list = rm.rotmat_slerp(r1, r2, 10)
-            interp_p_list = [p1 + (p2 - p1) * t for t in times]
+        ratio_1 = l / np.linalg.norm(res_pseq[i] - res_pseq[i - 1])
+        p1 = res_pseq[i] + (res_pseq[i - 1] - res_pseq[i]) * ratio_1
+        ratio_2 = l / np.linalg.norm(res_pseq[i] - res_pseq[i + 1])
+        p2 = res_pseq[i] + (res_pseq[i + 1] - res_pseq[i]) * ratio_2
+        tangent_pts.append(p1)
+        tangent_pts.append(p2)
 
-            inp_mat4_list.extend([rm.homomat_from_posrot(p, rot) for p, rot in zip(interp_p_list, interp_rot_list)])
-    print("length of interpolation result:", len(inp_mat4_list))
+        x = np.cross(v1, rot_n)
+        rot = np.asarray([rm.unit_vector(x), rm.unit_vector(v1), rm.unit_vector(rot_n)]).T
+        if toggledebug:
+            gm.gen_frame(res_pseq[i - 1], rot, length=.02, thickness=.001).attach_to(base)
+        plot_frame(ax, res_pseq[i - 1], rot)
 
-    return inp_mat4_list
+    plot_pseq(ax, res_pseq)
+    scatter_pseq(ax, res_pseq, s=5)
+    scatter_pseq(ax, tangent_pts, s=5)
+    plt.show()
+
+    return bendseq

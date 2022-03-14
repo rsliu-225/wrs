@@ -52,8 +52,7 @@ if __name__ == '__main__':
     # goal_pseq, bendset = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{f_name}_bendseq.pkl', 'rb'))
     result, _, _, _, bendset = pickle.load(open(f'{config.ROOT}/bendplanner/bendresseq/5_0.pkl', 'rb'))
 
-    bendset[0][0] = -bendset[0][0]
-    bendset[0][2] = bendset[0][2] - np.pi / 2
+
     for b in bendset:
         print(b)
 
@@ -66,8 +65,7 @@ if __name__ == '__main__':
     # grasp_list = grasp_list[:200]
 
     brp.set_up(bendset, grasp_list, transmat4)
-    # brp.run(f_name=f_name)
-    #
+    brp.run(f_name=f_name)
 
     bendresseq, seqs = result[-1]
     for x in np.linspace(.4, .9, 10):

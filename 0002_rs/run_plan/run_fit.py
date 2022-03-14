@@ -1,0 +1,50 @@
+import copy
+import math
+import visualization.panda.world as wd
+import modeling.geometric_model as gm
+import numpy as np
+import basis.robot_math as rm
+import basis.trimesh as trm
+import modeling.collision_model as cm
+import bendplanner.bend_utils as bu
+import bendplanner.bender_config as bconfig
+import time
+import motionplanner.motion_planner as m_planner
+import bendplanner.BendSim as b_sim
+import bendplanner.BendRbtPlanner as br_planner
+import utils.panda3d_utils as p3u
+import bendplanner.InvalidPermutationTree as ip_tree
+import config
+
+if __name__ == '__main__':
+    base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
+
+    bs = b_sim.BendSim(show=True)
+
+    transmat4 = rm.homomat_from_posrot((.9, -.35, .78 + bconfig.BENDER_H), rm.rotmat_from_axangle((0, 0, 1), np.pi))
+    # goal_pseq = bu.gen_polygen(5, .05)
+    goal_pseq = bu.gen_ramdom_curve(kp_num=5, length=.12, step=.0005, z_max=.005, toggledebug=False)
+    # goal_pseq = bu.gen_screw_thread(r=.02, lift_a=np.radians(5), rot_num=2)
+    # goal_pseq = bu.gen_circle(.05)
+    # goal_pseq = np.asarray([(0, 0, 0), (0, .02, 0), (.02, .02, 0), (.02, .03, .02), (0, .03, 0), (0, .03, -.02)])
+    # goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
+    #                         [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1],
+    #                         [.1, .1, .1], [.1, .1, .2]]) * .4
+    # goal_pseq = np.asarray([[0, 0, .1], [0, 0, 0], [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1]]) * .4
+    # goal_pseq = np.asarray([[.1, 0, .1], [0, 0, .1], [0, 0, 0]]) * .4
+    init_pseq = [(0, 0, 0), (0, .05 + bu.cal_length(goal_pseq), 0)]
+    init_rotseq = [np.eye(3), np.eye(3)]
+
+    fit_pseq = bu.decimate_pseq(goal_pseq, tor=.001, toggledebug=False)
+    bendset = bu.pseq2bendset(fit_pseq, pos=.05, toggledebug=False)[::-1]
+    init_rot = bu.get_init_rot(fit_pseq)
+    for b in bendset:
+        print(b)
+    bs.reset([(0, 0, 0), (0, max(np.asarray(bendset)[:, 3]), 0)], [np.eye(3), np.eye(3)],extend=False)
+    # bs.show(rgba=(.7, .7, .7, .7), show_frame=True)
+    is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, toggledebug=False)
+    goal_pseq, res_pseq = bu.align_with_goal(bs, goal_pseq, init_rot)
+    err, _ = bu.avg_distance_between_polylines(res_pseq, goal_pseq, toggledebug=True)
+
+    bs.show(rgba=(.7, .7, .7, .7), show_frame=True, show_pseq=False)
+    base.run()
