@@ -72,7 +72,7 @@ if __name__ == '__main__':
         print("---------------init to pick---------------")
         path_init2pick = motion_planner_lft.plan_gotopick(grasp, objmat4_init, pen_item.objcm, objrelpos,
                                                           objrelrot)
-        if path_init2pick is not None:
+        if path_init2pick is not None :
             motion_planner_x_lft.movepath(path_init2pick)
             motion_planner_lft.ah.show_animation_hold(path_init2pick, pen_cm, objrelpos, objrelrot)
             base.run()

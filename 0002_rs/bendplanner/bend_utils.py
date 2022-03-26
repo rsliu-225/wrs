@@ -1,4 +1,5 @@
 import math
+import pickle
 import numpy as np
 import modeling.geometric_model as gm
 import visualization.panda.world as wd
@@ -143,6 +144,12 @@ def plot_pseq_2d(ax, pseq):
 
 
 def align_with_goal(bs, goal_pseq, init_rot, init_pos=np.asarray((bconfig.R_BEND, 0, 0)), init_l=bconfig.INIT_L):
+    # v1 = goal_pseq[0] - goal_pseq[1]
+    # v2 = goal_pseq[1] - goal_pseq[2]
+    # rot_n = np.cross(rm.unit_vector(v1), rm.unit_vector(v2))
+    # x = np.cross(v1, rot_n)
+    # init_rot = np.asarray([-rm.unit_vector(x), -rm.unit_vector(v1), -rm.unit_vector(rot_n)]).T
+
     goal_pseq = np.asarray(goal_pseq)
     # goal_rot = np.dot(
     #     # rm.rotmat_from_axangle((1, 0, 0), -np.pi / 2),
@@ -187,6 +194,8 @@ def avg_distance_between_polylines(pts1, pts2, toggledebug=False):
         distance = np.cumsum(np.sqrt(np.sum(np.diff(polyline, axis=1) ** 2, axis=0)))
         return np.insert(distance, 0, 0) / distance[-1]
 
+    pts1 = np.round(np.asarray(pts1), decimals=5)
+    pts2 = np.round(np.asarray(pts2), decimals=5)
     x1, y1, z1 = pts1[:, 0], pts1[:, 1], pts1[:, 2]
     x2, y2, z2 = pts2[:, 0], pts2[:, 1], pts2[:, 2]
 
@@ -200,15 +209,17 @@ def avg_distance_between_polylines(pts1, pts2, toggledebug=False):
 
     if toggledebug:
         ax = plt.axes(projection='3d')
+        ax.set_box_aspect((1, 1, 1))
         # z_max = max([abs(np.max(z1)), abs(np.max(z2))])
-        ax.set_xlim([-0.08, 0.03])
-        ax.set_ylim([-0.02, 0.09])
+        ax.set_xlim([0, 0.08])
+        ax.set_ylim([-0.04, 0.04])
+        ax.set_zlim([-0.04, 0.04])
         # ax.scatter3D(x1, y1, z1, color='red')
         ax.plot3D(x1, y1, z1, 'red')
         # ax.scatter3D(x2, y2, z2, color='black')
         ax.plot3D(x2, y2, z2, 'black')
         # ax.scatter3D(xyz1_on_2[0], xyz1_on_2[1], xyz1_on_2[2], color='red')
-        ax.plot3D(xyz1_on_2[0], xyz1_on_2[1], xyz1_on_2[2], 'red')
+        # ax.plot3D(xyz1_on_2[0], xyz1_on_2[1], xyz1_on_2[2], 'g')
         plt.show()
     err = node_to_node_distance.mean()
     print('Avg. distance between polylines:', err)
@@ -235,12 +246,12 @@ def __ps2seg_max_dist(p1, p2, ps):
 
 
 def get_init_rot(pseq):
-    v1 = pseq[1] - pseq[0]
-    v2 = pseq[2] - pseq[1]
+    v1 = pseq[0] - pseq[1]
+    v2 = pseq[1] - pseq[2]
     rot_n = np.cross(rm.unit_vector(v1), rm.unit_vector(v2))
     x = np.cross(v1, rot_n)
 
-    return np.asarray([rm.unit_vector(x), rm.unit_vector(v1), rm.unit_vector(rot_n)]).T
+    return np.asarray([-rm.unit_vector(x), -rm.unit_vector(v1), -rm.unit_vector(rot_n)]).T
 
 
 def decimate_pseq(pseq, tor=.001, toggledebug=False):
@@ -265,58 +276,91 @@ def decimate_pseq(pseq, tor=.001, toggledebug=False):
     return pseq[res_pids]
 
 
-def pseq2bendset(res_pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, pos=0.0, toggledebug=False):
+def is_p_in_seg(p, seg):
+    p = np.asarray(p)
+    seg = np.asarray(seg)
+    if np.linalg.norm(p - seg[0]) + np.linalg.norm(p - seg[1]) == np.linalg.norm(seg[0] - seg[1]):
+        return True
+    return False
+
+
+def pseq2bendset(res_pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggledebug=False):
     ax = plt.axes(projection='3d')
-    # ax.set_box_aspect((1, 1, 1))
+    ax.set_box_aspect((1, 1, 1))
     tangent_pts = []
     bendseq = []
     diff_list = []
+    arc_list = []
     n_pre = None
     rot_a = 0
     lift_a = 0
+    pos = 0
     for i in range(1, len(res_pseq) - 1):
-        v1 = res_pseq[i] - res_pseq[i - 1]
-        v2 = res_pseq[i + 1] - res_pseq[i]
+        v1 = res_pseq[i - 1] - res_pseq[i]
+        v2 = res_pseq[i] - res_pseq[i + 1]
+        v3 = res_pseq[i - 1] - res_pseq[i + 1]
         pos += np.linalg.norm(v1)
-        rot_n = np.cross(rm.unit_vector(v1), rm.unit_vector(v2))
-        vj_xy = v2 - v2 * rot_n
-        vj_yz = v2 - v2 * (v1 / np.linalg.norm(v1))
-        vj_xz = v2 - v2 * (np.cross(rot_n, (v1 / np.linalg.norm(v1))))
-        bend_a = rm.angle_between_vectors(v1, vj_xy)
-        # lift_a = rm.angle_between_vectors(v1, vj_xz)
+        n = np.cross(rm.unit_vector(v1), rm.unit_vector(v2))
+        v2_xy = v2 - v2 * n
+        n_xz = n - n * v2
+        n_yz = n - n * np.cross(v1, n)
+        v2_xz = v2 - v2 * rm.unit_vector(v1)
+        v3_yz = v3 - v3 * np.cross(v1, n)
+
+        # bend_a = rm.angle_between_vectors(v1, v2_xy)
+        bend_a = rm.angle_between_vectors(v1, v2)
+        if round(bend_a, 8) == 0:
+            print(bend_a)
+            continue
+
         if n_pre is not None:
-            a = rm.angle_between_vectors(n_pre, rot_n)
-            # a = np.arccos(np.cross(n_pre, v1).dot(vj_yz) / (np.linalg.norm(v1) * np.linalg.norm(vj_yz)))
-            dir_a = rm.angle_between_vectors(v1, np.cross(n_pre, rot_n))
-            if dir_a is None:
-                dir_a = 0
-            if dir_a > np.pi / 2:
+            # v2_yz = v2 - v2 * (np.cross(n_pre, rm.unit_vector(v1)))
+            # lift_a = np.pi / 2 - rm.angle_between_vectors(n_pre, v3_yz)
+            # tmp_a = rm.angle_between_vectors(np.cross(v1, n_pre), np.cross(v1, v3_yz))
+            # if tmp_a < np.pi / 2:
+            #     lift_a = -lift_a
+            a = rm.angle_between_vectors(n_pre, n)
+            # a = rm.angle_between_vectors(n_pre, n_xz)
+            tmp_a = rm.angle_between_vectors(v1, np.cross(n_pre, n))
+            if tmp_a is not None and tmp_a > np.pi / 2:
                 rot_a += a
             else:
                 rot_a -= a
 
-        n_pre = rot_n
-        l = (bend_r / np.tan((np.pi - abs(bend_a)) / 2)) / np.cos(abs(lift_a))
-        arc = abs(bend_a) * bend_r
-        bendseq.append([bend_a, lift_a, rot_a, pos + init_l - l - sum(diff_list)])
+        n_pre = n
+        l = (bend_r * np.tan(abs(bend_a) / 2)) / np.cos(abs(lift_a))
+        arc = abs(bend_a) * bend_r / np.cos(abs(lift_a))
+        # print(sum(diff_list))
         diff_list.append(2 * l - arc)
+        arc_list.append(arc)
 
         ratio_1 = l / np.linalg.norm(res_pseq[i] - res_pseq[i - 1])
-        p1 = res_pseq[i] + (res_pseq[i - 1] - res_pseq[i]) * ratio_1
         ratio_2 = l / np.linalg.norm(res_pseq[i] - res_pseq[i + 1])
-        p2 = res_pseq[i] + (res_pseq[i + 1] - res_pseq[i]) * ratio_2
-        tangent_pts.append(p1)
-        tangent_pts.append(p2)
+        p_tan1 = res_pseq[i] + (res_pseq[i - 1] - res_pseq[i]) * ratio_1
+        p_tan2 = res_pseq[i] + (res_pseq[i + 1] - res_pseq[i]) * ratio_2
+        tangent_pts.extend([p_tan1, p_tan2])
 
-        x = np.cross(v1, rot_n)
-        rot = np.asarray([rm.unit_vector(x), rm.unit_vector(v1), rm.unit_vector(rot_n)]).T
+        # if i > 1 and is_p_in_seg(p_tan1, [res_pseq[i - 1], tangent_pts[-3]]):
+        #     scatter_pseq(ax, [p_tan1], s=20, c='gray')
+        #     a_res = np.arctan(np.linalg.norm(p_tan1 - tangent_pts[-3]) / bend_r)
+        #     print(i, np.degrees(a_res))
+        #     bend_a = bend_a + a_res if bend_a > 0 else bend_a - a_res
+
+        bendseq.append([bend_a, lift_a, rot_a, pos + init_l - l - sum(diff_list)])
+        x = np.cross(v1, n)
+        rot = np.asarray([rm.unit_vector(x), rm.unit_vector(v1), rm.unit_vector(n)]).T
         if toggledebug:
             gm.gen_frame(res_pseq[i - 1], rot, length=.02, thickness=.001).attach_to(base)
         plot_frame(ax, res_pseq[i - 1], rot)
 
+    ax.set_xlim([0, 0.08])
+    ax.set_ylim([-0.04, 0.04])
+    ax.set_zlim([-0.04, 0.04])
+    goal_pseq = pickle.load(open('goal_pseq.pkl', 'rb'))
     plot_pseq(ax, res_pseq)
-    scatter_pseq(ax, res_pseq, s=5)
-    scatter_pseq(ax, tangent_pts, s=5)
+    plot_pseq(ax, goal_pseq)
+    scatter_pseq(ax, res_pseq, s=10, c='g')
+    scatter_pseq(ax, tangent_pts, s=10, c='r')
     plt.show()
 
     return bendseq

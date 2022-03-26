@@ -162,7 +162,7 @@ if __name__ == '__main__':
     init_rotseq = [np.eye(3), np.eye(3)]
 
     fit_pseq = bu.decimate_pseq(goal_pseq, tor=.001, toggledebug=False)
-    init_bendseq = bu.pseq2bendset(fit_pseq, pos=.05, toggledebug=False)[::-1]
+    init_bendseq = bu.pseq2bendset(fit_pseq, toggledebug=False)[::-1]
 
     opt = BendOptimizer(bs, init_pseq, init_rotseq, goal_pseq, bend_times=len(init_bendseq))
     res, cost = opt.solve(init=np.asarray([[v[0], v[3]] for v in init_bendseq]).flatten())

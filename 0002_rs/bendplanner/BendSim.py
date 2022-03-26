@@ -27,7 +27,7 @@ def draw_plane(p, n):
 
 
 class BendSim(object):
-    def __init__(self, pseq=None, rotseq=None, show=False, granularity=np.pi / 90):
+    def __init__(self, pseq=None, rotseq=None, show=False, granularity=np.pi / 90, cm_type='stick'):
         # bending device prop
         self.r_side = bconfig.R_SIDE
         self.r_center = bconfig.R_CENTER
@@ -37,6 +37,7 @@ class BendSim(object):
         # bending meterial prop
         self.thickness = bconfig.THICKNESS
         self.width = bconfig.WIDTH
+        self.cm_type = cm_type
 
         # bending device prop
         self.bend_r = self.r_center + self.thickness / 2
@@ -53,7 +54,7 @@ class BendSim(object):
             self.rotseq = [np.eye(3)]
         else:
             self.pseq = pseq
-            self.pseq.append((0, self.pseq[-1][1] + 2 * bconfig.INIT_L, 0))
+            self.pseq.append((0, self.pseq[-1][1] + bconfig.INIT_L, 0))
             self.pseq = [np.asarray(p) + np.asarray([self.bend_r, 0, 0]) for p in self.pseq]
             self.rotseq = rotseq
             self.rotseq.append(np.eye(3))
@@ -108,7 +109,7 @@ class BendSim(object):
         self.rotseq = copy.deepcopy(rotseq)
         if extend:
             self.pseq.append((0, self.pseq[-1][1] + 2 * np.pi * self.bend_r, 0))
-            self.pseq = [np.asarray(p) + np.asarray([self.bend_r, 0, 0]) for p in self.pseq]
+            # self.pseq = [np.asarray(p) + np.asarray([self.bend_r, 0, 0]) for p in self.pseq]
             self.rotseq.append(np.eye(3))
         self.update_cm()
 
@@ -212,11 +213,9 @@ class BendSim(object):
         tmp_pseq = []
         tmp_rotseq = []
         if bend_angle > 0:
-            rng = (0, bend_angle + self.granularity)
-            srange = np.arange(rng[0], rng[1], self.granularity)
+            srange = np.linspace(0, bend_angle, round(bend_angle / self.granularity))
         else:
-            rng = (bend_angle, self.granularity)
-            srange = np.arange(rng[0], rng[1], self.granularity)[::-1]
+            srange = np.linspace(bend_angle, 0, round(bend_angle / self.granularity))[::-1]
         pseq_org = self.pseq[start_inx:end_inx + 1]
         rotseq_org = self.rotseq[start_inx:end_inx + 1]
 
@@ -360,9 +359,9 @@ class BendSim(object):
             gm.gen_frame(insert_pos, insert_rot, length=.01, thickness=.0004).attach_to(base)
         return insert_inx
 
-    def update_cm(self, type='stick'):
+    def update_cm(self):
         # ts = time.time()
-        if type == 'stick':
+        if self.cm_type == 'stick':
             vertices, faces = self.__gen_stick(self.pseq[::-1], self.rotseq[::-1], self.thickness / 2)
         else:
             vertices, faces = self.__gen_surface(self.pseq[::-1], self.rotseq[::-1])

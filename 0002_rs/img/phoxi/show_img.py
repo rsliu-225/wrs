@@ -1,22 +1,43 @@
 import os
 import pickle
 import cv2
+import utils.pcd_utils as pcdu
+import numpy as np
+
+transmat = np.asarray([[0.00320929, -1.00401041, 0.00128358, 0.31255359],
+                       [-0.98255047, -0.00797362, 0.19879522, -0.16003892],
+                       [-0.20321256, 0.00352566, -0.96782627, 0.95215224],
+                       [0.0, 0.0, 0.0, 1.0]])
 
 
-def loadalldata(folder_name):
+def loadalldata(folder_name, show=True):
     files = os.listdir(folder_name)
     alldata = []
     for file in files:
         if not os.path.isdir(file) and file[-4:] == ".pkl" and file[2:] != "bg":
+            print(file)
             data = pickle.load(open(folder_name + file, "rb"))
+            alldata.append(data)
             greyimg = data[0]
             depthimg = data[1]
             # cv2.imwrite("greyimg/" + file[:-4] + ".jpg", greyimg)
             # cv2.imwrite("depthimg/" + file[:-4] + ".jpg", depthimg)
-            cv2.imshow(str(file), greyimg)
-            cv2.waitKey(0)
+            if show:
+                cv2.imshow(str(file), greyimg)
+                cv2.waitKey(0)
     return [img[0] for img in alldata], [img[1] for img in alldata], [img[2] for img in alldata]
 
 
+def show_pcd(folder_name):
+    _, _, pcdseq = loadalldata(folder_name, show=False)
+    pcd = np.asarray(pcdseq[0]) / 1000
+    pcd = pcdu.trans_pcd(pcd, transmat)
+    base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
+    pcdu.show_pcd(pcd)
+    base.run()
+
+
 if __name__ == '__main__':
-    loadalldata('./')
+    import visualization.panda.world as wd
+    # loadalldata('./')
+    show_pcd('./')

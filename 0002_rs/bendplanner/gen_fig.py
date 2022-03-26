@@ -61,14 +61,14 @@ if __name__ == '__main__':
     is_success, bendresseq = pickle.load(open('planres/penta_bendresseq.pkl', 'rb'))
     brp.show_bendresseq_withrbt(bendresseq, transmat4, armjntsseq_list[0][1])
     brp.show_bendresseq(bendresseq, transmat4)
-    base.run()
-    # for g_tmp, armjntsseq in armjntsseq_list:
-    #     _, gl_jaw_center_pos, gl_jaw_center_rotmat, hnd_pos, hnd_rotmat = g_tmp
-    #     hndmat4 = rm.homomat_from_posrot(hnd_pos, hnd_rotmat)
-    #     brp.gripper.fix_to(hndmat4[:3, 3], hndmat4[:3, :3])
-    #     hnd = brp.gripper.gen_meshmodel(rgba=(0, 1, 0, .4))
-    #     hnd.attach_to(base)
     # base.run()
+    for g_tmp, armjntsseq in armjntsseq_list:
+        _, gl_jaw_center_pos, gl_jaw_center_rotmat, hnd_pos, hnd_rotmat = g_tmp
+        hndmat4 = rm.homomat_from_posrot(hnd_pos, hnd_rotmat)
+        brp.gripper.fix_to(hndmat4[:3, 3], hndmat4[:3, :3])
+        hnd = brp.gripper.gen_meshmodel(rgba=(0, 1, 0, .4))
+        hnd.attach_to(base)
+    base.run()
 
     _, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=True, toggledebug=False)
     print('Result Flag:', is_success)

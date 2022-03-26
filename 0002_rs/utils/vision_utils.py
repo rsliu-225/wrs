@@ -7,6 +7,7 @@ import open3d as o3d
 import pyrealsense2 as rs2
 
 import config
+from sklearn.cluster import DBSCAN
 
 
 def load_kntcalibmat(amat_path=os.path.join(config.ROOT, "./camcalib/data/"), f_name="knt_calibmat.pkl"):
@@ -117,3 +118,71 @@ def binary2pts(binary):
             if binary[i, j]:
                 p_list.append([i, j])
     return p_list
+
+
+def mask2pts(mask):
+    p_list = []
+    for i, row in enumerate(mask):
+        for j, val in enumerate(row):
+            if val > 0:
+                p_list.append((i, j))
+    return np.asarray(p_list)
+
+
+def pts2mask(narray, shape):
+    mask = np.zeros(shape)
+    for p in narray:
+        mask[p[0], p[1]] = 1
+    return mask
+
+
+def get_max_cluster(pts, eps=6, min_samples=20):
+    pts_narray = np.asarray(pts)
+    db = DBSCAN(eps=eps, min_samples=min_samples).fit(pts)
+    core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
+    core_samples_mask[db.core_sample_indices_] = True
+    labels = db.labels_
+    unique_labels = set(labels)
+    print("cluster:", unique_labels)
+    res = []
+    max_len = 0
+
+    for k in unique_labels:
+        if k == -1:
+            continue
+        else:
+            class_member_mask = (labels == k)
+            cluster = pts_narray[class_member_mask & core_samples_mask]
+            if len(cluster) > max_len:
+                max_len = len(cluster)
+                res = cluster
+    return res
+
+
+def extract_clr(gray, clr, toggledebug=False, erode=False):
+    shape = (772, 1032, 1)
+    # mask = gray < clr[1]
+    mask = gray > clr[0]
+    crop_mask = np.zeros(shape)
+    crop_mask[400:580, 540:720] = 1
+    cv2.imshow('mask', mask * np.ones(shape))
+    cv2.waitKey(0)
+    mask = mask * crop_mask
+
+    diff_p_narray = mask2pts(mask)
+    stroke_pts = np.array(get_max_cluster(diff_p_narray, eps=3, min_samples=20))
+    stroke_mask = pts2mask(stroke_pts, shape)
+    if erode:
+        kernel = np.ones((2, 2), np.uint8)
+        stroke_mask = cv2.erode(stroke_mask, kernel, iterations=1)
+    # print(stroke_mask)
+
+    if toggledebug:
+        # cv2.imshow('diff', diff)
+        # cv2.waitKey(0)
+        cv2.imshow('cropped mask', mask)
+        cv2.waitKey(0)
+        cv2.imshow('clustered mask', stroke_mask)
+        cv2.waitKey(0)
+
+    return stroke_mask

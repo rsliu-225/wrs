@@ -144,7 +144,6 @@ class MotionPlanner(object):
                 # self.rbth.show_armjnts(armjnts=armjnts, rgba=(.7, .7, 0, .7))
                 return armjnts
 
-
     def get_available_graspid_by_objmat4(self, grasp_list, obj, objmat4):
         remaingrasp_id_list = []
         for i in range(len(grasp_list)):
