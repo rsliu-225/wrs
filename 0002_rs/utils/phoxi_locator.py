@@ -19,7 +19,7 @@ from localenv import envloader as el
 
 
 class PhxiLocator(object):
-    def __init__(self, phxi, amat_f_name=config.AMAT_F_NAME):
+    def __init__(self, phxi=phoxi.Phoxi(host=config.PHOXI_HOST), amat_f_name=config.AMAT_F_NAME):
         self.__phxi = phxi
         # temporal data structure for acceleration
         self.__processed = None
@@ -168,6 +168,8 @@ class PhxiLocator(object):
             if x_range[0] < p[0] < x_range[1] and y_range[0] < p[1] < y_range[1] and z_range[0] < p[2] < z_range[1]:
                 pcd_result.append(p)
         pcd_result = np.array(pcd_result)
+        pcdu.show_pcd(pcd_result)
+        base.run()
 
         db = skc.DBSCAN(eps=eps, min_samples=50 * scan_num).fit(pcd_result)
         core_samples_mask = np.zeros_like(db.labels_, dtype=bool)

@@ -17,6 +17,7 @@ import bendplanner.BendRbtPlanner as br_planner
 import utils.panda3d_utils as p3u
 import bendplanner.InvalidPermutationTree as ip_tree
 import config
+import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
     base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
@@ -40,15 +41,27 @@ if __name__ == '__main__':
     init_pseq = [(0, 0, 0), (0, bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
 
-    fit_pseq = bu.decimate_pseq(goal_pseq, tor=.0002, toggledebug=False)
+    fit_pseq = bu.decimate_pseq(goal_pseq, r=bconfig.R_CENTER, tor=.0002, toggledebug=False)
     bendset = bu.pseq2bendset(fit_pseq, toggledebug=False)
     init_rot = bu.get_init_rot(fit_pseq)
-    for b in bendset:
-        print(b)
     bs.reset(init_pseq, init_rotseq, extend=True)
     bs.show(rgba=(.7, .7, .7, .7), show_frame=True)
     is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, toggledebug=False)
+    bs.show(rgba=(0, .7, .7, .7), show_frame=True)
     goal_pseq, res_pseq = bu.align_with_goal(bs, goal_pseq, init_rot)
     err, _ = bu.avg_distance_between_polylines(res_pseq, goal_pseq, toggledebug=True)
-    bs.show(rgba=(.7, .7, .7, .7), show_frame=True, show_pseq=False)
+
+    # pickle.dump(res_pseq, open('res.pkl', 'wb'))
+    res_pseq_tmp = pickle.load(open('res.pkl', 'rb'))
+    ax = plt.axes(projection='3d')
+    ax.set_box_aspect((1, 1, 1))
+    # z_max = max([abs(np.max(z1)), abs(np.max(z2))])
+    ax.set_xlim([0, 0.08])
+    ax.set_ylim([-0.04, 0.04])
+    ax.set_zlim([-0.04, 0.04])
+    bu.plot_pseq(ax, res_pseq, c='r')
+    bu.plot_pseq(ax, res_pseq_tmp, c='g')
+    bu.plot_pseq(ax, goal_pseq, c='black')
+    plt.show()
+
     base.run()

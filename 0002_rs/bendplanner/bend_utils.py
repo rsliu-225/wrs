@@ -254,7 +254,7 @@ def get_init_rot(pseq):
     return np.asarray([-rm.unit_vector(x), -rm.unit_vector(v1), -rm.unit_vector(rot_n)]).T
 
 
-def decimate_pseq(pseq, tor=.001, toggledebug=False):
+def decimate_pseq(pseq, tor=.001, r=None, toggledebug=False):
     pseq = np.asarray(pseq)
     res_pids = [0, len(pseq) - 1]
     ptr = 0
@@ -262,7 +262,15 @@ def decimate_pseq(pseq, tor=.001, toggledebug=False):
         max_err, max_inx = __ps2seg_max_dist(pseq[res_pids[ptr]], pseq[res_pids[ptr + 1]],
                                              pseq[res_pids[ptr]:res_pids[ptr + 1]])
         if max_err > tor:
-            res_pids.append(max_inx + res_pids[ptr])
+            curr = max_inx + res_pids[ptr]
+            # if r is not None and len(res_pids) > 2:
+            #     a = rm.angle_between_vectors(pseq[res_pids[ptr]] - pseq[curr],
+            #                                  pseq[res_pids[ptr + 1]] - pseq[res_pids[ptr]])
+            #     print(a)
+            #     if abs(a * r) > np.linalg.norm(pseq[res_pids[ptr]] - pseq[curr]):
+            #         ptr += 1
+            #         continue
+            res_pids.append(curr)
             res_pids = sorted(res_pids)
         else:
             ptr += 1
@@ -276,10 +284,12 @@ def decimate_pseq(pseq, tor=.001, toggledebug=False):
     return pseq[res_pids]
 
 
-def is_p_in_seg(p, seg):
+def is_collinearity(p, seg):
     p = np.asarray(p)
     seg = np.asarray(seg)
     if np.linalg.norm(p - seg[0]) + np.linalg.norm(p - seg[1]) == np.linalg.norm(seg[0] - seg[1]):
+        return True
+    if np.linalg.norm(p - seg[0]) + np.linalg.norm(seg[0] - seg[1]) == np.linalg.norm(p - seg[1]):
         return True
     return False
 
@@ -303,7 +313,6 @@ def pseq2bendset(res_pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggled
         n = np.cross(rm.unit_vector(v1), rm.unit_vector(v2))
         v2_xy = v2 - v2 * n
         n_xz = n - n * v2
-        n_yz = n - n * np.cross(v1, n)
         v2_xz = v2 - v2 * rm.unit_vector(v1)
         v3_yz = v3 - v3 * np.cross(v1, n)
 
@@ -340,11 +349,12 @@ def pseq2bendset(res_pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggled
         p_tan2 = res_pseq[i] + (res_pseq[i + 1] - res_pseq[i]) * ratio_2
         tangent_pts.extend([p_tan1, p_tan2])
 
-        # if i > 1 and is_p_in_seg(p_tan1, [res_pseq[i - 1], tangent_pts[-3]]):
+        # if i > 1 and is_collinearity(p_tan1, [res_pseq[i - 1], tangent_pts[-3]]):
         #     scatter_pseq(ax, [p_tan1], s=20, c='gray')
         #     a_res = np.arctan(np.linalg.norm(p_tan1 - tangent_pts[-3]) / bend_r)
-        #     print(i, np.degrees(a_res))
+        #     print(i, np.degrees(a_res), np.degrees(bend_a))
         #     bend_a = bend_a + a_res if bend_a > 0 else bend_a - a_res
+        #     print(np.degrees(bend_a))
 
         bendseq.append([bend_a, lift_a, rot_a, pos + init_l - l - sum(diff_list)])
         x = np.cross(v1, n)
@@ -353,9 +363,9 @@ def pseq2bendset(res_pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggled
             gm.gen_frame(res_pseq[i - 1], rot, length=.02, thickness=.001).attach_to(base)
         plot_frame(ax, res_pseq[i - 1], rot)
 
-    ax.set_xlim([0, 0.08])
-    ax.set_ylim([-0.04, 0.04])
-    ax.set_zlim([-0.04, 0.04])
+    ax.set_xlim([0, 0.1])
+    ax.set_ylim([-0.05, 0.05])
+    ax.set_zlim([-0.05, 0.05])
     goal_pseq = pickle.load(open('goal_pseq.pkl', 'rb'))
     plot_pseq(ax, res_pseq)
     plot_pseq(ax, goal_pseq)
@@ -364,3 +374,4 @@ def pseq2bendset(res_pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggled
     plt.show()
 
     return bendseq
+

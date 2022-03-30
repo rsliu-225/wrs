@@ -35,6 +35,16 @@ def remove_pcd_zeros(pcd):
     return pcd[np.all(pcd != 0, axis=1)]
 
 
+def crop_pcd(pcd, x_range, y_range, z_range):
+    pcd_res = []
+    for p in pcd:
+        if x_range[0] < p[0] < x_range[1] and y_range[0] < p[1] < y_range[1] and z_range[0] < p[2] < z_range[1]:
+            pcd_res.append(p)
+        else:
+            pcd_res.append(np.asarray([0, 0, 0]))
+    return np.array(pcd)
+
+
 def trans_pcd(pcd, transmat):
     pcd = np.asarray(pcd)
     homopcd = np.ones((4, len(pcd)))
@@ -108,7 +118,7 @@ def show_pcdseq_withrgb(pcdseq, rgbasseq, time_sleep=.1):
     pcldnp = [None]
     print(f'num of frames: {len(pcdseq)}')
     taskMgr.doMethodLater(time_sleep, __update, 'update',
-                          extraArgs=[pcldnp, counter, np.asarray(pcdseq), np.asarray(rgbasseq,dtype=object)],
+                          extraArgs=[pcldnp, counter, np.asarray(pcdseq), np.asarray(rgbasseq, dtype=object)],
                           appendTask=True)
 
 

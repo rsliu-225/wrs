@@ -67,8 +67,8 @@ def map_gray2pcd(grayimg, pcd):
     for i in range(len(grayimg)):
         if grayimg[i] != 0:
             pcd_result.append(pcdnarray[i])
-        # else:
-        #     pcd_result.append(np.array([0, 0, 0]))
+        else:
+            pcd_result.append(np.array([0, 0, 0]))
     pcdnarray = np.array(pcd_result)
 
     return pcdnarray
@@ -159,30 +159,29 @@ def get_max_cluster(pts, eps=6, min_samples=20):
     return res
 
 
-def extract_clr(gray, clr, toggledebug=False, erode=False):
+def extract_clr(grayimg, clr, toggledebug=False, erode=False):
     shape = (772, 1032, 1)
     # mask = gray < clr[1]
-    mask = gray > clr[0]
+
+    mask = np.where((grayimg > clr[0]) & (grayimg < clr[1]), 1, 0)
     crop_mask = np.zeros(shape)
-    crop_mask[400:580, 540:720] = 1
-    cv2.imshow('mask', mask * np.ones(shape))
-    cv2.waitKey(0)
+    crop_mask[250:400, 400:650] = 1
     mask = mask * crop_mask
 
     diff_p_narray = mask2pts(mask)
     stroke_pts = np.array(get_max_cluster(diff_p_narray, eps=3, min_samples=20))
-    stroke_mask = pts2mask(stroke_pts, shape)
+    clr_mask = pts2mask(stroke_pts, shape)
     if erode:
         kernel = np.ones((2, 2), np.uint8)
-        stroke_mask = cv2.erode(stroke_mask, kernel, iterations=1)
-    # print(stroke_mask)
+        clr_mask = cv2.erode(clr_mask, kernel, iterations=1)
+    # print(clr_mask)
 
     if toggledebug:
         # cv2.imshow('diff', diff)
         # cv2.waitKey(0)
         cv2.imshow('cropped mask', mask)
         cv2.waitKey(0)
-        cv2.imshow('clustered mask', stroke_mask)
+        cv2.imshow('clustered mask', clr_mask)
         cv2.waitKey(0)
 
-    return stroke_mask
+    return clr_mask

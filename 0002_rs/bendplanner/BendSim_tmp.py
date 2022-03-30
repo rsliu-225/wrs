@@ -226,13 +226,14 @@ class BendSim(object):
         elif bend_angle < 0 and init_a > 0:
             init_a = np.pi - init_a
         for i, a in enumerate(srange):
+            print(np.degrees(a))
             _, insert_inx, insert_pos, insert_rot = self.get_posrot_by_l(step_l * i, pseq_org, rotseq_org)
             p = np.asarray((self.bend_r * math.cos(init_a + a), self.bend_r * math.sin(init_a + a), insert_pos[2]))
-            # print(np.degrees(init_a + a), p)
             tmp_pseq.append(p)
             if i > 0:
-                a = rm.angle_between_vectors(p - tmp_pseq[-2], insert_rot[:, 1])
-                if np.cross(p - tmp_pseq[-2], insert_rot[:, 1])[2] > 0:
+                a = rm.angle_between_vectors(p - tmp_pseq[-2],
+                                             insert_rot[:, 1] - np.asarray([0, 0, 1] * insert_rot[:, 1]))
+                if np.cross(p - tmp_pseq[-2], insert_rot[:, 1] - np.asarray([0, 0, 1] * insert_rot[:, 1]))[2] > 0:
                     a = -a
             tmp_rotseq.append(rm.rotmat_from_axangle((0, 0, 1), a).dot(insert_rot))
             if toggledebug:
@@ -261,8 +262,8 @@ class BendSim(object):
         end_homomat = rm.homomat_from_posrot(self.pseq[end_inx], self.rotseq[end_inx])
 
         transmat4_mid = np.dot(start_homomat, np.linalg.inv(init_homomat))
-        # gm.gen_frame(np.asarray([.05, 0, 0]), start_homomat[:3, :3], length=.01, thickness=.0004).attach_to(base)
-        # gm.gen_frame(np.asarray([.05, 0, 0]), init_homomat[:3, :3], length=.01, thickness=.0004).attach_to(base)
+        # gm.gen_frame(np.asarray([.05, 0, 0]), start_homomat[:3, :3], length=.02, thickness=.0004).attach_to(base)
+        # gm.gen_frame(np.asarray([.05, 0, 0]), init_homomat[:3, :3], length=.02, thickness=.0004).attach_to(base)
         pseq_mid = rm.homomat_transform_points(transmat4_mid, tmp_pseq).tolist()
         rotseq_mid = [np.dot(transmat4_mid[:3, :3], r) for r in tmp_rotseq]
 
@@ -415,7 +416,7 @@ class BendSim(object):
         result = [[None]] * len(bendseq)
         fail_reason_list = []
         for i, bend in enumerate(bendseq):
-            print('------------')
+            print(f'------Bend {i}------')
             print(bend)
             bend_dir = 0 if bend[0] < 0 else 1
             # bend_angle, lift_angle, rot_angle, bend_pos
@@ -811,8 +812,8 @@ if __name__ == '__main__':
         # [np.radians(90), np.radians(0), np.radians(180), .08],
         # [np.radians(90), np.radians(0), np.radians(0), .1],
         # [np.radians(45), np.radians(0), np.radians(180), .12],
-        [np.radians(40), np.radians(0), np.radians(0), .04],
         [np.radians(90), np.radians(0), np.radians(0), .04],
+        [np.radians(-90), np.radians(0), np.radians(90), .04],
 
     ]
     # bendseq = pickle.load(open('./penta_bendseq.pkl', 'rb'))
@@ -824,7 +825,7 @@ if __name__ == '__main__':
     # bs.show(rgba=(.7, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
     bs.show(rgba=(.7, .7, .7, .7), show_frame=True, show_pseq=False)
     base.run()
+
     key_pseq, key_rotseq = bs.get_pull_primitive(.12, .04, toggledebug=True)
     resseq = bs.pull(key_pseq, key_rotseq, np.pi)
     base.run()
-

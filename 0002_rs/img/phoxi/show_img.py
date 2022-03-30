@@ -3,6 +3,7 @@ import pickle
 import cv2
 import utils.pcd_utils as pcdu
 import numpy as np
+import config
 
 transmat = np.asarray([[0.00320929, -1.00401041, 0.00128358, 0.31255359],
                        [-0.98255047, -0.00797362, 0.19879522, -0.16003892],
@@ -30,7 +31,7 @@ def loadalldata(folder_name, show=True):
 
 def show_pcd(folder_name):
     _, _, pcdseq = loadalldata(folder_name, show=False)
-    pcd = np.asarray(pcdseq[0]) / 1000
+    pcd = np.asarray(pcdseq[0])/1000
     pcd = pcdu.trans_pcd(pcd, transmat)
     base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
     pcdu.show_pcd(pcd)
@@ -39,5 +40,6 @@ def show_pcd(folder_name):
 
 if __name__ == '__main__':
     import visualization.panda.world as wd
+
     # loadalldata('./')
     show_pcd('./')
