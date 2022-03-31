@@ -212,6 +212,7 @@ class BendSim(object):
     def __get_bended_pseq(self, start_inx, end_inx, bend_angle, toggledebug=False):
         tmp_pseq = []
         tmp_rotseq = []
+        n = np.asarray([0, 0, 1])
         if bend_angle > 0:
             srange = np.linspace(0, bend_angle, round(bend_angle / self.granularity))
         else:
@@ -231,8 +232,9 @@ class BendSim(object):
             # print(np.degrees(init_a + a), p)
             tmp_pseq.append(p)
             if i > 0:
-                a = rm.angle_between_vectors(p - tmp_pseq[-2], insert_rot[:, 1])
-                if np.cross(p - tmp_pseq[-2], insert_rot[:, 1])[2] > 0:
+                v_tmp = np.asarray([-np.sin(a), np.cos(a), 0])
+                a = rm.angle_between_vectors(v_tmp - n * v_tmp, insert_rot[:, 1] - n * insert_rot[:, 1])
+                if np.cross(v_tmp - n * v_tmp, insert_rot[:, 1] - n * insert_rot[:, 1])[2] > 0:
                     a = -a
             tmp_rotseq.append(rm.rotmat_from_axangle((0, 0, 1), a).dot(insert_rot))
             if toggledebug:
@@ -559,18 +561,6 @@ class BendSim(object):
 
         return np.asarray(vertices), np.asarray(faces)
 
-    # def __gen_stick(self):
-    #     vertices = []
-    #     faces = []
-    #     for i in range(len(self.pseq) - 1):
-    #         tmp_cm = cm.gen_stick(spos=np.asarray(self.pseq[i]),
-    #                               epos=np.asarray(self.pseq[i + 1]),
-    #                               thickness=self.thickness, type='rect')
-    #         tmp_faces = tmp_cm.objtrm.faces
-    #         faces.extend(tmp_faces + np.ones(tmp_faces.shape) * len(vertices))
-    #         vertices.extend(tmp_cm.objtrm.vertices)
-    #     return np.array(vertices), np.array(faces)
-
     def __gen_stick(self, pseq, rotseq, r, section=5, toggledebug=False):
         vertices = []
         faces = []
@@ -811,8 +801,11 @@ if __name__ == '__main__':
         # [np.radians(90), np.radians(0), np.radians(180), .08],
         # [np.radians(90), np.radians(0), np.radians(0), .1],
         # [np.radians(45), np.radians(0), np.radians(180), .12],
-        [np.radians(40), np.radians(0), np.radians(0), .04],
+        # [np.radians(45), np.radians(0), np.radians(0), .04],
         [np.radians(90), np.radians(0), np.radians(0), .04],
+        [np.radians(90), np.radians(0), np.radians(0), .06],
+        [np.radians(90), np.radians(0), np.radians(0), .08],
+        [np.radians(90), np.radians(0), np.radians(0), .1],
 
     ]
     # bendseq = pickle.load(open('./penta_bendseq.pkl', 'rb'))
@@ -827,4 +820,3 @@ if __name__ == '__main__':
     key_pseq, key_rotseq = bs.get_pull_primitive(.12, .04, toggledebug=True)
     resseq = bs.pull(key_pseq, key_rotseq, np.pi)
     base.run()
-

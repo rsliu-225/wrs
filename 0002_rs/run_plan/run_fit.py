@@ -25,7 +25,7 @@ if __name__ == '__main__':
     bs = b_sim.BendSim(show=True)
 
     transmat4 = rm.homomat_from_posrot((.9, -.35, .78 + bconfig.BENDER_H), rm.rotmat_from_axangle((0, 0, 1), np.pi))
-    # goal_pseq = bu.gen_polygen(30, .01)
+    # goal_pseq = bu.gen_polygen(5, .01)
     # goal_pseq = bu.gen_ramdom_curve(kp_num=5, length=.12, step=.0005, z_max=.05, toggledebug=False)
     # goal_pseq = bu.gen_screw_thread(r=.02, lift_a=np.radians(5), rot_num=2)
     # goal_pseq = bu.gen_circle(.05)
@@ -45,9 +45,10 @@ if __name__ == '__main__':
     bendset = bu.pseq2bendset(fit_pseq, toggledebug=False)
     init_rot = bu.get_init_rot(fit_pseq)
     bs.reset(init_pseq, init_rotseq, extend=True)
-    bs.show(rgba=(.7, .7, .7, .7), show_frame=True)
     is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, toggledebug=False)
     bs.show(rgba=(0, .7, .7, .7), show_frame=True)
+    # bs.show_bendresseq(bendresseq, is_success)
+    # base.run()
     goal_pseq, res_pseq = bu.align_with_goal(bs, goal_pseq, init_rot)
     err, _ = bu.avg_distance_between_polylines(res_pseq, goal_pseq, toggledebug=True)
 

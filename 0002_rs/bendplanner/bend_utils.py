@@ -287,10 +287,12 @@ def decimate_pseq(pseq, tor=.001, r=None, toggledebug=False):
 def is_collinearity(p, seg):
     p = np.asarray(p)
     seg = np.asarray(seg)
-    if np.linalg.norm(p - seg[0]) + np.linalg.norm(p - seg[1]) == np.linalg.norm(seg[0] - seg[1]):
+    if round(np.linalg.norm(p - seg[0]) + np.linalg.norm(p - seg[1]), 8) == round(np.linalg.norm(seg[0] - seg[1]), 8):
         return True
-    if np.linalg.norm(p - seg[0]) + np.linalg.norm(seg[0] - seg[1]) == np.linalg.norm(p - seg[1]):
-        return True
+    # if np.linalg.norm(p - seg[0]) + np.linalg.norm(seg[0] - seg[1]) == np.linalg.norm(p - seg[1]):
+    #     return True
+    # if np.linalg.norm(p - seg[1]) + np.linalg.norm(seg[0] - seg[1]) == np.linalg.norm(p - seg[0]):
+    #     return True
     return False
 
 
@@ -305,6 +307,7 @@ def pseq2bendset(res_pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggled
     rot_a = 0
     lift_a = 0
     pos = 0
+    l_pos = 0
     for i in range(1, len(res_pseq) - 1):
         v1 = res_pseq[i - 1] - res_pseq[i]
         v2 = res_pseq[i] - res_pseq[i + 1]
@@ -338,25 +341,35 @@ def pseq2bendset(res_pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggled
 
         n_pre = n
         l = (bend_r * np.tan(abs(bend_a) / 2)) / np.cos(abs(lift_a))
-        arc = abs(bend_a) * bend_r / np.cos(abs(lift_a))
-        # print(sum(diff_list))
-        diff_list.append(2 * l - arc)
-        arc_list.append(arc)
-
         ratio_1 = l / np.linalg.norm(res_pseq[i] - res_pseq[i - 1])
         ratio_2 = l / np.linalg.norm(res_pseq[i] - res_pseq[i + 1])
         p_tan1 = res_pseq[i] + (res_pseq[i - 1] - res_pseq[i]) * ratio_1
         p_tan2 = res_pseq[i] + (res_pseq[i + 1] - res_pseq[i]) * ratio_2
+
+        if i > 1 and is_collinearity(p_tan1, [res_pseq[i - 1], tangent_pts[-1]]):
+            scatter_pseq(ax, [p_tan1], s=20, c='gray')
+            print(np.degrees(bend_a))
+            # bend_a = 2 * (bend_a * bend_r - np.linalg.norm(tangent_pts[-1] - res_pseq[i])) / bend_r
+            a_res = np.linalg.norm(p_tan1 - tangent_pts[-1]) / bend_r
+            print(i, np.degrees(a_res), np.degrees(bend_a))
+            bend_a = bend_a + a_res if bend_a > 0 else bend_a - a_res
+            print(np.degrees(bend_a))
+            l = (bend_r * np.tan(abs(bend_a) / 2)) / np.cos(abs(lift_a))
+            ratio_1 = l / np.linalg.norm(res_pseq[i] - res_pseq[i - 1])
+            ratio_2 = l / np.linalg.norm(res_pseq[i] - res_pseq[i + 1])
+            p_tan1 = res_pseq[i] + (res_pseq[i - 1] - res_pseq[i]) * ratio_1
+            p_tan2 = res_pseq[i] + (res_pseq[i + 1] - res_pseq[i]) * ratio_2
+            diff_list.append(np.linalg.norm(tangent_pts[-1] - p_tan1))
+            l_pos -= np.linalg.norm(tangent_pts[-1] - p_tan1)
+
+        if i == 1:
+            l_pos += np.linalg.norm(p_tan1 - res_pseq[i - 1])
+        else:
+            l_pos += np.linalg.norm(p_tan1 - tangent_pts[-1])
+            l_pos += abs(bendseq[-1][0]) * bend_r / np.cos(abs(bendseq[-1][1]))
+        bendseq.append([bend_a, lift_a, rot_a, l_pos + init_l])
         tangent_pts.extend([p_tan1, p_tan2])
 
-        # if i > 1 and is_collinearity(p_tan1, [res_pseq[i - 1], tangent_pts[-3]]):
-        #     scatter_pseq(ax, [p_tan1], s=20, c='gray')
-        #     a_res = np.arctan(np.linalg.norm(p_tan1 - tangent_pts[-3]) / bend_r)
-        #     print(i, np.degrees(a_res), np.degrees(bend_a))
-        #     bend_a = bend_a + a_res if bend_a > 0 else bend_a - a_res
-        #     print(np.degrees(bend_a))
-
-        bendseq.append([bend_a, lift_a, rot_a, pos + init_l - l - sum(diff_list)])
         x = np.cross(v1, n)
         rot = np.asarray([rm.unit_vector(x), rm.unit_vector(v1), rm.unit_vector(n)]).T
         if toggledebug:
@@ -369,9 +382,9 @@ def pseq2bendset(res_pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggled
     goal_pseq = pickle.load(open('goal_pseq.pkl', 'rb'))
     plot_pseq(ax, res_pseq)
     plot_pseq(ax, goal_pseq)
-    scatter_pseq(ax, res_pseq, s=10, c='g')
+    scatter_pseq(ax, [res_pseq[0]], s=10, c='y')
+    scatter_pseq(ax, res_pseq[1:], s=10, c='g')
     scatter_pseq(ax, tangent_pts, s=10, c='r')
     plt.show()
 
     return bendseq
-
