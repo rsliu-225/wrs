@@ -350,17 +350,18 @@ def pseq2bendset(res_pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggled
             scatter_pseq(ax, [p_tan1], s=20, c='gray')
             print(np.degrees(bend_a))
             # bend_a = 2 * (bend_a * bend_r - np.linalg.norm(tangent_pts[-1] - res_pseq[i])) / bend_r
-            a_res = np.linalg.norm(p_tan1 - tangent_pts[-1]) / bend_r
+            a_res = 2*np.linalg.norm(p_tan1 - tangent_pts[-1]) / bend_r
             print(i, np.degrees(a_res), np.degrees(bend_a))
             bend_a = bend_a + a_res if bend_a > 0 else bend_a - a_res
             print(np.degrees(bend_a))
+            # l_pos -= np.linalg.norm(tangent_pts[-1] - p_tan1)
+
             l = (bend_r * np.tan(abs(bend_a) / 2)) / np.cos(abs(lift_a))
             ratio_1 = l / np.linalg.norm(res_pseq[i] - res_pseq[i - 1])
             ratio_2 = l / np.linalg.norm(res_pseq[i] - res_pseq[i + 1])
             p_tan1 = res_pseq[i] + (res_pseq[i - 1] - res_pseq[i]) * ratio_1
             p_tan2 = res_pseq[i] + (res_pseq[i + 1] - res_pseq[i]) * ratio_2
             diff_list.append(np.linalg.norm(tangent_pts[-1] - p_tan1))
-            l_pos -= np.linalg.norm(tangent_pts[-1] - p_tan1)
 
         if i == 1:
             l_pos += np.linalg.norm(p_tan1 - res_pseq[i - 1])
