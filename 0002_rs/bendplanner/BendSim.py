@@ -803,9 +803,9 @@ if __name__ == '__main__':
         # [np.radians(45), np.radians(0), np.radians(180), .12],
         # [np.radians(45), np.radians(0), np.radians(0), .04],
         [np.radians(90), np.radians(0), np.radians(0), .04],
-        [np.radians(90), np.radians(0), np.radians(0), .06],
-        [np.radians(90), np.radians(0), np.radians(0), .08],
-        [np.radians(90), np.radians(0), np.radians(0), .1],
+        [np.radians(180), np.radians(0), np.radians(0), .04],
+        # [np.radians(90), np.radians(0), np.radians(0), .08],
+        # [np.radians(90), np.radians(0), np.radians(0), .1],
 
     ]
     # bendseq = pickle.load(open('./penta_bendseq.pkl', 'rb'))
@@ -817,6 +817,6 @@ if __name__ == '__main__':
     # bs.show(rgba=(.7, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
     bs.show(rgba=(.7, .7, .7, .7), show_frame=True, show_pseq=False)
     base.run()
-    key_pseq, key_rotseq = bs.get_pull_primitive(.12, .04, toggledebug=True)
-    resseq = bs.pull(key_pseq, key_rotseq, np.pi)
-    base.run()
+    # key_pseq, key_rotseq = bs.get_pull_primitive(.12, .04, toggledebug=True)
+    # resseq = bs.pull(key_pseq, key_rotseq, np.pi)
+    # base.run()

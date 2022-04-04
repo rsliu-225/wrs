@@ -52,7 +52,6 @@ if __name__ == '__main__':
     # goal_pseq, bendset = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{f_name}_bendseq.pkl', 'rb'))
     result, _, _, _, bendset = pickle.load(open(f'{config.ROOT}/bendplanner/bendresseq/5_0.pkl', 'rb'))
 
-
     for b in bendset:
         print(b)
 
