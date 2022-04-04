@@ -1,12 +1,13 @@
 import numpy as np
 import visualization.panda.world as wd
 
-from .BendSim import BendSim
+import bendplanner.BendSim as bs
+import bendplanner.bend_utils as bu
 
 
-class BendEnv():
-    def __init__(self, goal_set, pseq=None, rotseq=None, show=False, granularity=np.pi / 90, cm_type='stick'):
-        self._goal_set = goal_set
+class BendEnv(object):
+    def __init__(self, goal_pseq, pseq=None, rotseq=None, show=False, granularity=np.pi / 90, cm_type='stick'):
+        self._goal_pseq = goal_pseq
 
         self._pseq = pseq
         self._rotseq = rotseq
@@ -15,7 +16,7 @@ class BendEnv():
         self._cm_type = cm_type
 
         base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
-        self._sim = BendSim(self._pseq, self._rotseq, self._show, self._granularity, self._cm_type)
+        self._sim = bs.BendSim(self._pseq, self._rotseq, self._show, self._granularity, self._cm_type)
         base.run()
 
     def step(self, action):
@@ -36,15 +37,13 @@ class BendEnv():
         """
         is_success, _, _ = self._sim.gen_by_bendseq([action])
 
-        if not is_success:
+        if not is_success[0]:
             done = True
         else:
             done = False
 
         observation = self._sim.objcm
-
-        reward = self._calculate_reward_per_step()
-
+        reward = self._get_reward_per_step()
         info = {}
 
         return observation, reward, done, info
@@ -55,10 +54,10 @@ class BendEnv():
     def reset(self):
         self._sim.reset(self._pseq, self._rotseq)
 
-    def _calculate_reward_per_step(self):
+    def _get_reward_per_step(self):
         """
         Calculate the per step reward based on current point set and the target points set(self._goal_set)
 
-        # TODO: implement how to calculate reward here
         """
+        err, _ = bu.avg_distance_between_polylines(self._goal_pseq, self._sim.pseq)
         return 1

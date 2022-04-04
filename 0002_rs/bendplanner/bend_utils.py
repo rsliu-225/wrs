@@ -380,7 +380,7 @@ def pseq2bendset(res_pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggled
     ax.set_xlim([0, 0.1])
     ax.set_ylim([-0.05, 0.05])
     ax.set_zlim([-0.05, 0.05])
-    goal_pseq = pickle.load(open('goal_pseq.pkl', 'rb'))
+    goal_pseq = pickle.load(open('../run_plan/goal_pseq.pkl', 'rb'))
     plot_pseq(ax, res_pseq)
     plot_pseq(ax, goal_pseq)
     scatter_pseq(ax, [res_pseq[0]], s=10, c='y')

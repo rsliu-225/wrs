@@ -417,8 +417,6 @@ class BendSim(object):
         result = [[None]] * len(bendseq)
         fail_reason_list = []
         for i, bend in enumerate(bendseq):
-            print('------------')
-            print(bend)
             bend_dir = 0 if bend[0] < 0 else 1
             # bend_angle, lift_angle, rot_angle, bend_pos
             self.move_to_org(bend[3], dir=bend_dir, bend_angle=bend[0], lift_angle=bend[1], rot_angle=bend[2],
@@ -427,6 +425,8 @@ class BendSim(object):
             if abs(bend[1]) > np.pi / 2:
                 pseq_init, rotseq_init = pseq_init[::-1], rotseq_init[::-1]
             if cc:
+                print('------------')
+                print(bend)
                 motor_sa, plate_a = self.cal_start(dir=0 if bend[0] < 0 else 1, toggledebug=toggledebug)
                 pseq_init, rotseq_init = copy.deepcopy(self.pseq), copy.deepcopy(self.rotseq)
                 if abs(bend[1]) > np.pi / 2:
