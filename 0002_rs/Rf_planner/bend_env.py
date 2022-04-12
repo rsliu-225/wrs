@@ -17,7 +17,14 @@ class BendEnv(object):
 
         base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
         self._sim = bs.BendSim(self._pseq, self._rotseq, self._show, self._granularity, self._cm_type)
-        base.run()
+
+    def get_observation(self):
+        err, observation = bu.avg_distance_between_polylines(self._sim.pseq, self._goal_pseq)
+        return observation
+
+    def sample_action(self):
+        # TODO: implement random action sampling from action space here
+        return [0.0, 0.0, 0.0, 0.0]
 
     def step(self, action):
         """
@@ -42,7 +49,7 @@ class BendEnv(object):
         else:
             done = False
 
-        observation = self._sim.objcm
+        observation = bu.avg_distance_between_polylines(self._sim.pseq, self._goal_pseq)
         reward = self._get_reward_per_step()
         info = {}
 
