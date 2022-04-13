@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 if __name__ == '__main__':
     base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
 
-    bs = b_sim.BendSim(show=True)
+    bs = b_sim.BendSim(show=True, granularity=np.pi / 30)
 
     transmat4 = rm.homomat_from_posrot((.9, -.35, .78 + bconfig.BENDER_H), rm.rotmat_from_axangle((0, 0, 1), np.pi))
     # goal_pseq = bu.gen_polygen(5, .01)
@@ -50,7 +50,9 @@ if __name__ == '__main__':
     # bs.show_bendresseq(bendresseq, is_success)
     # base.run()
     goal_pseq, res_pseq = bu.align_with_goal(bs, goal_pseq, init_rot)
-    err, _ = bu.avg_distance_between_polylines(res_pseq, goal_pseq, toggledebug=True)
+    fit_pseq, _ = bu.align_with_goal(bs, fit_pseq, init_rot)
+    # err, _ = bu.avg_distance_between_polylines(res_pseq, goal_pseq, toggledebug=True)
+    kpts2 = bu.avg_distance_between_kpts(fit_pseq, res_pseq, bendset, toggledebug=True)
 
     # pickle.dump(res_pseq, open('res.pkl', 'wb'))
     res_pseq_tmp = pickle.load(open('res.pkl', 'rb'))

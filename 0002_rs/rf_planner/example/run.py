@@ -117,7 +117,7 @@ with agent.eval_mode():
         t = 0
         while True:
             # Uncomment to watch the behavior in a GUI window
-            # env.render()
+            env.render()
             action = agent.act(obs)
             obs, r, done, _ = env.step(action)
             R += r

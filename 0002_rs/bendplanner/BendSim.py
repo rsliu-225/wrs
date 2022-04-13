@@ -214,9 +214,9 @@ class BendSim(object):
         tmp_rotseq = []
         n = np.asarray([0, 0, 1])
         if bend_angle > 0:
-            srange = np.linspace(0, bend_angle, round(bend_angle / self.granularity))
+            srange = np.linspace(0, bend_angle, round(bend_angle / self.granularity) + 1)
         else:
-            srange = np.linspace(bend_angle, 0, round(-bend_angle / self.granularity))[::-1]
+            srange = np.linspace(bend_angle, 0, round(-bend_angle / self.granularity) + 1)[::-1]
         pseq_org = self.pseq[start_inx:end_inx + 1]
         rotseq_org = self.rotseq[start_inx:end_inx + 1]
 

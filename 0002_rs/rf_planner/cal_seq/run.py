@@ -5,50 +5,25 @@ import torch
 import numpy as np
 
 import bendplanner.bend_utils as bu
-from Rf_planner.bend_env import BendEnv
-
+from rf_planner.cal_seq.bend_env import BendEnv
 
 goal_pseq = pickle.load(open('goal_pseq.pkl', 'rb'))
-init_pseq = [(0, 0, 0), (0, bu.cal_length(goal_pseq), 0)]
+init_pseq = [(0, 0, 0), (0, .05 + bu.cal_length(goal_pseq), 0)]
 init_rotseq = [np.eye(3), np.eye(3)]
 
 env = BendEnv(goal_pseq=goal_pseq, pseq=init_pseq, rotseq=init_rotseq)
 
 # 239 * 3
 
-# obs = env.reset()
-# print('initial observation:', obs)
-#
-# action = env.action_space.sample()
-# obs, r, done, info = env.step(action)
-# print('next observation:', obs)
-# print('reward:', r)
-# print('done:', done)
-# print('info:', info)
+obs = env.reset()
+print('initial observation:', obs)
 
-
-# Uncomment to open a GUI window rendering the current state of the environment
-# env.render()
-
-# class QFunction(torch.nn.Module):
-#
-#     def __init__(self, obs_size, n_actions):
-#         super().__init__()
-#         self.l1 = torch.nn.Linear(obs_size, 50)
-#         self.l2 = torch.nn.Linear(50, 50)
-#         self.l3 = torch.nn.Linear(50, n_actions)
-#
-#     def forward(self, x):
-#         h = x
-#         h = torch.nn.functional.relu(self.l1(h))
-#         h = torch.nn.functional.relu(self.l2(h))
-#         h = self.l3(h)
-#         return pfrl.action_value.DiscreteActionValue(h)
-
-
-# obs_size = env.observation_space.low.size
-# n_actions = env.action_space.n
-# q_func = QFunction(obs_size, n_actions)
+action = env.sample_action()
+obs, r, done, info = env.step(action)
+print('next observation:', obs)
+print('reward:', r)
+print('done:', done)
+print('info:', info)
 
 # TODO: use point net to extract point features here, for now we just flatten the input to be 1D array
 q_func = torch.nn.Sequential(
@@ -106,7 +81,7 @@ for i in range(1, n_episodes + 1):
         # Uncomment to watch the behavior in a GUI window
         # env.render()
         # TODO: here we use flattened observation, in the future, the agent should use pointnet to extract point feature
-        action = agent.act(obs.flatten())
+        action = agent.act(obs)
         obs, reward, done, _ = env.step(action)
         R += reward
         t += 1

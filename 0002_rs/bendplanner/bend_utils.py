@@ -144,25 +144,11 @@ def plot_pseq_2d(ax, pseq):
 
 
 def align_with_goal(bs, goal_pseq, init_rot, init_pos=np.asarray((bconfig.R_BEND, 0, 0)), init_l=bconfig.INIT_L):
-    # v1 = goal_pseq[0] - goal_pseq[1]
-    # v2 = goal_pseq[1] - goal_pseq[2]
-    # rot_n = np.cross(rm.unit_vector(v1), rm.unit_vector(v2))
-    # x = np.cross(v1, rot_n)
-    # init_rot = np.asarray([-rm.unit_vector(x), -rm.unit_vector(v1), -rm.unit_vector(rot_n)]).T
-
     goal_pseq = np.asarray(goal_pseq)
-    # goal_rot = np.dot(
-    #     # rm.rotmat_from_axangle((1, 0, 0), -np.pi / 2),
-    #     np.linalg.inv(init_rot),
-    #     rm.rotmat_from_axangle((1, 0, 0), np.pi),
-    #     # rm.rotmat_between_vectors(np.cross(goal_pseq[1] - goal_pseq[0], goal_pseq[2] - goal_pseq[1]), [0, 0, 1]),
-    # )
-    # goal_rot = rm.rotmat_between_vectors(goal_pseq[1] - goal_pseq[0], [0, 1, 0])
-    # goal_pseq = rm.homomat_transform_points(rm.homomat_from_posrot(rot=goal_rot, pos=init_pos), goal_pseq)
     goal_pseq = rm.homomat_transform_points(rm.homomat_from_posrot(rot=np.linalg.inv(init_rot),
                                                                    pos=init_pos - goal_pseq[0]), goal_pseq)
     bs.move_to_org(init_l)
-    return goal_pseq, np.asarray(bs.pseq)[1:-1]
+    return goal_pseq, np.asarray(bs.pseq)[1:]
 
 
 def align_pseqs_icp(pseq_src, pseq_tgt):
@@ -189,8 +175,8 @@ def avg_mindist_between_polylines(pts1, pts2, toggledebug=True):
 
 
 def avg_distance_between_polylines(pts1, pts2, toggledebug=False):
-    def __normed_distance_along_path(polyline_x, polyline_y, polyline_z):
-        polyline = np.asarray([polyline_x, polyline_y, polyline_z])
+    def __normed_distance_along_path(x, y, z):
+        polyline = np.asarray([x, y, z])
         distance = np.cumsum(np.sqrt(np.sum(np.diff(polyline, axis=1) ** 2, axis=0)))
         return np.insert(distance, 0, 0) / distance[-1]
 
@@ -202,10 +188,10 @@ def avg_distance_between_polylines(pts1, pts2, toggledebug=False):
     s1 = __normed_distance_along_path(x1, y1, z1)
     s2 = __normed_distance_along_path(x2, y2, z2)
 
-    interpol_xyz1 = interpolate.interp1d(s1, [x1, y1, z1])
-    xyz1_on_2 = interpol_xyz1(s2)
+    interp_pts1 = interpolate.interp1d(s1, [x1, y1, z1])
+    pts1_on_2 = interp_pts1(s2)
 
-    node_to_node_distance = np.sqrt(np.sum((xyz1_on_2 - [x2, y2, z2]) ** 2, axis=0))
+    ptp_dist = np.sqrt(np.sum((pts1_on_2 - [x2, y2, z2]) ** 2, axis=0))
 
     if toggledebug:
         ax = plt.axes(projection='3d')
@@ -216,14 +202,45 @@ def avg_distance_between_polylines(pts1, pts2, toggledebug=False):
         ax.set_zlim([-0.04, 0.04])
         # ax.scatter3D(x1, y1, z1, color='red')
         ax.plot3D(x1, y1, z1, 'red')
-        # ax.scatter3D(x2, y2, z2, color='black')
+        ax.scatter3D(x2, y2, z2, color='black')
         ax.plot3D(x2, y2, z2, 'black')
-        # ax.scatter3D(xyz1_on_2[0], xyz1_on_2[1], xyz1_on_2[2], color='red')
-        # ax.plot3D(xyz1_on_2[0], xyz1_on_2[1], xyz1_on_2[2], 'g')
+        ax.scatter3D(pts1_on_2[0], pts1_on_2[1], pts1_on_2[2], color='g')
+        # ax.plot3D(pts1_on_2[0], pts1_on_2[1], pts1_on_2[2], 'g')
         plt.show()
-    err = node_to_node_distance.mean()
+    err = ptp_dist.mean()
     print('Avg. distance between polylines:', err)
-    return err, xyz1_on_2
+    return err, pts1_on_2
+
+
+def avg_distance_between_kpts(kpts, pts, bendset, r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggledebug=False):
+    kpts2 = []
+    for b in bendset:
+        tmp_l = 0
+        kl = b[3] + .5 * b[0] * r / np.cos(b[1]) - init_l
+        for i in range(len(pts) - 1):
+            p1 = np.asarray(pts[i])
+            p2 = np.asarray(pts[i + 1])
+            tmp_l += np.linalg.norm(p2 - p1)
+            if tmp_l < kl:
+                continue
+            elif tmp_l > kl:
+                insert_radio = (tmp_l - kl) / np.linalg.norm(p2 - p1)
+                insert_pos = p2 - insert_radio * (p2 - p1)
+                kpts2.append(insert_pos)
+                break
+    if toggledebug:
+        ax = plt.axes(projection='3d')
+        ax.set_box_aspect((1, 1, 1))
+        ax.set_xlim([0, 0.08])
+        ax.set_ylim([-0.04, 0.04])
+        ax.set_zlim([-0.04, 0.04])
+        # ax.scatter3D(x1, y1, z1, color='red')
+        plot_pseq(ax, kpts, c='r')
+        scatter_pseq(ax, kpts, c='r')
+        plot_pseq(ax, pts, c='g')
+        scatter_pseq(ax, kpts2, c='g', s=10)
+        plt.show()
+    return kpts2
 
 
 def __ps2seg_max_dist(p1, p2, ps):
@@ -246,6 +263,7 @@ def __ps2seg_max_dist(p1, p2, ps):
 
 
 def get_init_rot(pseq):
+    pseq = np.asarray(pseq)
     v1 = pseq[0] - pseq[1]
     v2 = pseq[1] - pseq[2]
     rot_n = np.cross(rm.unit_vector(v1), rm.unit_vector(v2))
@@ -301,8 +319,7 @@ def pseq2bendset(res_pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggled
     ax.set_box_aspect((1, 1, 1))
     tangent_pts = []
     bendseq = []
-    diff_list = []
-    arc_list = []
+    kls = []
     n_pre = None
     rot_a = 0
     lift_a = 0
@@ -345,47 +362,36 @@ def pseq2bendset(res_pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggled
         ratio_2 = l / np.linalg.norm(res_pseq[i] - res_pseq[i + 1])
         p_tan1 = res_pseq[i] + (res_pseq[i - 1] - res_pseq[i]) * ratio_1
         p_tan2 = res_pseq[i] + (res_pseq[i + 1] - res_pseq[i]) * ratio_2
+        kls.append(l_pos + np.linalg.norm(p_tan1 - res_pseq[i - 1]) + l)
 
         if i > 1 and is_collinearity(p_tan1, [res_pseq[i - 1], tangent_pts[-1]]):
             scatter_pseq(ax, [p_tan1], s=20, c='gray')
-            print(np.degrees(bend_a))
-            # bend_a = 2 * (bend_a * bend_r - np.linalg.norm(tangent_pts[-1] - res_pseq[i])) / bend_r
-            a_res = 2*np.linalg.norm(p_tan1 - tangent_pts[-1]) / bend_r
-            print(i, np.degrees(a_res), np.degrees(bend_a))
-            bend_a = bend_a + a_res if bend_a > 0 else bend_a - a_res
-            print(np.degrees(bend_a))
-            # l_pos -= np.linalg.norm(tangent_pts[-1] - p_tan1)
+            bendseq[-1][0] += bend_a
 
-            l = (bend_r * np.tan(abs(bend_a) / 2)) / np.cos(abs(lift_a))
-            ratio_1 = l / np.linalg.norm(res_pseq[i] - res_pseq[i - 1])
-            ratio_2 = l / np.linalg.norm(res_pseq[i] - res_pseq[i + 1])
-            p_tan1 = res_pseq[i] + (res_pseq[i - 1] - res_pseq[i]) * ratio_1
-            p_tan2 = res_pseq[i] + (res_pseq[i + 1] - res_pseq[i]) * ratio_2
-            diff_list.append(np.linalg.norm(tangent_pts[-1] - p_tan1))
-
-        if i == 1:
-            l_pos += np.linalg.norm(p_tan1 - res_pseq[i - 1])
         else:
-            l_pos += np.linalg.norm(p_tan1 - tangent_pts[-1])
-            l_pos += abs(bendseq[-1][0]) * bend_r / np.cos(abs(bendseq[-1][1]))
-        bendseq.append([bend_a, lift_a, rot_a, l_pos + init_l])
+            if i == 1:
+                l_pos += np.linalg.norm(p_tan1 - res_pseq[i - 1])
+            else:
+                l_pos += np.linalg.norm(p_tan1 - tangent_pts[-1])
+                l_pos += abs(bendseq[-1][0]) * bend_r / np.cos(abs(bendseq[-1][1]))
+            bendseq.append([bend_a, lift_a, rot_a, l_pos + init_l])
         tangent_pts.extend([p_tan1, p_tan2])
 
         x = np.cross(v1, n)
         rot = np.asarray([rm.unit_vector(x), rm.unit_vector(v1), rm.unit_vector(n)]).T
         if toggledebug:
             gm.gen_frame(res_pseq[i - 1], rot, length=.02, thickness=.001).attach_to(base)
-        plot_frame(ax, res_pseq[i - 1], rot)
+            plot_frame(ax, res_pseq[i - 1], rot)
+    if toggledebug:
+        ax.set_xlim([0, 0.1])
+        ax.set_ylim([-0.05, 0.05])
+        ax.set_zlim([-0.05, 0.05])
+        # goal_pseq = pickle.load(open('../run_plan/goal_pseq.pkl', 'rb'))
+        plot_pseq(ax, res_pseq)
+        # plot_pseq(ax, goal_pseq)
+        scatter_pseq(ax, [res_pseq[0]], s=10, c='y')
+        scatter_pseq(ax, res_pseq[1:], s=10, c='g')
+        scatter_pseq(ax, tangent_pts, s=10, c='r')
+        plt.show()
 
-    ax.set_xlim([0, 0.1])
-    ax.set_ylim([-0.05, 0.05])
-    ax.set_zlim([-0.05, 0.05])
-    goal_pseq = pickle.load(open('../run_plan/goal_pseq.pkl', 'rb'))
-    plot_pseq(ax, res_pseq)
-    plot_pseq(ax, goal_pseq)
-    scatter_pseq(ax, [res_pseq[0]], s=10, c='y')
-    scatter_pseq(ax, res_pseq[1:], s=10, c='g')
-    scatter_pseq(ax, tangent_pts, s=10, c='r')
-    plt.show()
-
-    return bendseq
+    return bendseq, kls

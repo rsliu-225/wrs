@@ -22,10 +22,10 @@ class BendOptimizer(object):
         self.goal_pseq = goal_pseq
         self.init_pseq = copy.deepcopy(init_pseq)
         self.init_rotseq = copy.deepcopy(init_rotseq)
-        self.bs.reset(self.init_pseq, self.init_rotseq)
+        self.bs.reset(self.init_pseq, self.init_rotseq, extend=False)
         self.total_len = bu.cal_length(goal_pseq)
         self.init_l = bconfig.INIT_L
-
+        self.init_rot = np.eye(3)
         # self.result = None
         self.cons = []
         self.ba_b = (-math.pi / 2, math.pi / 2)
@@ -38,19 +38,28 @@ class BendOptimizer(object):
         self.bs.reset(self.init_pseq, self.init_rotseq)
         try:
             self.bend_x(x)
-            self.bs.move_to_org(self.init_l)
-            # pseq = bu.linear_inp3d_by_step(bs.pseq)
-            # err, fitness, _ = o3dh.registration_ptpt(np.asarray(pseq), np.asarray(goal_pseq), toggledebug=False)
-            err, _ = bu.avg_distance_between_polylines(np.asarray(self.bs.pseq[1:-2]), np.asarray(goal_pseq),
-                                                       toggledebug=False)
+            goal_pseq, res_pseq = bu.align_with_goal(bs, self.goal_pseq, self.init_rot)
+            pseq = bu.linear_inp3d_by_step(res_pseq[:-1])
+            err, fitness, _ = o3dh.registration_ptpt(np.asarray(pseq), np.asarray(goal_pseq), toggledebug=False)
+            print(err, fitness)
         except:
             err = 1
-        print('cost:', err)
+            fitness = .1
+        print('cost:', err / fitness)
         return err
+    #
+    # def objctive(self, x):
+    #     self.bs.reset(self.init_pseq, self.init_rotseq, extend=False)
+    #     try:
+    #         self.bend_x(x)
+    #         goal_pseq, res_pseq = bu.align_with_goal(bs, self.goal_pseq, self.init_rot)
+    #         err, _ = bu.avg_distance_between_polylines(np.asarray(res_pseq), np.asarray(goal_pseq), toggledebug=False)
+    #     except:
+    #         err = 1
+    #     print('cost:', err * 100)
+    #     return err * 100
 
     def bend_x(self, x):
-        print('-----------')
-        print(x)
         x = np.asarray(x)
         self.bs.gen_by_bendseq(x.reshape(self.bend_times, 4), cc=False)
         return self.bs.pseq
@@ -81,7 +90,7 @@ class BendOptimizer(object):
         return min_dist - self.bs.bend_r
 
     def addconstraint_sort(self, i):
-        self.cons.append({'type': 'ineq', 'fun': lambda x: x[2 * i + 3] - x[2 * i + 1]})
+        self.cons.append({'type': 'ineq', 'fun': lambda x: x[4 * i + 5] - x[4 * i + 1]})
 
     def addconstraint(self, constraint, condition="ineq"):
         self.cons.append({'type': condition, 'fun': constraint})
@@ -111,10 +120,21 @@ class BendOptimizer(object):
 
         return np.asarray(init)
 
-    def fit_init(self, goal_pseq):
-        fit_pseq = bu.decimate_pseq(goal_pseq, r=bconfig.R_CENTER, tor=.0002, toggledebug=False)
-        bendset = bu.pseq2bendset(fit_pseq, toggledebug=False)
+    def fit_init(self, goal_pseq, tor=.001):
+        fit_pseq = bu.decimate_pseq(goal_pseq, r=bconfig.R_CENTER, tor=tor, toggledebug=False)
+        bendset = np.asarray(bu.pseq2bendset(fit_pseq, toggledebug=False))
+        self.init_rot = bu.get_init_rot(fit_pseq)
+        self.bend_times = len(bendset)
         return bendset.flatten()
+
+    def update_bnds(self, bseq_flatten):
+        bseq = bseq_flatten.reshape(self.bend_times, 4)
+        self.bnds = []
+        for b in bseq:
+            self.bnds.append((b[0] - math.pi / 20, b[0] + math.pi / 20))
+            self.bnds.append((b[1] - math.pi / 20, b[1] + math.pi / 20))
+            self.bnds.append((b[2] - math.pi / 20, b[2] + math.pi / 20))
+            self.bnds.append((b[3] - .02, b[3] + .02))
 
     def solve(self, method='SLSQP', init=None):
         """
@@ -131,24 +151,47 @@ class BendOptimizer(object):
         if init is None:
             # init = self.random_init()
             # init = self.equal_init()
-            init = self.fit_init(goal_pseq)
-        # for i in range(int(len(init) / 2) - 1):
-        #     self.addconstraint_sort(i)
+            init = self.fit_init(goal_pseq, tor=.0002)
+        self.update_bnds(init)
+        for i in range(int(len(init) / 4) - 1):
+            self.addconstraint_sort(i)
         sol = minimize(self.objctive, init, method=method, bounds=self.bnds, constraints=self.cons)
         print("time cost", time.time() - time_start, sol.success)
 
         if sol.success:
+            self.bs.reset(self.init_pseq, self.init_rotseq, extend=False)
             print(sol.x)
-            ax = plt.axes()
-            ax.grid()
-            ax.scatter([v for i, v in enumerate(sol.x) if i % 2 != 0],
-                       [v for i, v in enumerate(sol.x) if i % 2 == 0], color='red')
-            ax.plot([v for i, v in enumerate(sol.x) if i % 2 != 0],
-                    [v for i, v in enumerate(sol.x) if i % 2 == 0], color='red')
-            ax.scatter([v for i, v in enumerate(init) if i % 2 != 0],
-                       [v for i, v in enumerate(init) if i % 2 == 0], color='blue')
-            ax.plot([v for i, v in enumerate(init) if i % 2 != 0],
-                    [v for i, v in enumerate(init) if i % 2 == 0], color='blue')
+            # plt.figure(figsize=(16, 5))
+            plt.grid()
+            plt.subplot(131)
+            plt.scatter([v for i, v in enumerate(sol.x) if i % 4 == 3],
+                        [np.degrees(v) for i, v in enumerate(sol.x) if i % 4 == 0], color='red')
+            plt.plot([v for i, v in enumerate(sol.x) if i % 4 == 3],
+                     [np.degrees(v) for i, v in enumerate(sol.x) if i % 4 == 0], color='red')
+            plt.scatter([v for i, v in enumerate(init) if i % 4 == 3],
+                        [np.degrees(v) for i, v in enumerate(init) if i % 4 == 0], color='blue')
+            plt.plot([v for i, v in enumerate(init) if i % 4 == 3],
+                     [np.degrees(v) for i, v in enumerate(init) if i % 4 == 0], color='blue')
+
+            plt.subplot(132)
+            plt.scatter([v for i, v in enumerate(sol.x) if i % 4 == 3],
+                        [np.degrees(v) for i, v in enumerate(sol.x) if i % 4 == 1], color='red')
+            plt.plot([v for i, v in enumerate(sol.x) if i % 4 == 3],
+                     [np.degrees(v) for i, v in enumerate(sol.x) if i % 4 == 1], color='red')
+            plt.scatter([v for i, v in enumerate(init) if i % 4 == 3],
+                        [np.degrees(v) for i, v in enumerate(init) if i % 4 == 1], color='blue')
+            plt.plot([v for i, v in enumerate(init) if i % 4 == 3],
+                     [np.degrees(v) for i, v in enumerate(init) if i % 4 == 1], color='blue')
+
+            plt.subplot(133)
+            plt.scatter([v for i, v in enumerate(sol.x) if i % 4 == 3],
+                        [np.degrees(v) for i, v in enumerate(sol.x) if i % 4 == 2], color='red')
+            plt.plot([v for i, v in enumerate(sol.x) if i % 4 == 3],
+                     [np.degrees(v) for i, v in enumerate(sol.x) if i % 4 == 2], color='red')
+            plt.scatter([v for i, v in enumerate(init) if i % 4 == 3],
+                        [np.degrees(v) for i, v in enumerate(init) if i % 4 == 2], color='blue')
+            plt.plot([v for i, v in enumerate(init) if i % 4 == 3],
+                     [np.degrees(v) for i, v in enumerate(init) if i % 4 == 2], color='blue')
             plt.show()
             return sol.x.reshape(self.bend_times, 4), sol.fun
         else:
@@ -161,7 +204,7 @@ if __name__ == '__main__':
 
     base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
     gm.gen_frame(thickness=.0005, alpha=.1, length=.01).attach_to(base)
-    bs = b_sim.BendSim(show=True)
+    bs = b_sim.BendSim(show=False, granularity=np.pi / 30)
 
     # goal_pseq = bu.gen_polygen(5, .05)
     goal_pseq = pickle.load(open('../run_plan/goal_pseq.pkl', 'rb'))
@@ -169,13 +212,14 @@ if __name__ == '__main__':
     init_pseq = [(0, 0, 0), (0, .05 + bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
 
-    fit_pseq = bu.decimate_pseq(goal_pseq, tor=.001, toggledebug=False)
-    init_bendseq = bu.pseq2bendset(fit_pseq, toggledebug=False)[::-1]
+    opt = BendOptimizer(bs, init_pseq, init_rotseq, goal_pseq, bend_times=1)
+    res_bendseq, cost = opt.solve()
 
-    opt = BendOptimizer(bs, init_pseq, init_rotseq, goal_pseq, bend_times=len(init_bendseq))
-    res_bendseq, cost = opt.solve(init=np.asarray(init_bendseq).flatten())
-    print(res_bendseq, cost)
     bs.gen_by_bendseq(res_bendseq, cc=False)
+    goal_pseq, res_pseq = bu.align_with_goal(bs, goal_pseq, opt.init_rot)
+    _, _, _ = o3dh.registration_ptpt(np.asarray(bu.linear_inp3d_by_step(res_pseq[:-1])), np.asarray(goal_pseq),
+                                     toggledebug=True)
+    err, _ = bu.avg_distance_between_polylines(res_pseq, goal_pseq, toggledebug=True)
     bu.show_pseq(bu.linear_inp3d_by_step(bs.pseq), rgba=(1, 0, 0, 1))
-
+    bu.show_pseq(bu.linear_inp3d_by_step(goal_pseq), rgba=(1, 1, 0, 1))
     base.run()
