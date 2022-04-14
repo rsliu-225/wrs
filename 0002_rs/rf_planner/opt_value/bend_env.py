@@ -19,7 +19,7 @@ class BendEnv(object):
         self._sim = bs.BendSim(self._pseq, self._rotseq, self._show, self._granularity, self._cm_type)
 
     def get_observation(self):
-        err, observation = bu.avg_distance_between_polylines(self._sim.pseq, self._goal_pseq)
+        err, observation = bu.avg_polylines_dist_err(self._sim.pseq, self._goal_pseq)
         return observation
 
     def sample_action(self):
@@ -49,7 +49,7 @@ class BendEnv(object):
         else:
             done = False
 
-        observation = bu.avg_distance_between_polylines(self._sim.pseq, self._goal_pseq)
+        observation = bu.avg_polylines_dist_err(self._sim.pseq, self._goal_pseq)
         reward = self._get_reward_per_step()
         info = {}
 
@@ -66,5 +66,5 @@ class BendEnv(object):
         Calculate the per step reward based on current point set and the target points set(self._goal_set)
 
         """
-        err, _ = bu.avg_distance_between_polylines(self._goal_pseq, self._sim.pseq)
+        err, _ = bu.avg_polylines_dist_err(self._goal_pseq, self._sim.pseq)
         return 1

@@ -13,26 +13,24 @@ init_rotseq = [np.eye(3), np.eye(3)]
 
 env = BendEnv(goal_pseq=goal_pseq, pseq=init_pseq, rotseq=init_rotseq)
 
-# 239 * 3
-
-obs = env.reset()
-print('initial observation:', obs)
-
-action = env.sample_action()
-obs, r, done, info = env.step(action)
-print('next observation:', obs)
-print('reward:', r)
-print('done:', done)
-print('info:', info)
+# obs = env.reset()
+# print('initial observation:', obs)
+#
+# action = env.sample_action()
+# obs, r, done, info = env.step(action)
+# print('next observation:', obs)
+# print('reward:', r)
+# print('done:', done)
+# print('info:', info)
 
 # TODO: use point net to extract point features here, for now we just flatten the input to be 1D array
 q_func = torch.nn.Sequential(
-    torch.nn.Linear(239 * 3, 50),
+    torch.nn.Linear(200 * 200 * 200, 50),
     torch.nn.ReLU(),
     torch.nn.Linear(50, 50),
     torch.nn.ReLU(),
-    torch.nn.Linear(50, 4),
-    # pfrl.q_functions.DiscreteActionValueHead(),
+    torch.nn.Linear(50, 1),
+    pfrl.q_functions.DiscreteActionValueHead(),
 )
 
 # Use Adam to optimize q_func. eps=1e-2 is for stability.
@@ -70,8 +68,8 @@ agent = pfrl.agents.DoubleDQN(
     gpu=gpu,
 )
 
-n_episodes = 300
-max_episode_len = 200
+n_episodes = 10
+max_episode_len = 20
 for i in range(1, n_episodes + 1):
     env.reset()
     obs = env.get_observation()
@@ -91,7 +89,7 @@ for i in range(1, n_episodes + 1):
             break
     if i % 10 == 0:
         print('episode:', i, 'R:', R)
-    if i % 50 == 0:
+    if i % 10 == 0:
         print('statistics:', agent.get_statistics())
 print('Finished.')
 

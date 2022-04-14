@@ -34,30 +34,33 @@ class BendOptimizer(object):
         self.l_b = (0, self.total_len + self.bs.bend_r * math.pi)
         self.bnds = (self.ba_b, self.ra_b, self.la_b, self.l_b) * self.bend_times
 
-    def objctive(self, x):
-        self.bs.reset(self.init_pseq, self.init_rotseq)
-        try:
-            self.bend_x(x)
-            goal_pseq, res_pseq = bu.align_with_goal(bs, self.goal_pseq, self.init_rot)
-            pseq = bu.linear_inp3d_by_step(res_pseq[:-1])
-            err, fitness, _ = o3dh.registration_ptpt(np.asarray(pseq), np.asarray(goal_pseq), toggledebug=False)
-            print(err, fitness)
-        except:
-            err = 1
-            fitness = .1
-        print('cost:', err / fitness)
-        return err
-    #
+        self.init_bendset = None
+
     # def objctive(self, x):
-    #     self.bs.reset(self.init_pseq, self.init_rotseq, extend=False)
+    #     self.bs.reset(self.init_pseq, self.init_rotseq)
     #     try:
     #         self.bend_x(x)
     #         goal_pseq, res_pseq = bu.align_with_goal(bs, self.goal_pseq, self.init_rot)
-    #         err, _ = bu.avg_distance_between_polylines(np.asarray(res_pseq), np.asarray(goal_pseq), toggledebug=False)
+    #         pseq = bu.linear_inp3d_by_step(res_pseq[:-1])
+    #         err, fitness, _ = o3dh.registration_ptpt(np.asarray(pseq), np.asarray(goal_pseq), toggledebug=False)
+    #         print(err, fitness)
     #     except:
     #         err = 1
-    #     print('cost:', err * 100)
-    #     return err * 100
+    #         fitness = .1
+    #     print('cost:', err / fitness)
+    #     return err
+
+    def objctive(self, x):
+        self.bs.reset(self.init_pseq, self.init_rotseq, extend=False)
+        try:
+            self.bend_x(x)
+            goal_pseq, res_pseq = bu.align_with_goal(bs, self.goal_pseq, self.init_rot)
+            # err, _ = bu.avg_polylines_dist_err(np.asarray(res_pseq), np.asarray(goal_pseq), toggledebug=False)
+            err, _ = bu.mindist_err(np.asarray(res_pseq), np.asarray(goal_pseq), toggledebug=False)
+        except:
+            err = 1
+        print('cost:', err * 100)
+        return err * 100
 
     def bend_x(self, x):
         x = np.asarray(x)
@@ -122,10 +125,10 @@ class BendOptimizer(object):
 
     def fit_init(self, goal_pseq, tor=.001):
         fit_pseq = bu.decimate_pseq(goal_pseq, r=bconfig.R_CENTER, tor=tor, toggledebug=False)
-        bendset = np.asarray(bu.pseq2bendset(fit_pseq, toggledebug=False))
+        self.init_bendset = bu.pseq2bendset(fit_pseq, toggledebug=False)
         self.init_rot = bu.get_init_rot(fit_pseq)
-        self.bend_times = len(bendset)
-        return bendset.flatten()
+        self.bend_times = len(self.init_bendset)
+        return np.asarray(self.init_bendset).flatten()
 
     def update_bnds(self, bseq_flatten):
         bseq = bseq_flatten.reshape(self.bend_times, 4)
@@ -216,10 +219,16 @@ if __name__ == '__main__':
     res_bendseq, cost = opt.solve()
 
     bs.gen_by_bendseq(res_bendseq, cc=False)
-    goal_pseq, res_pseq = bu.align_with_goal(bs, goal_pseq, opt.init_rot)
-    _, _, _ = o3dh.registration_ptpt(np.asarray(bu.linear_inp3d_by_step(res_pseq[:-1])), np.asarray(goal_pseq),
-                                     toggledebug=True)
-    err, _ = bu.avg_distance_between_polylines(res_pseq, goal_pseq, toggledebug=True)
+    goal_pseq, res_pseq_opt = bu.align_with_goal(bs, goal_pseq, opt.init_rot)
+    # _, _, _ = o3dh.registration_ptpt(np.asarray(bu.linear_inp3d_by_step(res_pseq[:-1])), np.asarray(goal_pseq),
+    #                                  toggledebug=True)
+    err, _ = bu.avg_polylines_dist_err(res_pseq_opt, goal_pseq, toggledebug=True)
+
+    bs.reset(init_pseq, init_rotseq, extend=False)
+    bs.gen_by_bendseq(opt.init_bendset, cc=False)
+    _, res_pseq = bu.align_with_goal(bs, goal_pseq, opt.init_rot)
+    err, _ = bu.avg_polylines_dist_err(res_pseq_opt, goal_pseq, toggledebug=True)
+
     bu.show_pseq(bu.linear_inp3d_by_step(bs.pseq), rgba=(1, 0, 0, 1))
     bu.show_pseq(bu.linear_inp3d_by_step(goal_pseq), rgba=(1, 1, 0, 1))
     base.run()

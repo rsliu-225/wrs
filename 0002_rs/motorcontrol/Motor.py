@@ -119,7 +119,7 @@ class MotorNema23():
 if __name__ == '__main__':
     motor = MotorNema23()
     # print(motor.cal_counter(180))
-    # motor.goto_init()
+    motor.goto_init()
     # time.sleep(1)
 
     motor.goto_pos(-10000)

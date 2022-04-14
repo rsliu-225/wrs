@@ -51,8 +51,12 @@ if __name__ == '__main__':
     # base.run()
     goal_pseq, res_pseq = bu.align_with_goal(bs, goal_pseq, init_rot)
     fit_pseq, _ = bu.align_with_goal(bs, fit_pseq, init_rot)
-    # err, _ = bu.avg_distance_between_polylines(res_pseq, goal_pseq, toggledebug=True)
-    kpts2 = bu.avg_distance_between_kpts(fit_pseq, res_pseq, bendset, toggledebug=True)
+
+    fit_rotseq = bu.get_rotseq_by_pseq(fit_pseq)
+    goal_cm = bu.gen_stick(fit_pseq, fit_rotseq, bconfig.THICKNESS / 2)
+    goal_cm.attach_to(base)
+    err, _ = bu.avg_polylines_dist_err(res_pseq, goal_pseq, toggledebug=True)
+    kpts2 = bu.mindist_err(fit_pseq, res_pseq, toggledebug=True)
 
     # pickle.dump(res_pseq, open('res.pkl', 'wb'))
     res_pseq_tmp = pickle.load(open('res.pkl', 'rb'))

@@ -2,6 +2,8 @@ import copy
 import math
 import modeling.geometric_model as gm
 import numpy as np
+import open3d as o3d
+import basis.o3dhelper as o3dh
 import basis.robot_math as rm
 import basis.trimesh as trm
 import modeling.collision_model as cm
@@ -11,7 +13,6 @@ import time
 from panda3d.core import *
 import robot_sim.end_effectors.gripper.robotiqhe.robotiqhe as rtqhe
 import utils.panda3d_utils as p3u
-import itertools
 import random
 import config
 
@@ -326,36 +327,6 @@ class BendSim(object):
         if flag:
             self.pseq = self.pseq[:insert_inx] + [insert_pos] + self.pseq[insert_inx:]
             self.rotseq = list(self.rotseq[:insert_inx]) + [insert_rot] + list(self.rotseq[insert_inx:])
-        # tmp_l = 0
-        # insert_inx, insert_pos, insert_rot = 0, self.pseq[0], self.rotseq[0]
-        # for i in range(len(self.pseq) - 1):
-        #     p1 = np.asarray(self.pseq[i])
-        #     p2 = np.asarray(self.pseq[i + 1])
-        #     r1 = self.rotseq[i]
-        #     r2 = self.rotseq[i + 1]
-        #     tmp_l += np.linalg.norm(p2 - p1)
-        #     if tmp_l < pos:
-        #         continue
-        #     elif tmp_l > pos:
-        #         insert_radio = (tmp_l - pos) / np.linalg.norm(p2 - p1)
-        #         insert_pos = p2 - insert_radio * (p2 - p1)
-        #         if (r1 == r2).all():
-        #             insert_rot = r1
-        #         else:
-        #             rotmat_list = rm.rotmat_slerp(r1, r2, 10)
-        #             inx = np.floor(insert_radio * len(rotmat_list)) - 1
-        #             if inx > 9:
-        #                 inx = 9
-        #             insert_rot = rotmat_list[int(inx)]
-        #         insert_inx = i + 1
-        #         self.pseq = self.pseq[:i + 1] + [insert_pos] + self.pseq[i + 1:]
-        #         self.rotseq = list(self.rotseq[:i + 1]) + [insert_rot] + list(self.rotseq[i + 1:])
-        #         break
-        #     else:
-        #         insert_pos = self.pseq[i + 1]
-        #         insert_rot = self.rotseq[i + 1]
-        #         insert_inx = i + 1
-        #         break
         if toggledebug:
             gm.gen_sphere(insert_pos, radius=.0004, rgba=(1, 1, 0, 1)).attach_to(base)
             gm.gen_frame(insert_pos, insert_rot, length=.01, thickness=.0004).attach_to(base)
@@ -392,6 +363,26 @@ class BendSim(object):
             gm.gen_sphere(self.pseq[-1], radius=.0004, rgba=(0, 1, 0, 1)).attach_to(base)
         objcm.set_rgba(rgba)
         objcm.attach_to(base)
+
+    def voxelize(self, bnd=(200, 200, 200)):
+        onehot = np.zeros(bnd)
+        pcd_narry, _ = self.objcm.sample_surface(radius=.0005)
+        pcd = o3dh.nparray2o3dpcd(np.asarray(pcd_narry))
+        pcd.scale(1, center=(0, 0, 0))
+        pts = []
+        voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(pcd, voxel_size=bconfig.THICKNESS)
+        # o3d.visualization.draw_geometries([voxel_grid])
+        for v in voxel_grid.get_voxels():
+            pts.append(v.grid_index)
+            onehot[v.grid_index[0]][v.grid_index[1]][v.grid_index[2]]=1
+        import matplotlib.pyplot as plt
+        ax = plt.axes(projection='3d')
+        ax.set_xlim(1, 10)
+        ax.set_ylim(1, 10)
+        ax.set_zlim(1, 10)
+        bu.scatter_pseq(ax, pts, c='r')
+        plt.show()
+        return onehot
 
     def unshow(self):
         self.objcm.detach()
@@ -800,7 +791,7 @@ if __name__ == '__main__':
         # [np.radians(225), np.radians(0), np.radians(0), .04],
         # [np.radians(90), np.radians(0), np.radians(180), .08],
         # [np.radians(90), np.radians(0), np.radians(0), .1],
-        # [np.radians(45), np.radians(0), np.radians(180), .12],
+        [np.radians(45), np.radians(0), np.radians(90), .12],
         # [np.radians(45), np.radians(0), np.radians(0), .04],
         [np.radians(90), np.radians(0), np.radians(0), .04],
         [np.radians(180), np.radians(0), np.radians(0), .04],
@@ -815,8 +806,9 @@ if __name__ == '__main__':
     # bs.show(rgba=(.7, .7, .7, .7), show_frame=True)
     is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, toggledebug=False)
     # bs.show(rgba=(.7, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
-    bs.show(rgba=(.7, .7, .7, .7), show_frame=True, show_pseq=False)
-    base.run()
+    bs.voxelize()
+    # bs.show(rgba=(.7, .7, .7, .7), show_frame=True, show_pseq=False)
+    # base.run()
     # key_pseq, key_rotseq = bs.get_pull_primitive(.12, .04, toggledebug=True)
     # resseq = bs.pull(key_pseq, key_rotseq, np.pi)
     # base.run()

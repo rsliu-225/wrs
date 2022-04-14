@@ -11,6 +11,8 @@ import time
 import random
 import matplotlib.pyplot as plt
 import bendplanner.bender_config as bconfig
+import basis.trimesh as trm
+import modeling.collision_model as cm
 
 
 def gen_circle(r, step=math.pi / 90):
@@ -174,7 +176,7 @@ def avg_mindist_between_polylines(pts1, pts2, toggledebug=True):
         plt.show()
 
 
-def avg_distance_between_polylines(pts1, pts2, toggledebug=False):
+def avg_polylines_dist_err(pts1, pts2, toggledebug=False):
     def __normed_distance_along_path(x, y, z):
         polyline = np.asarray([x, y, z])
         distance = np.cumsum(np.sqrt(np.sum(np.diff(polyline, axis=1) ** 2, axis=0)))
@@ -194,6 +196,8 @@ def avg_distance_between_polylines(pts1, pts2, toggledebug=False):
     ptp_dist = np.sqrt(np.sum((pts1_on_2 - [x2, y2, z2]) ** 2, axis=0))
 
     if toggledebug:
+        print('Sum. distance between polylines:', ptp_dist.sum())
+        print('Avg. distance between polylines:', ptp_dist.mean())
         ax = plt.axes(projection='3d')
         ax.set_box_aspect((1, 1, 1))
         # z_max = max([abs(np.max(z1)), abs(np.max(z2))])
@@ -207,28 +211,26 @@ def avg_distance_between_polylines(pts1, pts2, toggledebug=False):
         ax.scatter3D(pts1_on_2[0], pts1_on_2[1], pts1_on_2[2], color='g')
         # ax.plot3D(pts1_on_2[0], pts1_on_2[1], pts1_on_2[2], 'g')
         plt.show()
+
     err = ptp_dist.mean()
-    print('Avg. distance between polylines:', err)
+
     return err, pts1_on_2
 
 
-def avg_distance_between_kpts(kpts, pts, bendset, r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggledebug=False):
-    kpts2 = []
-    for b in bendset:
-        tmp_l = 0
-        kl = b[3] + .5 * b[0] * r / np.cos(b[1]) - init_l
-        for i in range(len(pts) - 1):
-            p1 = np.asarray(pts[i])
-            p2 = np.asarray(pts[i + 1])
-            tmp_l += np.linalg.norm(p2 - p1)
-            if tmp_l < kl:
-                continue
-            elif tmp_l > kl:
-                insert_radio = (tmp_l - kl) / np.linalg.norm(p2 - p1)
-                insert_pos = p2 - insert_radio * (p2 - p1)
-                kpts2.append(insert_pos)
-                break
+def mindist_err(kpts, pts, toggledebug=False):
+    from sklearn.neighbors import KDTree
+    nearest_pts = []
+    err_list = []
+
+    res_pts = linear_inp3d_by_step(pts,step=0.0001)
+    kdt = KDTree(res_pts, leaf_size=100, metric='euclidean')
+    for p in kpts:
+        distances, indices = kdt.query([p], k=1, return_distance=True)
+        err_list.append(distances[0][0])
+        nearest_pts.append(res_pts[indices[0][0]])
     if toggledebug:
+        print('Sum. distance between polylines:', np.asarray(err_list).sum())
+        print('Avg. distance between polylines:', np.asarray(err_list).mean())
         ax = plt.axes(projection='3d')
         ax.set_box_aspect((1, 1, 1))
         ax.set_xlim([0, 0.08])
@@ -238,9 +240,12 @@ def avg_distance_between_kpts(kpts, pts, bendset, r=bconfig.R_BEND, init_l=bconf
         plot_pseq(ax, kpts, c='r')
         scatter_pseq(ax, kpts, c='r')
         plot_pseq(ax, pts, c='g')
-        scatter_pseq(ax, kpts2, c='g', s=10)
+        # scatter_pseq(ax, kpts2, c='g', s=10)
+        scatter_pseq(ax, nearest_pts, c='black', s=10)
         plt.show()
-    return kpts2
+    err = np.asarray(err_list).sum()
+
+    return err, nearest_pts
 
 
 def __ps2seg_max_dist(p1, p2, ps):
@@ -298,8 +303,23 @@ def decimate_pseq(pseq, tor=.001, r=None, toggledebug=False):
             plot_pseq(ax, linear_inp3d_by_step(pseq[res_pids]))
             plot_pseq(ax, pseq[res_pids])
             plt.show()
+
     print('Num. of fitting result:', len(res_pids))
     return pseq[res_pids]
+
+
+def get_rotseq_by_pseq(pseq):
+    rotseq = []
+    for i in range(1, len(pseq) - 1):
+        v1 = pseq[i - 1] - pseq[i]
+        v2 = pseq[i] - pseq[i + 1]
+        n = np.cross(rm.unit_vector(v1), rm.unit_vector(v2))
+        x = np.cross(v1, n)
+        rot = np.asarray([rm.unit_vector(x), rm.unit_vector(v1), rm.unit_vector(n)]).T
+        rotseq.append(rot)
+    rotseq = [rotseq[0]] + rotseq + [rotseq[-1]]
+    print(len(rotseq))
+    return rotseq
 
 
 def is_collinearity(p, seg):
@@ -314,12 +334,34 @@ def is_collinearity(p, seg):
     return False
 
 
+def gen_stick(pseq, rotseq, r, section=5, toggledebug=False):
+    vertices = []
+    faces = []
+    for i, p in enumerate(pseq):
+        for a in np.linspace(-np.pi, np.pi, section + 1):
+            vertices.append(p + rotseq[i][:, 0] * r * np.sin(a)
+                            + rotseq[i][:, 2] * r * np.cos(a))
+    for i in range((section + 1) * (len(pseq) - 1)):
+        if i % (section + 1) == 0:
+            for v in range(i, i + section):
+                faces.extend([[v, v + section + 1, v + section + 2], [v, v + section + 2, v + 1]])
+    if toggledebug:
+        show_pseq(pseq, rgba=[1, 0, 0, 1], radius=0.0002)
+        show_pseq(vertices, rgba=[1, 1, 0, 1], radius=0.0002)
+        tmp_trm = trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces))
+        tmp_cm = cm.CollisionModel(initor=tmp_trm, btwosided=True)
+        tmp_cm.set_rgba((.7, .7, 0, .7))
+        tmp_cm.attach_to(base)
+    objtrm = trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces))
+
+    return cm.CollisionModel(initor=objtrm, btwosided=True, name='obj', cdprimit_type='surface_balls')
+
+
 def pseq2bendset(res_pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggledebug=False):
     ax = plt.axes(projection='3d')
     ax.set_box_aspect((1, 1, 1))
     tangent_pts = []
     bendseq = []
-    kls = []
     n_pre = None
     rot_a = 0
     lift_a = 0
@@ -362,7 +404,6 @@ def pseq2bendset(res_pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggled
         ratio_2 = l / np.linalg.norm(res_pseq[i] - res_pseq[i + 1])
         p_tan1 = res_pseq[i] + (res_pseq[i - 1] - res_pseq[i]) * ratio_1
         p_tan2 = res_pseq[i] + (res_pseq[i + 1] - res_pseq[i]) * ratio_2
-        kls.append(l_pos + np.linalg.norm(p_tan1 - res_pseq[i - 1]) + l)
 
         if i > 1 and is_collinearity(p_tan1, [res_pseq[i - 1], tangent_pts[-1]]):
             scatter_pseq(ax, [p_tan1], s=20, c='gray')
@@ -394,4 +435,4 @@ def pseq2bendset(res_pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggled
         scatter_pseq(ax, tangent_pts, s=10, c='r')
         plt.show()
 
-    return bendseq, kls
+    return bendseq
