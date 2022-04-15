@@ -19,12 +19,12 @@ def loadalldata(folder_name, show=True):
             print(file)
             data = pickle.load(open(folder_name + file, "rb"))
             alldata.append(data)
-            greyimg = data[0]
+            grayimg = data[0]
             depthimg = data[1]
-            # cv2.imwrite("greyimg/" + file[:-4] + ".jpg", greyimg)
-            # cv2.imwrite("depthimg/" + file[:-4] + ".jpg", depthimg)
+            cv2.imwrite("grayimg/" + file[:-4] + ".jpg", grayimg)
+            cv2.imwrite("depthimg/" + file[:-4] + ".jpg", depthimg)
             if show:
-                cv2.imshow(str(file), greyimg)
+                cv2.imshow(str(file), grayimg)
                 cv2.waitKey(0)
     return [img[0] for img in alldata], [img[1] for img in alldata], [img[2] for img in alldata]
 
@@ -41,5 +41,5 @@ def show_pcd(folder_name):
 if __name__ == '__main__':
     import visualization.panda.world as wd
 
-    # loadalldata('./')
-    show_pcd('./')
+    loadalldata('./')
+    # show_pcd('./')

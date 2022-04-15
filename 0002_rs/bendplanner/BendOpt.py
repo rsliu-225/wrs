@@ -35,7 +35,7 @@ class BendOptimizer(object):
         self.bnds = (self.ba_b, self.ra_b, self.la_b, self.l_b) * self.bend_times
 
         self.init_bendset = None
-
+    #
     # def objctive(self, x):
     #     self.bs.reset(self.init_pseq, self.init_rotseq)
     #     try:
@@ -59,8 +59,8 @@ class BendOptimizer(object):
             err, _ = bu.mindist_err(np.asarray(res_pseq), np.asarray(goal_pseq), toggledebug=False)
         except:
             err = 1
-        print('cost:', err * 100)
-        return err * 100
+        print('cost:', err)
+        return err/10
 
     def bend_x(self, x):
         x = np.asarray(x)
@@ -134,9 +134,9 @@ class BendOptimizer(object):
         bseq = bseq_flatten.reshape(self.bend_times, 4)
         self.bnds = []
         for b in bseq:
-            self.bnds.append((b[0] - math.pi / 20, b[0] + math.pi / 20))
-            self.bnds.append((b[1] - math.pi / 20, b[1] + math.pi / 20))
-            self.bnds.append((b[2] - math.pi / 20, b[2] + math.pi / 20))
+            self.bnds.append((b[0] - math.pi / 9, b[0] + math.pi / 9))
+            self.bnds.append((b[1] - math.pi / 9, b[1] + math.pi / 9))
+            self.bnds.append((b[2] - math.pi / 9, b[2] + math.pi / 9))
             self.bnds.append((b[3] - .02, b[3] + .02))
 
     def solve(self, method='SLSQP', init=None):
@@ -154,11 +154,12 @@ class BendOptimizer(object):
         if init is None:
             # init = self.random_init()
             # init = self.equal_init()
-            init = self.fit_init(goal_pseq, tor=.0002)
+            init = self.fit_init(goal_pseq, tor=.001)
         self.update_bnds(init)
         for i in range(int(len(init) / 4) - 1):
             self.addconstraint_sort(i)
         sol = minimize(self.objctive, init, method=method, bounds=self.bnds, constraints=self.cons)
+
         print("time cost", time.time() - time_start, sol.success)
 
         if sol.success:
@@ -231,4 +232,5 @@ if __name__ == '__main__':
 
     bu.show_pseq(bu.linear_inp3d_by_step(bs.pseq), rgba=(1, 0, 0, 1))
     bu.show_pseq(bu.linear_inp3d_by_step(goal_pseq), rgba=(1, 1, 0, 1))
+    bu.show_pseq(bu.linear_inp3d_by_step(res_pseq_opt), rgba=(0, 1, 0, 1))
     base.run()

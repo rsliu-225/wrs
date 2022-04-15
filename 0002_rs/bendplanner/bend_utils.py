@@ -222,7 +222,8 @@ def mindist_err(kpts, pts, toggledebug=False):
     nearest_pts = []
     err_list = []
 
-    res_pts = linear_inp3d_by_step(pts,step=0.0001)
+    res_pts = linear_inp3d_by_step(pts, step=0.0001)
+    kpts = linear_inp3d_by_step(kpts, step=0.001)
     kdt = KDTree(res_pts, leaf_size=100, metric='euclidean')
     for p in kpts:
         distances, indices = kdt.query([p], k=1, return_distance=True)
