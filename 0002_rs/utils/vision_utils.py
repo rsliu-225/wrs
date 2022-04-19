@@ -8,6 +8,9 @@ import pyrealsense2 as rs2
 
 import config
 from sklearn.cluster import DBSCAN
+from skimage.morphology import skeletonize
+import matplotlib.pyplot as plt
+import sknw
 
 
 def load_kntcalibmat(amat_path=os.path.join(config.ROOT, "./camcalib/data/"), f_name="knt_calibmat.pkl"):
@@ -59,7 +62,7 @@ def convert_depth2pcd_o3d(depthnarray, intr_f_name="realsense_intr.pkl", toggled
     return np.asarray(pcd.points)
 
 
-def map_gray2pcd(grayimg, pcd):
+def map_gray2pcd(grayimg, pcd, zeros=False):
     pcdnarray = np.array(pcd)
     grayimg = grayimg.flatten().reshape((grayimg.shape[0] * grayimg.shape[1], 1))
 
@@ -68,7 +71,8 @@ def map_gray2pcd(grayimg, pcd):
         if grayimg[i] != 0:
             pcd_result.append(pcdnarray[i])
         else:
-            pcd_result.append(np.array([0, 0, 0]))
+            if zeros:
+                pcd_result.append(np.array([0, 0, 0]))
     pcdnarray = np.array(pcd_result)
 
     return pcdnarray
@@ -129,9 +133,10 @@ def mask2pts(mask):
     return np.asarray(p_list)
 
 
-def pts2mask(narray, shape):
+def pts2mask(pts, shape):
+    pts = np.asarray(pts).astype(int)
     mask = np.zeros(shape)
-    for p in narray:
+    for p in pts:
         mask[p[0], p[1]] = 1
     return mask
 
@@ -159,15 +164,13 @@ def get_max_cluster(pts, eps=6, min_samples=20):
     return res
 
 
-def extract_clr(grayimg, clr, toggledebug=False, erode=False):
-    shape = (772, 1032, 1)
-    # mask = gray < clr[1]
-
+def extract_clr_gray(grayimg, clr, shape=(772, 1032, 1), crop_xy=((250, 400), (400, 650)), toggledebug=False,
+                     erode=False):
     mask = np.where((grayimg > clr[0]) & (grayimg < clr[1]), 1, 0)
-    crop_mask = np.zeros(shape)
-    crop_mask[250:400, 400:650] = 1
-    mask = mask * crop_mask
-
+    if crop_xy is not None:
+        crop_mask = np.zeros(shape)
+        crop_mask[crop_xy[0][0]:crop_xy[0][1], crop_xy[0][0]:crop_xy[0][1]] = 1
+        mask = mask * crop_mask
     diff_p_narray = mask2pts(mask)
     stroke_pts = np.array(get_max_cluster(diff_p_narray, eps=3, min_samples=20))
     clr_mask = pts2mask(stroke_pts, shape)
@@ -185,3 +188,51 @@ def extract_clr(grayimg, clr, toggledebug=False, erode=False):
         cv2.waitKey(0)
 
     return clr_mask
+
+
+def extract_label_rgb(rgbimg, shape=(772, 1032, 1), crop_xy=None, toggledebug=False, erode=False):
+    rgbimg_std = np.std(rgbimg, axis=2)
+    mask = np.where((rgbimg_std > 20), 1, 0)
+    mask = mask.reshape(shape)
+    if crop_xy is not None:
+        crop_mask = np.zeros(shape)
+        crop_mask[crop_xy[0][0]:crop_xy[0][1], crop_xy[0][0]:crop_xy[0][1]] = 1
+        mask = mask * crop_mask
+    if erode:
+        kernel = np.ones((2, 2), np.uint8)
+        mask = cv2.erode(mask, kernel, iterations=1)
+    mask = mask.astype(np.float)
+
+    if toggledebug:
+        cv2.imshow('mask', mask)
+        cv2.waitKey(0)
+
+    return mask
+
+
+def mask2skeleton(mask):
+    skeleton = skeletonize(mask)
+    graph = sknw.build_sknw(skeleton, multi=True)
+    pts_all = []
+    # draw image
+    plt.imshow(skeleton, cmap='gray')
+    # draw edges by pts
+    for (s, e) in graph.edges():
+        for cnt in range(10):
+            try:
+                pts = graph[s][e][cnt]['pts']
+                plt.plot(pts[:, 1], pts[:, 0], 'g')
+                for i in range(len(pts)):
+                    if i % 4 == 0:
+                        pts_all.append(pts[i])
+                        plt.plot([pts[i, 1]], [pts[i, 0]], 'b.')
+            except:
+                break
+
+    nodes = graph.nodes()
+    pts = np.array([nodes[i]['o'] for i in nodes])
+    pts_all.extend(pts)
+    plt.plot(pts[:, 1], pts[:, 0], 'r.')
+    plt.title('Build Graph')
+    plt.show()
+    return graph, pts_all

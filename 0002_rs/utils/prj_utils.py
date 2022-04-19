@@ -292,10 +292,6 @@ def rayhitmesh_p(obj, center, p, kdt_d3=None, direction=np.asarray((0, 0, 1))):
     return pos, -nrml
 
 
-def get_vecs_angle(v1, v2):
-    return math.degrees(np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))))
-
-
 def get_knn_indices(p, kdt, k=3):
     distances, indices = kdt.query([p], k=k, return_distance=True)
     return indices[0]

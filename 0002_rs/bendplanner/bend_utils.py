@@ -217,15 +217,15 @@ def avg_polylines_dist_err(pts1, pts2, toggledebug=False):
     return err, pts1_on_2
 
 
-def mindist_err(kpts, pts, toggledebug=False):
+def mindist_err(res_pts, goal_pts, toggledebug=False):
     from sklearn.neighbors import KDTree
     nearest_pts = []
     err_list = []
 
-    res_pts = linear_inp3d_by_step(pts, step=0.0001)
-    kpts = linear_inp3d_by_step(kpts, step=0.001)
+    # goal_pts = linear_inp3d_by_step(goal_pts, step=0.0001)
+    res_pts = linear_inp3d_by_step(res_pts, step=0.0001)
     kdt = KDTree(res_pts, leaf_size=100, metric='euclidean')
-    for p in kpts:
+    for p in goal_pts:
         distances, indices = kdt.query([p], k=1, return_distance=True)
         err_list.append(distances[0][0])
         nearest_pts.append(res_pts[indices[0][0]])
@@ -238,10 +238,10 @@ def mindist_err(kpts, pts, toggledebug=False):
         ax.set_ylim([-0.04, 0.04])
         ax.set_zlim([-0.04, 0.04])
         # ax.scatter3D(x1, y1, z1, color='red')
-        plot_pseq(ax, kpts, c='r')
-        scatter_pseq(ax, kpts, c='r')
-        plot_pseq(ax, pts, c='g')
-        # scatter_pseq(ax, kpts2, c='g', s=10)
+        plot_pseq(ax, res_pts, c='r')
+        scatter_pseq(ax, res_pts, c='r')
+        plot_pseq(ax, goal_pts, c='g')
+        scatter_pseq(ax, goal_pts, c='g', s=10)
         scatter_pseq(ax, nearest_pts, c='black', s=10)
         plt.show()
     err = np.asarray(err_list).sum()

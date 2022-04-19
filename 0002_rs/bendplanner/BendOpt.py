@@ -56,7 +56,7 @@ class BendOptimizer(object):
             self.bend_x(x)
             goal_pseq, res_pseq = bu.align_with_goal(bs, self.goal_pseq, self.init_rot)
             # err, _ = bu.avg_polylines_dist_err(np.asarray(res_pseq), np.asarray(goal_pseq), toggledebug=False)
-            err, _ = bu.mindist_err(np.asarray(res_pseq), np.asarray(goal_pseq), toggledebug=False)
+            err, _ = bu.mindist_err(np.asarray(res_pseq), np.asarray(goal_pseq), toggledebug=True)
         except:
             err = 1
         print('cost:', err)

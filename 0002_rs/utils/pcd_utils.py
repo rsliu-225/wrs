@@ -2,6 +2,7 @@ import copy
 import itertools
 import math
 import random
+import time
 
 import numpy as np
 import open3d as o3d
@@ -16,6 +17,43 @@ import basis.robot_math as rm
 import basis.o3dhelper as o3d_helper
 from basis import trimesh
 from localenv import envloader as el
+from sklearn.neighbors import KDTree
+
+
+def get_knn_indices(p, kdt, k=3):
+    distances, indices = kdt.query([p], k=k, return_distance=True)
+    return indices[0]
+
+
+def get_knn(p, kdt, k=3):
+    p_nearest_inx = get_knn_indices(p, kdt, k=k)
+    pcd = list(np.array(kdt.data))
+    return np.asarray([pcd[p_inx] for p_inx in p_nearest_inx])
+
+
+def get_nn_indices_by_distance(p, kdt, step=1.0):
+    result_indices = []
+    distances, indices = kdt.query([p], k=1000, return_distance=True)
+    distances = distances[0]
+    indices = indices[0]
+    for i in range(len(distances)):
+        if distances[i] < step:
+            result_indices.append(indices[i])
+    return result_indices
+
+
+def get_kdt(p_list, dimension=3):
+    time_start = time.time()
+    p_list = np.asarray(p_list)
+    p_narray = np.array(p_list[:, :dimension])
+    kdt = KDTree(p_narray, leaf_size=100, metric='euclidean')
+    print('time cost(kdt):', time.time() - time_start)
+    return kdt, p_narray
+
+
+def get_nrml_pca(knn):
+    pcv, pcaxmat = rm.compute_pca(knn)
+    return pcaxmat[:, np.argmin(pcv)]
 
 
 def get_objpcd(objcm, objmat4=np.eye(4), sample_num=100000, toggledebug=False):
@@ -35,14 +73,15 @@ def remove_pcd_zeros(pcd):
     return pcd[np.all(pcd != 0, axis=1)]
 
 
-def crop_pcd(pcd, x_range, y_range, z_range):
+def crop_pcd(pcd, x_range, y_range, z_range, zeros=False):
     pcd_res = []
     for p in pcd:
         if x_range[0] < p[0] < x_range[1] and y_range[0] < p[1] < y_range[1] and z_range[0] < p[2] < z_range[1]:
             pcd_res.append(p)
         else:
-            pcd_res.append(np.asarray([0, 0, 0]))
-    return np.array(pcd)
+            if zeros:
+                pcd_res.append(np.asarray([0, 0, 0]))
+    return np.array(pcd_res)
 
 
 def trans_pcd(pcd, transmat):
@@ -520,6 +559,22 @@ def get_plane(pcd, dist_threshold=0.0002, toggledebug=False):
         gm.gen_box(np.array([.2, .2, .001]), homomat=homomat, rgba=[1, 1, 0, .3]).attach_to(base)
 
     return plane[:3], plane[3]
+
+
+def surface_interp(p, v, kdt_d3, inp=0.001, max_nn=100):
+    pseq = []
+    nseq = []
+    for _ in range(int(np.linalg.norm(v) / inp)):
+        pt = p + rm.unit_vector(v) * inp
+        knn = get_knn(pt, kdt_d3, k=max_nn)
+        center = get_pcd_center(np.asarray(knn))
+        nrml = get_nrml_pca(knn)
+        if np.dot(nrml, np.asarray([0, 0, 1])) < 0:
+            nrml = -nrml
+        pseq.append(pt - np.dot((pt - center), nrml) * nrml)
+        nseq.append(nrml)
+        p = pt
+    return pseq, nseq
 
 
 if __name__ == '__main__':

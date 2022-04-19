@@ -122,11 +122,11 @@ if __name__ == '__main__':
     # motor.goto_init()
     # time.sleep(1)
 
-    motor.goto_pos(-10000)
+    motor.goto_pos(-9000)
     time.sleep(2)
-    motor.goto_pos(1000)
+    motor.goto_pos(0)
     time.sleep(1)
-    motor.goto_pos(-10000)
+    motor.goto_pos(-9000)
     time.sleep(2)
 
     # motor.goto_pos(10000)
