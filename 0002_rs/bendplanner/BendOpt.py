@@ -54,7 +54,7 @@ class BendOptimizer(object):
         self.bs.reset(self.init_pseq, self.init_rotseq, extend=False)
         try:
             self.bend_x(x)
-            goal_pseq, res_pseq = bu.align_with_goal(bs, self.goal_pseq, self.init_rot)
+            goal_pseq, res_pseq = bu.align_with_init(bs, self.goal_pseq, self.init_rot)
             # err, _ = bu.avg_polylines_dist_err(np.asarray(res_pseq), np.asarray(goal_pseq), toggledebug=False)
             err, _ = bu.mindist_err(np.asarray(res_pseq), np.asarray(goal_pseq), toggledebug=True)
         except:
@@ -211,7 +211,7 @@ if __name__ == '__main__':
     bs = b_sim.BendSim(show=False, granularity=np.pi / 30)
 
     # goal_pseq = bu.gen_polygen(5, .05)
-    goal_pseq = pickle.load(open('../run_plan/goal_pseq.pkl', 'rb'))
+    goal_pseq = pickle.load(open('../data/bend/pseq/random_curve.pkl', 'rb'))
 
     init_pseq = [(0, 0, 0), (0, .05 + bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
@@ -220,14 +220,14 @@ if __name__ == '__main__':
     res_bendseq, cost = opt.solve()
 
     bs.gen_by_bendseq(res_bendseq, cc=False)
-    goal_pseq, res_pseq_opt = bu.align_with_goal(bs, goal_pseq, opt.init_rot)
+    goal_pseq, res_pseq_opt = bu.align_with_init(bs, goal_pseq, opt.init_rot)
     # _, _, _ = o3dh.registration_ptpt(np.asarray(bu.linear_inp3d_by_step(res_pseq[:-1])), np.asarray(goal_pseq),
     #                                  toggledebug=True)
     err, _ = bu.avg_polylines_dist_err(res_pseq_opt, goal_pseq, toggledebug=True)
 
     bs.reset(init_pseq, init_rotseq, extend=False)
     bs.gen_by_bendseq(opt.init_bendset, cc=False)
-    _, res_pseq = bu.align_with_goal(bs, goal_pseq, opt.init_rot)
+    _, res_pseq = bu.align_with_init(bs, goal_pseq, opt.init_rot)
     err, _ = bu.avg_polylines_dist_err(res_pseq_opt, goal_pseq, toggledebug=True)
 
     bu.show_pseq(bu.linear_inp3d_by_step(bs.pseq), rgba=(1, 0, 0, 1))

@@ -15,6 +15,34 @@ import basis.trimesh as trm
 import modeling.collision_model as cm
 
 
+def plot_frame(ax, pos, rot):
+    length = .005
+    x = rot[:, 0] * length
+    y = rot[:, 1] * length
+    z = rot[:, 2] * length
+    ax.arrow3D(pos[0], pos[1], pos[2], x[0], x[1], x[2], mutation_scale=10, arrowstyle='->', color='r')
+    ax.arrow3D(pos[0], pos[1], pos[2], y[0], y[1], y[2], mutation_scale=10, arrowstyle='->', color='g')
+    ax.arrow3D(pos[0], pos[1], pos[2], z[0], z[1], z[2], mutation_scale=10, arrowstyle='->', color='b')
+
+
+def plot_pseq(ax3d, pseq, c=None):
+    pseq = np.asarray(pseq)
+    ax3d.plot3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], c=c)
+    ax3d.grid()
+
+
+def scatter_pseq(ax3d, pseq, s=2, c=None):
+    pseq = np.asarray(pseq)
+    ax3d.scatter3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], s=s, c=c)
+    ax3d.grid()
+
+
+def plot_pseq_2d(ax, pseq):
+    pseq = np.asarray(pseq)
+    ax.scatter(pseq[:, 0], pseq[:, 1], s=2)
+    ax.grid()
+
+
 def gen_circle(r, step=math.pi / 90):
     pseq = []
     for a in np.arange(0, 2 * math.pi, step):
@@ -77,24 +105,53 @@ def linear_inp3d_by_step(pseq, step=.001):
     return np.asarray(inp_pseq)
 
 
-def linear_inp3d(pseq, x_space):
+def inp_rotp_by_step(pseq, rotseq, step=.001):
+    inp_pseq = []
+    inp_rotseq = []
+    for i in range(len(pseq) - 1):
+        p1 = np.asarray(pseq[i])
+        p2 = np.asarray(pseq[i + 1])
+        r1 = np.asarray(rotseq[i])
+        r2 = np.asarray(rotseq[i + 1])
+        diff = p2 - p1
+        inp_num = int(np.linalg.norm(p1 - p2) / step)
+        if inp_num == 0:
+            inp_pseq.append(p1)
+            inp_rotseq.append(r1)
+        else:
+            for j in range(inp_num):
+                if (r1 == r2).all():
+                    insert_rot = r1
+                else:
+                    rotmat_list = rm.rotmat_slerp(r1, r2, 10)
+                    inx = np.floor((j / inp_num) * len(rotmat_list)) - 1
+                    if inx > 9:
+                        inx = 9
+                    insert_rot = rotmat_list[int(inx)]
+                inp_pseq.append(p1 + j * diff / inp_num)
+                inp_rotseq.append(insert_rot)
+
+    return np.asarray(inp_pseq), np.asarray(inp_rotseq)
+
+
+def linear_inp3d(pseq, x):
     pseq = np.asarray(pseq)
     inp_y = interpolate.interp1d(pseq[:, 0], pseq[:, 1], kind='linear')
-    y = inp_y(x_space)
+    y = inp_y(x)
     inp_z = interpolate.interp1d(pseq[:, 0], pseq[:, 2], kind='linear')
-    z = inp_z(x_space)
+    z = inp_z(x)
 
-    return list(zip(x_space, y, z))
+    return list(zip(x, y, z))
 
 
-def linear_inp2d(pseq, x_space, appendzero=True):
+def linear_inp2d(pseq, x, appendzero=True):
     pseq = np.asarray(pseq)
     inp = interpolate.interp1d(pseq[:, 0], pseq[:, 1], kind='linear')
-    y = inp(x_space)
+    y = inp(x)
     if appendzero:
-        return list(zip(x_space, y, [0] * len(y)))
+        return list(zip(x, y, [0] * len(y)))
     else:
-        return list(zip(x_space, y))
+        return list(zip(x, y))
 
 
 def cal_length(pseq):
@@ -114,43 +171,15 @@ def show_pseq(pseq, rgba=(1, 0, 0, 1), radius=0.0005, show_stick=False):
                 .attach_to(base)
 
 
-def plot_frame(ax, pos, rot):
-    length = .005
-    x = rot[:, 0] * length
-    y = rot[:, 1] * length
-    z = rot[:, 2] * length
-    ax.arrow3D(pos[0], pos[1], pos[2], x[0], x[1], x[2],
-               mutation_scale=10, arrowstyle='->', color='r')
-    ax.arrow3D(pos[0], pos[1], pos[2], y[0], y[1], y[2],
-               mutation_scale=10, arrowstyle='->', color='g')
-    ax.arrow3D(pos[0], pos[1], pos[2], z[0], z[1], z[2],
-               mutation_scale=10, arrowstyle='->', color='b')
-
-
-def plot_pseq(ax3d, pseq, c=None):
-    pseq = np.asarray(pseq)
-    ax3d.plot3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], c=c)
-    ax3d.grid()
-
-
-def scatter_pseq(ax3d, pseq, s=2, c=None):
-    pseq = np.asarray(pseq)
-    ax3d.scatter3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], s=s, c=c)
-    ax3d.grid()
-
-
-def plot_pseq_2d(ax, pseq):
-    pseq = np.asarray(pseq)
-    ax.scatter(pseq[:, 0], pseq[:, 1], s=2)
-    ax.grid()
-
-
-def align_with_goal(bs, goal_pseq, init_rot, init_pos=np.asarray((bconfig.R_BEND, 0, 0)), init_l=bconfig.INIT_L):
-    goal_pseq = np.asarray(goal_pseq)
-    goal_pseq = rm.homomat_transform_points(rm.homomat_from_posrot(rot=np.linalg.inv(init_rot),
-                                                                   pos=init_pos - goal_pseq[0]), goal_pseq)
+def align_with_init(bs, pseq, init_rot, rotseq=None, init_pos=np.asarray((bconfig.R_BEND, 0, 0)),
+                    init_l=bconfig.INIT_L):
+    pseq = np.asarray(pseq) - pseq[0]
+    pseq = rm.homomat_transform_points(rm.homomat_from_posrot(rot=np.linalg.inv(init_rot),
+                                                              pos=init_pos - pseq[0]), pseq)
+    if rotseq is not None:
+        rotseq = [np.dot(np.linalg.inv(init_rot), r) for r in rotseq]
     bs.move_to_org(init_l)
-    return goal_pseq, np.asarray(bs.pseq)[1:]
+    return pseq, rotseq
 
 
 def align_pseqs_icp(pseq_src, pseq_tgt):
@@ -199,11 +228,10 @@ def avg_polylines_dist_err(pts1, pts2, toggledebug=False):
         print('Sum. distance between polylines:', ptp_dist.sum())
         print('Avg. distance between polylines:', ptp_dist.mean())
         ax = plt.axes(projection='3d')
-        ax.set_box_aspect((1, 1, 1))
-        # z_max = max([abs(np.max(z1)), abs(np.max(z2))])
-        ax.set_xlim([0, 0.08])
-        ax.set_ylim([-0.04, 0.04])
-        ax.set_zlim([-0.04, 0.04])
+        center = np.mean(pts1, axis=0)
+        ax.set_xlim([center[0] - 0.05, center[0] + 0.05])
+        ax.set_ylim([center[1] - 0.05, center[1] + 0.05])
+        ax.set_zlim([center[2] - 0.05, center[2] + 0.05])
         # ax.scatter3D(x1, y1, z1, color='red')
         ax.plot3D(x1, y1, z1, 'red')
         ax.scatter3D(x2, y2, z2, color='black')
@@ -217,26 +245,31 @@ def avg_polylines_dist_err(pts1, pts2, toggledebug=False):
     return err, pts1_on_2
 
 
-def mindist_err(res_pts, goal_pts, toggledebug=False):
+def mindist_err(res_pts, goal_pts, res_rs=None, goal_rs=None, toggledebug=False):
     from sklearn.neighbors import KDTree
     nearest_pts = []
-    err_list = []
-
-    # goal_pts = linear_inp3d_by_step(goal_pts, step=0.0001)
-    res_pts = linear_inp3d_by_step(res_pts, step=0.0001)
+    pos_err_list = []
+    n_err_list = []
+    res_pts, res_rs = inp_rotp_by_step(res_pts, res_rs, step=.0001)
     kdt = KDTree(res_pts, leaf_size=100, metric='euclidean')
-    for p in goal_pts:
-        distances, indices = kdt.query([p], k=1, return_distance=True)
-        err_list.append(distances[0][0])
+    for i in range(len(goal_pts)):
+        distances, indices = kdt.query([goal_pts[i]], k=1, return_distance=True)
+        pos_err_list.append(distances[0][0])
+        if goal_rs is not None:
+            n_err_list.append(rm.angle_between_vectors(goal_rs[i][:, 0], res_rs[indices[0][0]][:, 0]))
+        else:
+            n_err_list.append(0)
         nearest_pts.append(res_pts[indices[0][0]])
     if toggledebug:
-        print('Sum. distance between polylines:', np.asarray(err_list).sum())
-        print('Avg. distance between polylines:', np.asarray(err_list).mean())
+        print('Sum. distance between polylines:', np.asarray(pos_err_list).sum())
+        print('Avg. distance between polylines:', np.asarray(pos_err_list).mean())
+        print('Sum. angel err between polylines:', np.asarray(n_err_list).sum())
+        print('Avg. angel err between polylines:', np.asarray(n_err_list).mean())
         ax = plt.axes(projection='3d')
-        ax.set_box_aspect((1, 1, 1))
-        ax.set_xlim([0, 0.08])
-        ax.set_ylim([-0.04, 0.04])
-        ax.set_zlim([-0.04, 0.04])
+        center = np.mean(res_pts, axis=0)
+        ax.set_xlim([center[0] - 0.05, center[0] + 0.05])
+        ax.set_ylim([center[1] - 0.05, center[1] + 0.05])
+        ax.set_zlim([center[2] - 0.05, center[2] + 0.05])
         # ax.scatter3D(x1, y1, z1, color='red')
         plot_pseq(ax, res_pts, c='r')
         scatter_pseq(ax, res_pts, c='r')
@@ -244,7 +277,7 @@ def mindist_err(res_pts, goal_pts, toggledebug=False):
         scatter_pseq(ax, goal_pts, c='g', s=10)
         scatter_pseq(ax, nearest_pts, c='black', s=10)
         plt.show()
-    err = np.asarray(err_list).sum()
+    err = np.asarray(pos_err_list).sum()
 
     return err, nearest_pts
 
@@ -278,7 +311,7 @@ def get_init_rot(pseq):
     return np.asarray([-rm.unit_vector(x), -rm.unit_vector(v1), -rm.unit_vector(rot_n)]).T
 
 
-def decimate_pseq(pseq, tor=.001, r=None, toggledebug=False):
+def decimate_pseq(pseq, tor=.001, toggledebug=False):
     pseq = np.asarray(pseq)
     res_pids = [0, len(pseq) - 1]
     ptr = 0
@@ -287,13 +320,29 @@ def decimate_pseq(pseq, tor=.001, r=None, toggledebug=False):
                                              pseq[res_pids[ptr]:res_pids[ptr + 1]])
         if max_err > tor:
             curr = max_inx + res_pids[ptr]
-            # if r is not None and len(res_pids) > 2:
-            #     a = rm.angle_between_vectors(pseq[res_pids[ptr]] - pseq[curr],
-            #                                  pseq[res_pids[ptr + 1]] - pseq[res_pids[ptr]])
-            #     print(a)
-            #     if abs(a * r) > np.linalg.norm(pseq[res_pids[ptr]] - pseq[curr]):
-            #         ptr += 1
-            #         continue
+            res_pids.append(curr)
+            res_pids = sorted(res_pids)
+        else:
+            ptr += 1
+        if toggledebug:
+            ax = plt.axes(projection='3d')
+            plot_pseq(ax, pseq)
+            plot_pseq(ax, linear_inp3d_by_step(pseq[res_pids]))
+            plot_pseq(ax, pseq[res_pids])
+            plt.show()
+    print(f'Num. of fitting result:{len(res_pids)}/{len(pseq)}')
+    return pseq[res_pids]
+
+
+def decimate_rotpseq(pseq, rotseq, tor=.001, toggledebug=False):
+    pseq = np.asarray(pseq)
+    res_pids = [0, len(pseq) - 1]
+    ptr = 0
+    while ptr < len(res_pids) - 1:
+        max_err, max_inx = __ps2seg_max_dist(pseq[res_pids[ptr]], pseq[res_pids[ptr + 1]],
+                                             pseq[res_pids[ptr]:res_pids[ptr + 1]])
+        if max_err > tor:
+            curr = max_inx + res_pids[ptr]
             res_pids.append(curr)
             res_pids = sorted(res_pids)
         else:
@@ -305,8 +354,8 @@ def decimate_pseq(pseq, tor=.001, r=None, toggledebug=False):
             plot_pseq(ax, pseq[res_pids])
             plt.show()
 
-    print('Num. of fitting result:', len(res_pids))
-    return pseq[res_pids]
+    print(f'Num. of fitting result:{len(res_pids)}/{len(pseq)}')
+    return pseq[res_pids], [r for i, r in enumerate(rotseq) if i in res_pids]
 
 
 def get_rotseq_by_pseq(pseq):
@@ -319,7 +368,6 @@ def get_rotseq_by_pseq(pseq):
         rot = np.asarray([rm.unit_vector(x), rm.unit_vector(v1), rm.unit_vector(n)]).T
         rotseq.append(rot)
     rotseq = [rotseq[0]] + rotseq + [rotseq[-1]]
-    print(len(rotseq))
     return rotseq
 
 
@@ -358,7 +406,31 @@ def gen_stick(pseq, rotseq, r, section=5, toggledebug=False):
     return cm.CollisionModel(initor=objtrm, btwosided=True, name='obj', cdprimit_type='surface_balls')
 
 
-def pseq2bendset(res_pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggledebug=False):
+def gen_surface(pseq, rotseq, thickness, width, toggledebug=False):
+    vertices = []
+    faces = []
+
+    for i, p in enumerate(pseq):
+        vertices.append(p + rotseq[i][:, 0] * thickness / 2 + rotseq[i][:, 2] * width / 2)
+        vertices.append(p + rotseq[i][:, 0] * thickness / 2 - rotseq[i][:, 2] * width / 2)
+    for i in range(2 * len(pseq) - 2):
+        f = [i, i + 1, i + 2]
+        if i % 2 == 0:
+            f = f[::-1]
+        faces.append(f)
+    if toggledebug:
+        for p in pseq:
+            gm.gen_sphere(pos=np.asarray(p), rgba=[1, 0, 0, 1], radius=0.0002).attach_to(base)
+        tmp_trm = trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces))
+        tmp_cm = cm.CollisionModel(initor=tmp_trm, btwosided=True)
+        tmp_cm.set_rgba((.7, .7, 0, .7))
+        tmp_cm.attach_to(base)
+    objtrm = trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces))
+
+    return cm.CollisionModel(initor=objtrm, btwosided=True, name='obj', cdprimit_type='surface_balls')
+
+
+def pseq2bendset(pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggledebug=False):
     ax = plt.axes(projection='3d')
     ax.set_box_aspect((1, 1, 1))
     tangent_pts = []
@@ -368,10 +440,10 @@ def pseq2bendset(res_pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggled
     lift_a = 0
     pos = 0
     l_pos = 0
-    for i in range(1, len(res_pseq) - 1):
-        v1 = res_pseq[i - 1] - res_pseq[i]
-        v2 = res_pseq[i] - res_pseq[i + 1]
-        v3 = res_pseq[i - 1] - res_pseq[i + 1]
+    for i in range(1, len(pseq) - 1):
+        v1 = pseq[i - 1] - pseq[i]
+        v2 = pseq[i] - pseq[i + 1]
+        v3 = pseq[i - 1] - pseq[i + 1]
         pos += np.linalg.norm(v1)
         n = np.cross(rm.unit_vector(v1), rm.unit_vector(v2))
         v2_xy = v2 - v2 * n
@@ -382,7 +454,6 @@ def pseq2bendset(res_pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggled
         # bend_a = rm.angle_between_vectors(v1, v2_xy)
         bend_a = rm.angle_between_vectors(v1, v2)
         if round(bend_a, 8) == 0:
-            print(bend_a)
             continue
 
         if n_pre is not None:
@@ -401,18 +472,18 @@ def pseq2bendset(res_pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggled
 
         n_pre = n
         l = (bend_r * np.tan(abs(bend_a) / 2)) / np.cos(abs(lift_a))
-        ratio_1 = l / np.linalg.norm(res_pseq[i] - res_pseq[i - 1])
-        ratio_2 = l / np.linalg.norm(res_pseq[i] - res_pseq[i + 1])
-        p_tan1 = res_pseq[i] + (res_pseq[i - 1] - res_pseq[i]) * ratio_1
-        p_tan2 = res_pseq[i] + (res_pseq[i + 1] - res_pseq[i]) * ratio_2
+        ratio_1 = l / np.linalg.norm(pseq[i] - pseq[i - 1])
+        ratio_2 = l / np.linalg.norm(pseq[i] - pseq[i + 1])
+        p_tan1 = pseq[i] + (pseq[i - 1] - pseq[i]) * ratio_1
+        p_tan2 = pseq[i] + (pseq[i + 1] - pseq[i]) * ratio_2
 
-        if i > 1 and is_collinearity(p_tan1, [res_pseq[i - 1], tangent_pts[-1]]):
+        if i > 1 and is_collinearity(p_tan1, [pseq[i - 1], tangent_pts[-1]]):
             scatter_pseq(ax, [p_tan1], s=20, c='gray')
             bendseq[-1][0] += bend_a
 
         else:
             if i == 1:
-                l_pos += np.linalg.norm(p_tan1 - res_pseq[i - 1])
+                l_pos += np.linalg.norm(p_tan1 - pseq[i - 1])
             else:
                 l_pos += np.linalg.norm(p_tan1 - tangent_pts[-1])
                 l_pos += abs(bendseq[-1][0]) * bend_r / np.cos(abs(bendseq[-1][1]))
@@ -422,17 +493,96 @@ def pseq2bendset(res_pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggled
         x = np.cross(v1, n)
         rot = np.asarray([rm.unit_vector(x), rm.unit_vector(v1), rm.unit_vector(n)]).T
         if toggledebug:
-            gm.gen_frame(res_pseq[i - 1], rot, length=.02, thickness=.001).attach_to(base)
-            plot_frame(ax, res_pseq[i - 1], rot)
+            plot_frame(ax, pseq[i - 1], rot)
     if toggledebug:
-        ax.set_xlim([0, 0.1])
-        ax.set_ylim([-0.05, 0.05])
-        ax.set_zlim([-0.05, 0.05])
-        # goal_pseq = pickle.load(open('../run_plan/goal_pseq.pkl', 'rb'))
-        plot_pseq(ax, res_pseq)
+        center = np.mean(pseq, axis=0)
+        ax.set_xlim([center[0] - 0.05, center[0] + 0.05])
+        ax.set_ylim([center[1] - 0.05, center[1] + 0.05])
+        ax.set_zlim([center[2] - 0.05, center[2] + 0.05])
+        # goal_pseq = pickle.load(open('../run_plan/random_curve.pkl', 'rb'))
+        plot_pseq(ax, pseq)
         # plot_pseq(ax, goal_pseq)
-        scatter_pseq(ax, [res_pseq[0]], s=10, c='y')
-        scatter_pseq(ax, res_pseq[1:], s=10, c='g')
+        scatter_pseq(ax, [pseq[0]], s=10, c='y')
+        scatter_pseq(ax, pseq[1:], s=10, c='g')
+        scatter_pseq(ax, tangent_pts, s=10, c='r')
+        plt.show()
+
+    return bendseq
+
+
+def rotpseq2bendset(pseq, rotseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggledebug=False):
+    ax = plt.axes(projection='3d')
+    ax.set_box_aspect((1, 1, 1))
+    tangent_pts = []
+    bendseq = []
+    n_pre = None
+    x_pre = None
+    rot_a = 0
+    lift_a = 0
+    pos = 0
+    l_pos = 0
+
+    for i in range(1, len(pseq) - 1):
+        v1 = pseq[i - 1] - pseq[i]
+        v2 = pseq[i] - pseq[i + 1]
+        pos += np.linalg.norm(v1)
+        x = rotseq[i][:, 0]
+        n = rotseq[i][:, 2]
+        v2_xy = v2 - v2 * n
+
+        bend_a = rm.angle_between_vectors(v1, v2_xy)
+        # bend_a = rm.angle_between_vectors(v1, v2)
+        if round(bend_a, 8) == 0:
+            continue
+
+        if x_pre is not None:
+            # v2_yz = v2 - v2 * (np.cross(n_pre, rm.unit_vector(v1)))
+            # lift_a = np.pi / 2 - rm.angle_between_vectors(n_pre, v3_yz)
+            # tmp_a = rm.angle_between_vectors(np.cross(v1, n_pre), np.cross(v1, v3_yz))
+            # if tmp_a < np.pi / 2:
+            #     lift_a = -lift_a
+            a = rm.angle_between_vectors(x_pre, x)
+            # a = rm.angle_between_vectors(n_pre, n_xz)
+            tmp_a = rm.angle_between_vectors(v1, np.cross(n_pre, n))
+            if tmp_a is not None and tmp_a > np.pi / 2:
+                rot_a += a
+            else:
+                rot_a -= a
+
+        n_pre = n
+        x_pre = x
+        l = (bend_r * np.tan(abs(bend_a) / 2)) / np.cos(abs(lift_a))
+        ratio_1 = l / np.linalg.norm(pseq[i] - pseq[i - 1])
+        ratio_2 = l / np.linalg.norm(pseq[i] - pseq[i + 1])
+        p_tan1 = pseq[i] + (pseq[i - 1] - pseq[i]) * ratio_1
+        p_tan2 = pseq[i] + (pseq[i + 1] - pseq[i]) * ratio_2
+
+        if i > 1 and is_collinearity(p_tan1, [pseq[i - 1], tangent_pts[-1]]):
+            scatter_pseq(ax, [p_tan1], s=20, c='gray')
+            bendseq[-1][0] += bend_a
+
+        else:
+            if i == 1:
+                l_pos += np.linalg.norm(p_tan1 - pseq[i - 1])
+            else:
+                l_pos += np.linalg.norm(p_tan1 - tangent_pts[-1])
+                l_pos += abs(bendseq[-1][0]) * bend_r / np.cos(abs(bendseq[-1][1]))
+            bendseq.append([bend_a, lift_a, rot_a, l_pos + init_l])
+            print(bendseq[-1])
+        tangent_pts.extend([p_tan1, p_tan2])
+
+        if toggledebug:
+            plot_frame(ax, pseq[i - 1], rotseq[i])
+    if toggledebug:
+        center = np.mean(pseq, axis=0)
+        ax.set_xlim([center[0] - 0.05, center[0] + 0.05])
+        ax.set_ylim([center[1] - 0.05, center[1] + 0.05])
+        ax.set_zlim([center[2] - 0.05, center[2] + 0.05])
+        # goal_pseq = pickle.load(open('../run_plan/random_curve.pkl', 'rb'))
+        plot_pseq(ax, pseq)
+        # plot_pseq(ax, goal_pseq)
+        scatter_pseq(ax, [pseq[0]], s=10, c='y')
+        scatter_pseq(ax, pseq[1:], s=10, c='g')
         scatter_pseq(ax, tangent_pts, s=10, c='r')
         plt.show()
 

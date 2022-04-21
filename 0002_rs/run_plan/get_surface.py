@@ -27,11 +27,8 @@ if __name__ == '__main__':
                          transmat=pickle.load(open(config.ROOT + '/camcalib/data/phoxi_calibmat_yumi.pkl', 'rb')))
     mask = vu.extract_label_rgb(labelimg, toggledebug=False)
     # mask = vu.extract_clr_gray(grayimg, clr=(10, 50), toggledebug=True)
-    grayimg = grayimg * mask
-    pcd_ext = vu.map_gray2pcd(grayimg, pcd)
-    _, pts = vu.mask2skeleton(mask)
-
-    mask_sk = vu.pts2mask(pts, shape=(772, 1032, 1))
+    pcd_ext = vu.map_gray2pcd(grayimg * mask, pcd)
+    mask_sk = vu.mask2skmask(mask)
     pcd_sk = vu.map_gray2pcd(grayimg * mask_sk, pcd)
 
     x_range = (.2, .6)
@@ -44,16 +41,19 @@ if __name__ == '__main__':
     #     if nrml[2] < 0:
     #         nrml = -nrml
     #     gm.gen_arrow(spos=p, epos=p + nrml * .01, thickness=.001).attach_to(base)
-
-    for p in pcd_sk:
+    res_pseq = []
+    res_rotseq = []
+    for i, p in enumerate(pcd_sk[:-1]):
         nrml = pcdu.get_nrml_pca(pcdu.get_knn(p, kdt, k=100))
         if nrml[2] < 0:
             nrml = -nrml
         gm.gen_arrow(spos=p, epos=p + nrml * .01, thickness=.001, rgba=(1, 1, 0, 1)).attach_to(base)
-    pseq, nseq = pcdu.surface_interp(pcd_sk[0], pcd_sk[-1] - pcd_sk, kdt)
-    for i in range(len(nseq)):
-        gm.gen_arrow(spos=pseq[i], epos=pseq[i] + nseq[i] * .01, thickness=.001, rgba=(1, 1, 0, 1)).attach_to(base)
-
+        pseq, rotseq = pcdu.surface_interp(pcd_sk[i], pcd_sk[i + 1] - pcd_sk[i], kdt)
+        res_pseq.extend(pseq)
+        res_rotseq.extend(rotseq)
+        for j in range(len(rotseq)):
+            gm.gen_frame(pos=pseq[j], rotmat=rotseq[j], thickness=.001, length=.01).attach_to(base)
+    pickle.dump([res_pseq, res_rotseq], open(config.ROOT + '/data/bend/rotpseq/skull1.pkl', 'wb'))
     pcdu.show_pcd(pcd, rgba=(1, 1, 1, .1))
     pcdu.show_pcd(pcd_ext, rgba=(1, 0, 0, 1))
     base.run()

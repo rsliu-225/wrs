@@ -210,7 +210,7 @@ def extract_label_rgb(rgbimg, shape=(772, 1032, 1), crop_xy=None, toggledebug=Fa
     return mask
 
 
-def mask2skeleton(mask):
+def mask2skmask(mask, inp=5, shape=(772, 1032, 1)):
     skeleton = skeletonize(mask)
     graph = sknw.build_sknw(skeleton, multi=True)
     pts_all = []
@@ -223,7 +223,7 @@ def mask2skeleton(mask):
                 pts = graph[s][e][cnt]['pts']
                 plt.plot(pts[:, 1], pts[:, 0], 'g')
                 for i in range(len(pts)):
-                    if i % 4 == 0:
+                    if i % inp == 0:
                         pts_all.append(pts[i])
                         plt.plot([pts[i, 1]], [pts[i, 0]], 'b.')
             except:
@@ -235,4 +235,4 @@ def mask2skeleton(mask):
     plt.plot(pts[:, 1], pts[:, 0], 'r.')
     plt.title('Build Graph')
     plt.show()
-    return graph, pts_all
+    return pts2mask(pts_all, shape=shape)

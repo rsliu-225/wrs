@@ -21,41 +21,30 @@ import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
     base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
-
-    bs = b_sim.BendSim(show=True, granularity=np.pi / 90, cm_type='stick')
+    bs = b_sim.BendSim(show=True, granularity=np.pi / 90, cm_type='surface')
 
     transmat4 = rm.homomat_from_posrot((.9, -.35, .78 + bconfig.BENDER_H), rm.rotmat_from_axangle((0, 0, 1), np.pi))
-    # goal_pseq = bu.gen_polygen(5, .01)
-    # goal_pseq = bu.gen_ramdom_curve(kp_num=5, length=.12, step=.0005, z_max=.05, toggledebug=False)
-    # goal_pseq = bu.gen_screw_thread(r=.02, lift_a=np.radians(5), rot_num=2)
-    # goal_pseq = bu.gen_circle(.05)
-    # goal_pseq = np.asarray([(0, 0, 0), (0, .2, 0), (.2, .2, 0), (.2, .3, .2), (0, .3, 0), (0, .3, -.2)])
-    # goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
-    #                         [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1],
-    #                         [.1, .1, .1], [.1, .1, .2]]) * .4
-    # goal_pseq = np.asarray([[0, 0, .1], [0, 0, 0], [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1]]) * .4
-    # goal_pseq = np.asarray([[.1, 0, .1], [0, 0, .1], [0, 0, 0]]) * .4
-
-    # pickle.dump(goal_pseq, open('random_curve.pkl', 'wb'))
-    goal_pseq = pickle.load(open(config.ROOT + '/data/bend/pseq/random_curve.pkl', 'rb'))
+    goal_pseq, goal_rotseq = pickle.load(open(config.ROOT + '/data/bend/rotpseq/skull1.pkl', 'rb'))
     init_pseq = [(0, 0, 0), (0, bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
 
-    fit_pseq = bu.decimate_pseq(goal_pseq, tor=.0002, toggledebug=False)
-    bendset = bu.pseq2bendset(fit_pseq, toggledebug=False)
-    init_rot = bu.get_init_rot(fit_pseq)
+    fit_pseq, fit_rotseq = bu.decimate_rotpseq(goal_pseq, goal_rotseq, tor=.0001, toggledebug=False)
+    bendset = bu.rotpseq2bendset(fit_pseq, fit_rotseq, toggledebug=True)
+    init_rot = fit_rotseq[0]
 
     bs.reset(init_pseq, init_rotseq, extend=True)
-    is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, toggledebug=True)
+    is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, toggledebug=False)
     # bs.show_bendresseq(bendresseq, is_success)
     # base.run()
-    goal_pseq, goal_rotseq = bu.align_with_init(bs, goal_pseq, init_rot)
-    fit_pseq, _ = bu.align_with_init(bs, fit_pseq, init_rot)
-    fit_rotseq = bu.get_rotseq_by_pseq(fit_pseq)
-    goal_cm = bu.gen_stick(fit_pseq, fit_rotseq, bconfig.THICKNESS / 2)
+
+    goal_pseq, goal_rotseq = bu.align_with_init(bs, goal_pseq, init_rot, goal_rotseq)
+    fit_pseq, fit_rotseq = bu.align_with_init(bs, fit_pseq, init_rot, fit_rotseq)
+    goal_cm = bu.gen_surface(fit_pseq, fit_rotseq, bconfig.THICKNESS / 2, width=bconfig.WIDTH)
     goal_cm.attach_to(base)
+    for i in range(len(fit_rotseq)):
+        gm.gen_frame(fit_pseq[i], fit_rotseq[i], length=.02, thickness=.001).attach_to(base)
     # err, _ = bu.avg_polylines_dist_err(res_pseq, goal_pseq, toggledebug=True)
-    kpts2 = bu.mindist_err(bs.pseq[1:], goal_pseq, toggledebug=True)
+    kpts2 = bu.mindist_err(bs.pseq[1:], goal_pseq, res_rs=bs.rotseq[1:], goal_rs=goal_rotseq, toggledebug=True)
 
     # pickle.dump(res_pseq, open('res.pkl', 'wb'))
     # res_pseq_tmp = pickle.load(open('res.pkl', 'rb'))

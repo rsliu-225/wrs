@@ -278,7 +278,6 @@ class BendSim(object):
         # gm.gen_frame(pseq_end[0], rotseq_end[0], length=.01, thickness=.0004).attach_to(base)
         self.pseq = self.pseq[:start_inx] + pseq_mid + pseq_end
         self.rotseq = list(self.rotseq[:start_inx]) + list(rotseq_mid) + list(rotseq_end)
-
         self.update_cm()
 
     def __trans_pos(self, pts, pos):

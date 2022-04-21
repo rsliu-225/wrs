@@ -53,7 +53,7 @@ def get_kdt(p_list, dimension=3):
 
 def get_nrml_pca(knn):
     pcv, pcaxmat = rm.compute_pca(knn)
-    return pcaxmat[:, np.argmin(pcv)]
+    return np.asarray(pcaxmat[:, np.argmin(pcv)])
 
 
 def get_objpcd(objcm, objmat4=np.eye(4), sample_num=100000, toggledebug=False):
@@ -563,18 +563,21 @@ def get_plane(pcd, dist_threshold=0.0002, toggledebug=False):
 
 def surface_interp(p, v, kdt_d3, inp=0.001, max_nn=100):
     pseq = []
-    nseq = []
+    rotseq = []
     for _ in range(int(np.linalg.norm(v) / inp)):
-        pt = p + rm.unit_vector(v) * inp
+        pt = np.asarray(p) + rm.unit_vector(v) * inp
         knn = get_knn(pt, kdt_d3, k=max_nn)
         center = get_pcd_center(np.asarray(knn))
         nrml = get_nrml_pca(knn)
         if np.dot(nrml, np.asarray([0, 0, 1])) < 0:
             nrml = -nrml
         pseq.append(pt - np.dot((pt - center), nrml) * nrml)
-        nseq.append(nrml)
+        print(np.dot(nrml, v))
+        x = np.cross(nrml, v)
+        rot = np.asarray([rm.unit_vector(nrml), rm.unit_vector(v), rm.unit_vector(x)]).T
+        rotseq.append(rot)
         p = pt
-    return pseq, nseq
+    return pseq, rotseq
 
 
 if __name__ == '__main__':
