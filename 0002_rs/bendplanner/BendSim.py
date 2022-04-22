@@ -376,9 +376,10 @@ class BendSim(object):
             onehot[v.grid_index[0]][v.grid_index[1]][v.grid_index[2]]=1
         import matplotlib.pyplot as plt
         ax = plt.axes(projection='3d')
-        ax.set_xlim(1, 10)
-        ax.set_ylim(1, 10)
-        ax.set_zlim(1, 10)
+        center = np.mean(pts, axis=0)
+        ax.set_xlim([center[0] - 5, center[0] + 5])
+        ax.set_ylim([center[1] - 5, center[1] + 5])
+        ax.set_zlim([center[2] - 5, center[2] + 5])
         bu.scatter_pseq(ax, pts, c='r')
         plt.show()
         return onehot
@@ -784,16 +785,16 @@ if __name__ == '__main__':
     import visualization.panda.world as wd
 
     base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
-    bs = BendSim(show=True)
+    bs = BendSim(show=True,cm_type='surface')
 
     bendset = [
         # [np.radians(225), np.radians(0), np.radians(0), .04],
         # [np.radians(90), np.radians(0), np.radians(180), .08],
         # [np.radians(90), np.radians(0), np.radians(0), .1],
-        [np.radians(45), np.radians(0), np.radians(90), .12],
+        [np.radians(45), np.radians(30), np.radians(0), .04],
         # [np.radians(45), np.radians(0), np.radians(0), .04],
-        [np.radians(90), np.radians(0), np.radians(0), .04],
-        [np.radians(180), np.radians(0), np.radians(0), .04],
+        # [np.radians(90), np.radians(0), np.radians(0), .04],
+        # [np.radians(180), np.radians(0), np.radians(0), .04],
         # [np.radians(90), np.radians(0), np.radians(0), .08],
         # [np.radians(90), np.radians(0), np.radians(0), .1],
 
@@ -802,12 +803,12 @@ if __name__ == '__main__':
     # bendset = bs.gen_random_bendset(5)
     # print(bendset)
     bs.reset([(0, 0, 0), (0, max(np.asarray(bendset)[:, 3]), 0)], [np.eye(3), np.eye(3)])
-    # bs.show(rgba=(.7, .7, .7, .7), show_frame=True)
     is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, toggledebug=False)
-    # bs.show(rgba=(.7, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
+    # bs.show(rgba=(.7, .7, 0, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
+    bs.show(rgba=(.7, .7, 0, .7),show_frame=True)
     bs.voxelize()
     # bs.show(rgba=(.7, .7, .7, .7), show_frame=True, show_pseq=False)
     # base.run()
     # key_pseq, key_rotseq = bs.get_pull_primitive(.12, .04, toggledebug=True)
     # resseq = bs.pull(key_pseq, key_rotseq, np.pi)
-    # base.run()
+    base.run()

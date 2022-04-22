@@ -124,7 +124,7 @@ class BendOptimizer(object):
         return np.asarray(init)
 
     def fit_init(self, goal_pseq, tor=.001):
-        fit_pseq = bu.decimate_pseq(goal_pseq, r=bconfig.R_CENTER, tor=tor, toggledebug=False)
+        fit_pseq,_ = bu.decimate_pseq(goal_pseq, tor=tor, toggledebug=False)
         self.init_bendset = bu.pseq2bendset(fit_pseq, toggledebug=False)
         self.init_rot = bu.get_init_rot(fit_pseq)
         self.bend_times = len(self.init_bendset)

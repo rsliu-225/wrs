@@ -250,7 +250,10 @@ def mindist_err(res_pts, goal_pts, res_rs=None, goal_rs=None, toggledebug=False)
     nearest_pts = []
     pos_err_list = []
     n_err_list = []
-    res_pts, res_rs = inp_rotp_by_step(res_pts, res_rs, step=.0001)
+    if res_rs is None:
+        res_pts = linear_inp3d_by_step(res_pts, step=.0001)
+    else:
+        res_pts, res_rs = inp_rotp_by_step(res_pts, res_rs, step=.0001)
     kdt = KDTree(res_pts, leaf_size=100, metric='euclidean')
     for i in range(len(goal_pts)):
         distances, indices = kdt.query([goal_pts[i]], k=1, return_distance=True)
@@ -313,6 +316,7 @@ def get_init_rot(pseq):
 
 def decimate_pseq(pseq, tor=.001, toggledebug=False):
     pseq = np.asarray(pseq)
+    rotseq = []
     res_pids = [0, len(pseq) - 1]
     ptr = 0
     while ptr < len(res_pids) - 1:
@@ -331,7 +335,7 @@ def decimate_pseq(pseq, tor=.001, toggledebug=False):
             plot_pseq(ax, pseq[res_pids])
             plt.show()
     print(f'Num. of fitting result:{len(res_pids)}/{len(pseq)}')
-    return pseq[res_pids]
+    return np.asarray(pseq[res_pids]), get_rotseq_by_pseq(pseq[res_pids])
 
 
 def decimate_rotpseq(pseq, rotseq, tor=.001, toggledebug=False):
@@ -353,8 +357,8 @@ def decimate_rotpseq(pseq, rotseq, tor=.001, toggledebug=False):
             plot_pseq(ax, linear_inp3d_by_step(pseq[res_pids]))
             plot_pseq(ax, pseq[res_pids])
             plt.show()
-
     print(f'Num. of fitting result:{len(res_pids)}/{len(pseq)}')
+
     return pseq[res_pids], [r for i, r in enumerate(rotseq) if i in res_pids]
 
 
@@ -443,27 +447,14 @@ def pseq2bendset(pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggledebug
     for i in range(1, len(pseq) - 1):
         v1 = pseq[i - 1] - pseq[i]
         v2 = pseq[i] - pseq[i + 1]
-        v3 = pseq[i - 1] - pseq[i + 1]
         pos += np.linalg.norm(v1)
         n = np.cross(rm.unit_vector(v1), rm.unit_vector(v2))
-        v2_xy = v2 - v2 * n
-        n_xz = n - n * v2
-        v2_xz = v2 - v2 * rm.unit_vector(v1)
-        v3_yz = v3 - v3 * np.cross(v1, n)
-
-        # bend_a = rm.angle_between_vectors(v1, v2_xy)
         bend_a = rm.angle_between_vectors(v1, v2)
         if round(bend_a, 8) == 0:
             continue
 
         if n_pre is not None:
-            # v2_yz = v2 - v2 * (np.cross(n_pre, rm.unit_vector(v1)))
-            # lift_a = np.pi / 2 - rm.angle_between_vectors(n_pre, v3_yz)
-            # tmp_a = rm.angle_between_vectors(np.cross(v1, n_pre), np.cross(v1, v3_yz))
-            # if tmp_a < np.pi / 2:
-            #     lift_a = -lift_a
             a = rm.angle_between_vectors(n_pre, n)
-            # a = rm.angle_between_vectors(n_pre, n_xz)
             tmp_a = rm.angle_between_vectors(v1, np.cross(n_pre, n))
             if tmp_a is not None and tmp_a > np.pi / 2:
                 rot_a += a
@@ -571,9 +562,9 @@ def rotpseq2bendset(pseq, rotseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, 
             print(bendseq[-1])
         tangent_pts.extend([p_tan1, p_tan2])
 
-        if toggledebug:
-            plot_frame(ax, pseq[i - 1], rotseq[i])
     if toggledebug:
+        for i in range(len(pseq)):
+            plot_frame(ax, pseq[i], rotseq[i])
         center = np.mean(pseq, axis=0)
         ax.set_xlim([center[0] - 0.05, center[0] + 0.05])
         ax.set_ylim([center[1] - 0.05, center[1] + 0.05])

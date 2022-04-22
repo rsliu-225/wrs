@@ -28,6 +28,7 @@ if __name__ == '__main__':
     init_pseq = [(0, 0, 0), (0, bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
 
+    # fit_pseq, fit_rotseq = bu.decimate_rotpseq(goal_pseq, goal_rotseq, tor=.0001, toggledebug=False)
     fit_pseq, fit_rotseq = bu.decimate_rotpseq(goal_pseq, goal_rotseq, tor=.0001, toggledebug=False)
     bendset = bu.rotpseq2bendset(fit_pseq, fit_rotseq, toggledebug=True)
     init_rot = fit_rotseq[0]
@@ -42,7 +43,7 @@ if __name__ == '__main__':
     goal_cm = bu.gen_surface(fit_pseq, fit_rotseq, bconfig.THICKNESS / 2, width=bconfig.WIDTH)
     goal_cm.attach_to(base)
     for i in range(len(fit_rotseq)):
-        gm.gen_frame(fit_pseq[i], fit_rotseq[i], length=.02, thickness=.001).attach_to(base)
+        gm.gen_frame(fit_pseq[i], fit_rotseq[i], length=.01, thickness=.0005).attach_to(base)
     # err, _ = bu.avg_polylines_dist_err(res_pseq, goal_pseq, toggledebug=True)
     kpts2 = bu.mindist_err(bs.pseq[1:], goal_pseq, res_rs=bs.rotseq[1:], goal_rs=goal_rotseq, toggledebug=True)
 

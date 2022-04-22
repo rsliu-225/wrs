@@ -17,8 +17,8 @@ class BendEnv(object):
         self._granularity = granularity
         self._cm_type = cm_type
 
-        fit_pseq = bu.decimate_pseq(self._goal_pseq, r=bconfig.R_CENTER, tor=.0002, toggledebug=False)
-        self._bendset= bu.pseq2bendset(fit_pseq, toggledebug=False)
+        fit_pseq, fit_rotseq = bu.decimate_pseq(self._goal_pseq, tor=.0002, toggledebug=False)
+        self._bendset = bu.pseq2bendset(fit_pseq, toggledebug=False)
         self._res_action = list(range(len(self._bendset)))
 
         self._sim = bs.BendSim(self._pseq, self._rotseq, self._show, self._granularity, self._cm_type)

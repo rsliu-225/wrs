@@ -41,7 +41,7 @@ if __name__ == '__main__':
     init_pseq = [(0, 0, 0), (0, bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
 
-    fit_pseq = bu.decimate_pseq(goal_pseq, tor=.0002, toggledebug=False)
+    fit_pseq, fit_rotseq = bu.decimate_pseq(goal_pseq, tor=.0002, toggledebug=False)
     bendset = bu.pseq2bendset(fit_pseq, toggledebug=False)
     init_rot = bu.get_init_rot(fit_pseq)
 
@@ -51,7 +51,6 @@ if __name__ == '__main__':
     # base.run()
     goal_pseq, goal_rotseq = bu.align_with_init(bs, goal_pseq, init_rot)
     fit_pseq, _ = bu.align_with_init(bs, fit_pseq, init_rot)
-    fit_rotseq = bu.get_rotseq_by_pseq(fit_pseq)
     goal_cm = bu.gen_stick(fit_pseq, fit_rotseq, bconfig.THICKNESS / 2)
     goal_cm.attach_to(base)
     # err, _ = bu.avg_polylines_dist_err(res_pseq, goal_pseq, toggledebug=True)
