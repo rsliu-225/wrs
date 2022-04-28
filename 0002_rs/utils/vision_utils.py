@@ -73,9 +73,8 @@ def map_gray2pcd(grayimg, pcd, zeros=False):
         else:
             if zeros:
                 pcd_result.append(np.array([0, 0, 0]))
-    pcdnarray = np.array(pcd_result)
 
-    return pcdnarray
+    return np.asarray(pcd_result)
 
 
 def mask2gray(mask, grayimg):
@@ -192,7 +191,7 @@ def extract_clr_gray(grayimg, clr, shape=(772, 1032, 1), crop_xy=((250, 400), (4
 
 def extract_label_rgb(rgbimg, shape=(772, 1032, 1), crop_xy=None, toggledebug=False, erode=False):
     rgbimg_std = np.std(rgbimg, axis=2)
-    mask = np.where((rgbimg_std > 20), 1, 0)
+    mask = np.where((rgbimg_std > 50), 1, 0)
     mask = mask.reshape(shape)
     if crop_xy is not None:
         crop_mask = np.zeros(shape)
@@ -210,12 +209,11 @@ def extract_label_rgb(rgbimg, shape=(772, 1032, 1), crop_xy=None, toggledebug=Fa
     return mask
 
 
-def mask2skmask(mask, inp=5, shape=(772, 1032, 1)):
+def mask2skmask(mask, inp=5, shape=(772, 1032, 1), toggledebug=False):
     skeleton = skeletonize(mask)
     graph = sknw.build_sknw(skeleton, multi=True)
     pts_all = []
-    # draw image
-    plt.imshow(skeleton, cmap='gray')
+
     # draw edges by pts
     for (s, e) in graph.edges():
         for cnt in range(10):
@@ -232,7 +230,9 @@ def mask2skmask(mask, inp=5, shape=(772, 1032, 1)):
     nodes = graph.nodes()
     pts = np.array([nodes[i]['o'] for i in nodes])
     pts_all.extend(pts)
-    plt.plot(pts[:, 1], pts[:, 0], 'r.')
-    plt.title('Build Graph')
-    plt.show()
+    if toggledebug:
+        plt.imshow(skeleton, cmap='gray')
+        plt.plot(pts[:, 1], pts[:, 0], 'r.')
+        plt.title('Build Graph')
+        plt.show()
     return pts2mask(pts_all, shape=shape)

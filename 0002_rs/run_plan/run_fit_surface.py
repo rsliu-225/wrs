@@ -20,23 +20,26 @@ import config
 import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
-    base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
+    # base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
+    base = wd.World(cam_pos=[.2, .2, .2], lookat_pos=[0, 0, 0])
+
+    f_name = 'skull'
+
     bs = b_sim.BendSim(show=True, granularity=np.pi / 90, cm_type='surface')
 
     transmat4 = rm.homomat_from_posrot((.9, -.35, .78 + bconfig.BENDER_H), rm.rotmat_from_axangle((0, 0, 1), np.pi))
-    goal_pseq, goal_rotseq = pickle.load(open(config.ROOT + '/data/bend/rotpseq/skull1.pkl', 'rb'))
+    goal_pseq, goal_rotseq = pickle.load(open(config.ROOT + f'/data/bend/rotpseq/{f_name}.pkl', 'rb'))
     init_pseq = [(0, 0, 0), (0, bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
 
-    # fit_pseq, fit_rotseq = bu.decimate_rotpseq(goal_pseq, goal_rotseq, tor=.0001, toggledebug=False)
     fit_pseq, fit_rotseq = bu.decimate_rotpseq(goal_pseq, goal_rotseq, tor=.0001, toggledebug=False)
     bendset = bu.rotpseq2bendset(fit_pseq, fit_rotseq, toggledebug=True)
     init_rot = fit_rotseq[0]
 
     bs.reset(init_pseq, init_rotseq, extend=True)
+    bs.move_to_org(bu.cal_length(goal_pseq))
     is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, toggledebug=False)
     # bs.show_bendresseq(bendresseq, is_success)
-    # base.run()
 
     goal_pseq, goal_rotseq = bu.align_with_init(bs, goal_pseq, init_rot, goal_rotseq)
     fit_pseq, fit_rotseq = bu.align_with_init(bs, fit_pseq, init_rot, fit_rotseq)

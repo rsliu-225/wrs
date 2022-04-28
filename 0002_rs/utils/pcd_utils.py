@@ -56,6 +56,19 @@ def get_nrml_pca(knn):
     return np.asarray(pcaxmat[:, np.argmin(pcv)])
 
 
+def get_frame_pca(knn):
+    pcv, pcaxmat = rm.compute_pca(knn)
+    inx = sorted(range(len(pcv)), key=lambda k: pcv[k])
+    x = pcaxmat[:, inx[2]]
+    y = pcaxmat[:, inx[1]]
+    z = pcaxmat[:, inx[0]]
+    if z[2] > 0:
+        z = -z
+    if y[2] < 0:
+        y = -y
+    return np.asarray([y, x, z]).T
+
+
 def get_objpcd(objcm, objmat4=np.eye(4), sample_num=100000, toggledebug=False):
     objpcd = objcm.sample_surface(nsample=sample_num, toggle_option=None)
     objpcd = trans_pcd(objpcd, objmat4)
@@ -561,22 +574,55 @@ def get_plane(pcd, dist_threshold=0.0002, toggledebug=False):
     return plane[:3], plane[3]
 
 
-def surface_interp(p, v, kdt_d3, inp=0.001, max_nn=100):
+# def surface_interp(p, v, kdt_d3, inp=0.0005, max_nn=100):
+#     pseq = []
+#     rotseq = []
+#     times = int(np.linalg.norm(v) / inp)
+#     # v = np.asarray([v[0], v[1], 0])
+#     knn = get_knn(p, kdt_d3, k=max_nn)
+#     n = get_nrml_pca(knn)
+#
+#     for _ in range(times):
+#         rotmat = rm.rotmat_between_vectors(np.asarray([0, 0, 1]), n)
+#         v_cur = rm.unit_vector(np.dot(rotmat, v))
+#         pt = np.asarray(p) + v_cur * inp
+#         knn = get_knn(pt, kdt_d3, k=max_nn)
+#         center = get_pcd_center(np.asarray(knn))
+#         n_cur = get_nrml_pca(knn)
+#         p_cur = pt - np.dot((pt - center), n_cur) * n_cur
+#         if np.dot(n_cur, np.asarray([0, 0, 1])) < 0:
+#             n_cur = -n_cur
+#         pseq.append(p_cur)
+#         rot = np.asarray([rm.unit_vector(n_cur), -rm.unit_vector(np.cross(n_cur, np.cross(n_cur, v_cur))),
+#                           rm.unit_vector(np.cross(n_cur, v_cur))]).T
+#         rotseq.append(rot)
+#         p = p_cur
+#         n = n_cur
+#     return pseq, rotseq
+
+def surface_interp(p, v, kdt_d3, inp=0.0005, max_nn=100):
     pseq = []
     rotseq = []
-    for _ in range(int(np.linalg.norm(v) / inp)):
-        pt = np.asarray(p) + rm.unit_vector(v) * inp
+    times = int(np.linalg.norm(v) / inp)
+    knn = get_knn(p, kdt_d3, k=max_nn)
+    n = get_nrml_pca(knn)
+
+    for _ in range(times):
+        v_cur = rm.unit_vector(v - v * n)
+        # v_cur = rm.unit_vector(np.dot(rotmat, v))
+        pt = np.asarray(p) + v_cur * inp
         knn = get_knn(pt, kdt_d3, k=max_nn)
         center = get_pcd_center(np.asarray(knn))
-        nrml = get_nrml_pca(knn)
-        if np.dot(nrml, np.asarray([0, 0, 1])) < 0:
-            nrml = -nrml
-        pseq.append(pt - np.dot((pt - center), nrml) * nrml)
-        print(np.dot(nrml, v))
-        x = np.cross(nrml, v)
-        rot = np.asarray([rm.unit_vector(nrml), rm.unit_vector(v), rm.unit_vector(x)]).T
+        n_cur = get_nrml_pca(knn)
+        p_cur = pt - np.dot((pt - center), n_cur) * n_cur
+        if np.dot(n_cur, np.asarray([0, 0, 1])) < 0:
+            n_cur = -n_cur
+        pseq.append(p_cur)
+        rot = np.asarray([rm.unit_vector(n_cur), -rm.unit_vector(np.cross(n_cur, np.cross(n_cur, v_cur))),
+                          rm.unit_vector(np.cross(n_cur, v_cur))]).T
         rotseq.append(rot)
-        p = pt
+        p = p_cur
+        n = n_cur
     return pseq, rotseq
 
 

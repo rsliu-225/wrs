@@ -13,13 +13,16 @@ import matplotlib.pyplot as plt
 import bend_utils as bu
 import bender_config as bconfig
 import utils.math_utils as mu
+from direct.stdpy import threading
+import config
 
 
 class BendOptimizer(object):
-    def __init__(self, bs, init_pseq, init_rotseq, goal_pseq, bend_times=1):
+    def __init__(self, bs, init_pseq, init_rotseq, goal_pseq, goal_rotseq, bend_times=1):
         self.bs = bs
         self.bend_times = bend_times
         self.goal_pseq = goal_pseq
+        self.goal_rotseq = goal_rotseq
         self.init_pseq = copy.deepcopy(init_pseq)
         self.init_rotseq = copy.deepcopy(init_rotseq)
         self.bs.reset(self.init_pseq, self.init_rotseq, extend=False)
@@ -35,7 +38,13 @@ class BendOptimizer(object):
         self.bnds = (self.ba_b, self.ra_b, self.la_b, self.l_b) * self.bend_times
 
         self.init_bendset = None
-    #
+
+        self.cost_list = []
+
+        self._ploton = True
+        self._plotflag = True
+        self._thread_plot = threading.Thread(target=self._plot, name="plot")
+
     # def objctive(self, x):
     #     self.bs.reset(self.init_pseq, self.init_rotseq)
     #     try:
@@ -54,13 +63,19 @@ class BendOptimizer(object):
         self.bs.reset(self.init_pseq, self.init_rotseq, extend=False)
         try:
             self.bend_x(x)
-            goal_pseq, res_pseq = bu.align_with_init(bs, self.goal_pseq, self.init_rot)
+            goal_pseq, goal_rotseq = bu.align_with_init(self.bs, self.goal_pseq, self.init_rot, self.goal_rotseq)
             # err, _ = bu.avg_polylines_dist_err(np.asarray(res_pseq), np.asarray(goal_pseq), toggledebug=False)
-            err, _ = bu.mindist_err(np.asarray(res_pseq), np.asarray(goal_pseq), toggledebug=True)
+            # err, _ = bu.mindist_err(self.bs.pseq[1:], goal_pseq, toggledebug=True)
+            if goal_rotseq is None:
+                err, _ = bu.mindist_err(self.bs.pseq[1:], goal_pseq, toggledebug=False)
+            else:
+                err, _ = bu.mindist_err(self.bs.pseq[1:], goal_pseq, self.bs.rotseq[1:], goal_rotseq, toggledebug=False)
         except:
-            err = 1
+            err = 100
         print('cost:', err)
-        return err/10
+        self.cost_list.append(err)
+
+        return err / 10
 
     def bend_x(self, x):
         x = np.asarray(x)
@@ -123,9 +138,13 @@ class BendOptimizer(object):
 
         return np.asarray(init)
 
-    def fit_init(self, goal_pseq, tor=.001):
-        fit_pseq,_ = bu.decimate_pseq(goal_pseq, tor=tor, toggledebug=False)
-        self.init_bendset = bu.pseq2bendset(fit_pseq, toggledebug=False)
+    def fit_init(self, goal_pseq, goal_rotseq, tor=.001):
+        if goal_rotseq is not None:
+            fit_pseq, fit_rotseq = bu.decimate_rotpseq(goal_pseq, goal_rotseq, tor=tor, toggledebug=False)
+            self.init_bendset = bu.rotpseq2bendset(fit_pseq, fit_rotseq, toggledebug=False)
+        else:
+            fit_pseq, fit_rotseq = bu.decimate_pseq(goal_pseq, tor=tor, toggledebug=False)
+            self.init_bendset = bu.pseq2bendset(fit_pseq, toggledebug=False)
         self.init_rot = bu.get_init_rot(fit_pseq)
         self.bend_times = len(self.init_bendset)
         return np.asarray(self.init_bendset).flatten()
@@ -148,24 +167,27 @@ class BendOptimizer(object):
         :param method: 'SLSQP' or 'COBYLA'
         :return:
         """
+
         time_start = time.time()
         # self.addconstraint(self.con_end, condition="ineq")
         # self.addconstraint(self.con_avgdist, condition="ineq")
         if init is None:
             # init = self.random_init()
             # init = self.equal_init()
-            init = self.fit_init(goal_pseq, tor=.001)
+            init = self.fit_init(self.goal_pseq, self.goal_rotseq, tor=.0001)
         self.update_bnds(init)
         for i in range(int(len(init) / 4) - 1):
             self.addconstraint_sort(i)
-        sol = minimize(self.objctive, init, method=method, bounds=self.bnds, constraints=self.cons)
 
+        # self._thread_plot.start()
+        sol = minimize(self.objctive, init, method=method, bounds=self.bnds, constraints=self.cons)
         print("time cost", time.time() - time_start, sol.success)
+        # self._thread_plot.join()
+        self._ploton = False
 
         if sol.success:
             self.bs.reset(self.init_pseq, self.init_rotseq, extend=False)
             print(sol.x)
-            # plt.figure(figsize=(16, 5))
             plt.grid()
             plt.subplot(131)
             plt.scatter([v for i, v in enumerate(sol.x) if i % 4 == 3],
@@ -201,6 +223,23 @@ class BendOptimizer(object):
         else:
             return None, None
 
+    def _plot(self):
+        print("plot start")
+        fig = plt.figure(1, figsize=(16, 9))
+        plt.ion()
+        plt.show()
+        plt.ylim((-10, 10))
+        plt.title("Error")
+        while self._ploton:
+            if 1:
+                plt.clf()
+                x = [i for i in range(len(self.cost_list))]
+                plt.plot(x, self.cost_list, label=["Err"])
+                # plt.pause(.5)
+            time.sleep(.5)
+        plt.savefig(f"{config.ROOT}/bendplanner/tst.png")
+        plt.close(fig)
+
 
 if __name__ == '__main__':
     import pickle
@@ -208,29 +247,39 @@ if __name__ == '__main__':
 
     base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
     gm.gen_frame(thickness=.0005, alpha=.1, length=.01).attach_to(base)
-    bs = b_sim.BendSim(show=False, granularity=np.pi / 30)
+    bs = b_sim.BendSim(show=True, granularity=np.pi / 30, cm_type='surface')
 
     # goal_pseq = bu.gen_polygen(5, .05)
-    goal_pseq = pickle.load(open('../data/bend/pseq/random_curve.pkl', 'rb'))
+    # goal_pseq = pickle.load(open('../data/bend/pseq/random_curve.pkl', 'rb'))
+    # goal_rotseq = None
+    goal_pseq, goal_rotseq = pickle.load(open('../data/bend/rotpseq/skull.pkl', 'rb'))
 
     init_pseq = [(0, 0, 0), (0, .05 + bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
 
-    opt = BendOptimizer(bs, init_pseq, init_rotseq, goal_pseq, bend_times=1)
+    opt = BendOptimizer(bs, init_pseq, init_rotseq, goal_pseq, goal_rotseq=goal_rotseq, bend_times=1)
     res_bendseq, cost = opt.solve()
 
     bs.gen_by_bendseq(res_bendseq, cc=False)
-    goal_pseq, res_pseq_opt = bu.align_with_init(bs, goal_pseq, opt.init_rot)
+    goal_pseq, goal_rotseq = bu.align_with_init(bs, goal_pseq, opt.init_rot, goal_rotseq)
+    bs.show(rgba=(1, 0, 0, 1))
+    goal_cm = bu.gen_surface(goal_pseq, goal_rotseq, bconfig.THICKNESS / 2, width=bconfig.WIDTH)
+    goal_cm.attach_to(base)
     # _, _, _ = o3dh.registration_ptpt(np.asarray(bu.linear_inp3d_by_step(res_pseq[:-1])), np.asarray(goal_pseq),
     #                                  toggledebug=True)
-    err, _ = bu.avg_polylines_dist_err(res_pseq_opt, goal_pseq, toggledebug=True)
+    res_pseq = bs.pseq[1:]
+    err, _ = bu.mindist_err(res_pseq, goal_pseq, toggledebug=True)
+    print(err)
 
     bs.reset(init_pseq, init_rotseq, extend=False)
     bs.gen_by_bendseq(opt.init_bendset, cc=False)
-    _, res_pseq = bu.align_with_init(bs, goal_pseq, opt.init_rot)
-    err, _ = bu.avg_polylines_dist_err(res_pseq_opt, goal_pseq, toggledebug=True)
+    _, _ = bu.align_with_init(bs, goal_pseq, opt.init_rot, goal_rotseq)
+    bs.show(rgba=(0, 1, 0, 1))
+    res_pseq_opt = bs.pseq[1:]
+    err, _ = bu.mindist_err(res_pseq_opt, goal_pseq, toggledebug=True)
+    print(err)
 
-    bu.show_pseq(bu.linear_inp3d_by_step(bs.pseq), rgba=(1, 0, 0, 1))
+    bu.show_pseq(bu.linear_inp3d_by_step(res_pseq), rgba=(1, 0, 0, 1))
     bu.show_pseq(bu.linear_inp3d_by_step(goal_pseq), rgba=(1, 1, 0, 1))
     bu.show_pseq(bu.linear_inp3d_by_step(res_pseq_opt), rgba=(0, 1, 0, 1))
     base.run()

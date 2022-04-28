@@ -25,6 +25,12 @@ def plot_frame(ax, pos, rot):
     ax.arrow3D(pos[0], pos[1], pos[2], z[0], z[1], z[2], mutation_scale=10, arrowstyle='->', color='b')
 
 
+def plot_frameseq(ax, pseq, rotseq, skip=5):
+    for i in range(len(pseq)):
+        if i % skip == 0:
+            plot_frame(ax, pseq[i], rotseq[i])
+
+
 def plot_pseq(ax3d, pseq, c=None):
     pseq = np.asarray(pseq)
     ax3d.plot3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], c=c)
@@ -247,22 +253,26 @@ def avg_polylines_dist_err(pts1, pts2, toggledebug=False):
 
 def mindist_err(res_pts, goal_pts, res_rs=None, goal_rs=None, toggledebug=False):
     from sklearn.neighbors import KDTree
+    res_pts, goal_pts = np.asarray(res_pts), np.asarray(goal_pts)
     nearest_pts = []
+    nearest_rs = []
     pos_err_list = []
     n_err_list = []
     if res_rs is None:
         res_pts = linear_inp3d_by_step(res_pts, step=.0001)
     else:
+        res_rs, goal_rs = np.asarray(res_rs), np.asarray(goal_rs)
         res_pts, res_rs = inp_rotp_by_step(res_pts, res_rs, step=.0001)
     kdt = KDTree(res_pts, leaf_size=100, metric='euclidean')
     for i in range(len(goal_pts)):
         distances, indices = kdt.query([goal_pts[i]], k=1, return_distance=True)
         pos_err_list.append(distances[0][0])
-        if goal_rs is not None:
+        nearest_pts.append(res_pts[indices[0][0]])
+        if res_rs is not None:
             n_err_list.append(rm.angle_between_vectors(goal_rs[i][:, 0], res_rs[indices[0][0]][:, 0]))
+            nearest_rs.append(res_rs[indices[0][0]])
         else:
             n_err_list.append(0)
-        nearest_pts.append(res_pts[indices[0][0]])
     if toggledebug:
         print('Sum. distance between polylines:', np.asarray(pos_err_list).sum())
         print('Avg. distance between polylines:', np.asarray(pos_err_list).mean())
@@ -279,8 +289,11 @@ def mindist_err(res_pts, goal_pts, res_rs=None, goal_rs=None, toggledebug=False)
         plot_pseq(ax, goal_pts, c='g')
         scatter_pseq(ax, goal_pts, c='g', s=10)
         scatter_pseq(ax, nearest_pts, c='black', s=10)
+        if res_rs is not None:
+            plot_frameseq(ax, nearest_pts, nearest_rs, skip=10)
+            plot_frameseq(ax, goal_pts, goal_rs, skip=10)
         plt.show()
-    err = np.asarray(pos_err_list).sum()
+    err = np.asarray(pos_err_list).sum() + sum(n_err_list) / 100
 
     return err, nearest_pts
 
@@ -506,42 +519,38 @@ def rotpseq2bendset(pseq, rotseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, 
     ax.set_box_aspect((1, 1, 1))
     tangent_pts = []
     bendseq = []
-    n_pre = None
-    x_pre = None
     rot_a = 0
-    lift_a = 0
     pos = 0
     l_pos = 0
-
+    n = rotseq[0][:, 2]
     for i in range(1, len(pseq) - 1):
         v1 = pseq[i - 1] - pseq[i]
         v2 = pseq[i] - pseq[i + 1]
         pos += np.linalg.norm(v1)
-        x = rotseq[i][:, 0]
-        n = rotseq[i][:, 2]
+        x1 = rotseq[i - 1][:, 0]
+        x2 = rotseq[i][:, 0]
+        n1 = rotseq[i - 1][:, 2]
+        n2 = rotseq[i][:, 2]
+        x1_xy = x1 - x1 * n
+        x2_xy = x2 - x2 * n
+        v1_xy = v1 - v1 * n
         v2_xy = v2 - v2 * n
+        v1_yz = v1 - v1 * x1
+        v2_yz = v2 - v2 * x1
 
-        bend_a = rm.angle_between_vectors(v1, v2_xy)
+        # bend_a = rm.angle_between_vectors(x1_xy, x2_xy)
+        bend_a = rm.angle_between_vectors(v1_xy, v2_xy)
         # bend_a = rm.angle_between_vectors(v1, v2)
         if round(bend_a, 8) == 0:
             continue
+        if np.cross(v1_xy, v2_xy)[2] < 0:
+            rot_a = np.pi
+        else:
+            rot_a = 0
 
-        if x_pre is not None:
-            # v2_yz = v2 - v2 * (np.cross(n_pre, rm.unit_vector(v1)))
-            # lift_a = np.pi / 2 - rm.angle_between_vectors(n_pre, v3_yz)
-            # tmp_a = rm.angle_between_vectors(np.cross(v1, n_pre), np.cross(v1, v3_yz))
-            # if tmp_a < np.pi / 2:
-            #     lift_a = -lift_a
-            a = rm.angle_between_vectors(x_pre, x)
-            # a = rm.angle_between_vectors(n_pre, n_xz)
-            tmp_a = rm.angle_between_vectors(v1, np.cross(n_pre, n))
-            if tmp_a is not None and tmp_a > np.pi / 2:
-                rot_a += a
-            else:
-                rot_a -= a
+        lift_a = rm.angle_between_vectors(v1_yz, v2_yz)
+        # lift_a = 0
 
-        n_pre = n
-        x_pre = x
         l = (bend_r * np.tan(abs(bend_a) / 2)) / np.cos(abs(lift_a))
         ratio_1 = l / np.linalg.norm(pseq[i] - pseq[i - 1])
         ratio_2 = l / np.linalg.norm(pseq[i] - pseq[i + 1])
@@ -566,12 +575,12 @@ def rotpseq2bendset(pseq, rotseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, 
         for i in range(len(pseq)):
             plot_frame(ax, pseq[i], rotseq[i])
         center = np.mean(pseq, axis=0)
-        ax.set_xlim([center[0] - 0.05, center[0] + 0.05])
-        ax.set_ylim([center[1] - 0.05, center[1] + 0.05])
-        ax.set_zlim([center[2] - 0.05, center[2] + 0.05])
+        ax.set_xlim([center[0] - 0.02, center[0] + 0.02])
+        ax.set_ylim([center[1] - 0.02, center[1] + 0.02])
+        ax.set_zlim([center[2] - 0.02, center[2] + 0.02])
         # goal_pseq = pickle.load(open('../run_plan/random_curve.pkl', 'rb'))
-        plot_pseq(ax, pseq)
         # plot_pseq(ax, goal_pseq)
+        plot_pseq(ax, pseq)
         scatter_pseq(ax, [pseq[0]], s=10, c='y')
         scatter_pseq(ax, pseq[1:], s=10, c='g')
         scatter_pseq(ax, tangent_pts, s=10, c='r')
