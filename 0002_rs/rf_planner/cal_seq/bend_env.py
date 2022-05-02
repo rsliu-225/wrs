@@ -24,7 +24,7 @@ class BendEnv(object):
         self._sim = bs.BendSim(self._pseq, self._rotseq, self._show, self._granularity, self._cm_type)
 
     def get_observation(self):
-        return self._sim.voxelize().flatten()
+        return bu.onehot_voxel(self._sim.voxelize()).flatten()
 
     def sample_action(self):
         return random.choice(self._res_action)
@@ -64,7 +64,7 @@ class BendEnv(object):
         else:
             done = False
 
-        return self._sim.voxelize().flatten(), reward, done, info
+        return bu.onehot_voxel(self._sim.voxelize()).flatten(), reward, done, info
 
     def render(self):
         self._sim.show(rgba=(.7, .7, .7, .7), show_frame=True, show_pseq=False)

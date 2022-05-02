@@ -6,6 +6,7 @@ import visualization.panda.world as wd
 import basis.robot_math as rm
 from scipy import interpolate
 from scipy.optimize import minimize
+import open3d as o3d
 import basis.o3dhelper as o3dh
 import time
 import random
@@ -398,6 +399,39 @@ def is_collinearity(p, seg):
     # if np.linalg.norm(p - seg[1]) + np.linalg.norm(seg[0] - seg[1]) == np.linalg.norm(p - seg[0]):
     #     return True
     return False
+
+
+def voxelize(pseq, rotseq, r=bconfig.THICKNESS / 2):
+    objcm = gen_stick(pseq, rotseq, r)
+    pcd_narry, _ = objcm.sample_surface(radius=.0005)
+    pcd = o3dh.nparray2o3dpcd(np.asarray(pcd_narry))
+    pcd.scale(1, center=(0, 0, 0))
+    voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(pcd, voxel_size=bconfig.THICKNESS)
+    return voxel_grid
+
+
+def onehot_voxel(voxel_grid, bnd=(200, 200, 200)):
+    onehot = np.zeros(bnd)
+    for v in voxel_grid.get_voxels():
+        onehot[v.grid_index[0]][v.grid_index[1]][v.grid_index[2]] = 1
+    return onehot
+
+
+def visualize_voxel(voxel_grids, colors=[]):
+    ax = plt.axes(projection='3d')
+    for i, voxel_grid in enumerate(voxel_grids):
+        pts = []
+        for v in voxel_grid.get_voxels():
+            pts.append(v.grid_index)
+        center = np.mean(pts, axis=0)
+        print(center)
+        # ax.set_xlim([center[0] - 5, center[0] + 5])
+        # ax.set_ylim([center[1] - 5, center[1] + 5])
+        # ax.set_zlim([center[2] - 5, center[2] + 5])
+
+        color = colors[i] if i < len(colors) else None
+        scatter_pseq(ax, pts, c=color)
+    plt.show()
 
 
 def gen_stick(pseq, rotseq, r, section=5, toggledebug=False):

@@ -215,9 +215,9 @@ class BendSim(object):
         tmp_rotseq = []
         n = np.asarray([0, 0, 1])
         if bend_angle > 0:
-            srange = np.linspace(0, bend_angle, round(bend_angle / self.granularity) + 1)
+            srange = np.linspace(0, bend_angle, int(bend_angle / self.granularity) + 1)
         else:
-            srange = np.linspace(bend_angle, 0, round(-bend_angle / self.granularity) + 1)[::-1]
+            srange = np.linspace(bend_angle, 0, int(-bend_angle / self.granularity) + 1)[::-1]
         pseq_org = self.pseq[start_inx:end_inx + 1]
         rotseq_org = self.rotseq[start_inx:end_inx + 1]
 
@@ -362,26 +362,12 @@ class BendSim(object):
         objcm.set_rgba(rgba)
         objcm.attach_to(base)
 
-    def voxelize(self, bnd=(200, 200, 200)):
-        onehot = np.zeros(bnd)
+    def voxelize(self):
         pcd_narry, _ = self.objcm.sample_surface(radius=.0005)
         pcd = o3dh.nparray2o3dpcd(np.asarray(pcd_narry))
-        pcd.scale(1, center=(0, 0, 0))
-        pts = []
+        pcd.scale(1.0, center=(0, 0, 0))
         voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(pcd, voxel_size=bconfig.THICKNESS)
-        # o3d.visualization.draw_geometries([voxel_grid])
-        for v in voxel_grid.get_voxels():
-            pts.append(v.grid_index)
-            onehot[v.grid_index[0]][v.grid_index[1]][v.grid_index[2]] = 1
-        import matplotlib.pyplot as plt
-        ax = plt.axes(projection='3d')
-        center = np.mean(pts, axis=0)
-        ax.set_xlim([center[0] - 5, center[0] + 5])
-        ax.set_ylim([center[1] - 5, center[1] + 5])
-        ax.set_zlim([center[2] - 5, center[2] + 5])
-        bu.scatter_pseq(ax, pts, c='r')
-        plt.show()
-        return onehot
+        return voxel_grid
 
     def unshow(self):
         self.objcm.detach()
@@ -792,7 +778,7 @@ if __name__ == '__main__':
         # [np.radians(90), np.radians(0), np.radians(180), .08],
         # [np.radians(90), np.radians(0), np.radians(0), .1],
         [np.radians(45), np.radians(30), np.radians(0), .04],
-        [np.radians(45), np.radians(10), np.radians(0), .04],
+        # [np.radians(45), np.radians(10), np.radians(0), .04],
         # [np.radians(45), np.radians(0), np.radians(0), .04],
         # [np.radians(90), np.radians(0), np.radians(0), .04],
         # [np.radians(180), np.radians(0), np.radians(0), .04],
@@ -807,7 +793,7 @@ if __name__ == '__main__':
     is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, toggledebug=False)
     # bs.show(rgba=(.7, .7, 0, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
     bs.show(rgba=(.7, .7, 0, .7), show_frame=False)
-    # bs.voxelize()
+    bu.visualize_voxel([bs.voxelize()], colors=['r'])
     bs.move_to_org(.04)
     bs.show(rgba=(.7, .7, .7, .7), show_frame=True, show_pseq=False)
 
