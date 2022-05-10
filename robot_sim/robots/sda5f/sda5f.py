@@ -23,14 +23,14 @@ class SDA5F(ri.RobotInterface):
         self.lft_body.jnts[2]['loc_rotmat'] = rm.rotmat_from_euler(-math.pi / 2.0, -math.pi / 2.0, 0)
         self.lft_body.lnks[0]['name'] = "sda5f_lft_body"
         self.lft_body.lnks[0]['loc_pos'] = np.array([0, 0, 0])
-        self.lft_body.lnks[0]['collisionmodel'] = cm.CollisionModel(
+        self.lft_body.lnks[0]['collision_model'] = cm.CollisionModel(
             os.path.join(this_dir, "meshes", "base_link.stl"),
             cdprimit_type="user_defined", expand_radius=.005,
             userdefined_cdprimitive_fn=self._base_combined_cdnp)
         self.lft_body.lnks[0]['rgba'] = [.7, .7, .7, 1.0]
         self.lft_body.lnks[1]['name'] = "sda5f_lft_torso"
         self.lft_body.lnks[1]['loc_pos'] = np.array([0, 0, 0])
-        self.lft_body.lnks[1]['collisionmodel'] = cm.CollisionModel(
+        self.lft_body.lnks[1]['collision_model'] = cm.CollisionModel(
             os.path.join(this_dir, "meshes", "torso_link.stl"),
             cdprimit_type="user_defined", expand_radius=.005,
             userdefined_cdprimitive_fn=self._torso_combined_cdnp)
@@ -59,10 +59,10 @@ class SDA5F(ri.RobotInterface):
         self.rgt_body.jnts[2]['loc_rotmat'] = rm.rotmat_from_euler(math.pi / 2.0, -math.pi / 2.0, 0)
         self.rgt_body.lnks[0]['name'] = "sda5f_rgt_body"
         self.rgt_body.lnks[0]['loc_pos'] = np.array([0, 0, 0])
-        self.rgt_body.lnks[0]['meshfile'] = None
+        self.rgt_body.lnks[0]['mesh_file'] = None
         self.rgt_body.lnks[1]['name'] = "sda5f_rgt_torso"
         self.rgt_body.lnks[1]['loc_pos'] = np.array([0, 0, 0])
-        self.rgt_body.lnks[1]['meshfile'] = None
+        self.rgt_body.lnks[1]['mesh_file'] = None
         self.rgt_body.reinitialize()
         rgt_arm_homeconf = np.zeros(7)
         # rgt_arm_homeconf[0] = -math.pi * 1.0 / 3.0
@@ -82,11 +82,11 @@ class SDA5F(ri.RobotInterface):
                                      enable_cc=False)
         # tool center point
         # lft
-        self.lft_arm.tcp_jntid = -1
+        self.lft_arm.tcp_jnt_id = -1
         self.lft_arm.tcp_loc_pos = np.array([0, 0, .145])
         self.lft_arm.tcp_loc_rotmat = np.eye(3)
         # rgt
-        self.rgt_arm.tcp_jntid = -1
+        self.rgt_arm.tcp_jnt_id = -1
         self.rgt_arm.tcp_loc_pos = np.array([0, 0, .145])
         self.rgt_arm.tcp_loc_rotmat = np.eye(3)
         # a list of detailed information about objects in hand, see CollisionChecker.add_objinhnd
@@ -159,23 +159,25 @@ class SDA5F(ri.RobotInterface):
                 obj_info['gl_rotmat'] = gl_rotmat
 
         def update_component(component_name, jnt_values):
-            self.manipulator_dict[component_name].fk(jnt_values=jnt_values)
+            status = self.manipulator_dict[component_name].fk(jnt_values=jnt_values)
             self.get_hnd_on_manipulator(component_name).fix_to(
                 pos=self.manipulator_dict[component_name].jnts[-1]['gl_posq'],
                 rotmat=self.manipulator_dict[component_name].jnts[-1]['gl_rotmatq'])
             update_oih(component_name=component_name)
+            return status
 
         super().fk(component_name, jnt_values)
         # examine length
         if component_name == 'lft_arm' or component_name == 'rgt_arm':
             if not isinstance(jnt_values, np.ndarray) or jnt_values.size != 6:
                 raise ValueError("An 1x6 npdarray must be specified to move a single arm!")
-            update_component(component_name, jnt_values)
+            return update_component(component_name, jnt_values)
         elif component_name == 'both_arm':
             if (jnt_values.size != 12):
                 raise ValueError("A 1x12 npdarrays must be specified to move both arm!")
-            update_component('lft_arm', jnt_values[0:6])
-            update_component('rgt_arm', jnt_values[6:12])
+            status_lft = update_component('lft_arm', jnt_values[0:6])
+            status_rgt = update_component('rgt_arm', jnt_values[6:12])
+            return "succ" if status_lft == "succ" and status_rgt == "succ" else "out_of_rng"
         elif component_name == 'all':
             raise NotImplementedError
         else:
@@ -197,7 +199,7 @@ class SDA5F(ri.RobotInterface):
             raise NotImplementedError
 
     def gen_stickmodel(self,
-                       tcp_jntid=None,
+                       tcp_jnt_id=None,
                        tcp_loc_pos=None,
                        tcp_loc_rotmat=None,
                        toggle_tcpcs=False,
@@ -209,7 +211,7 @@ class SDA5F(ri.RobotInterface):
                                      tcp_loc_rotmat=None,
                                      toggle_tcpcs=False,
                                      toggle_jntscs=toggle_jntscs).attach_to(stickmodel)
-        self.lft_arm.gen_stickmodel(tcp_jntid=tcp_jntid,
+        self.lft_arm.gen_stickmodel(tcp_jnt_id=tcp_jnt_id,
                                     tcp_loc_pos=tcp_loc_pos,
                                     tcp_loc_rotmat=tcp_loc_rotmat,
                                     toggle_tcpcs=toggle_tcpcs,
@@ -224,7 +226,7 @@ class SDA5F(ri.RobotInterface):
                                      tcp_loc_rotmat=None,
                                      toggle_tcpcs=False,
                                      toggle_jntscs=toggle_jntscs).attach_to(stickmodel)
-        self.rgt_arm.gen_stickmodel(tcp_jntid=tcp_jntid,
+        self.rgt_arm.gen_stickmodel(tcp_jnt_id=tcp_jnt_id,
                                     tcp_loc_pos=tcp_loc_pos,
                                     tcp_loc_rotmat=tcp_loc_rotmat,
                                     toggle_tcpcs=toggle_tcpcs,
@@ -238,7 +240,7 @@ class SDA5F(ri.RobotInterface):
         return stickmodel
 
     def gen_meshmodel(self,
-                      tcp_jntid=None,
+                      tcp_jnt_id=None,
                       tcp_loc_pos=None,
                       tcp_loc_rotmat=None,
                       toggle_tcpcs=False,
@@ -251,7 +253,7 @@ class SDA5F(ri.RobotInterface):
                                     toggle_tcpcs=False,
                                     toggle_jntscs=toggle_jntscs,
                                     rgba=rgba).attach_to(meshmodel)
-        self.lft_arm.gen_meshmodel(tcp_jntid=tcp_jntid,
+        self.lft_arm.gen_meshmodel(tcp_jnt_id=tcp_jnt_id,
                                    tcp_loc_pos=tcp_loc_pos,
                                    tcp_loc_rotmat=tcp_loc_rotmat,
                                    toggle_tcpcs=toggle_tcpcs,
@@ -260,7 +262,7 @@ class SDA5F(ri.RobotInterface):
         self.lft_hnd.gen_meshmodel(toggle_tcpcs=False,
                                    toggle_jntscs=toggle_jntscs,
                                    rgba=rgba).attach_to(meshmodel)
-        self.rgt_arm.gen_meshmodel(tcp_jntid=tcp_jntid,
+        self.rgt_arm.gen_meshmodel(tcp_jnt_id=tcp_jnt_id,
                                    tcp_loc_pos=tcp_loc_pos,
                                    tcp_loc_rotmat=tcp_loc_rotmat,
                                    toggle_tcpcs=toggle_tcpcs,
@@ -270,12 +272,12 @@ class SDA5F(ri.RobotInterface):
                                    toggle_jntscs=toggle_jntscs,
                                    rgba=rgba).attach_to(meshmodel)
         for obj_info in self.lft_oih_infos:
-            objcm = obj_info['collisionmodel']
+            objcm = obj_info['collision_model']
             objcm.set_pos(obj_info['gl_pos'])
             objcm.set_rotmat(obj_info['gl_rotmat'])
             objcm.copy().attach_to(meshmodel)
         for obj_info in self.rgt_oih_infos:
-            objcm = obj_info['collisionmodel']
+            objcm = obj_info['collision_model']
             objcm.set_pos(obj_info['gl_pos'])
             objcm.set_rotmat(obj_info['gl_rotmat'])
             objcm.copy().attach_to(meshmodel)

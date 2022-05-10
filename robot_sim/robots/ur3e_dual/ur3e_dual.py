@@ -23,11 +23,11 @@ class UR3EDual(ri.RobotInterface):
                                                                    math.pi / 2.0)  # left from robot_s view
         self.lft_body.lnks[0]['name'] = "ur3e_dual_base"
         self.lft_body.lnks[0]['loc_pos'] = np.array([0, 0, 0])
-        self.lft_body.lnks[0]['collisionmodel'] = cm.CollisionModel(
+        self.lft_body.lnks[0]['collision_model'] = cm.CollisionModel(
             os.path.join(this_dir, "meshes", "ur3e_dual_base.stl"),
             cdprimit_type="user_defined", expand_radius=.005,
             userdefined_cdprimitive_fn=self._base_combined_cdnp)
-        self.lft_body.lnks[0]['rgba'] = [.3, .3, .3, 1.0]
+        self.lft_body.lnks[0]['rgba'] = [.55, .55, .55, 1.0]
         self.lft_body.reinitialize()
         lft_arm_homeconf = np.zeros(6)
         lft_arm_homeconf[0] = -math.pi * 2.0 / 3.0
@@ -39,11 +39,9 @@ class UR3EDual(ri.RobotInterface):
                                rotmat=self.lft_body.jnts[-1]['gl_rotmatq'],
                                homeconf=lft_arm_homeconf,
                                enable_cc=False)
-        # lft hand offset (if needed)
-        self.lft_hnd_offset = np.zeros(3)
-        lft_hnd_pos, lft_hnd_rotmat = self.lft_arm.cvt_loc_tcp_to_gl(loc_pos=self.lft_hnd_offset)
-        self.lft_hnd = rtq.RobotiqHE(pos=lft_hnd_pos,
+        self.lft_hnd = rtq.RobotiqHE(pos=self.lft_arm.jnts[-1]['gl_posq'],
                                      rotmat=self.lft_arm.jnts[-1]['gl_rotmatq'],
+                                     coupling_offset_pos=np.array([0.0, 0.0, 0.0331]),
                                      enable_cc=False)
         # rigth side
         self.rgt_body = jl.JLChain(pos=pos, rotmat=rotmat, homeconf=np.zeros(0), name='rgt_body_jl')
@@ -52,7 +50,7 @@ class UR3EDual(ri.RobotInterface):
                                                                    math.pi / 2.0)  # left from robot_s view
         self.rgt_body.lnks[0]['name'] = "ur3e_dual_base"
         self.rgt_body.lnks[0]['loc_pos'] = np.array([0, 0, 0])
-        self.rgt_body.lnks[0]['meshfile'] = None
+        self.rgt_body.lnks[0]['mesh_file'] = None
         self.rgt_body.lnks[0]['rgba'] = [.3, .3, .3, 1.0]
         self.rgt_body.reinitialize()
         rgt_arm_homeconf = np.zeros(6)
@@ -64,20 +62,17 @@ class UR3EDual(ri.RobotInterface):
                                rotmat=self.rgt_body.jnts[-1]['gl_rotmatq'],
                                homeconf=rgt_arm_homeconf,
                                enable_cc=False)
-        # rgt hand offset (if needed)
-        self.rgt_hnd_offset = np.zeros(3)
-        rgt_hnd_pos, rgt_hnd_rotmat = self.rgt_arm.cvt_loc_tcp_to_gl(loc_pos=self.rgt_hnd_offset)
-        # TODO replace using copy
-        self.rgt_hnd = rtq.RobotiqHE(pos=rgt_hnd_pos,
+        self.rgt_hnd = rtq.RobotiqHE(pos=self.rgt_arm.jnts[-1]['gl_posq'],
                                      rotmat=self.rgt_arm.jnts[-1]['gl_rotmatq'],
+                                     coupling_offset_pos=np.array([0.0, 0.0, 0.0331]),
                                      enable_cc=False)
         # tool center point
         # lft
-        self.lft_arm.tcp_jntid = -1
+        self.lft_arm.tcp_jnt_id = -1
         self.lft_arm.tcp_loc_pos = self.lft_hnd.jaw_center_pos
         self.lft_arm.tcp_loc_rotmat = self.lft_hnd.jaw_center_rotmat
         # rgt
-        self.rgt_arm.tcp_jntid = -1
+        self.rgt_arm.tcp_jnt_id = -1
         self.rgt_arm.tcp_loc_pos = self.lft_hnd.jaw_center_pos
         self.rgt_arm.tcp_loc_rotmat = self.lft_hnd.jaw_center_rotmat
         # a list of detailed information about objects in hand, see CollisionChecker.add_objinhnd
@@ -248,23 +243,25 @@ class UR3EDual(ri.RobotInterface):
                 obj_info['gl_rotmat'] = gl_rotmat
 
         def update_component(component_name, jnt_values):
-            self.manipulator_dict[component_name].fk(jnt_values=jnt_values)
+            status = self.manipulator_dict[component_name].fk(jnt_values=jnt_values)
             self.get_hnd_on_manipulator(component_name).fix_to(
                 pos=self.manipulator_dict[component_name].jnts[-1]['gl_posq'],
                 rotmat=self.manipulator_dict[component_name].jnts[-1]['gl_rotmatq'])
             update_oih(component_name=component_name)
+            return status
 
         super().fk(component_name, jnt_values)
         # examine length
         if component_name == 'lft_arm' or component_name == 'rgt_arm':
             if not isinstance(jnt_values, np.ndarray) or jnt_values.size != 6:
                 raise ValueError("An 1x6 npdarray must be specified to move a single arm!")
-            update_component(component_name, jnt_values)
+            return update_component(component_name, jnt_values)
         elif component_name == 'both_arm':
             if (jnt_values.size != 12):
                 raise ValueError("A 1x12 npdarrays must be specified to move both arm!")
-            update_component('lft_arm', jnt_values[0:6])
-            update_component('rgt_arm', jnt_values[6:12])
+            status_lft = update_component('lft_arm', jnt_values[0:6])
+            status_rgt = update_component('rgt_arm', jnt_values[6:12])
+            return "succ" if status_lft == "succ" and status_rgt == "succ" else "out_of_rng"
         elif component_name == 'all':
             raise NotImplementedError
         else:
@@ -469,7 +466,7 @@ class UR3EDual(ri.RobotInterface):
         oih_infos.clear()
 
     def gen_stickmodel(self,
-                       tcp_jntid=None,
+                       tcp_jnt_id=None,
                        tcp_loc_pos=None,
                        tcp_loc_rotmat=None,
                        toggle_tcpcs=False,
@@ -481,7 +478,7 @@ class UR3EDual(ri.RobotInterface):
                                      tcp_loc_rotmat=None,
                                      toggle_tcpcs=False,
                                      toggle_jntscs=toggle_jntscs).attach_to(stickmodel)
-        self.lft_arm.gen_stickmodel(tcp_jntid=tcp_jntid,
+        self.lft_arm.gen_stickmodel(tcp_jnt_id=tcp_jnt_id,
                                     tcp_loc_pos=tcp_loc_pos,
                                     tcp_loc_rotmat=tcp_loc_rotmat,
                                     toggle_tcpcs=toggle_tcpcs,
@@ -494,7 +491,7 @@ class UR3EDual(ri.RobotInterface):
                                      tcp_loc_rotmat=None,
                                      toggle_tcpcs=False,
                                      toggle_jntscs=toggle_jntscs).attach_to(stickmodel)
-        self.rgt_arm.gen_stickmodel(tcp_jntid=tcp_jntid,
+        self.rgt_arm.gen_stickmodel(tcp_jnt_id=tcp_jnt_id,
                                     tcp_loc_pos=tcp_loc_pos,
                                     tcp_loc_rotmat=tcp_loc_rotmat,
                                     toggle_tcpcs=toggle_tcpcs,
@@ -506,7 +503,7 @@ class UR3EDual(ri.RobotInterface):
         return stickmodel
 
     def gen_meshmodel(self,
-                      tcp_jntid=None,
+                      tcp_jnt_id=None,
                       tcp_loc_pos=None,
                       tcp_loc_rotmat=None,
                       toggle_tcpcs=False,
@@ -519,7 +516,7 @@ class UR3EDual(ri.RobotInterface):
                                     toggle_tcpcs=False,
                                     toggle_jntscs=toggle_jntscs,
                                     rgba=rgba).attach_to(mm_collection)
-        self.lft_arm.gen_meshmodel(tcp_jntid=tcp_jntid,
+        self.lft_arm.gen_meshmodel(tcp_jnt_id=tcp_jnt_id,
                                    tcp_loc_pos=tcp_loc_pos,
                                    tcp_loc_rotmat=tcp_loc_rotmat,
                                    toggle_tcpcs=toggle_tcpcs,
@@ -528,7 +525,7 @@ class UR3EDual(ri.RobotInterface):
         self.lft_hnd.gen_meshmodel(toggle_tcpcs=False,
                                    toggle_jntscs=toggle_jntscs,
                                    rgba=rgba).attach_to(mm_collection)
-        self.rgt_arm.gen_meshmodel(tcp_jntid=tcp_jntid,
+        self.rgt_arm.gen_meshmodel(tcp_jnt_id=tcp_jnt_id,
                                    tcp_loc_pos=tcp_loc_pos,
                                    tcp_loc_rotmat=tcp_loc_rotmat,
                                    toggle_tcpcs=toggle_tcpcs,
@@ -538,12 +535,12 @@ class UR3EDual(ri.RobotInterface):
                                    toggle_jntscs=toggle_jntscs,
                                    rgba=rgba).attach_to(mm_collection)
         for obj_info in self.lft_oih_infos:
-            objcm = obj_info['collisionmodel']
+            objcm = obj_info['collision_model']
             objcm.set_pos(obj_info['gl_pos'])
             objcm.set_rotmat(obj_info['gl_rotmat'])
             objcm.copy().attach_to(mm_collection)
         for obj_info in self.rgt_oih_infos:
-            objcm = obj_info['collisionmodel']
+            objcm = obj_info['collision_model']
             objcm.set_pos(obj_info['gl_pos'])
             objcm.set_rotmat(obj_info['gl_rotmat'])
             objcm.copy().attach_to(mm_collection)

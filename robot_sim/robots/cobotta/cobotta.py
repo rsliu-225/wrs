@@ -20,7 +20,7 @@ class Cobotta(ri.RobotInterface):
                                      homeconf=np.zeros(0),
                                      name='base_plate')
         self.base_plate.jnts[1]['loc_pos'] = np.array([0, 0, 0.035])
-        self.base_plate.lnks[0]['meshfile'] = os.path.join(this_dir, "meshes", "base_plate.stl")
+        self.base_plate.lnks[0]['mesh_file'] = os.path.join(this_dir, "meshes", "base_plate.stl")
         self.base_plate.lnks[0]['rgba'] = [.35,.35,.35,1]
         self.base_plate.reinitialize()
         # arm
@@ -37,7 +37,7 @@ class Cobotta(ri.RobotInterface):
                                        rotmat=self.arm.jnts[-1]['gl_rotmatq'],
                                        name='hnd_s', enable_cc=False)
         # tool center point
-        self.arm.jlc.tcp_jntid = -1
+        self.arm.jlc.tcp_jnt_id = -1
         self.arm.jlc.tcp_loc_pos = self.hnd.jaw_center_pos
         self.arm.jlc.tcp_loc_rotmat = self.hnd.jaw_center_rotmat
         # a list of detailed information about objects in hand, see CollisionChecker.add_objinhnd
@@ -80,8 +80,9 @@ class Cobotta(ri.RobotInterface):
                     self.hnd.jlc.lnks[1],
                     self.hnd.jlc.lnks[2]]
         self.cc.set_cdpair(fromlist, intolist)
+        # TODO is the following update needed?
         for oih_info in self.oih_infos:
-            objcm = oih_info['collisionmodel']
+            objcm = oih_info['collision_model']
             self.hold(objcm)
 
     def fix_to(self, pos, rotmat):
@@ -112,16 +113,17 @@ class Cobotta(ri.RobotInterface):
                 obj_info['gl_rotmat'] = gl_rotmat
 
         def update_component(component_name, jnt_values):
-            self.manipulator_dict[component_name].fk(jnt_values=jnt_values)
+            status = self.manipulator_dict[component_name].fk(jnt_values=jnt_values)
             self.hnd_dict[component_name].fix_to(
                 pos=self.manipulator_dict[component_name].jnts[-1]['gl_posq'],
                 rotmat=self.manipulator_dict[component_name].jnts[-1]['gl_rotmatq'])
             update_oih(component_name=component_name)
+            return status
 
         if component_name in self.manipulator_dict:
             if not isinstance(jnt_values, np.ndarray) or jnt_values.size != 6:
                 raise ValueError("An 1x6 npdarray must be specified to move the arm!")
-            update_component(component_name, jnt_values)
+            return update_component(component_name, jnt_values)
         else:
             raise ValueError("The given component name is not supported!")
 
@@ -163,7 +165,7 @@ class Cobotta(ri.RobotInterface):
     def get_oih_list(self):
         return_list = []
         for obj_info in self.oih_infos:
-            objcm = obj_info['collisionmodel']
+            objcm = obj_info['collision_model']
             objcm.set_pos(obj_info['gl_pos'])
             objcm.set_rotmat(obj_info['gl_rotmat'])
             return_list.append(objcm)
@@ -181,27 +183,27 @@ class Cobotta(ri.RobotInterface):
         if jawwidth is not None:
             self.hnd_dict[hnd_name].jaw_to(jawwidth)
         for obj_info in self.oih_infos:
-            if obj_info['collisionmodel'] is objcm:
+            if obj_info['collision_model'] is objcm:
                 self.cc.delete_cdobj(obj_info)
                 self.oih_infos.remove(obj_info)
                 break
 
     def gen_stickmodel(self,
-                       tcp_jntid=None,
+                       tcp_jnt_id=None,
                        tcp_loc_pos=None,
                        tcp_loc_rotmat=None,
                        toggle_tcpcs=False,
                        toggle_jntscs=False,
                        toggle_connjnt=False,
-                       name='xarm7_shuidi_mobile_stickmodel'):
+                       name='cobotta_stickmodel'):
         stickmodel = mc.ModelCollection(name=name)
-        self.base_plate.gen_stickmodel(tcp_jntid=tcp_jntid,
+        self.base_plate.gen_stickmodel(tcp_jnt_id=tcp_jnt_id,
                                        tcp_loc_pos=tcp_loc_pos,
                                        tcp_loc_rotmat=tcp_loc_rotmat,
                                        toggle_tcpcs=False,
                                        toggle_jntscs=toggle_jntscs,
                                        toggle_connjnt=toggle_connjnt).attach_to(stickmodel)
-        self.arm.gen_stickmodel(tcp_jntid=tcp_jntid,
+        self.arm.gen_stickmodel(tcp_jnt_id=tcp_jnt_id,
                                 tcp_loc_pos=tcp_loc_pos,
                                 tcp_loc_rotmat=tcp_loc_rotmat,
                                 toggle_tcpcs=toggle_tcpcs,
@@ -212,7 +214,7 @@ class Cobotta(ri.RobotInterface):
         return stickmodel
 
     def gen_meshmodel(self,
-                      tcp_jntid=None,
+                      tcp_jnt_id=None,
                       tcp_loc_pos=None,
                       tcp_loc_rotmat=None,
                       toggle_tcpcs=False,
@@ -220,12 +222,12 @@ class Cobotta(ri.RobotInterface):
                       rgba=None,
                       name='xarm_shuidi_mobile_meshmodel'):
         meshmodel = mc.ModelCollection(name=name)
-        self.base_plate.gen_meshmodel(tcp_jntid=tcp_jntid,
+        self.base_plate.gen_meshmodel(tcp_jnt_id=tcp_jnt_id,
                                       tcp_loc_pos=tcp_loc_pos,
                                       tcp_loc_rotmat=tcp_loc_rotmat,
                                       toggle_tcpcs=False,
                                       toggle_jntscs=toggle_jntscs).attach_to(meshmodel)
-        self.arm.gen_meshmodel(tcp_jntid=tcp_jntid,
+        self.arm.gen_meshmodel(tcp_jnt_id=tcp_jnt_id,
                                tcp_loc_pos=tcp_loc_pos,
                                tcp_loc_rotmat=tcp_loc_rotmat,
                                toggle_tcpcs=toggle_tcpcs,
@@ -235,7 +237,7 @@ class Cobotta(ri.RobotInterface):
                                toggle_jntscs=toggle_jntscs,
                                rgba=rgba).attach_to(meshmodel)
         for obj_info in self.oih_infos:
-            objcm = obj_info['collisionmodel']
+            objcm = obj_info['collision_model']
             objcm.set_pos(obj_info['gl_pos'])
             objcm.set_rotmat(obj_info['gl_rotmat'])
             objcm.copy().attach_to(meshmodel)
@@ -248,12 +250,15 @@ if __name__ == '__main__':
     import visualization.panda.world as wd
     import modeling.geometric_model as gm
 
-    base = wd.World(cam_pos=[1.5, 0, 3], lookat_pos=[0, 0, .5])
+    base = wd.World(cam_pos=[1.7, 1.7, 1.7], lookat_pos=[0, 0, .3])
 
     gm.gen_frame().attach_to(base)
     robot_s = Cobotta(enable_cc=True)
     robot_s.jaw_to(.02)
-    robot_s.gen_meshmodel(toggle_tcpcs=True).attach_to(base)
+    # robot_s.gen_meshmodel(toggle_tcpcs=True, toggle_jntscs=True).attach_to(base)
+    # robot_s.gen_meshmodel(toggle_tcpcs=False, toggle_jntscs=False).attach_to(base)
+    robot_s.gen_stickmodel(toggle_tcpcs=True, toggle_jntscs=True).attach_to(base)
+    base.run()
     tgt_pos = np.array([.25, .2, .15])
     tgt_rotmat = rm.rotmat_from_axangle([0, 1, 0], math.pi * 2/ 3)
     gm.gen_frame(pos=tgt_pos, rotmat=tgt_rotmat).attach_to(base)

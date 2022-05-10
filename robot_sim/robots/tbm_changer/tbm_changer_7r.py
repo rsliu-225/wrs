@@ -21,7 +21,7 @@ class TBMChanger7R(ri.RobotInterface):
                                      homeconf=np.zeros(0),
                                      name='base_plate')
         # self.base_plate.jnts[1]['loc_pos'] = np.array([0, 0, 0.035])
-        # self.base_plate.lnks[0]['meshfile'] = os.path.join(this_dir, "meshes", "base_plate.stl")
+        # self.base_plate.lnks[0]['mesh_file'] = os.path.join(this_dir, "meshes", "base_plate.stl")
         # self.base_plate.lnks[0]['rgba'] = [.35,.35,.35,1]
         # self.base_plate.reinitialize()
         # arm
@@ -33,7 +33,7 @@ class TBMChanger7R(ri.RobotInterface):
                                     rotmat=self.arm.jnts[-1]['gl_rotmatq'],
                                     name='hnd', enable_cc=False)
         # tool center point
-        self.arm.jlc.tcp_jntid = -1
+        self.arm.jlc.tcp_jnt_id = -1
         self.arm.jlc.tcp_loc_pos = self.hnd.jaw_center_pos
         self.arm.jlc.tcp_loc_rotmat = self.hnd.jaw_center_rotmat
         # a list of detailed information about objects in hand, see CollisionChecker.add_objinhnd
@@ -64,7 +64,7 @@ class TBMChanger7R(ri.RobotInterface):
                       self.hnd.rgt_fgr.lnks[1]]
         self.cc.set_active_cdlnks(activelist)
         for oih_info in self.oih_infos:
-            objcm = oih_info['collisionmodel']
+            objcm = oih_info['collision_model']
             self.hold(objcm)
 
     def fix_to(self, pos, rotmat):
@@ -146,7 +146,7 @@ class TBMChanger7R(ri.RobotInterface):
     def get_oih_list(self):
         return_list = []
         for obj_info in self.oih_infos:
-            objcm = obj_info['collisionmodel']
+            objcm = obj_info['collision_model']
             objcm.set_pos(obj_info['gl_pos'])
             objcm.set_rotmat(obj_info['gl_rotmat'])
             return_list.append(objcm)
@@ -164,13 +164,13 @@ class TBMChanger7R(ri.RobotInterface):
         if jawwidth is not None:
             self.hnd_dict[hnd_name].jaw_to(jawwidth)
         for obj_info in self.oih_infos:
-            if obj_info['collisionmodel'] is objcm:
+            if obj_info['collision_model'] is objcm:
                 self.cc.delete_cdobj(obj_info)
                 self.oih_infos.remove(obj_info)
                 break
 
     def gen_stickmodel(self,
-                       tcp_jntid=None,
+                       tcp_jnt_id=None,
                        tcp_loc_pos=None,
                        tcp_loc_rotmat=None,
                        toggle_tcpcs=False,
@@ -178,13 +178,13 @@ class TBMChanger7R(ri.RobotInterface):
                        toggle_connjnt=False,
                        name='xarm7_shuidi_mobile_stickmodel'):
         stickmodel = mc.ModelCollection(name=name)
-        self.base_plate.gen_stickmodel(tcp_jntid=tcp_jntid,
+        self.base_plate.gen_stickmodel(tcp_jnt_id=tcp_jnt_id,
                                        tcp_loc_pos=tcp_loc_pos,
                                        tcp_loc_rotmat=tcp_loc_rotmat,
                                        toggle_tcpcs=False,
                                        toggle_jntscs=toggle_jntscs,
                                        toggle_connjnt=toggle_connjnt).attach_to(stickmodel)
-        self.arm.gen_stickmodel(tcp_jntid=tcp_jntid,
+        self.arm.gen_stickmodel(tcp_jnt_id=tcp_jnt_id,
                                 tcp_loc_pos=tcp_loc_pos,
                                 tcp_loc_rotmat=tcp_loc_rotmat,
                                 toggle_tcpcs=toggle_tcpcs,
@@ -195,7 +195,7 @@ class TBMChanger7R(ri.RobotInterface):
         return stickmodel
 
     def gen_meshmodel(self,
-                      tcp_jntid=None,
+                      tcp_jnt_id=None,
                       tcp_loc_pos=None,
                       tcp_loc_rotmat=None,
                       toggle_tcpcs=False,
@@ -203,12 +203,12 @@ class TBMChanger7R(ri.RobotInterface):
                       rgba=None,
                       name='xarm_shuidi_mobile_meshmodel'):
         meshmodel = mc.ModelCollection(name=name)
-        self.base_plate.gen_meshmodel(tcp_jntid=tcp_jntid,
+        self.base_plate.gen_meshmodel(tcp_jnt_id=tcp_jnt_id,
                                       tcp_loc_pos=tcp_loc_pos,
                                       tcp_loc_rotmat=tcp_loc_rotmat,
                                       toggle_tcpcs=False,
                                       toggle_jntscs=toggle_jntscs).attach_to(meshmodel)
-        self.arm.gen_meshmodel(tcp_jntid=tcp_jntid,
+        self.arm.gen_meshmodel(tcp_jnt_id=tcp_jnt_id,
                                tcp_loc_pos=tcp_loc_pos,
                                tcp_loc_rotmat=tcp_loc_rotmat,
                                toggle_tcpcs=toggle_tcpcs,
@@ -218,7 +218,7 @@ class TBMChanger7R(ri.RobotInterface):
                                toggle_jntscs=toggle_jntscs,
                                rgba=rgba).attach_to(meshmodel)
         for obj_info in self.oih_infos:
-            objcm = obj_info['collisionmodel']
+            objcm = obj_info['collision_model']
             objcm.set_pos(obj_info['gl_pos'])
             objcm.set_rotmat(obj_info['gl_rotmat'])
             objcm.copy().attach_to(meshmodel)

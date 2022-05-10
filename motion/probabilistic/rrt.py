@@ -10,8 +10,22 @@ from operator import itemgetter
 
 class RRT(object):
 
+    def _decorator_keep_jnt_values(foo):
+        """
+        decorator function for save and restore robot_s's jnt values
+        :return:
+        author: weiwei
+        date: 20220404
+        """
+        def wrapper(self, component_name, *args, **kwargs):
+            jnt_values_bk = self.robot_s.get_jnt_values(component_name)
+            result = foo(self, component_name, *args, **kwargs)
+            self.robot_s.fk(component_name=component_name, jnt_values=jnt_values_bk)
+            return result
+        return wrapper
+
     def __init__(self, robot_s):
-        self.robot_s = robot_s.copy()
+        self.robot_s = robot_s
         self.roadmap = nx.Graph()
         self.start_conf = None
         self.goal_conf = None
@@ -21,8 +35,26 @@ class RRT(object):
                      conf,
                      obstacle_list=[],
                      otherrobot_list=[]):
-        self.robot_s.fk(component_name=component_name, jnt_values=conf)
-        return self.robot_s.is_collided(obstacle_list=obstacle_list, otherrobot_list=otherrobot_list)
+        """
+        The function first examines if joint values of the given conf are in ranges.
+        It will promptly return False if any joint value is out of range.
+        Or else, it will compute fk and carry out collision checking.
+        :param component_name:
+        :param conf:
+        :param obstacle_list:
+        :param otherrobot_list:
+        :return:
+        author: weiwei
+        date: 20220326
+        """
+        # self.robot_s.fk(component_name=component_name, jnt_values=conf)
+        # return self.robot_s.is_collided(obstacle_list=obstacle_list, otherrobot_list=otherrobot_list)
+        if self.robot_s.is_jnt_values_in_ranges(component_name=component_name, jnt_values=conf):
+            self.robot_s.fk(component_name=component_name, jnt_values=conf)
+            return self.robot_s.is_collided(obstacle_list=obstacle_list, otherrobot_list=otherrobot_list)
+        else:
+            print("The given joint angles are out of joint limits.")
+            return True
 
     def _sample_conf(self, component_name, rand_rate, default_conf):
         if random.randint(0, 99) < rand_rate:
@@ -52,7 +84,7 @@ class RRT(object):
         min_dist_nid = np.argmin(diff_conf_array)
         return nodes_key_list[min_dist_nid]
 
-    def _extend_conf(self, conf1, conf2, ext_dist, exact_end=False):
+    def _extend_conf(self, conf1, conf2, ext_dist, exact_end=True):
         """
         :param conf1:
         :param conf2:
@@ -65,9 +97,11 @@ class RRT(object):
         # switch to the following code for ful extensions
         if not exact_end:
             nval = math.ceil(len / ext_dist)
+            nval = 1 if nval == 0  else nval # at least include itself
             conf_array = np.linspace(conf1, conf1 + nval * ext_dist * vec, nval)
         else:
             nval = math.floor(len / ext_dist)
+            nval = 1 if nval == 0  else nval # at least include itself
             conf_array = np.linspace(conf1, conf1 + nval * ext_dist * vec, nval)
             conf_array = np.vstack((conf_array, conf2))
         return list(conf_array)
@@ -158,6 +192,7 @@ class RRT(object):
                                  obstacle_list, shortcut=shortcut, smoothed_path=smoothed_path)
         return smoothed_path
 
+    @_decorator_keep_jnt_values
     def plan(self,
              component_name,
              start_conf,
@@ -280,7 +315,6 @@ if __name__ == '__main__':
     import robot_sim._kinematics.jlchain as jl
     import robot_sim.robots.robot_interface as ri
 
-
     class XYBot(ri.RobotInterface):
 
         def __init__(self, pos=np.zeros(3), rotmat=np.eye(3), name='XYBot'):
@@ -318,7 +352,7 @@ if __name__ == '__main__':
                     return True  # collision
             return False  # safe
 
-
+    import robot_sim.robots.xybot.xybot as xyb
     # ====Search Path with RRT====
     obstacle_list = [
         ((5, 5), 3),
@@ -330,7 +364,7 @@ if __name__ == '__main__':
         ((10, 5), 3)
     ]  # [x,y,size]
     # Set Initial parameters
-    robot = XYBot()
+    robot = xyb.XYBot()
     rrt = RRT(robot)
     path = rrt.plan(start_conf=np.array([0, 0]), goal_conf=np.array([6, 9]), obstacle_list=obstacle_list,
                     ext_dist=1, rand_rate=70, max_time=300, component_name='all', animation=True)

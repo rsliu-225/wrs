@@ -41,45 +41,45 @@ class XArmGripper(gi.GripperInterface):
         self.lft_outer.lnks[0]['loc_pos'] = np.zeros(3)
         self.lft_outer.lnks[0]['com'] = np.array([-0.00065489, -0.0018497, 0.048028])
         self.lft_outer.lnks[0]['mass'] = 0.5415
-        self.lft_outer.lnks[0]['meshfile'] = os.path.join(this_dir, "meshes", "base_link.stl")
+        self.lft_outer.lnks[0]['mesh_file'] = os.path.join(this_dir, "meshes", "base_link.stl")
         self.lft_outer.lnks[1]['name'] = 'lnk_left_outer_knuckle'
         self.lft_outer.lnks[1]['loc_pos'] = np.zeros(3)
         self.lft_outer.lnks[1]['com'] = np.array([2.9948e-14, 0.021559, 0.015181])
         self.lft_outer.lnks[1]['mass'] = 0.033618
-        self.lft_outer.lnks[1]['meshfile'] = os.path.join(this_dir, "meshes", "left_outer_knuckle.stl")
+        self.lft_outer.lnks[1]['mesh_file'] = os.path.join(this_dir, "meshes", "left_outer_knuckle.stl")
         self.lft_outer.lnks[1]['rgba'] = [.2, .2, .2, 1]
         self.lft_outer.lnks[2]['name'] = 'lnk_left_finger'
         self.lft_outer.lnks[2]['loc_pos'] = np.zeros(3)
         self.lft_outer.lnks[2]['com'] = np.array([-2.4536e-14, -0.016413, 0.029258])
         self.lft_outer.lnks[2]['mass'] = 0.048304
-        self.lft_outer.lnks[2]['meshfile'] = os.path.join(this_dir, "meshes", "left_finger.stl")
+        self.lft_outer.lnks[2]['mesh_file'] = os.path.join(this_dir, "meshes", "left_finger.stl")
         self.lft_outer.lnks[2]['rgba'] = [.2, .2, .2, 1]
         # - lft_inner
         self.lft_inner.lnks[1]['name'] = 'lnk_left_inner_knuckle'
         self.lft_inner.lnks[1]['loc_pos'] = np.zeros(3)
         self.lft_inner.lnks[1]['com'] = np.array([2.9948e-14, 0.021559, 0.015181])
         self.lft_inner.lnks[1]['mass'] = 0.033618
-        self.lft_inner.lnks[1]['meshfile'] = os.path.join(this_dir, "meshes", "left_inner_knuckle.stl")
+        self.lft_inner.lnks[1]['mesh_file'] = os.path.join(this_dir, "meshes", "left_inner_knuckle.stl")
         self.lft_inner.lnks[1]['rgba'] = [.2, .2, .2, 1]
         # - rgt_outer
         self.rgt_outer.lnks[1]['name'] = 'lnk_right_outer_knuckle'
         self.rgt_outer.lnks[1]['loc_pos'] = np.zeros(3)
         self.rgt_outer.lnks[1]['com'] = np.array([-3.1669e-14, -0.021559, 0.015181])
         self.rgt_outer.lnks[1]['mass'] = 0.033618
-        self.rgt_outer.lnks[1]['meshfile'] = os.path.join(this_dir, "meshes", "right_outer_knuckle.stl")
+        self.rgt_outer.lnks[1]['mesh_file'] = os.path.join(this_dir, "meshes", "right_outer_knuckle.stl")
         self.rgt_outer.lnks[1]['rgba'] = [.2, .2, .2, 1]
         self.rgt_outer.lnks[2]['name'] = 'lnk_right_finger'
         self.rgt_outer.lnks[2]['loc_pos'] = np.zeros(3)
         self.rgt_outer.lnks[2]['com'] = np.array([2.5618e-14, 0.016413, 0.029258])
         self.rgt_outer.lnks[2]['mass'] = 0.048304
-        self.rgt_outer.lnks[2]['meshfile'] = os.path.join(this_dir, "meshes", "right_finger.stl")
+        self.rgt_outer.lnks[2]['mesh_file'] = os.path.join(this_dir, "meshes", "right_finger.stl")
         self.rgt_outer.lnks[2]['rgba'] = [.2, .2, .2, 1]
         # - rgt_inner
         self.rgt_inner.lnks[1]['name'] = 'lnk_right_inner_knuckle'
         self.rgt_inner.lnks[1]['loc_pos'] = np.zeros(3)
         self.rgt_inner.lnks[1]['com'] = np.array([1.866e-06, -0.022047, 0.026133])
         self.rgt_inner.lnks[1]['mass'] = 0.023013
-        self.rgt_inner.lnks[1]['meshfile'] = os.path.join(this_dir, "meshes", "right_inner_knuckle.stl")
+        self.rgt_inner.lnks[1]['mesh_file'] = os.path.join(this_dir, "meshes", "right_inner_knuckle.stl")
         self.rgt_inner.lnks[1]['rgba'] = [.2, .2, .2, 1]
         # reinitialize
         self.lft_outer.reinitialize()
@@ -87,11 +87,11 @@ class XArmGripper(gi.GripperInterface):
         self.rgt_outer.reinitialize()
         self.rgt_inner.reinitialize()
         # jaw center
-        self.jaw_center_pos = np.array([0,0,.15])
+        self.jaw_center_pos = np.array([0, 0, .15])
         # jaw width
         self.jawwidth_rng = [0.0, .085]
         # collision detection
-        self.all_cdelements=[]
+        self.all_cdelements = []
         self.enable_cc(toggle_cdprimit=enable_cc)
 
     def enable_cc(self, toggle_cdprimit):
@@ -114,7 +114,7 @@ class XArmGripper(gi.GripperInterface):
                                    self.rgt_outer.lnks[2]]
         # cdmesh
         for cdelement in self.all_cdelements:
-            cdmesh = cdelement['collisionmodel'].copy()
+            cdmesh = cdelement['collision_model'].copy()
             self.cdmesh_collection.add_cm(cdmesh)
 
     def fix_to(self, pos, rotmat, motion_val=None):
@@ -156,15 +156,15 @@ class XArmGripper(gi.GripperInterface):
 
     def jaw_to(self, jaw_width):
         if jaw_width > 0.085:
-            raise ValueError("jawwidth must be 0mm~85mm!")
-        angle = .85 - math.asin(jaw_width/2.0/0.055)
+            raise ValueError("jaw_width must be 0mm~85mm!")
+        angle = .85 - math.asin(jaw_width / 2.0 / 0.055)
         if angle < 0:
             angle = 0
         self.fk(angle)
 
     def get_jawwidth(self):
         angle = self.lft_outer.jnts[1]['motion_val']
-        return math.sin(.85-angle)*0.055*2.0
+        return math.sin(.85 - angle) * 0.055 * 2.0
 
     def gen_stickmodel(self,
                        toggle_tcpcs=False,
@@ -210,7 +210,7 @@ class XArmGripper(gi.GripperInterface):
             gm.gen_dashstick(spos=self.pos,
                              epos=jaw_center_gl_pos,
                              thickness=.0062,
-                             rgba=[.5,0,1,1],
+                             rgba=[.5, 0, 1, 1],
                              type="round").attach_to(mm_collection)
             gm.gen_mycframe(pos=jaw_center_gl_pos, rotmat=jaw_center_gl_rotmat).attach_to(mm_collection)
         return mm_collection
@@ -229,10 +229,10 @@ if __name__ == '__main__':
     xag = XArmGripper(enable_cc=True)
     xag.jaw_to(0.05)
     print(xag.get_jawwidth())
-    model = xag.gen_meshmodel(rgba=[.5,0,0,.3])
+    model = xag.gen_meshmodel(rgba=[.5, 0, 0, .3])
     model.attach_to(base)
     xag.show_cdprimit()
-    xag.cdmesh_type='convexhull'
+    xag.cdmesh_type = 'convexhull'
     xag.show_cdmesh()
     xag.gen_stickmodel().attach_to(base)
     base.run()
