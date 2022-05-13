@@ -53,12 +53,12 @@ if __name__ == '__main__':
     #     b[3] = b[3]+.1
     # init_rot = brp.get_init_rot(fit_pseq)
     # pickle.dump(bendset, open('planres/penta_bendseq.pkl', 'wb'))
-    bendset = pickle.load(open('planres/penta_bendseq.pkl', 'rb'))
+    bendset = pickle.load(open('planres/stick/penta_bendseq.pkl', 'rb'))
 
     bs = b_sim.BendSim(show=True)
     mp = m_planner.MotionPlanner(env, rbt, armname="rgt_arm")
-    armjntsseq_list = pickle.load(open('planres/penta_armjntsseq.pkl', 'rb'))
-    is_success, bendresseq = pickle.load(open('planres/penta_bendresseq.pkl', 'rb'))
+    armjntsseq_list = pickle.load(open('planres/stick/penta_armjntsseq.pkl', 'rb'))
+    is_success, bendresseq = pickle.load(open('planres/stick/penta_bendresseq.pkl', 'rb'))
     brp.show_bendresseq_withrbt(bendresseq, transmat4, armjntsseq_list[0][1])
     brp.show_bendresseq(bendresseq, transmat4)
     # base.run()

@@ -76,11 +76,8 @@ class BendEnv(object):
             done = False
 
         # observation = bu.avg_polylines_dist_err(self._sim.pseq, self._goal_pseq)
-
         observation = self.get_observation()
-
         reward = self._get_reward_per_step(observation)
-
         info = {}
 
         return observation, reward, done, info

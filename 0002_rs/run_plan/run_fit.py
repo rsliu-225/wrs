@@ -54,9 +54,9 @@ if __name__ == '__main__':
     goal_cm = bu.gen_stick(fit_pseq, fit_rotseq, bconfig.THICKNESS / 2)
     goal_cm.attach_to(base)
     # err, _ = bu.avg_polylines_dist_err(res_pseq, goal_pseq, toggledebug=True)
-    kpts2 = bu.mindist_err(bs.pseq[1:], goal_pseq, toggledebug=True)
+    err, kpts2 = bu.mindist_err(bs.pseq[1:], goal_pseq, toggledebug=True)
 
-    # pickle.dump(res_pseq, open('res.pkl', 'wb'))
+    pickle.dump(bs.pseq[1:], open('res.pkl', 'wb'))
     # res_pseq_tmp = pickle.load(open('res.pkl', 'rb'))
     # ax = plt.axes(projection='3d')
     # ax.set_xlim([-0.05, 0.05])

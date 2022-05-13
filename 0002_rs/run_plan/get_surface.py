@@ -13,13 +13,15 @@ import robot_sim.robots.yumi.yumi as ym
 import modeling.geometric_model as gm
 
 
-def move_to_init(pseq, rotseq):
+def move_to_init(pseq, rotseq, pcd=None):
     init_homomat = rm.homomat_from_posrot([0, 0, 0], np.eye(3))
     goal_homomat = rm.homomat_from_posrot(pseq[0], rotseq[0])
     transmat4 = np.dot(init_homomat, np.linalg.inv(goal_homomat))
     pseq = rm.homomat_transform_points(transmat4, pseq).tolist()
     rotseq = np.asarray([transmat4[:3, :3].dot(r) for r in rotseq])
-    return pseq, rotseq
+    if pcd is not None:
+        pcd = rm.homomat_transform_points(transmat4, pcd).tolist()
+    return pseq, rotseq, pcd
 
 
 if __name__ == '__main__':
@@ -27,7 +29,7 @@ if __name__ == '__main__':
 
     base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
     f_name = 'skull2'
-    robot_s = ym.Yumi()  # simulation rbt_s
+    robot_s = ym.Yumi()
     robot_s.gen_meshmodel().attach_to(base)
 
     labelimg = cv2.imread(config.ROOT + f'\img\phoxi\labelimg\{f_name}.jpg')
@@ -39,7 +41,7 @@ if __name__ == '__main__':
     mask = vu.extract_label_rgb(labelimg, toggledebug=False)
     # mask = vu.extract_clr_gray(grayimg, clr=(10, 50), toggledebug=True)
     pcd_ext = vu.map_gray2pcd(grayimg * mask, pcd)
-    mask_sk = vu.mask2skmask(mask, inp=1, toggledebug=False)
+    mask_sk = vu.mask2skmask(mask, inp=1, toggledebug=True)
     pcd_sk = vu.map_gray2pcd(grayimg * mask_sk, pcd)
 
     x_range = (.2, .6)
@@ -69,12 +71,10 @@ if __name__ == '__main__':
     res_pseq, res_rotseq = pcdu.surface_interp(pcd_sk[0], pcd_sk[-1] - pcd_sk[0], kdt)
     for i in range(len(res_pseq)):
         gm.gen_frame(pos=res_pseq[i], rotmat=res_rotseq[i], thickness=.001, length=.01).attach_to(base)
-
-    res_pseq, res_rotseq = move_to_init(res_pseq, res_rotseq)
-    for i in range(len(res_pseq)):
-        gm.gen_frame(pos=res_pseq[i], rotmat=res_rotseq[i], thickness=.001, length=.01).attach_to(base)
-
-    pickle.dump([res_pseq, res_rotseq], open(config.ROOT + f'/data/bend/rotpseq/{f_name}.pkl', 'wb'))
+    # res_pseq, res_rotseq, pcd_ext = move_to_init(res_pseq, res_rotseq, pcd_ext)
+    # for i in range(len(res_pseq)):
+    #     gm.gen_frame(pos=res_pseq[i], rotmat=res_rotseq[i], thickness=.001, length=.01).attach_to(base)
+    pickle.dump([res_pseq, res_rotseq, pcd_ext], open(config.ROOT + f'/data/bend/rotpseq/{f_name}.pkl', 'wb'))
     pcdu.show_pcd(pcd, rgba=(1, 1, 1, .1))
     pcdu.show_pcd(pcd_ext, rgba=(1, 0, 0, 1))
     base.run()

@@ -10,7 +10,7 @@ class RobotHelper(object):
     def __init__(self, env, rbt, armname="lft_arm"):
         self.rbt = rbt
         self.env = env
-        self.obscmlist = env.getstationaryobslist() + env.getchangableobslist()
+        self.obscmlist = self.env.getstationaryobslist() + self.env.getchangableobslist()
         self.armname = armname
         self.initjnts = self.rbt.get_jnt_values(self.armname)
 
@@ -46,8 +46,8 @@ class RobotHelper(object):
             self.goto_armjnts(armjnts)
         return self.rbt.get_gl_tcp(manipulator_name=self.armname)
 
-    def draw_axis(self, pos, rot, rgba=None, length=50, thickness=5):
-        gm.gen_frame(pos=pos, rotmat=rot, length=length, thickness=thickness)
+    def draw_axis(self, pos, rot, rgbmatrix=None, length=50, thickness=5):
+        gm.gen_frame(pos=pos, rotmat=rot, length=length, thickness=thickness, rgbmatrix=rgbmatrix)
         gm.gen_sphere(pos, radius=10, rgba=(1, 1, 0, 1))
 
     def draw_axis_uneven(self, pos, rot, scale=1, thickness=.005):

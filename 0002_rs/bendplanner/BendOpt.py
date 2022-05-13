@@ -154,7 +154,7 @@ class BendOptimizer(object):
         self.bnds = []
         for b in bseq:
             self.bnds.append((b[0] - math.pi / 9, b[0] + math.pi / 9))
-            self.bnds.append((b[1] - math.pi / 9, b[1] + math.pi / 9))
+            self.bnds.append((b[1] - math.pi / 1e8, b[1] + math.pi / 1e8))
             self.bnds.append((b[2] - math.pi / 9, b[2] + math.pi / 9))
             self.bnds.append((b[3] - .02, b[3] + .02))
 
@@ -174,7 +174,7 @@ class BendOptimizer(object):
         if init is None:
             # init = self.random_init()
             # init = self.equal_init()
-            init = self.fit_init(self.goal_pseq, self.goal_rotseq, tor=.0001)
+            init = self.fit_init(self.goal_pseq, self.goal_rotseq, tor=.0002)
         self.update_bnds(init)
         for i in range(int(len(init) / 4) - 1):
             self.addconstraint_sort(i)
@@ -184,6 +184,12 @@ class BendOptimizer(object):
         print("time cost", time.time() - time_start, sol.success)
         # self._thread_plot.join()
         self._ploton = False
+
+        ax = plt.axes()
+        ax.set_title("Error")
+        ax.plot([i for i in range(len(self.cost_list))], self.cost_list, label=["Err"])
+        # ax.savefig(f"{config.ROOT}/bendplanner/tst.png")
+        plt.show()
 
         if sol.success:
             self.bs.reset(self.init_pseq, self.init_rotseq, extend=False)
@@ -228,7 +234,6 @@ class BendOptimizer(object):
         fig = plt.figure(1, figsize=(16, 9))
         plt.ion()
         plt.show()
-        plt.ylim((-10, 10))
         plt.title("Error")
         while self._ploton:
             if 1:
@@ -247,12 +252,12 @@ if __name__ == '__main__':
 
     base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
     gm.gen_frame(thickness=.0005, alpha=.1, length=.01).attach_to(base)
-    bs = b_sim.BendSim(show=True, granularity=np.pi / 30, cm_type='surface')
+    bs = b_sim.BendSim(show=True, granularity=np.pi / 90, cm_type='stick')
 
     # goal_pseq = bu.gen_polygen(5, .05)
-    # goal_pseq = pickle.load(open('../data/bend/pseq/random_curve.pkl', 'rb'))
-    # goal_rotseq = None
-    goal_pseq, goal_rotseq = pickle.load(open('../data/bend/rotpseq/skull.pkl', 'rb'))
+    goal_pseq = pickle.load(open('../data/bend/pseq/random_curve.pkl', 'rb'))
+    goal_rotseq = None
+    # goal_pseq, goal_rotseq = pickle.load(open('../data/bend/rotpseq/skull2.pkl', 'rb'))
 
     init_pseq = [(0, 0, 0), (0, .05 + bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
@@ -262,22 +267,32 @@ if __name__ == '__main__':
 
     bs.gen_by_bendseq(res_bendseq, cc=False)
     goal_pseq, goal_rotseq = bu.align_with_init(bs, goal_pseq, opt.init_rot, goal_rotseq)
-    bs.show(rgba=(1, 0, 0, 1))
-    goal_cm = bu.gen_surface(goal_pseq, goal_rotseq, bconfig.THICKNESS / 2, width=bconfig.WIDTH)
-    goal_cm.attach_to(base)
+    bs.show(rgba=(0, 1, 0, 1))
+    # goal_cm = bu.gen_surface(goal_pseq, goal_rotseq, bconfig.THICKNESS / 2, width=bconfig.WIDTH)
+    # goal_cm.attach_to(base)
     # _, _, _ = o3dh.registration_ptpt(np.asarray(bu.linear_inp3d_by_step(res_pseq[:-1])), np.asarray(goal_pseq),
     #                                  toggledebug=True)
-    res_pseq = bs.pseq[1:]
-    err, _ = bu.mindist_err(res_pseq, goal_pseq, toggledebug=True)
+    res_pseq_opt = bs.pseq[1:]
+    err, _ = bu.mindist_err(res_pseq_opt, goal_pseq, toggledebug=True)
     print(err)
 
     bs.reset(init_pseq, init_rotseq, extend=False)
     bs.gen_by_bendseq(opt.init_bendset, cc=False)
     _, _ = bu.align_with_init(bs, goal_pseq, opt.init_rot, goal_rotseq)
-    bs.show(rgba=(0, 1, 0, 1))
-    res_pseq_opt = bs.pseq[1:]
-    err, _ = bu.mindist_err(res_pseq_opt, goal_pseq, toggledebug=True)
+    bs.show(rgba=(1, 0, 0, 1))
+    res_pseq = bs.pseq[1:]
+    err, _ = bu.mindist_err(res_pseq, goal_pseq, toggledebug=True)
     print(err)
+
+    ax = plt.axes(projection='3d')
+    center = np.mean(res_pseq, axis=0)
+    ax.set_xlim([center[0] - 0.05, center[0] + 0.05])
+    ax.set_ylim([center[1] - 0.05, center[1] + 0.05])
+    ax.set_zlim([center[2] - 0.05, center[2] + 0.05])
+    bu.plot_pseq(ax, res_pseq, c='r')
+    bu.plot_pseq(ax, res_pseq_opt, c='g')
+    bu.plot_pseq(ax, goal_pseq, c='black')
+    plt.show()
 
     bu.show_pseq(bu.linear_inp3d_by_step(res_pseq), rgba=(1, 0, 0, 1))
     bu.show_pseq(bu.linear_inp3d_by_step(goal_pseq), rgba=(1, 1, 0, 1))

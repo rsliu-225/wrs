@@ -862,7 +862,7 @@ class IkSolver(object):
                 if show_armjnts:
                     mp_lft.rbth.show_armjnts(armjnts=armjnts, toggleendcoord=False, rgba=(1, 0, 0, .5))
                 eepos, eerot = self.rbth.get_ee(armjnts=armjnts, releemat4=releemat4)
-                self.rbth.draw_axis(eepos, eerot, rgba=(1, 1, 0, .2))
+                self.rbth.draw_axis(eepos, eerot, rgbmatrix=(1, 1, 0, .2))
                 diff_list.append(np.linalg.norm(armjnts - self.initjnts))
                 print("diff:", diff_list[-1])
             else:
@@ -903,11 +903,11 @@ if __name__ == '__main__':
     msc = iks_lft.solve_numik3(tgtpos, tgtrot, releemat4=releemat4)
     if msc is not None:
         eepos, eerot = rbth.get_ee(armjnts=msc, releemat4=releemat4)
-        rbth.draw_axis(eepos, eerot, rgba=(1, 1, 0, .5))
+        rbth.draw_axis(eepos, eerot, rgbmatrix=(1, 1, 0, .5))
         mp_lft.rbth.show_armjnts(armjnts=msc, toggleendcoord=False)
 
     tgtpos_2 = tgtpos + np.asarray((-100, 0, -50))
-    rbth.draw_axis(tgtpos_2, tgtrot, rgba=(0, 1, 0, .5))
+    rbth.draw_axis(tgtpos_2, tgtrot, rgbmatrix=(0, 1, 0, .5))
     # q_bs = iks_lft.solve_numik(tgtpos_2, tgtrot, seedjntagls=msc, releemat4=releemat4)
     # mp_lft.show_armjnts(armjnts=q_bs, rgba=(0, 1, 0, .5), toggleendcoord=True)
     # print(np.linalg.norm(q_bs - msc))
@@ -918,7 +918,7 @@ if __name__ == '__main__':
                                   col_ps=objitem.pcd, movedir=movedir)
     if q is not None:
         eepos, eerot = rbth.get_ee(armjnts=q, releemat4=releemat4)
-        rbth.draw_axis(eepos, eerot, rgba=(1, 0, 0, .5))
+        rbth.draw_axis(eepos, eerot, rgbmatrix=(1, 0, 0, .5))
         mp_lft.rbth.show_armjnts(armjnts=q, rgba=(0, 1, 0, .5), toggleendcoord=False)
         print(np.linalg.norm(q - msc))
 

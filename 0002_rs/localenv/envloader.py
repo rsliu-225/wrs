@@ -4,17 +4,17 @@ import os
 import numpy as np
 import open3d as o3d
 
+import basis.o3dhelper as o3d_helper
+import basis.robot_math as rm
+import basis.trimesh.sample as ts
 import config
+import localenv.item as item
 import modeling.collision_model as cm
 import modeling.geometric_model as gm
-import localenv.item as item
-import robot_sim.end_effectors.gripper.robotiqhe.robotiqhe as rtqhe
-import visualization.panda.world as wd
 import robot_con.ur.ur3e_dual_x as ur3ex
 import robot_sim.robots.ur3e_dual.ur3e_dual as ur3edual
-import basis.trimesh.sample as ts
-import basis.robot_math as rm
-import basis.o3dhelper as o3d_helper
+import robot_sim.robots.yumi.yumi as ym
+import visualization.panda.world as wd
 from basis.trimesh.primitives import Box
 
 
@@ -104,6 +104,41 @@ class Env_wrs(object):
             objcm.remove()
 
 
+class Env_yumi(object):
+    def __init__(self, boundingradius=.01, betransparent=False):
+        self.__this_dir, _ = os.path.split(__file__)
+        self.__battached = False
+        self.__changableobslist = []
+
+    def reparentTo(self, nodepath):
+        if not self.__battached:
+            self.__battached = True
+
+    def loadobj(self, name):
+        self.__objpath = os.path.join(self.__this_dir, "../../0000_srl/objects", name)
+        self.__objcm = cm.CollisionModel(self.__objpath, cdprimit_type="ball")
+        return self.__objcm
+
+    def getstationaryobslist(self):
+        stationaryobslist = []
+        return stationaryobslist
+
+    def getchangableobslist(self):
+        return self.__changableobslist
+
+    def addchangableobs(self, base, objcm, pos, rot):
+        self.__changableobslist.append(objcm)
+        objcm.attach_to(base)
+        objcm.set_homomat(rm.homomat_from_posrot(pos, rot))
+
+    def addchangableobscm(self, objcm):
+        self.__changableobslist.append(objcm)
+
+    def removechangableobs(self, objcm):
+        if objcm in self.__changableobslist:
+            objcm.remove()
+
+
 def loadEnv_wrs(camp=[4, 0, 1.7], lookatpos=[0, 0, 1]):
     # Table width: 120
     # Table long: 1080
@@ -130,6 +165,21 @@ def loadEnv_wrs(camp=[4, 0, 1.7], lookatpos=[0, 0, 1]):
     return base, env
 
 
+def loadEnv_yumi(camp=[4, 0, 1.7], lookatpos=[0, 0, 1]):
+    # Table width:
+    # Table long:
+    base = wd.World(cam_pos=camp, lookat_pos=lookatpos)
+    env = Env_yumi(boundingradius=.007)
+    env.reparentTo(base)
+
+    # phoxi
+    # phoxicam = cm.CollisionModel(initor=Box(box_extents=[.55, .2, .1]))
+    # phoxicam.set_rgba((.32, .32, .3, 1))
+    # env.addchangableobs(base, phoxicam, [.65, 0, 1.76], np.eye(3))
+
+    return base, env
+
+
 def __pcd_trans(pcd, amat):
     homopcd = np.ones((4, len(pcd)))
     homopcd[:3, :] = pcd.T
@@ -145,8 +195,15 @@ def loadUr3e(showrbt=False):
     return rbt
 
 
+def loadYumi(showrbt=False):
+    rbt = ym.Yumi()
+    if showrbt:
+        rbt.gen_meshmodel().attach_to(base)
+    return rbt
+
+
 def loadUr3ex(pc_ip='10.0.2.11'):
-    rbtx = ur3ex.Ur3EDualUrx(lft_robot_ip='10.0.2.2',rgt_robot_ip='10.0.2.3', pc_ip=pc_ip)
+    rbtx = ur3ex.Ur3EDualUrx(lft_robot_ip='10.0.2.2', rgt_robot_ip='10.0.2.3', pc_ip=pc_ip)
 
     return rbtx
 

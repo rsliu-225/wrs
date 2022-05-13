@@ -1,19 +1,18 @@
 import math
-import pickle
-import numpy as np
-import modeling.geometric_model as gm
-import visualization.panda.world as wd
-import basis.robot_math as rm
-from scipy import interpolate
-from scipy.optimize import minimize
-import open3d as o3d
-import basis.o3dhelper as o3dh
-import time
 import random
+
 import matplotlib.pyplot as plt
-import bendplanner.bender_config as bconfig
+import numpy as np
+import open3d as o3d
+from scipy import interpolate
+from sklearn.neighbors import KDTree
+
+import basis.o3dhelper as o3dh
+import basis.robot_math as rm
 import basis.trimesh as trm
+import bendplanner.bender_config as bconfig
 import modeling.collision_model as cm
+import modeling.geometric_model as gm
 
 
 def plot_frame(ax, pos, rot):
@@ -253,7 +252,6 @@ def avg_polylines_dist_err(pts1, pts2, toggledebug=False):
 
 
 def mindist_err(res_pts, goal_pts, res_rs=None, goal_rs=None, toggledebug=False):
-    from sklearn.neighbors import KDTree
     res_pts, goal_pts = np.asarray(res_pts), np.asarray(goal_pts)
     nearest_pts = []
     nearest_rs = []
@@ -270,15 +268,54 @@ def mindist_err(res_pts, goal_pts, res_rs=None, goal_rs=None, toggledebug=False)
         pos_err_list.append(distances[0][0])
         nearest_pts.append(res_pts[indices[0][0]])
         if res_rs is not None:
-            n_err_list.append(rm.angle_between_vectors(goal_rs[i][:, 0], res_rs[indices[0][0]][:, 0]))
+            n_err_list.append(np.degrees(rm.angle_between_vectors(goal_rs[i][:, 0], res_rs[indices[0][0]][:, 0])))
             nearest_rs.append(res_rs[indices[0][0]])
         else:
             n_err_list.append(0)
     if toggledebug:
         print('Sum. distance between polylines:', np.asarray(pos_err_list).sum())
         print('Avg. distance between polylines:', np.asarray(pos_err_list).mean())
+        print('Max. distance between polylines:', max(pos_err_list))
         print('Sum. angel err between polylines:', np.asarray(n_err_list).sum())
         print('Avg. angel err between polylines:', np.asarray(n_err_list).mean())
+        print('Max. angel err between polylines:', max(n_err_list))
+        ax = plt.axes(projection='3d')
+        center = np.mean(res_pts, axis=0)
+        ax.set_xlim([center[0] - 0.05, center[0] + 0.05])
+        ax.set_ylim([center[1] - 0.05, center[1] + 0.05])
+        ax.set_zlim([center[2] - 0.05, center[2] + 0.05])
+        # ax.scatter3D(x1, y1, z1, color='red')
+        plot_pseq(ax, res_pts, c='r')
+        scatter_pseq(ax, res_pts, c='r')
+        plot_pseq(ax, goal_pts, c='g')
+        # scatter_pseq(ax, goal_pts, c='g', s=10)
+        # scatter_pseq(ax, nearest_pts, c='black', s=10)
+        if res_rs is not None:
+            plot_frameseq(ax, nearest_pts, nearest_rs, skip=10)
+            plot_frameseq(ax, goal_pts, goal_rs, skip=10)
+        plt.show()
+    # err = np.asarray(pos_err_list).sum() * 10 + np.asarray(n_err_list).sum()/10
+    err = np.asarray(pos_err_list).sum() * 10
+
+    return err, nearest_pts
+
+
+def mindist_err_sfc(res_pts, goal_pts, toggledebug=False):
+    from sklearn.neighbors import KDTree
+    res_pts, goal_pts = np.asarray(res_pts), np.asarray(goal_pts)
+    nearest_pts = []
+    pos_err_list = []
+    res_pts = linear_inp3d_by_step(res_pts, step=.0001)
+
+    kdt = KDTree(res_pts, leaf_size=100, metric='euclidean')
+    for i in range(len(goal_pts)):
+        distances, indices = kdt.query([goal_pts[i]], k=1, return_distance=True)
+        pos_err_list.append(distances[0][0])
+        nearest_pts.append(res_pts[indices[0][0]])
+
+    if toggledebug:
+        print('Sum. distance between polylines:', np.asarray(pos_err_list).sum())
+        print('Avg. distance between polylines:', np.asarray(pos_err_list).mean())
         ax = plt.axes(projection='3d')
         center = np.mean(res_pts, axis=0)
         ax.set_xlim([center[0] - 0.05, center[0] + 0.05])
@@ -290,11 +327,8 @@ def mindist_err(res_pts, goal_pts, res_rs=None, goal_rs=None, toggledebug=False)
         plot_pseq(ax, goal_pts, c='g')
         scatter_pseq(ax, goal_pts, c='g', s=10)
         scatter_pseq(ax, nearest_pts, c='black', s=10)
-        if res_rs is not None:
-            plot_frameseq(ax, nearest_pts, nearest_rs, skip=10)
-            plot_frameseq(ax, goal_pts, goal_rs, skip=10)
         plt.show()
-    err = np.asarray(pos_err_list).sum() + sum(n_err_list) / 100
+    err = np.asarray(pos_err_list).sum() * 10
 
     return err, nearest_pts
 
@@ -424,10 +458,9 @@ def visualize_voxel(voxel_grids, colors=[]):
         for v in voxel_grid.get_voxels():
             pts.append(v.grid_index)
         center = np.mean(pts, axis=0)
-        print(center)
-        # ax.set_xlim([center[0] - 5, center[0] + 5])
-        # ax.set_ylim([center[1] - 5, center[1] + 5])
-        # ax.set_zlim([center[2] - 5, center[2] + 5])
+        ax.set_xlim([center[0] - 5, center[0] + 5])
+        ax.set_ylim([center[1] - 5, center[1] + 5])
+        ax.set_zlim([center[2] - 5, center[2] + 5])
 
         color = colors[i] if i < len(colors) else None
         scatter_pseq(ax, pts, c=color)
@@ -571,7 +604,7 @@ def rotpseq2bendset(pseq, rotseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, 
         v2_xy = v2 - v2 * n
         v1_yz = v1 - v1 * x1
         v2_yz = v2 - v2 * x1
-
+        x2_yz = x2 - x2 * x1
         # bend_a = rm.angle_between_vectors(x1_xy, x2_xy)
         bend_a = rm.angle_between_vectors(v1_xy, v2_xy)
         # bend_a = rm.angle_between_vectors(v1, v2)
@@ -601,7 +634,7 @@ def rotpseq2bendset(pseq, rotseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, 
             else:
                 l_pos += np.linalg.norm(p_tan1 - tangent_pts[-1])
                 l_pos += abs(bendseq[-1][0]) * bend_r / np.cos(abs(bendseq[-1][1]))
-            bendseq.append([bend_a, lift_a, rot_a, l_pos + init_l])
+            bendseq.append([bend_a, 4 * lift_a, rot_a, l_pos + init_l])
             print(bendseq[-1])
         tangent_pts.extend([p_tan1, p_tan2])
 

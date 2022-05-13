@@ -44,46 +44,45 @@ if __name__ == '__main__':
     '''
     plate
     '''
-    # obj = cm.gen_box(extent=np.asarray([.0015, .1, .01]))
-    # obj = cm.gen_stick(epos=np.asarray([0, .1, 0]), thickness=.0015, sections=180)
-    # obj.attach_to(base)
-    #
-    # pregrasp_list = grasp_planner.define_grasp_with_rotation(grasp_coordinate=(0, 0, 0), finger_normal=(0, 0, 1),
-    #                                                          hand_normal=(0, 1, 0), jawwidth=.02,
-    #                                                          obj=obj, rotation_ax=(1, 0, 0),
-    #                                                          rotation_range=(-75, 75), toggledebug=True)
-    #
-    # grasp_planner.write_pregrasps('plate', pregrasp_list)
-    # grasp_list = grasp_planner.load_pregrasp('plate')
-    # grasp_planner.show_grasp(grasp_list[:30], obj, rgba=None, toggle_tcpcs=False, toggle_jntscs=False)
-    #
-    # base.run()
+    obj = cm.gen_box(extent=np.asarray([.0015, .1, .01]), homomat=rm.homomat_from_posrot([0, .05, 0], np.eye(3)))
+    obj.attach_to(base)
+
+    pregrasp_list = grasp_planner.define_grasp_with_rotation(grasp_coordinate=(0, 0, 0), finger_normal=(0, 0, 1),
+                                                             hand_normal=(0, 1, 0), jawwidth=.005, rot_interval=10,
+                                                             obj=obj, rot_ax=(1, 0, 0),
+                                                             rot_range=(-180, 180), toggledebug=True)
+
+    grasp_planner.write_pregrasps('plate', pregrasp_list)
+    grasp_list = grasp_planner.load_pregrasp('plate')
+    grasp_planner.show_grasp(grasp_list, obj, rgba=None, toggle_tcpcs=False, toggle_jntscs=False)
+
+    base.run()
 
     '''
     stick
     '''
     # gm.gen_frame(length=.2).attach_to(base)
-    obj = cm.gen_stick(epos=np.asarray([0, .01, 0]), thickness=.0015, sections=180, rgba=(.7, .7, .7, .7))
-    obj.attach_to(base)
-    pregrasp_list = []
-    finger_normal = (0, 0, 1)
-    hand_normal = (0, 1, 0)
-
-    for i in np.linspace(0, 360, 24):
-        print(i)
-        tmp_rotmat = rm.rotmat_from_axangle((1, 0, 0), np.radians(360 / 24))
-        hand_normal = np.dot(tmp_rotmat, hand_normal)
-        finger_normal = np.dot(tmp_rotmat, finger_normal)
-        pregrasp_list.extend(grasp_planner.define_grasp_with_rotation(grasp_coordinate=(0, 0, 0),
-                                                                      finger_normal=finger_normal,
-                                                                      hand_normal=hand_normal, jawwidth=.01,
-                                                                      obj=obj, rot_ax=(0, 1, 0),
-                                                                      rot_range=(-180, 181),
-                                                                      rot_interval=15,
-                                                                      toggledebug=True))
-
-    grasp_planner.write_pregrasps('stick', pregrasp_list)
-    grasp_list = grasp_planner.load_pregrasp('stick')
-    grasp_planner.show_grasp(grasp_list, obj, rgba=None, toggle_tcpcs=False, toggle_jntscs=False)
-    print(len(grasp_list))
-    base.run()
+    # obj = cm.gen_stick(epos=np.asarray([0, .01, 0]), thickness=.0015, sections=180, rgba=(.7, .7, .7, .7))
+    # obj.attach_to(base)
+    # pregrasp_list = []
+    # finger_normal = (0, 0, 1)
+    # hand_normal = (0, 1, 0)
+    #
+    # for i in np.linspace(0, 360, 12):
+    #     print(i)
+    #     tmp_rotmat = rm.rotmat_from_axangle((1, 0, 0), np.radians(360 / 12))
+    #     hand_normal = np.dot(tmp_rotmat, hand_normal)
+    #     finger_normal = np.dot(tmp_rotmat, finger_normal)
+    #     pregrasp_list.extend(grasp_planner.define_grasp_with_rotation(grasp_coordinate=(0, 0, 0),
+    #                                                                   finger_normal=finger_normal,
+    #                                                                   hand_normal=hand_normal, jawwidth=.01,
+    #                                                                   obj=obj, rot_ax=(0, 1, 0),
+    #                                                                   rot_range=(-180, 181),
+    #                                                                   rot_interval=15,
+    #                                                                   toggledebug=True))
+    #
+    # grasp_planner.write_pregrasps('stick', pregrasp_list)
+    # grasp_list = grasp_planner.load_pregrasp('stick')
+    # grasp_planner.show_grasp(grasp_list, obj, rgba=None, toggle_tcpcs=False, toggle_jntscs=False)
+    # print(len(grasp_list))
+    # base.run()

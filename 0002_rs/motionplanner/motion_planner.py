@@ -961,8 +961,10 @@ if __name__ == '__main__':
     '''
     set up env and param
     '''
-    base, env = el.loadEnv_wrs()
-    rbt = el.loadUr3e()
+    # base, env = el.loadEnv_wrs()
+    # rbt = el.loadUr3e()
+    base, env = el.loadEnv_yumi()
+    rbt = el.loadYumi(showrbt=True)
     # rbtx = el.loadUr3ex(rbt)
     # rbtx.lft_arm_hnd.open_gripper()
     # rbtx.rgt_arm_hnd.open_gripper()
@@ -983,12 +985,13 @@ if __name__ == '__main__':
     import math
 
     glist = mp_lft.load_all_grasp(config.PEN_STL_F_NAME.split('.stl')[0])
-    objmat4_init = rm.homomat_from_posrot(np.asarray([.9, .4, .9]), rm.rotmat_from_axangle((0, 1, 0), -math.pi / 4))
-    objmat4_goal = rm.homomat_from_posrot(np.asarray([.9, .3, .9]), rm.rotmat_from_axangle((0, 1, 0), -math.pi / 4))
+    objmat4_init = rm.homomat_from_posrot(np.asarray([.4, .2, .2]), rm.rotmat_from_axangle((0, 1, 0), -math.pi / 4))
+    objmat4_goal = rm.homomat_from_posrot(np.asarray([.4, .1, .2]), rm.rotmat_from_axangle((0, 1, 0), -math.pi / 4))
     objmat4_obs = rm.homomat_from_posrot(np.asarray([.85, .35, 1]), rm.rotmat_from_axangle((0, 1, 0), -math.pi / 4))
 
     mp_lft.ah.show_objmat4(pen, objmat4_init, rgba=(1, 0, 1, .5), showlocalframe=True)
     mp_lft.ah.show_objmat4(pen, objmat4_goal, rgba=(0, 1, 1, .5), showlocalframe=True)
+    # base.run()
     # obs = pen.copy()
     # obs.set_homomat(objmat4_obs)
     # obs.attach_to(base)
@@ -1005,7 +1008,7 @@ if __name__ == '__main__':
                 i += 1
                 obj_hold = pen.copy()
                 obj_hold.set_homomat(objmat4_init)
-                _, _ = mp_lft.rbt.hold(obj_hold, hnd_name=mp_lft.hnd_name, jawwidth=.02)
+                objrelpos, objrelrot = mp_lft.rbt.hold(objcm=obj_hold, hnd_name=mp_lft.hnd_name, jaw_width=.02)
                 mp_lft.rbt.release(hnd_name=mp_lft.hnd_name, objcm=obj_hold)
             mp_lft.ah.show_ani(path)
             base.run()

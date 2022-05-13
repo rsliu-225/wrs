@@ -1,26 +1,14 @@
+import copy
+import pickle
 import time
 
 import numpy as np
-import visualization.panda.world as wd
 
-# import motionplanner.motion_planner as m_planner
-# import motionplanner.rbtx_motion_planner as m_plannerx
 import bendplanner.BendSim as b_sim
-import bendplanner.BendRbtPlanner as br_planner
-import bendplanner.PremutationTree as p_tree
 import bendplanner.InvalidPermutationTree as ip_tree
-import bendplanner.bend_utils as bu
-# import utils.phoxi as phoxi
-# import utils.phoxi_locator as pl
-import basis.robot_math as rm
-# from utils.run_script_utils import *
-import pickle
-import copy
-import localenv.envloader as el
-import motionplanner.motion_planner as m_planner
-import modeling.geometric_model as gm
-import matplotlib.pyplot as plt
+import bendplanner.PremutationTree as p_tree
 import config
+import visualization.panda.world as wd
 
 
 def plan_pt(bendset):
@@ -137,15 +125,6 @@ if __name__ == '__main__':
     base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
     bs = b_sim.BendSim(show=True)
 
-    # bendset = [
-    #     [np.radians(225), np.radians(0), np.radians(0), .04],
-    #     [np.radians(90), np.radians(0), np.radians(180), .08],
-    #     [np.radians(90), np.radians(0), np.radians(0), .1],
-    #     [np.radians(45), np.radians(0), np.radians(180), .12],
-    #     # [np.radians(40), np.radians(0), np.radians(0), .06],
-    #     # [np.radians(-15), np.radians(0), np.radians(0), .08],
-    #     # [np.radians(20), np.radians(0), np.radians(0), .1]
-    # ]
     # bendset = pickle.load(open('./penta_bendseq.pkl', 'rb'))
     random_cnt = 7
 

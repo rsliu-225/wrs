@@ -12,7 +12,7 @@ class AnimationHelper(object):
     def __init__(self, env, rbt, armname="lft_arm"):
         self.rbt = rbt
         self.env = env
-        self.obscmlist = env.getstationaryobslist() + env.getchangableobslist()
+        self.obscmlist = self.env.getstationaryobslist() + self.env.getchangableobslist()
         self.armname = armname
         if self.armname == 'lft_arm':
             self.hnd_name = 'lft_hnd'
@@ -178,7 +178,7 @@ class AnimationHelper(object):
     def show_ani(self, path):
         rbtmnp = [None, None]
         motioncounter = [0]
-        taskMgr.doMethodLater(0.5, self.__update, "update",
+        taskMgr.doMethodLater(0.05, self.__update, "update",
                               extraArgs=[rbtmnp, motioncounter, self.rbt, path, self.armname],
                               appendTask=True)
 
@@ -235,10 +235,10 @@ class AnimationHelper(object):
             rbtmnp[0].attach_to(base)
             objpos, objrot = self.arm.cvt_gl_to_loc_tcp(objrelpos, objrelrot)
             objmat4 = rm.homomat_from_posrot(objpos, objrot)
-            obj.set_rgba(1, 0, 0, 1)
-            obj.setMat(base.pg.np4ToMat4(objmat4))
+            obj.set_rgba((1, 0, 0, 1))
+            obj.set_homomat(objmat4)
             obj.attach_to(base)
-            obj.showlocalframe()
+            # obj.showlocalframe()
             motioncounter[0] += 1
         else:
             motioncounter[0] = 0

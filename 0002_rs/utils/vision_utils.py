@@ -10,7 +10,7 @@ import config
 from sklearn.cluster import DBSCAN
 from skimage.morphology import skeletonize
 import matplotlib.pyplot as plt
-import sknw
+# import sknw
 
 
 def load_kntcalibmat(amat_path=os.path.join(config.ROOT, "./camcalib/data/"), f_name="knt_calibmat.pkl"):
