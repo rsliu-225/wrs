@@ -230,7 +230,6 @@ class BendSim(object):
             init_a = np.pi + init_a
         elif bend_angle < 0 and init_a > 0:
             init_a = np.pi - init_a
-        print(init_a)
         for i, a in enumerate(srange):
             _, insert_inx, insert_pos, insert_rot = self.get_posrot_by_l(step_l * i, pseq_org, rotseq_org)
             p = np.asarray((self.bend_r * math.cos(init_a + a), self.bend_r * math.sin(init_a + a), insert_pos[2]))
@@ -243,7 +242,7 @@ class BendSim(object):
                 if np.cross(v_tmp - n * v_tmp, insert_rot[:, 1] - n * insert_rot[:, 1])[2] > 0:
                     a = -rm.angle_between_vectors(v_tmp - n * v_tmp, insert_rot[:, 1] - n * insert_rot[:, 1]) + init_a
             tmp_rotseq.append(rm.rotmat_from_axangle((0, 0, 1), a).dot(insert_rot))
-            if True:
+            if toggledebug:
                 gm.gen_sphere(np.asarray(tmp_pseq[-1]), rgba=[1, 0, 0, .5], radius=0.0002).attach_to(base)
                 gm.gen_frame(np.asarray(tmp_pseq[-1]), tmp_rotseq[-1], length=.005,
                              thickness=.0004, alpha=.5).attach_to(base)
@@ -780,6 +779,7 @@ class BendSim(object):
 
 if __name__ == '__main__':
     import visualization.panda.world as wd
+    import matplotlib.pyplot as plt
 
     base = wd.World(cam_pos=[.2, .2, 0], lookat_pos=[0, 0, 0])
     bs = BendSim(show=True, cm_type='stick', granularity=np.pi / 90)
@@ -788,9 +788,16 @@ if __name__ == '__main__':
         # [np.radians(225), np.radians(0), np.radians(0), .04],
         # [np.radians(90), np.radians(0), np.radians(180), .08],
         # [np.radians(90), np.radians(0), np.radians(0), .1],
-        [np.radians(-45), np.radians(0), np.radians(180), .12],
-        # [np.radians(-90), np.radians(0), np.radians(0), .06],
-        # [np.radians(45), np.radians(0), np.radians(0), .04],
+        # [np.radians(-45), np.radians(0), np.radians(180), .12],
+        [np.radians(10), np.radians(0), np.radians(0), .08],
+        [np.radians(10), np.radians(0), np.radians(0), .1],
+        [np.radians(15), np.radians(0), np.radians(0), .11],
+        [np.radians(35), np.radians(0), np.radians(0), .12],
+        [np.radians(20), np.radians(0), np.radians(0), .13],
+        [np.radians(15), np.radians(0), np.radians(0), .14],
+        [np.radians(15), np.radians(0), np.radians(0), .15],
+        [np.radians(-70), np.radians(0), np.radians(90), .2],
+        [np.radians(40), np.radians(0), np.radians(0), .2],
 
     ]
     # bendseq = pickle.load(open('./penta_bendseq.pkl', 'rb'))
@@ -801,14 +808,23 @@ if __name__ == '__main__':
     is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, toggledebug=False)
     # bs.show(rgba=(.7, .7, 0, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
     bs.show(rgba=(.7, .7, 0, .7), show_frame=False)
-    pickle.dump([bs.pseq, bs.rotseq], open('tmp.pkl', 'wb'))
     # bu.visualize_voxel([bs.voxelize()], colors=['r'])
-    # bs.move_to_org(.04)
+    bs.move_to_org(.04)
     # bs.show(rgba=(.7, .7, .7, .7), show_frame=True, show_pseq=False)
     # bu.show_pseq(bs.vertices()[2:-2])
     # key_pseq, key_rotseq = bs.get_pull_primitive(.12, .04, toggledebug=True)
     # resseq = bs.pull(key_pseq, key_rotseq, np.pi)
     # bs.move_to_org(.04)
     # bs.show(rgba=(.7, .7, .7, .7), show_frame=True)
+    pseq = bs.pseq
+    ax = plt.axes(projection='3d')
+    center = np.mean(pseq, axis=0)
+    ax.set_xlim([center[0] - 0.05, center[0] + 0.05])
+    ax.set_ylim([center[1] - 0.05, center[1] + 0.05])
+    ax.set_zlim([center[2] - 0.05, center[2] + 0.05])
+    bu.plot_pseq(ax, pseq, c='k')
+    bu.scatter_pseq(ax, pseq[1:-2], c='r')
+    # bu.scatter_pseq(ax, pseq[:1], c='r')
+    plt.show()
 
     base.run()

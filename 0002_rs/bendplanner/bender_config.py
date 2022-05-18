@@ -1,16 +1,15 @@
 import numpy as np
 
-# R_SIDE = .013 / 2
-# R_CENTER = .02 / 2
 R_SIDE = .015 / 2
-R_CENTER = .1 / 2
+R_CENTER = .03 / 2
 R_BASE = .015 / 2
 C2C_DIST = .0245
 PILLAR_H = .02
 BENDER_H = 0.12375
 
-THICKNESS = 0.0015
-WIDTH = .002
+# THICKNESS = 0.0015
+THICKNESS = 0
+WIDTH = .01
 
 R_BEND = R_CENTER + THICKNESS/2
 INIT_L = R_BEND * np.pi

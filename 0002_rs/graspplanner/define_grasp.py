@@ -44,19 +44,38 @@ if __name__ == '__main__':
     '''
     plate
     '''
-    obj = cm.gen_box(extent=np.asarray([.0015, .1, .01]), homomat=rm.homomat_from_posrot([0, .05, 0], np.eye(3)))
+    # obj = cm.gen_box(extent=np.asarray([.0015, .1, .01]), homomat=rm.homomat_from_posrot([0, .05, 0], np.eye(3)))
+    obj = cm.gen_box(extent=np.asarray([.0015, .01, .01]), homomat=rm.homomat_from_posrot([0, .01, 0], np.eye(3)))
     obj.attach_to(base)
 
     pregrasp_list = grasp_planner.define_grasp_with_rotation(grasp_coordinate=(0, 0, 0), finger_normal=(0, 0, 1),
-                                                             hand_normal=(0, 1, 0), jawwidth=.005, rot_interval=10,
+                                                             hand_normal=(0, -1, 0), jawwidth=.005, rot_interval=10,
                                                              obj=obj, rot_ax=(1, 0, 0),
-                                                             rot_range=(-180, 180), toggledebug=True)
+                                                             rot_range=(-75, 75), toggledebug=True)
 
     grasp_planner.write_pregrasps('plate', pregrasp_list)
     grasp_list = grasp_planner.load_pregrasp('plate')
     grasp_planner.show_grasp(grasp_list, obj, rgba=None, toggle_tcpcs=False, toggle_jntscs=False)
 
+    # base.run()
+
+    '''
+    plate
+    '''
+    obj = cm.gen_box(extent=np.asarray([.0015, .01, .01]), homomat=rm.homomat_from_posrot([0, .01, 0], np.eye(3)))
+    obj.attach_to(base)
+
+    pregrasp_list = grasp_planner.define_grasp_with_rotation(grasp_coordinate=(0, 0, 0), finger_normal=(0, 0, 1),
+                                                             hand_normal=(0, 1, 0), jawwidth=.005, rot_interval=10,
+                                                             obj=obj, rot_ax=(1, 0, 0),
+                                                             rot_range=(-75, 75), toggledebug=True)
+
+    grasp_planner.write_pregrasps('plate_rgt', pregrasp_list)
+    grasp_list = grasp_planner.load_pregrasp('plate_rgt')
+    grasp_planner.show_grasp(grasp_list, obj, rgba=None, toggle_tcpcs=False, toggle_jntscs=False)
+
     base.run()
+
 
     '''
     stick

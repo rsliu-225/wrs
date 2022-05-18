@@ -9,6 +9,7 @@ import modeling.collision_model as cm
 import bendplanner.bend_utils as bu
 import bendplanner.bender_config as bconfig
 import time
+import robot_sim.end_effectors.gripper.robotiqhe.robotiqhe as rtqhe
 import motionplanner.motion_planner as m_planner
 import bendplanner.BendSim as b_sim
 import bendplanner.BendRbtPlanner as br_planner

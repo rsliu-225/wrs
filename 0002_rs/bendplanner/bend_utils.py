@@ -89,6 +89,24 @@ def gen_ramdom_curve(kp_num=5, length=.5, step=.005, z_max=False, do_inp=True, t
     return pseq
 
 
+def gen_sgl_curve(pseq, step=.001, do_inp=True, toggledebug=False):
+    length = cal_length(pseq)
+    inp = interpolate.interp1d(pseq[:, 0], pseq[:, 1], kind='cubic')
+    inp_z = interpolate.interp1d(pseq[:, 0], pseq[:, 2], kind='cubic')
+    x = np.linspace(0, pseq[-1][0], int(length / step))
+    y = inp(x)
+    z = inp_z(x)
+    if toggledebug:
+        ax = plt.axes(projection='3d')
+        ax.plot3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], color='red')
+        ax.scatter3D(x, y, z, color='green')
+        plt.show()
+    if do_inp:
+        pseq = linear_inp3d_by_step(np.asarray(list(zip(x, y, z))))
+
+    return pseq
+
+
 def gen_screw_thread(r, lift_a, rot_num, step=math.pi / 90):
     pseq = []
     for a in np.arange(0, 2 * math.pi * rot_num, step):
