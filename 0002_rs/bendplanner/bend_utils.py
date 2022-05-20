@@ -495,7 +495,8 @@ def gen_stick(pseq, rotseq, r, section=5, toggledebug=False):
     for i in range((section + 1) * (len(pseq) - 1)):
         if i % (section + 1) == 0:
             for v in range(i, i + section):
-                faces.extend([[v, v + section + 1, v + section + 2], [v, v + section + 2, v + 1]])
+                faces.extend([[v, v + section + 1, v + section + 2],
+                              [v, v + section + 2, v + 1]])
     if toggledebug:
         show_pseq(pseq, rgba=[1, 0, 0, 1], radius=0.0002)
         show_pseq(vertices, rgba=[1, 1, 0, 1], radius=0.0002)
@@ -523,6 +524,34 @@ def gen_surface(pseq, rotseq, thickness, width, toggledebug=False):
     if toggledebug:
         for p in pseq:
             gm.gen_sphere(pos=np.asarray(p), rgba=[1, 0, 0, 1], radius=0.0002).attach_to(base)
+        tmp_trm = trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces))
+        tmp_cm = cm.CollisionModel(initor=tmp_trm, btwosided=True)
+        tmp_cm.set_rgba((.7, .7, 0, .7))
+        tmp_cm.attach_to(base)
+    objtrm = trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces))
+
+    return cm.CollisionModel(initor=objtrm, btwosided=True, name='obj', cdprimit_type='surface_balls')
+
+
+def gen_swap(pseq, rotseq, cross_sec, toggledebug=False):
+    vertices = []
+    faces = []
+    cross_sec.append(cross_sec[0])
+    for i, p in enumerate(pseq):
+        for n in cross_sec:
+            vertices.append(p + rotseq[i][:, 0] * n[0] + rotseq[i][:, 2] * n[1])
+    for i in range(len(cross_sec) - 3):
+        faces.append([0, i + 1, i + 2])
+    for i in range((len(cross_sec)) * (len(pseq) - 1)):
+        if i % (len(cross_sec)) == 0:
+            for v in range(i, i + len(cross_sec) - 1):
+                faces.extend([[v, v + len(cross_sec), v + len(cross_sec) + 1],
+                              [v, v + len(cross_sec) + 1, v + 1]])
+    for i in range(len(cross_sec) - 3):
+        faces.append([len(vertices) - 1, len(vertices) - 2 - i, len(vertices) - 3 - i])
+    if toggledebug:
+        show_pseq(pseq, rgba=[1, 0, 0, 1], radius=0.0002)
+        show_pseq(vertices, rgba=[1, 1, 0, 1], radius=0.0002)
         tmp_trm = trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces))
         tmp_cm = cm.CollisionModel(initor=tmp_trm, btwosided=True)
         tmp_cm.set_rgba((.7, .7, 0, .7))

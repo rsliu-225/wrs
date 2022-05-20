@@ -17,6 +17,7 @@ import robot_sim.end_effectors.gripper.robotiqhe.robotiqhe as rtqhe
 import utils.panda3d_utils as p3u
 import random
 import config
+import matplotlib.pyplot as plt
 
 
 def draw_plane(p, n):
@@ -340,8 +341,14 @@ class BendSim(object):
         # ts = time.time()
         if self.cm_type == 'stick':
             vertices, faces = self._gen_stick(self.pseq[::-1], self.rotseq[::-1], self.thickness / 2)
-        else:
+        elif self.cm_type == 'surface':
             vertices, faces = self._gen_surface(self.pseq[::-1], self.rotseq[::-1])
+        else:
+            cross_sec = [[0, self.width / 2], [0, -self.width / 2],
+                         [-self.thickness / 2, -self.width / 2],
+                         [-self.thickness / 2, self.width / 2]]
+            vertices, faces = self._gen_plate(self.pseq[::-1], self.rotseq[::-1], cross_sec)
+
         objtrm = trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces))
         self.objcm = cm.CollisionModel(initor=objtrm, btwosided=True, name='obj', cdprimit_type='surface_balls')
         # print('time cost(update cm):', time.time() - ts)
@@ -545,10 +552,7 @@ class BendSim(object):
 
         return np.asarray(vertices), np.asarray(faces)
 
-    def vertices(self):
-        return np.asarray(self.objcm.objtrm.vertices)
-
-    def _gen_stick(self, pseq, rotseq, r, section=5, toggledebug=False):
+    def _gen_stick(self, pseq, rotseq, r, section=4, toggledebug=False):
         vertices = []
         faces = []
         for i, p in enumerate(pseq):
@@ -558,7 +562,9 @@ class BendSim(object):
         for i in range((section + 1) * (len(pseq) - 1)):
             if i % (section + 1) == 0:
                 for v in range(i, i + section):
-                    faces.extend([[v, v + section + 1, v + section + 2], [v, v + section + 2, v + 1]])
+                    faces.extend([[v, v + section + 1, v + section + 2],
+                                  [v, v + section + 2, v + 1]])
+
         if toggledebug:
             bu.show_pseq(pseq, rgba=[1, 0, 0, 1], radius=0.0002)
             bu.show_pseq(vertices, rgba=[1, 1, 0, 1], radius=0.0002)
@@ -566,6 +572,33 @@ class BendSim(object):
             tmp_cm = cm.CollisionModel(initor=tmp_trm, btwosided=True)
             tmp_cm.set_rgba((.7, .7, 0, .7))
             tmp_cm.attach_to(base)
+
+        return np.asarray(vertices), np.asarray(faces)
+
+    def _gen_plate(self, pseq, rotseq, cross_sec, toggledebug=False):
+        vertices = []
+        faces = []
+        cross_sec.append(cross_sec[0])
+        for i, p in enumerate(pseq):
+            for n in cross_sec:
+                vertices.append(p + rotseq[i][:, 0] * n[0] + rotseq[i][:, 2] * n[1])
+        for i in range(len(cross_sec) - 3):
+            faces.append([0, i + 1, i + 2])
+        for i in range((len(cross_sec)) * (len(pseq) - 1)):
+            if i % (len(cross_sec)) == 0:
+                for v in range(i, i + len(cross_sec) - 1):
+                    faces.extend([[v, v + len(cross_sec), v + len(cross_sec) + 1],
+                                  [v, v + len(cross_sec) + 1, v + 1]])
+        for i in range(len(cross_sec) - 3):
+            faces.append([len(vertices) - 1, len(vertices) - 2 - i, len(vertices) - 3 - i])
+        if toggledebug:
+            bu.show_pseq(pseq, rgba=[1, 0, 0, 1], radius=0.0002)
+            bu.show_pseq(vertices, rgba=[1, 1, 0, 1], radius=0.0002)
+            tmp_trm = trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces))
+            tmp_cm = cm.CollisionModel(initor=tmp_trm, btwosided=True)
+            tmp_cm.set_rgba((.7, .7, 0, .7))
+            tmp_cm.attach_to(base)
+            base.run()
 
         return np.asarray(vertices), np.asarray(faces)
 
@@ -776,55 +809,52 @@ class BendSim(object):
                                 self.bend_r * np.pi + .1])
         return bendset
 
+    def plot(self):
+        pseq = copy.deepcopy(bs.pseq)
+        ax = plt.axes(projection='3d')
+        center = np.mean(pseq, axis=0)
+        ax.set_xlim([center[0] - 0.05, center[0] + 0.05])
+        ax.set_ylim([center[1] - 0.05, center[1] + 0.05])
+        ax.set_zlim([center[2] - 0.05, center[2] + 0.05])
+        bu.plot_pseq(ax, pseq, c='k')
+        bu.scatter_pseq(ax, pseq[1:-2], c='r')
+        # bu.scatter_pseq(ax, pseq[:1], c='r')
+        plt.show()
+
 
 if __name__ == '__main__':
     import visualization.panda.world as wd
-    import matplotlib.pyplot as plt
 
     base = wd.World(cam_pos=[.2, .2, 0], lookat_pos=[0, 0, 0])
-    bs = BendSim(show=True, cm_type='stick', granularity=np.pi / 90)
+    bs = BendSim(show=True, cm_type='plate', granularity=np.pi / 90)
 
     bendset = [
-        # [np.radians(225), np.radians(0), np.radians(0), .04],
-        # [np.radians(90), np.radians(0), np.radians(180), .08],
+        [np.radians(225), np.radians(0), np.radians(0), .04],
+        [np.radians(90), np.radians(0), np.radians(180), .08],
         # [np.radians(90), np.radians(0), np.radians(0), .1],
         # [np.radians(-45), np.radians(0), np.radians(180), .12],
-        [np.radians(10), np.radians(0), np.radians(0), .08],
-        [np.radians(10), np.radians(0), np.radians(0), .1],
-        [np.radians(15), np.radians(0), np.radians(0), .11],
-        [np.radians(35), np.radians(0), np.radians(0), .12],
-        [np.radians(20), np.radians(0), np.radians(0), .13],
-        [np.radians(15), np.radians(0), np.radians(0), .14],
-        [np.radians(15), np.radians(0), np.radians(0), .15],
-        [np.radians(-70), np.radians(0), np.radians(90), .2],
-        [np.radians(40), np.radians(0), np.radians(0), .2],
-
+        # [np.radians(10), np.radians(0), np.radians(0), .08],
+        # [np.radians(10), np.radians(0), np.radians(0), .1],
+        # [np.radians(15), np.radians(0), np.radians(0), .11],
+        # [np.radians(35), np.radians(0), np.radians(0), .12],
+        # [np.radians(20), np.radians(0), np.radians(0), .13],
     ]
     # bendseq = pickle.load(open('./penta_bendseq.pkl', 'rb'))
     # bendset = bs.gen_random_bendset(5)
     # print(bendset)
     bs.reset([(0, 0, 0), (0, max(np.asarray(bendset)[:, 3]) + .15, 0)], [np.eye(3), np.eye(3)], extend=False)
+    # bs.reset([(0, 0, 0), (0, .1, 0)], [np.eye(3), np.eye(3)], extend=False)
 
     is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, toggledebug=False)
     # bs.show(rgba=(.7, .7, 0, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
-    bs.show(rgba=(.7, .7, 0, .7), show_frame=False)
+    # bs.show(rgba=(.7, .7, 0, .7), show_frame=False)
     # bu.visualize_voxel([bs.voxelize()], colors=['r'])
     bs.move_to_org(.04)
-    # bs.show(rgba=(.7, .7, .7, .7), show_frame=True, show_pseq=False)
+    bs.show(rgba=(.7, .7, .7, 1), show_frame=True, show_pseq=False)
     # bu.show_pseq(bs.vertices()[2:-2])
     # key_pseq, key_rotseq = bs.get_pull_primitive(.12, .04, toggledebug=True)
     # resseq = bs.pull(key_pseq, key_rotseq, np.pi)
     # bs.move_to_org(.04)
     # bs.show(rgba=(.7, .7, .7, .7), show_frame=True)
-    pseq = bs.pseq
-    ax = plt.axes(projection='3d')
-    center = np.mean(pseq, axis=0)
-    ax.set_xlim([center[0] - 0.05, center[0] + 0.05])
-    ax.set_ylim([center[1] - 0.05, center[1] + 0.05])
-    ax.set_zlim([center[2] - 0.05, center[2] + 0.05])
-    bu.plot_pseq(ax, pseq, c='k')
-    bu.scatter_pseq(ax, pseq[1:-2], c='r')
-    # bu.scatter_pseq(ax, pseq[:1], c='r')
-    plt.show()
 
     base.run()

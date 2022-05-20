@@ -180,10 +180,10 @@ def show_pcd_withrbt(pcd, rgba=(1, 1, 1, 1), rbtx=None, toggleendcoord=False):
     env.reparentTo(base)
 
     if rbtx is not None:
-        for armname in ["lft", "rgt"]:
+        for armname in ["lft_arm", "rgt_arm"]:
             tmprealjnts = rbtx.getjnts(armname)
             print(armname, tmprealjnts)
-            rbt.movearmfk(tmprealjnts, armname)
+            rbt.fk(armname, tmprealjnts)
 
     rbt.gen_meshmodel(toggle_tcpcs=toggleendcoord).attach_to(base)
     gm.gen_pointcloud(pcd, rgbas=[rgba]).attach_to(base)
@@ -254,7 +254,7 @@ def get_std_convexhull(pcd, origin="center", color=(1, 1, 1), transparency=1, to
     origin_pos = np.array(center)
 
     pcd = pcd - np.array([center]).repeat(len(pcd), axis=0)
-    pcd = trans_pcd(pcd, rm.homomat_from_posrot((0, 0, 0), rm.rodrigues((0, 0, 1), -rot_angle)))
+    pcd = trans_pcd(pcd, rm.homomat_from_posrot((0, 0, 0), rm.rotmat_from_axangle((0, 0, 1), -rot_angle)))
 
     convexhull = trimesh.Trimesh(vertices=pcd)
     convexhull = convexhull.convex_hull
@@ -263,9 +263,9 @@ def get_std_convexhull(pcd, origin="center", color=(1, 1, 1), transparency=1, to
 
     if origin == "tip":
         tip = get_pcd_tip(pcd, axis=0)
-        origin_pos = center + \
-                     trans_pcd(np.array([tip]), rm.homomat_from_posrot((0, 0, 0), rm.rodrigues((0, 0, 1), rot_angle)))[
-                         0]
+        origin_pos = center + trans_pcd(np.array([tip]),
+                                        rm.homomat_from_posrot((0, 0, 0),
+                                                               rm.rotmat_from_axangle((0, 0, 1), rot_angle)))[0]
         pcd = pcd - np.array([tip]).repeat(len(pcd), axis=0)
 
         convexhull = trimesh.Trimesh(vertices=pcd)
@@ -429,15 +429,15 @@ def get_objpcd_withnrmls(objcm, objmat4=np.eye(4), sample_num=100000, toggledebu
             import random
             v = random.choice(range(0, 10000))
             if v == 1:
-                base.pggen.plotArrow(base.render, spos=objpcd[i], epos=objpcd[i] + 10 * n)
-                base.pggen.plotSphere(base.render, pos=objpcd[i], rgba=(1, 0, 0, 1))
+                gm.gen_arrow(spos=objpcd[i], epos=objpcd[i] + 10 * n).attach_to(base)
+                gm.gen_sphere(pos=objpcd[i], rgba=(1, 0, 0, 1)).attach_to(base)
         base.run()
 
     return objpcd, np.asarray(objpcd_nrmls)
 
 
 def get_objpcd_partial(objcm, objmat4=np.eye(4), sample_num=100000, toggledebug=False):
-    objpcd = np.asarray(ts.sample_surface(objcm.objtrm, count=sample_num))
+    objpcd = np.asarray(ts.sample_surface(objcm.objtrm, count=sample_num)[0])
     objpcd = trans_pcd(objpcd, objmat4)
 
     grid = {}
@@ -448,88 +448,76 @@ def get_objpcd_partial(objcm, objmat4=np.eye(4), sample_num=100000, toggledebug=
             grid[str((x, y))].append(p)
         else:
             grid[str((x, y))] = [p]
-    objpcd_new = []
+    objpcd_partial = []
     for k, v in grid.items():
         z_max = max(np.array(v)[:, 2])
         for p in v:
-            objpcd_new.append([p[0], p[1], z_max])
-    objpcd_new = np.array(objpcd_new)
+            objpcd_partial.append([p[0], p[1], z_max])
+    objpcd_partial = np.array(objpcd_partial)
 
     print("Length of org pcd", len(objpcd))
-    print("Length of partial pcd", len(objpcd_new))
+    print("Length of partial pcd", len(objpcd_partial))
 
     if toggledebug:
         objpcd = o3d_helper.nparray2o3dpcd(copy.deepcopy(objpcd))
         objpcd.paint_uniform_color([1, 0.706, 0])
         o3d.visualization.draw_geometries([objpcd])
 
-        objpcd_partial = o3d_helper.nparray2o3dpcd(copy.deepcopy(objpcd_new))
+        objpcd_partial = o3d_helper.nparray2o3dpcd(copy.deepcopy(objpcd_partial))
         objpcd_partial.paint_uniform_color([0, 0.706, 1])
         o3d.visualization.draw_geometries([objpcd_partial])
 
         # pcddnp = base.pg.genpointcloudnp(objpcd)
         # pcddnp.reparentTo(base.render)
 
-    return objpcd_new
+    return objpcd_partial
 
 
-def get_objpcd_partial_bycampos(objcm, objmat4=np.eye(4), sample_num=100000, cam_pos=np.array([860, 80, 1780]),
+def get_objpcd_partial_bycampos(objcm, objmat4=np.eye(4), smp_num=100000, cam_pos=np.array([.86, .08, 1.78]),
                                 toggledebug=False):
-    def __get_angle(x, y):
-        lx = np.sqrt(x.dot(x))
-        ly = np.sqrt(y.dot(y))
-        cos_angle = x.dot(y) / (lx * ly)
-        angle = np.arccos(cos_angle)
-        return angle * 360 / 2 / np.pi
-        # return cos_angle
-
-    def sigmoid(angle):
+    def __sigmoid(angle):
+        angle = np.degrees(angle)
         return 1 / (1 + np.exp((angle - 90) / 90)) - 0.5
 
-    objpcd = np.asarray(ts.sample_surface(objcm.objtrm, count=sample_num))
-    objpcd_center = get_pcd_center(objpcd)
-    face_num = len(objcm.objtrm.face_normals)
-
-    objpcd_new = []
+    objpcd, _ = objcm.sample_surface(radius=.0005, nsample=smp_num)
+    objpcd_partial = []
     area_list = objcm.objtrm.area_faces
     area_sum = sum(area_list)
 
     for i, n in enumerate(objcm.objtrm.face_normals):
         n = np.dot(n, objmat4[:3, :3])
-        angle = __get_angle(n, np.array(cam_pos - objpcd_center))
+        angle = rm.angle_between_vectors(n, np.array(cam_pos - np.mean(objpcd, axis=0)))
 
-        if angle > 90:
+        if angle > np.pi / 2:
             continue
         else:
-            objcm_temp = copy.deepcopy(objcm)
-            # print(i, angle, sigmoid(angle))
-            mask_temp = [False] * face_num
-            mask_temp[i] = True
-            objcm_temp.trimesh.update_faces(mask_temp)
-            objpcd_new.extend(np.asarray(ts.sample_surface(objcm_temp.trimesh,
-                                                           count=int(sample_num / area_sum * area_list[i] * sigmoid(
-                                                               angle) * 100))))
-    if len(objpcd_new) > sample_num:
-        objpcd_new = random.sample(objpcd_new, sample_num)
-    objpcd_new = np.array(objpcd_new)
-    objpcd_new = trans_pcd(objpcd_new, objmat4)
+            objcm_tmp = copy.deepcopy(objcm)
+            # print(i, angle, __sigmoid(angle))
+            mask_tmp = [False] * len(objcm.objtrm.face_normals)
+            mask_tmp[i] = True
+            objcm_tmp.objtrm.update_faces(mask_tmp)
+            pcd_tmp, _ = \
+                objcm_tmp.sample_surface(radius=.0005,
+                                         nsample=int(smp_num / area_sum * area_list[i] * __sigmoid(angle) * 100))
+            objpcd_partial.extend(np.asarray(pcd_tmp))
+    if len(objpcd_partial) > smp_num:
+        objpcd_partial = random.sample(objpcd_partial, smp_num)
+    objpcd_partial = np.array(objpcd_partial)
+    objpcd_partial = trans_pcd(objpcd_partial, objmat4)
 
-    # print("Length of org pcd", len(objpcd))
-    # print("Length of source pcd", len(objpcd_new))
+    print("Length of org pcd", len(objpcd))
+    print("Length of source pcd", len(objpcd_partial))
 
     if toggledebug:
         objpcd = o3d_helper.nparray2o3dpcd(copy.deepcopy(objpcd))
         objpcd.paint_uniform_color([1, 0.706, 0])
         o3d.visualization.draw_geometries([objpcd])
 
-        objpcd_partial = o3d_helper.nparray2o3dpcd(copy.deepcopy(objpcd_new))
+        objpcd_partial = o3d_helper.nparray2o3dpcd(copy.deepcopy(objpcd_partial))
         objpcd_partial.paint_uniform_color([0, 0.706, 1])
         o3d.visualization.draw_geometries([objpcd_partial])
 
-        # pcddnp = base.pg.genpointcloudnp(objpcd)
-        # pcddnp.reparentTo(base.render)
-
-    return objpcd_new
+    return objpcd_partial
 
 
 def get_nrmls(pcd, camera_location=(800, -200, 1800), toggledebug=False):
@@ -633,8 +621,8 @@ if __name__ == '__main__':
     base, env = el.loadEnv_wrs()
     objcm = el.loadObj("pentip.stl")
 
-    source_pcd = np.asarray(ts.sample_surface(objcm.objtrm, count=10000))
-    source = o3d_helper.nparray2o3dpcd(source_pcd[source_pcd[:, 2] > 5])
+    # source_pcd = np.asarray(ts.sample_surface(objcm.objtrm, count=10000))
+    # source = o3d_helper.nparray2o3dpcd(source_pcd[source_pcd[:, 2] > 5])
     # source.paint_uniform_color([0, 0.706, 1])
     # o3d.visualization.draw_geometries([source])
 
@@ -648,7 +636,8 @@ if __name__ == '__main__':
     # for i, p in enumerate(pcd):
     #     base.pggen.plotArrow(base.render, spos=p, epos=p + 10 * pcd_normals[i])
     # base.run()
-    get_objpcd_partial_bycampos(objcm, sample_num=10000, toggledebug=True)
+    get_objpcd_partial_bycampos(objcm, smp_num=10000, toggledebug=True)
+    # get_objpcd_partial(objcm, objmat4=np.eye(4), sample_num=10000, toggledebug=True)
 
     # pcd = pickle.load(open(el.root + "/dataset/pcd/a_lft_0.pkl", "rb"))
     # amat = pickle.load(open(el.root + "/camcalib/data/phoxi_calibmat_0117.pkl", "rb"))
