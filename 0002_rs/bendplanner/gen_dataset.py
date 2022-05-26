@@ -16,6 +16,8 @@ import modeling.collision_model as cm
 import modeling.geometric_model as gm
 import copy
 
+import trimesh
+
 
 def gen_sgl_curve(pseq, step=.001, toggledebug=False):
     length = np.sum(np.linalg.norm(np.diff(np.asarray(pseq), axis=0), axis=1))
@@ -104,6 +106,16 @@ def get_objpcd_partial_sample(objcm, objmat4=np.eye(4), smp_num=100000, cam_pos=
     return objpcd_partial
 
 
+def get_objpcd_full_sample(objcm, radius=.0005, smp_num=100000, toggledebug=False):
+    objpcd, _ = objcm.sample_surface(radius=radius, nsample=smp_num)
+    print("Length of org pcd", len(objpcd))
+
+    if toggledebug:
+        gm.gen_pointcloud(objpcd).attach_to(base)
+
+    return objpcd
+
+
 def gen_swap(pseq, rotseq, cross_sec, toggledebug=False):
     vertices = []
     faces = []
@@ -132,18 +144,28 @@ def gen_swap(pseq, rotseq, cross_sec, toggledebug=False):
     return cm.CollisionModel(initor=objtrm, btwosided=True, name='obj', cdprimit_type='surface_balls')
 
 
-def get_objpcd_partial_o3d(objcm):
+def get_objpcd_partial_o3d(objcm, ):
     vis = o3d.visualization.Visualizer()
-    objpcd = o3dh.nparray2o3dpcd(np.asarray(objcm.sample_surface(radius=.001)[0]))
-    o3d.geometry.TriangleMesh.
-    o3d.visualization.draw_geometries(
-        [objpcd], width=400, height=400, point_show_normal=True
-    )
-    vis.add_geometry(objpcd)
-    vis.capture_depth_point_cloud("tst.pcd", do_render=True)
+    vis.create_window('win', width=1280, height=720, left=0, top=0)
+    o3dmesh = o3d.geometry.TriangleMesh(vertices=o3d.utility.Vector3dVector(objcm.objtrm.vertices),
+                                        triangles=o3d.utility.Vector3iVector(objcm.objtrm.faces))
+    # o3dmesh.compute_vertex_normals()
+    vis.add_geometry(o3dmesh)
+    vis.poll_events()
+    vis.update_renderer()
+    vis.capture_depth_point_cloud("tst.pcd", do_render=False, convert_to_world_coordinate=True)
+    o3dpcd = o3d.io.read_point_cloud("tst.pcd")
+    print(o3dpcd)
+    o3d.visualization.draw_geometries([o3dpcd])
+    # o3d.visualization.draw_geometries([o3dmesh])
+
+    vis.capture_depth_image("tst_depth.png", do_render=False, depth_scale=255)
+    depth = cv2.imread("tst_depth.png")
+
+    return o3dpcd.points
 
 
-def get_objpcd_partial(objcm, img_size=(200, 200), granurity=0.2645 / 1000):
+def get_objpcd_partial(objcm, img_size=(50, 50), granurity=0.2645 / 1000):
     pcd = []
     mask = np.zeros(img_size)
 
@@ -173,7 +195,7 @@ if __name__ == '__main__':
     base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
     width = .005
     thickness = .0015
-    pseq = gen_sgl_curve(pseq=np.asarray([[0, 0, 0], [.018, .03, 0], [.06, .06, 0], [.12, 0, 0]]))
+    pseq = gen_sgl_curve(pseq=np.asarray([[0, 0, 0], [.018, .03, .02], [.06, .06, 0], [.12, 0, 0]]))
     rotseq = get_rotseq_by_pseq(pseq)
     cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
 
@@ -181,9 +203,11 @@ if __name__ == '__main__':
     objcm.set_rotmat(rm.rotmat_from_axangle((0, 1, 0), np.pi / 4))
     # objpcd = get_objpcd_partial_sample(objcm, cam_pos=cam_pos)
     # objpcd, mask = get_objpcd_partial(objcm, granurity=.0005)
-    objpcd = get_objpcd_partial_o3d(objcm)
+    get_objpcd_partial_o3d(objcm)
 
-    gm.gen_pointcloud(objpcd).attach_to(base)
+    objpcd = o3d.io.read_point_cloud("tst.pcd")
+    gm.gen_pointcloud(objpcd.points, pntsize=1).attach_to(base)
+
     objcm.set_rgba((1, 1, 1, 1))
     objcm.attach_to(base)
     base.run()
