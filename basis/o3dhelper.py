@@ -137,7 +137,7 @@ def registration_ptpt(src, tgt, downsampling_voxelsize=1, toggledebug=False):
         down_radius_normal = voxel_size * 15
         pcd_down.estimate_normals(o3d.geometry.KDTreeSearchParamHybrid(radius=down_radius_normal, max_nn=30))
         radius_feature = voxel_size * 15
-        pcd_fpfh = o3d.pipelines.registration.compute_fpfh_feature(
+        pcd_fpfh = o3d.registration.compute_fpfh_feature(
             pcd_down,
             o3d.geometry.KDTreeSearchParamHybrid(radius=radius_feature, max_nn=100))
         return pcd_down, pcd_fpfh
@@ -154,9 +154,9 @@ def registration_ptpt(src, tgt, downsampling_voxelsize=1, toggledebug=False):
     #     print("   Since the downsampling voxel size is %.3f," % downsampling_voxelsize)
     #     print("   we use a liberal distance threshold %.3f." % distance_threshold)
 
-    result_global = o3d.pipelines.registration.registration_fast_based_on_feature_matching(
+    result_global = o3d.registration.registration_fast_based_on_feature_matching(
         source_down, target_down, source_fpfh, target_fpfh,
-        o3d.pipelines.registration.FastGlobalRegistrationOption(
+        o3d.registration.FastGlobalRegistrationOption(
             maximum_correspondence_distance=distance_threshold))
     if toggledebug:
         __draw_registration_result(source_down, target_down, result_global.transformation)
@@ -307,12 +307,12 @@ def _registration_icp_ptpt_o3d(src, tgt, inithomomat=np.eye(4), maxcorrdist=2, t
     date: 20191229
     """
 
-    criteria = o3d.pipelines.registration.ICPConvergenceCriteria(relative_fitness=1e-6,
+    criteria = o3d.registration.ICPConvergenceCriteria(relative_fitness=1e-6,
                                                                  # converge if fitnesss smaller than this
                                                                  relative_rmse=1e-6,
                                                                  # converge if rmse smaller than this
                                                                  max_iteration=2000)
-    result_icp = o3d.pipelines.registration.registration_icp(src, tgt, maxcorrdist, inithomomat, criteria=criteria)
+    result_icp = o3d.registration.registration_icp(src, tgt, maxcorrdist, inithomomat, criteria=criteria)
     if toggledebug:
         __draw_registration_result(src, tgt, result_icp.transformation)
     return [result_icp.inlier_rmse, result_icp.fitness, result_icp.transformation]

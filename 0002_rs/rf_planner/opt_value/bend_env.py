@@ -7,7 +7,7 @@ import bendplanner.bender_config as bconfig
 
 
 class BendEnv(object):
-    def __init__(self, goal_pseq, pseq=None, rotseq=None, show=False, granularity=np.pi / 90, cm_type='stick'):
+    def __init__(self, goal_pseq, pseq=None, rotseq=None, show=True, granularity=np.pi / 90, cm_type='stick'):
         self._pseq, self._rotseq = pseq, rotseq
 
         self._goal_pseq = goal_pseq
@@ -30,6 +30,9 @@ class BendEnv(object):
 
         self._reward_thres = 0.7
         self._reward_bonus = 5
+
+        self._action_space_low = [0.5, -np.pi/4, 0, 0.1]
+        self._action_space_high = [np.pi/2, np.pi/4, np.pi/4, 0.2]
 
     def get_observation(self, one_hot=True):
         voxel = self._sim.voxelize()
@@ -67,7 +70,12 @@ class BendEnv(object):
         -------
             numpy.ndarray, float, boolean, dict: observation, reward, done and info
         """
-        is_success, _, _ = self._sim.gen_by_bendseq([action])
+        print(f"action before clip {action}")
+        for i in range(4):
+            action[i] = np.clip(action[i], self._action_space_low[i], self._action_space_high[i])
+        print(f"action after clip {action}")
+
+        is_success, _, _ = self._sim.gen_by_bendseq([action], cc=False)
         self._sim.move_to_org(bconfig.INIT_L)
 
         if not is_success[0]:
