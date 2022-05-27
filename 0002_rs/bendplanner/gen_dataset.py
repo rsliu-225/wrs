@@ -1,6 +1,7 @@
 import math
+import pickle
 import random
-
+import os
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
@@ -144,25 +145,32 @@ def gen_swap(pseq, rotseq, cross_sec, toggledebug=False):
     return cm.CollisionModel(initor=objtrm, btwosided=True, name='obj', cdprimit_type='surface_balls')
 
 
-def get_objpcd_partial_o3d(objcm, ):
+def o3dmesh2cm(o3dmesh):
+    objtrm = trm.Trimesh(vertices=o3dmesh.vertices, faces=o3dmesh.triangles)
+    objcm = cm.CollisionModel(objtrm)
+    return objcm
+
+
+def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolusion=(1280, 720), toggledebug=False):
+    if not os.path.exists(path):
+        os.mkdir(path)
     vis = o3d.visualization.Visualizer()
-    vis.create_window('win', width=1280, height=720, left=0, top=0)
+    vis.create_window('win', width=resolusion[0], height=resolusion[1], left=0, top=0)
     o3dmesh = o3d.geometry.TriangleMesh(vertices=o3d.utility.Vector3dVector(objcm.objtrm.vertices),
-                                        triangles=o3d.utility.Vector3iVector(objcm.objtrm.faces))
-    # o3dmesh.compute_vertex_normals()
+                                        triangles=o3d.utility.Vector3iVector(objcm.objtrm.faces), )
+
+    o3dmesh.rotate(rot, center=rot_center)
     vis.add_geometry(o3dmesh)
+
     vis.poll_events()
-    vis.update_renderer()
-    vis.capture_depth_point_cloud("tst.pcd", do_render=False, convert_to_world_coordinate=True)
-    o3dpcd = o3d.io.read_point_cloud("tst.pcd")
-    print(o3dpcd)
-    o3d.visualization.draw_geometries([o3dpcd])
-    # o3d.visualization.draw_geometries([o3dmesh])
-
-    vis.capture_depth_image("tst_depth.png", do_render=False, depth_scale=255)
-    depth = cv2.imread("tst_depth.png")
-
-    return o3dpcd.points
+    vis.capture_depth_point_cloud(os.path.join(path, f_name + '.pcd'), do_render=False,
+                                  convert_to_world_coordinate=True)
+    o3d.io.write_triangle_mesh(os.path.join(path, f_name + '.ply'), o3dmesh)
+    vis.capture_screen_image(os.path.join(path, f_name + '.png'), do_render=False)
+    if toggledebug:
+        o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f_name + '.pcd'))
+        print(o3dpcd.get_center())
+        o3d.visualization.draw_geometries([o3dmesh, o3dpcd])
 
 
 def get_objpcd_partial(objcm, img_size=(50, 50), granurity=0.2645 / 1000):
@@ -195,19 +203,33 @@ if __name__ == '__main__':
     base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
     width = .005
     thickness = .0015
+
     pseq = gen_sgl_curve(pseq=np.asarray([[0, 0, 0], [.018, .03, .02], [.06, .06, 0], [.12, 0, 0]]))
     rotseq = get_rotseq_by_pseq(pseq)
     cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
 
     objcm = gen_swap(pseq, rotseq, cross_sec)
-    objcm.set_rotmat(rm.rotmat_from_axangle((0, 1, 0), np.pi / 4))
-    # objpcd = get_objpcd_partial_sample(objcm, cam_pos=cam_pos)
-    # objpcd, mask = get_objpcd_partial(objcm, granurity=.0005)
-    get_objpcd_partial_o3d(objcm)
+    rot_center = (0, 0, 0)
+    for x in range(2):
+        for y in range(2):
+            for z in range(2):
+                rot = rm.rotmat_from_axangle((1, 0, 0), x * np.pi / 10) \
+                    .dot(rm.rotmat_from_axangle((0, 1, 0), y * np.pi / 10)) \
+                    .dot(rm.rotmat_from_axangle((0, 0, 1), z * np.pi / 10))
+                get_objpcd_partial_o3d(objcm, rot, rot_center, path='tst', f_name='_'.join([str(x), str(y), str(z)]))
 
-    objpcd = o3d.io.read_point_cloud("tst.pcd")
-    gm.gen_pointcloud(objpcd.points, pntsize=1).attach_to(base)
+    # for x in range(2):
+    #     for y in range(2):
+    #         for z in range(2):
+    #             o3dmesh = o3d.io.read_triangle_mesh(f"tst/{'_'.join([str(x), str(y), str(z)])}.ply")
+    #             objcm = o3dmesh2cm(o3dmesh)
+    #             o3dpcd = o3d.io.read_point_cloud(f"tst/{'_'.join([str(x), str(y), str(z)])}.pcd")
+    #             print(o3dpcd)
+    #             gm.gen_pointcloud(o3dpcd.points, pntsize=5).attach_to(base)
+    #             objcm.set_rgba((1, 1, 1, 1))
+    #             objcm.attach_to(base)
 
-    objcm.set_rgba((1, 1, 1, 1))
-    objcm.attach_to(base)
+    objpcd = get_objpcd_full_sample(objcm)
+    gm.gen_pointcloud(objpcd, pntsize=5, rgbas=[[1, 0, 0, 1]]).attach_to(base)
+
     base.run()
