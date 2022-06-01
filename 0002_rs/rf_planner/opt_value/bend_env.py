@@ -4,6 +4,10 @@ import visualization.panda.world as wd
 import bendplanner.BendSim as bs
 import bendplanner.bend_utils as bu
 import bendplanner.bender_config as bconfig
+import modeling.geometric_model as gm
+import open3d as o3d
+import basis.o3dhelper as o3dh
+from collections import Counter
 
 
 class BendEnv(object):
@@ -13,28 +17,27 @@ class BendEnv(object):
         self._goal_pseq = goal_pseq
         self._goal_rotseq = bu.get_rotseq_by_pseq(self._goal_pseq)
 
-        self._init_rot = np.eye(3)
-
         base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
 
         self._sim = bs.BendSim(pseq, rotseq, show, granularity, cm_type)
         self._sim.reset(self._pseq, self._rotseq)
         self._sim.move_to_org(bconfig.INIT_L)
 
-        # Align the goal with initialization
-        self._goal_pseq, self._goal_rotseq = bu.align_with_init(
-            self._sim, self._goal_pseq, self._init_rot, self._goal_rotseq,
-        )
+        # fit_pseq, _ = bu.decimate_pseq(goal_pseq, tor=.0002, toggledebug=False)
+
         self._goal_voxel = bu.voxelize(self._goal_pseq, self._goal_rotseq, bconfig.THICKNESS)
         self._goal_voxel_one_hot = bu.onehot_voxel(self._goal_voxel)
 
         self._reward_thres = 0.7
         self._reward_bonus = 5
 
-        self._action_space_low = [0.5, -np.pi/4, 0, 0.1]
-        self._action_space_high = [np.pi/2, np.pi/4, np.pi/4, 0.2]
+        self._action_space_low = [-np.pi / 2, 0, -np.pi, bconfig.INIT_L]
+        self._action_space_high = [np.pi / 2, 0, np.pi, bu.cal_length(self._goal_pseq)]
+
+        self._init_rot = np.eye(3)
 
     def get_observation(self, one_hot=True):
+        self._sim.move_to_org()
         voxel = self._sim.voxelize()
         if one_hot:
             return bu.onehot_voxel(voxel)
@@ -48,7 +51,8 @@ class BendEnv(object):
         else:
             grids = [self.get_observation(False)]
             colors = ['g']
-        bu.visualize_voxel(grids, colors)
+        o3d.visualization.draw_geometries(grids)
+        # bu.visualize_voxel(grids, colors)
 
     def sample_action(self):
         # TODO: implement random action sampling from action space here
@@ -70,23 +74,28 @@ class BendEnv(object):
         -------
             numpy.ndarray, float, boolean, dict: observation, reward, done and info
         """
-        print(f"action before clip {action}")
+        # print(f"action before clip {action}")
         for i in range(4):
             action[i] = np.clip(action[i], self._action_space_low[i], self._action_space_high[i])
         print(f"action after clip {action}")
-
         is_success, _, _ = self._sim.gen_by_bendseq([action], cc=False)
-        self._sim.move_to_org(bconfig.INIT_L)
+        self._init_rot = bu.get_init_rot(self._sim.pseq)
+        goal_pseq_tmp, goal_rotseq_tmp = bu.align_with_init(
+            self._sim, self._goal_pseq, self._init_rot, self._goal_rotseq,
+        )
 
+        self._goal_voxel = bu.voxelize(goal_pseq_tmp, goal_rotseq_tmp, bconfig.THICKNESS)
+        self._goal_voxel_one_hot = bu.onehot_voxel(self._goal_voxel)
         if not is_success[0]:
             done = True
         else:
             done = False
 
-        # observation = bu.avg_polylines_dist_err(self._sim.pseq, self._goal_pseq)
         observation = self.get_observation()
-        reward = self._get_reward_per_step(observation)
+        reward = self._get_reward_per_step()
+        print('reward:', reward)
         info = {}
+        self._sim.show(rgba=(1, 1, 1, .5))
 
         return observation, reward, done, info
 
@@ -97,23 +106,26 @@ class BendEnv(object):
         self._sim.reset(self._pseq, self._rotseq)
         self._sim.move_to_org(bconfig.INIT_L)
 
-    def _get_reward_per_step(self, observation):
+    def _get_reward_per_step(self):
         """
         Calculate the per step reward based on current point set and the target points set(self._goal_set)
 
         """
-        # err, _ = bu.avg_polylines_dist_err(self._goal_pseq, self._sim.pseq)
-
-        matched = np.count_nonzero(self._goal_voxel_one_hot.astype(np.bool).flatten() & observation.astype(np.bool).flatten())
-        recall = matched / np.count_nonzero(self._goal_voxel_one_hot.astype(np.bool).flatten())
-
+        # try:
+        #     err, _ = bu.mindist_err(self._sim.pseq, self._goal_pseq)
+        #     print(.1 / err)
+        # except:
+        #     print(self._sim.pseq)
+        #     print(self._goal_pseq)
+        querier = np.asarray(self._sim.objcm.sample_surface(radius=.0005)[0])
+        overlap_mask = self._goal_voxel.check_if_included(o3d.utility.Vector3dVector(querier))
+        overlap_o3dpcd = o3dh.nparray2o3dpcd(np.asarray(querier[overlap_mask]))
+        overlap_o3dpcd.paint_uniform_color([1, 0.706, 0])
+        try:
+            recall = overlap_mask.count(True) / len(overlap_mask)
+        except:
+            recall = 0
         if recall >= self._reward_thres:
             return recall + self._reward_bonus
         else:
             return recall
-
-
-
-
-
-

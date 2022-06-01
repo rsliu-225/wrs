@@ -376,11 +376,10 @@ class BendSim(object):
         objcm.attach_to(base)
 
     def voxelize(self):
-        pcd_narry, _ = self.objcm.sample_surface(radius=.0005)
-        pcd = o3dh.nparray2o3dpcd(np.asarray(pcd_narry))
-        pcd.scale(1.0, center=(0, 0, 0))
-        voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(pcd, voxel_size=bconfig.THICKNESS)
-        return voxel_grid
+        # pcd_narry, _ = self.objcm.sample_surface(radius=.0005)
+        # pcd = o3dh.nparray2o3dpcd(np.asarray(pcd_narry))
+        # voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(pcd, voxel_size=bconfig.THICKNESS / 2)
+        return bu.voxelize(self.pseq[1:], self.rotseq[1:])
 
     def unshow(self):
         self.objcm.detach()
@@ -484,7 +483,7 @@ class BendSim(object):
             # base.run()
         return collided_pts_all
 
-    def move_to_org(self, l, dir=1, lift_angle=0, rot_angle=0, bend_angle=0, toggledebug=False):
+    def move_to_org(self, l=bconfig.INIT_L, dir=1, lift_angle=0, rot_angle=0, bend_angle=0, toggledebug=False):
         arc_l = abs(bend_angle * self.bend_r / np.cos(lift_angle))
         if abs(lift_angle) < np.pi / 2:
             inx = self._insert_p(l, toggledebug=False)

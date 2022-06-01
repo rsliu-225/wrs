@@ -17,9 +17,6 @@ import modeling.collision_model as cm
 import modeling.geometric_model as gm
 import copy
 
-import trimesh
-
-
 def gen_sgl_curve(pseq, step=.001, toggledebug=False):
     length = np.sum(np.linalg.norm(np.diff(np.asarray(pseq), axis=0), axis=1))
     inp = interpolate.interp1d(pseq[:, 0], pseq[:, 1], kind='cubic')
@@ -157,16 +154,16 @@ def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolus
     vis = o3d.visualization.Visualizer()
     vis.create_window('win', width=resolusion[0], height=resolusion[1], left=0, top=0)
     o3dmesh = o3d.geometry.TriangleMesh(vertices=o3d.utility.Vector3dVector(objcm.objtrm.vertices),
-                                        triangles=o3d.utility.Vector3iVector(objcm.objtrm.faces), )
+                                        triangles=o3d.utility.Vector3iVector(objcm.objtrm.faces))
 
     o3dmesh.rotate(rot, center=rot_center)
     vis.add_geometry(o3dmesh)
-
     vis.poll_events()
     vis.capture_depth_point_cloud(os.path.join(path, f_name + '.pcd'), do_render=False,
                                   convert_to_world_coordinate=True)
     o3d.io.write_triangle_mesh(os.path.join(path, f_name + '.ply'), o3dmesh)
     vis.capture_screen_image(os.path.join(path, f_name + '.png'), do_render=False)
+    vis.destroy_window()
     if toggledebug:
         o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f_name + '.pcd'))
         print(o3dpcd.get_center())

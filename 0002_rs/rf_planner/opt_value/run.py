@@ -8,37 +8,36 @@ import numpy as np
 import bendplanner.bend_utils as bu
 from rf_planner.opt_value.bend_env import BendEnv
 
-
 goal_pseq = pickle.load(open('goal_pseq.pkl', 'rb'))
-init_pseq = [(0, 0, 0), (0, bu.cal_length(goal_pseq), 0)]
-init_rotseq = [np.eye(3), np.eye(3)]
+init_pseq = [(0, 0, 0), (0, bu.cal_length(goal_pseq), 0), (0, bu.cal_length(goal_pseq) + .1, 0)]
+init_rotseq = [np.eye(3), np.eye(3), np.eye(3)]
 
 env = BendEnv(goal_pseq=goal_pseq, pseq=init_pseq, rotseq=init_rotseq)
-env.visualize_observation()
 
-
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 model = nn.Sequential(
-            nn.Linear(200 * 200 * 200, 256),
-            nn.LeakyReLU(0.2),
-            nn.Linear(256, 128),
-            nn.LeakyReLU(0.2),
-            nn.Linear(128, 4),
-            pfrl.policies.GaussianHeadWithFixedCovariance(0.3),
+    nn.Linear(200 * 200 * 200, 128),
+    nn.LeakyReLU(0.2),
+    nn.Linear(128, 64),
+    nn.LeakyReLU(0.2),
+    nn.Linear(64, 4),
+    pfrl.policies.GaussianHeadWithStateIndependentCovariance(action_size=4),
 )
+model.to(device)
 
 opt = torch.optim.Adam(model.parameters(), lr=1e-3)
 
 agent = pfrl.agents.REINFORCE(
     model,
     opt,
-    gpu=-1,
+    gpu=0,
     beta=1e-4,
     batchsize=10,
     max_grad_norm=1.0,
 )
 
-n_episodes = 300
-max_episode_len = 200
+n_episodes = 2000
+max_episode_len = 30
 for i in range(1, n_episodes + 1):
     env.reset()
     obs = env.get_observation()
@@ -54,15 +53,17 @@ for i in range(1, n_episodes + 1):
         agent.observe(obs, reward, done, reset)
         if done or reset:
             break
-    if i % 10 == 0:
+    if i % 5 == 0:
         print('episode:', i, 'R:', R)
     if i % 50 == 0:
         print('statistics:', agent.get_statistics())
+env.visualize_observation()
 print('Finished.')
 
 with agent.eval_mode():
     for i in range(10):
-        obs = env.reset()
+        env.reset()
+        obs = env.get_observation()
         R = 0
         t = 0
         while True:

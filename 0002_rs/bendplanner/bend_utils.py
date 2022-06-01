@@ -374,9 +374,11 @@ def get_init_rot(pseq):
     pseq = np.asarray(pseq)
     v1 = pseq[0] - pseq[1]
     v2 = pseq[1] - pseq[2]
-    rot_n = np.cross(rm.unit_vector(v1), rm.unit_vector(v2))
-    x = np.cross(v1, rot_n)
 
+    rot_n = np.cross(rm.unit_vector(v1), rm.unit_vector(v2))
+    if np.array_equal(rot_n, np.asarray([0, 0, 0])):
+        return -np.eye(3)
+    x = np.cross(v1, rot_n)
     return np.asarray([-rm.unit_vector(x), -rm.unit_vector(v1), -rm.unit_vector(rot_n)]).T
 
 
@@ -457,9 +459,8 @@ def voxelize(pseq, rotseq, r=bconfig.THICKNESS / 2):
     objcm = gen_stick(pseq, rotseq, r)
     pcd_narry, _ = objcm.sample_surface(radius=.0005)
     pcd = o3dh.nparray2o3dpcd(np.asarray(pcd_narry))
-    pcd.scale(1, center=(0, 0, 0))
-    voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(pcd, voxel_size=bconfig.THICKNESS)
-    return voxel_grid
+    # pcd.scale(1, center=(0, 0, 0))
+    return o3d.geometry.VoxelGrid.create_from_point_cloud(input=pcd, voxel_size=bconfig.THICKNESS)
 
 
 def onehot_voxel(voxel_grid, bnd=(200, 200, 200)):
@@ -471,17 +472,18 @@ def onehot_voxel(voxel_grid, bnd=(200, 200, 200)):
 
 def visualize_voxel(voxel_grids, colors=[]):
     ax = plt.axes(projection='3d')
+    center = np.asarray([0, 0, 0])
     for i, voxel_grid in enumerate(voxel_grids):
         pts = []
         for v in voxel_grid.get_voxels():
+            print(v)
             pts.append(v.grid_index)
-        center = np.mean(pts, axis=0)
-        ax.set_xlim([center[0] - 5, center[0] + 5])
-        ax.set_ylim([center[1] - 5, center[1] + 5])
-        ax.set_zlim([center[2] - 5, center[2] + 5])
-
         color = colors[i] if i < len(colors) else None
         scatter_pseq(ax, pts, c=color)
+        center = np.mean(pts, axis=0)
+    ax.set_xlim([center[0] - 50, center[0] + 50])
+    ax.set_ylim([center[1] - 50, center[1] + 50])
+    ax.set_zlim([center[2] - 50, center[2] + 50])
     plt.show()
 
 
