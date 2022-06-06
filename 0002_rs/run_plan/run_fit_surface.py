@@ -23,7 +23,7 @@ if __name__ == '__main__':
     # base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
     base = wd.World(cam_pos=[.2, .2, .2], lookat_pos=[0, 0, 0])
 
-    f_name = 'skull2'
+    f_name = 'skull'
 
     bs = b_sim.BendSim(show=True, granularity=np.pi / 180, cm_type='plate')
 

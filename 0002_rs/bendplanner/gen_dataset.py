@@ -17,6 +17,7 @@ import modeling.collision_model as cm
 import modeling.geometric_model as gm
 import copy
 
+
 def gen_sgl_curve(pseq, step=.001, toggledebug=False):
     length = np.sum(np.linalg.norm(np.diff(np.asarray(pseq), axis=0), axis=1))
     inp = interpolate.interp1d(pseq[:, 0], pseq[:, 1], kind='cubic')
@@ -148,15 +149,17 @@ def o3dmesh2cm(o3dmesh):
     return objcm
 
 
-def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolusion=(1280, 720), toggledebug=False):
+def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolusion=(1280, 720), toggledebug=False,
+                           add_noisy=False, add_occ=False):
     if not os.path.exists(path):
         os.mkdir(path)
     vis = o3d.visualization.Visualizer()
     vis.create_window('win', width=resolusion[0], height=resolusion[1], left=0, top=0)
     o3dmesh = o3d.geometry.TriangleMesh(vertices=o3d.utility.Vector3dVector(objcm.objtrm.vertices),
                                         triangles=o3d.utility.Vector3iVector(objcm.objtrm.faces))
-
     o3dmesh.rotate(rot, center=rot_center)
+    if add_noisy:
+        o3dmesh = noisy_mesh(o3dmesh)
     vis.add_geometry(o3dmesh)
     vis.poll_events()
     vis.capture_depth_point_cloud(os.path.join(path, f_name + '.pcd'), do_render=False,
@@ -193,8 +196,27 @@ def get_objpcd_partial(objcm, img_size=(50, 50), granurity=0.2645 / 1000):
     return np.asarray(pcd), mask
 
 
+def noisy_mesh(o3dmesh, noise=.0005):
+    print('create noisy mesh')
+    vertices = np.asarray(o3dmesh.vertices)
+    vertices += np.random.uniform(0, noise, size=vertices.shape)
+    o3dmesh.vertices = o3d.utility.Vector3dVector(vertices)
+    o3dmesh.compute_vertex_normals()
+    # o3d.visualization.draw_geometries([o3dmesh])
+    return o3dmesh
+
+
+def get_kpts_gmm(objpcd, n_components=20, show=True, rgba=(1, 0, 0, 1)):
+    X = np.array(objpcd)
+    gmix = GaussianMixture(n_components=n_components, random_state=0).fit(X)
+    if show:
+        for p in gmix.means_:
+            gm.gen_sphere(p, radius=.001, rgba=rgba).attach_to(base)
+
+
 if __name__ == '__main__':
     import visualization.panda.world as wd
+    from sklearn.mixture import GaussianMixture
 
     cam_pos = np.asarray([0, 0, .5])
     base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
@@ -206,27 +228,44 @@ if __name__ == '__main__':
     cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
 
     objcm = gen_swap(pseq, rotseq, cross_sec)
-    rot_center = (0, 0, 0)
-    for x in range(2):
-        for y in range(2):
-            for z in range(2):
-                rot = rm.rotmat_from_axangle((1, 0, 0), x * np.pi / 10) \
-                    .dot(rm.rotmat_from_axangle((0, 1, 0), y * np.pi / 10)) \
-                    .dot(rm.rotmat_from_axangle((0, 0, 1), z * np.pi / 10))
-                get_objpcd_partial_o3d(objcm, rot, rot_center, path='tst', f_name='_'.join([str(x), str(y), str(z)]))
 
+    # '''
+    # gen data
+    # '''
+    # rot_center = (0, 0, 0)
     # for x in range(2):
     #     for y in range(2):
     #         for z in range(2):
-    #             o3dmesh = o3d.io.read_triangle_mesh(f"tst/{'_'.join([str(x), str(y), str(z)])}.ply")
-    #             objcm = o3dmesh2cm(o3dmesh)
-    #             o3dpcd = o3d.io.read_point_cloud(f"tst/{'_'.join([str(x), str(y), str(z)])}.pcd")
-    #             print(o3dpcd)
-    #             gm.gen_pointcloud(o3dpcd.points, pntsize=5).attach_to(base)
-    #             objcm.set_rgba((1, 1, 1, 1))
-    #             objcm.attach_to(base)
+    #             rot = rm.rotmat_from_axangle((1, 0, 0), x * np.pi / 10) \
+    #                 .dot(rm.rotmat_from_axangle((0, 1, 0), y * np.pi / 10)) \
+    #                 .dot(rm.rotmat_from_axangle((0, 0, 1), z * np.pi / 10))
+    #             get_objpcd_partial_o3d(objcm, rot, rot_center, path='tst', f_name='_'.join([str(x), str(y), str(z)]),
+    #                                    add_noisy=True)
 
-    objpcd = get_objpcd_full_sample(objcm)
-    gm.gen_pointcloud(objpcd, pntsize=5, rgbas=[[1, 0, 0, 1]]).attach_to(base)
-
+    '''
+    show data
+    '''
+    for x in range(2):
+        for y in range(2):
+            for z in range(2):
+                o3dmesh = o3d.io.read_triangle_mesh(f"tst/{'_'.join([str(x), str(y), str(z)])}.ply")
+                objcm = o3dmesh2cm(o3dmesh)
+                o3dpcd = o3d.io.read_point_cloud(f"tst/{'_'.join([str(x), str(y), str(z)])}.pcd")
+                gm.gen_pointcloud(o3dpcd.points, pntsize=5).attach_to(base)
+                objcm.set_rgba((1, 1, 1, 1))
+                objcm.attach_to(base)
     base.run()
+
+    # '''
+    # show key point
+    # '''
+    # objpcd_narry = get_objpcd_full_sample(objcm)
+    # gm.gen_pointcloud(objpcd_narry, pntsize=5, rgbas=[[1, 1, 1, .5]]).attach_to(base)
+    # get_kpts_gmm(objpcd_narry, rgba=(1, 0, 0, 1))
+    #
+    # o3dmesh = o3d.io.read_triangle_mesh(f"tst/0_0_0.ply")
+    # o3dpcd = o3d.io.read_point_cloud(f"tst/0_0_0.pcd")
+    # gm.gen_pointcloud(o3dpcd.points, pntsize=5, rgbas=[[1, 1, 0, .5]]).attach_to(base)
+    # get_kpts_gmm(o3dpcd.points, rgba=(0, 1, 0, 1))
+    #
+    # base.run()
