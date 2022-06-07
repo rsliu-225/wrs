@@ -21,17 +21,17 @@ def loadalldata(folder_name, show=True):
             alldata.append(data)
             grayimg = data[0]
             depthimg = data[1]
-            cv2.imwrite("grayimg/" + file[:-4] + ".jpg", grayimg)
-            cv2.imwrite("depthimg/" + file[:-4] + ".jpg", depthimg)
+            cv2.imwrite(os.path.join(folder_name, "grayimg/", f"{file[:-4]}.jpg"), grayimg)
+            cv2.imwrite(os.path.join(folder_name, "depthimg/", f"{file[:-4]}.jpg"), depthimg)
             if show:
-                cv2.imshow(str(file), grayimg)
+                cv2.imshow(str(file), depthimg)
                 cv2.waitKey(0)
     return [img[0] for img in alldata], [img[1] for img in alldata], [img[2] for img in alldata]
 
 
 def show_pcd(folder_name):
     _, _, pcdseq = loadalldata(folder_name, show=False)
-    pcd = np.asarray(pcdseq[0])/1000
+    pcd = np.asarray(pcdseq[0]) / 1000
     pcd = pcdu.trans_pcd(pcd, transmat)
     base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
     pcdu.show_pcd(pcd)
@@ -41,5 +41,5 @@ def show_pcd(folder_name):
 if __name__ == '__main__':
     import visualization.panda.world as wd
 
-    loadalldata('./')
+    loadalldata('./seq/plate_as/')
     # show_pcd('./')

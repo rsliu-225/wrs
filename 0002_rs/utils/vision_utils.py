@@ -4,11 +4,10 @@ import pickle
 import cv2
 import numpy as np
 import open3d as o3d
-import pyrealsense2 as rs2
 
 import config
 from sklearn.cluster import DBSCAN
-from skimage.morphology import skeletonize
+# from skimage.morphology import skeletonize
 import matplotlib.pyplot as plt
 # import sknw
 
@@ -189,13 +188,21 @@ def extract_clr_gray(grayimg, clr, shape=(772, 1032, 1), crop_xy=((250, 400), (4
     return clr_mask
 
 
+def crop(crop_xy, img):
+    img = np.asarray(img)
+    crop_mask = np.zeros(img.shape)
+    print(img.shape)
+    crop_mask[crop_xy[0][0]:crop_xy[0][1], crop_xy[1][0]:crop_xy[1][1]] = 1
+    return img * crop_mask
+
+
 def extract_label_rgb(rgbimg, shape=(772, 1032, 1), crop_xy=None, toggledebug=False, erode=False):
     rgbimg_std = np.std(rgbimg, axis=2)
     mask = np.where((rgbimg_std > 50), 1, 0)
     mask = mask.reshape(shape)
     if crop_xy is not None:
         crop_mask = np.zeros(shape)
-        crop_mask[crop_xy[0][0]:crop_xy[0][1], crop_xy[0][0]:crop_xy[0][1]] = 1
+        crop_mask[crop_xy[0][0]:crop_xy[0][1], crop_xy[1][0]:crop_xy[1][1]] = 1
         mask = mask * crop_mask
     if erode:
         kernel = np.ones((2, 2), np.uint8)

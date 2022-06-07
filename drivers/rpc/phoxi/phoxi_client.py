@@ -5,6 +5,7 @@ import drivers.rpc.phoxi.phoxi_pb2_grpc as pxrpc
 import copy
 import cv2
 
+
 class PhxClient(object):
 
     def __init__(self, host="localhost:18300"):
@@ -96,7 +97,8 @@ class PhxClient(object):
         depthnparray_scaled = copy.deepcopy(darr_float32)
         maxdepth = np.max(darr_float32)
         mindepth = np.min(darr_float32[darr_float32 != 0])
-        depthnparray_scaled[depthnparray_scaled != 0] = (darr_float32[darr_float32 != 0] - mindepth) / (maxdepth - mindepth) * 200 + 25
+        depthnparray_scaled[depthnparray_scaled != 0] = (darr_float32[darr_float32 != 0] - mindepth) / (
+                    maxdepth - mindepth) * 200 + 25
         depthnparray_scaled = depthnparray_scaled.astype(dtype=np.uint8)
 
         return depthnparray_scaled
@@ -105,38 +107,44 @@ class PhxClient(object):
         rgbtxtimg = self.stub.getrgbtextureimg(pxmsg.Empty())
         rgbtxtnparray = self._unpackarraydata(rgbtxtimg)
 
-        return rgbtxtnparray.astype(np.uint8)[:,:,::-1]
+        return rgbtxtnparray.astype(np.uint8)[:, :, ::-1]
+
 
 if __name__ == "__main__":
-    import robotconn.rpc.phoxi.phoxi_client as pclt
-    import pandaplotutils.pandactrl as pc
+    import modeling.geometric_model as gm
+    import visualization.panda.world as wd
 
-    pxc = pclt.PhxClient(host = "192.168.125.100:18300")
-    #
-    # while True:
-    #     pxc.triggerframe()
-    #     clrmap, deptharray = pxc.getdepthimg()
-    #     cv2.imshow("test", clrmap)
-    #     cv2.waitKey(1)
+    pxc = PhxClient(host="10.2.0.218:18300")
+    base = wd.World(cam_pos=[0, 0, 0], lookat_pos=[0, 0, .2])
 
-
-    pcdcenter=[0,0,1500]
-    base = pc.World(camp=[0,0,-5000], lookatpos=pcdcenter)
-
-    pcldnp = [None]
-    def update(pxc, pcldnp, task):
-        if pcldnp[0] is not None:
-            pcldnp[0].detachNode()
+    while True:
         pxc.triggerframe()
         pcd = pxc.getpcd()
-        normalsnp = pxc.getnormals()
-        colorsnp = np.ones((normalsnp.shape[0], normalsnp.shape[1]+1))
-        colorsnp[:,:3] = normalsnp
-        pcldnp[0] = base.pg.genpointcloudnp(pcd, colors=colorsnp, pntsize=3)
-        pcldnp[0].reparentTo(base.render)
-        return task.done
+        gm.gen_pointcloud(np.asarray(pcd)/1000).attach_to(base)
+        base.run()
 
-    taskMgr.doMethodLater(0.05, update, "update", extraArgs=[pxc, pcldnp],
-                      appendTask=True)
+        # cv2.imshow("test", cv2.equalizeHist(img))
+        # cv2.waitKey(0)
 
-    base.run()
+
+    #
+    # pcdcenter=[0,0,1500]
+    # base = pc.World(camp=[0,0,-5000], lookatpos=pcdcenter)
+    #
+    # pcldnp = [None]
+    # def update(pxc, pcldnp, task):
+    #     if pcldnp[0] is not None:
+    #         pcldnp[0].detachNode()
+    #     pxc.triggerframe()
+    #     pcd = pxc.getpcd()
+    #     normalsnp = pxc.getnormals()
+    #     colorsnp = np.ones((normalsnp.shape[0], normalsnp.shape[1]+1))
+    #     colorsnp[:,:3] = normalsnp
+    #     pcldnp[0] = base.pg.genpointcloudnp(pcd, colors=colorsnp, pntsize=3)
+    #     pcldnp[0].reparentTo(base.render)
+    #     return task.done
+    #
+    # taskMgr.doMethodLater(0.05, update, "update", extraArgs=[pxc, pcldnp],
+    #                   appendTask=True)
+
+    # base.run()
