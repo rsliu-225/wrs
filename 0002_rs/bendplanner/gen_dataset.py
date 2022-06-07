@@ -36,10 +36,14 @@ def gen_sgl_curve(pseq, step=.001, toggledebug=False):
 
 def get_rotseq_by_pseq(pseq):
     rotseq = []
+    n_pre = None
     for i in range(1, len(pseq) - 1):
         v1 = pseq[i - 1] - pseq[i]
         v2 = pseq[i] - pseq[i + 1]
         n = np.cross(rm.unit_vector(v1), rm.unit_vector(v2))
+        if n_pre is not None:
+            if rm.angle_between_vectors(n, n_pre) > np.pi / 2:
+                n = -n
         x = np.cross(v1, n)
         rot = np.asarray([rm.unit_vector(x), rm.unit_vector(v1), rm.unit_vector(n)]).T
         rotseq.append(rot)
@@ -228,6 +232,8 @@ if __name__ == '__main__':
     cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
 
     objcm = gen_swap(pseq, rotseq, cross_sec)
+    objcm.attach_to(base)
+    base.run()
 
     # '''
     # gen data
@@ -242,19 +248,19 @@ if __name__ == '__main__':
     #             get_objpcd_partial_o3d(objcm, rot, rot_center, path='tst', f_name='_'.join([str(x), str(y), str(z)]),
     #                                    add_noisy=True)
 
-    '''
-    show data
-    '''
-    for x in range(2):
-        for y in range(2):
-            for z in range(2):
-                o3dmesh = o3d.io.read_triangle_mesh(f"tst/{'_'.join([str(x), str(y), str(z)])}.ply")
-                objcm = o3dmesh2cm(o3dmesh)
-                o3dpcd = o3d.io.read_point_cloud(f"tst/{'_'.join([str(x), str(y), str(z)])}.pcd")
-                gm.gen_pointcloud(o3dpcd.points, pntsize=5).attach_to(base)
-                objcm.set_rgba((1, 1, 1, 1))
-                objcm.attach_to(base)
-    base.run()
+    # '''
+    # show data
+    # '''
+    # for x in range(2):
+    #     for y in range(2):
+    #         for z in range(2):
+    #             o3dmesh = o3d.io.read_triangle_mesh(f"tst/{'_'.join([str(x), str(y), str(z)])}.ply")
+    #             objcm = o3dmesh2cm(o3dmesh)
+    #             o3dpcd = o3d.io.read_point_cloud(f"tst/{'_'.join([str(x), str(y), str(z)])}.pcd")
+    #             gm.gen_pointcloud(o3dpcd.points, pntsize=5).attach_to(base)
+    #             objcm.set_rgba((1, 1, 1, 1))
+    #             objcm.attach_to(base)
+    # base.run()
 
     # '''
     # show key point
