@@ -316,7 +316,8 @@ class BendRbtPlanner(object):
                 self.iptree.add_invalid_seq(seqs[:fail_index + 1])
                 seqs, _ = self.iptree.get_potential_valid()
                 continue
-            pickle.dump(armjntsseq_list, open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_armjntsseq.pkl', 'wb'))
+            pickle.dump(armjntsseq_list,
+                        open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_armjntsseq.pkl', 'wb'))
             # self.show_bendresseq_withrbt(bendresseq, self.transmat4, armjntsseq_list[0][1])
             # base.run()
             _, bendresseq = pickle.load(
@@ -332,12 +333,12 @@ class BendRbtPlanner(object):
                 continue
             pickle.dump(pathseq_list,
                         open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_pathseq.pkl', 'wb'))
-            pathseq_list = pickle.load(
-                open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_pathseq.pkl', 'rb'))
-            print(f'success {seqs}')
-            seqs = self.iptree.get_potential_valid()
-            self.show_motion_withrbt(bendresseq, self.transmat4, pathseq_list[1][1])
-            base.run()
+            # pathseq_list = pickle.load(
+            #     open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_pathseq.pkl', 'rb'))
+            # print(f'success {seqs}')
+            # seqs = self.iptree.get_potential_valid()
+            # self.show_motion_withrbt(bendresseq, self.transmat4, pathseq_list[1][1])
+            # base.run()
 
     def show_bendresseq(self, bendresseq, transmat4):
         motioncounter = [0]

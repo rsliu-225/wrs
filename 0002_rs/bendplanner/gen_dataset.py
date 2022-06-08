@@ -154,7 +154,7 @@ def o3dmesh2cm(o3dmesh):
 
 
 def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolusion=(1280, 720), toggledebug=False,
-                           add_noisy=False, add_occ=False):
+                           add_noise=False, add_occ=False):
     if not os.path.exists(path):
         os.mkdir(path)
     vis = o3d.visualization.Visualizer()
@@ -162,12 +162,16 @@ def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolus
     o3dmesh = o3d.geometry.TriangleMesh(vertices=o3d.utility.Vector3dVector(objcm.objtrm.vertices),
                                         triangles=o3d.utility.Vector3iVector(objcm.objtrm.faces))
     o3dmesh.rotate(rot, center=rot_center)
-    if add_noisy:
-        o3dmesh = noisy_mesh(o3dmesh)
+    if add_noise:
+        o3dmesh = add_noisy_mesh(o3dmesh)
     vis.add_geometry(o3dmesh)
     vis.poll_events()
     vis.capture_depth_point_cloud(os.path.join(path, f_name + '.pcd'), do_render=False,
                                   convert_to_world_coordinate=True)
+    if add_occ:
+        o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f_name + '.pcd'))
+        o3dpcd = add_random_occ(o3dpcd)
+        o3d.io.write_point_cloud(os.path.join(path, f_name + '.pcd'), o3dpcd)
     o3d.io.write_triangle_mesh(os.path.join(path, f_name + '.ply'), o3dmesh)
     vis.capture_screen_image(os.path.join(path, f_name + '.png'), do_render=False)
     vis.destroy_window()
@@ -200,14 +204,22 @@ def get_objpcd_partial(objcm, img_size=(50, 50), granurity=0.2645 / 1000):
     return np.asarray(pcd), mask
 
 
-def noisy_mesh(o3dmesh, noise=.0005):
-    print('create noisy mesh')
+def add_noisy_mesh(o3dmesh, noise=.0005):
     vertices = np.asarray(o3dmesh.vertices)
     vertices += np.random.uniform(0, noise, size=vertices.shape)
     o3dmesh.vertices = o3d.utility.Vector3dVector(vertices)
     o3dmesh.compute_vertex_normals()
     # o3d.visualization.draw_geometries([o3dmesh])
     return o3dmesh
+
+
+def add_random_occ(o3dpcd, occ_ratio_rng=(.05, .1)):
+    kdt = KDTree(np.asarray(o3dpcd.points), leaf_size=100, metric='euclidean')
+    seed = random.choice(o3dpcd.points)
+    _, indices = kdt.query([seed], k=int(len(o3dpcd.points)*random.uniform(occ_ratio_rng[0], occ_ratio_rng[1])),
+                           return_distance=True)
+    pcd = np.delete(np.asarray(o3dpcd.points), indices[0], axis=0)
+    return o3dh.nparray2o3dpcd(pcd)
 
 
 def get_kpts_gmm(objpcd, n_components=20, show=True, rgba=(1, 0, 0, 1)):
@@ -232,8 +244,7 @@ if __name__ == '__main__':
     cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
 
     objcm = gen_swap(pseq, rotseq, cross_sec)
-    objcm.attach_to(base)
-    base.run()
+    # objcm.attach_to(base)
 
     # '''
     # gen data
@@ -246,21 +257,21 @@ if __name__ == '__main__':
     #                 .dot(rm.rotmat_from_axangle((0, 1, 0), y * np.pi / 10)) \
     #                 .dot(rm.rotmat_from_axangle((0, 0, 1), z * np.pi / 10))
     #             get_objpcd_partial_o3d(objcm, rot, rot_center, path='tst', f_name='_'.join([str(x), str(y), str(z)]),
-    #                                    add_noisy=True)
+    #                                    add_noise=False, add_occ=True)
 
-    # '''
-    # show data
-    # '''
-    # for x in range(2):
-    #     for y in range(2):
-    #         for z in range(2):
-    #             o3dmesh = o3d.io.read_triangle_mesh(f"tst/{'_'.join([str(x), str(y), str(z)])}.ply")
-    #             objcm = o3dmesh2cm(o3dmesh)
-    #             o3dpcd = o3d.io.read_point_cloud(f"tst/{'_'.join([str(x), str(y), str(z)])}.pcd")
-    #             gm.gen_pointcloud(o3dpcd.points, pntsize=5).attach_to(base)
-    #             objcm.set_rgba((1, 1, 1, 1))
-    #             objcm.attach_to(base)
-    # base.run()
+    '''
+    show data
+    '''
+    for x in range(2):
+        for y in range(2):
+            for z in range(2):
+                o3dmesh = o3d.io.read_triangle_mesh(f"tst/{'_'.join([str(x), str(y), str(z)])}.ply")
+                objcm = o3dmesh2cm(o3dmesh)
+                o3dpcd = o3d.io.read_point_cloud(f"tst/{'_'.join([str(x), str(y), str(z)])}.pcd")
+                gm.gen_pointcloud(o3dpcd.points, pntsize=5).attach_to(base)
+                objcm.set_rgba((1, 1, 1, 1))
+                objcm.attach_to(base)
+    base.run()
 
     # '''
     # show key point
@@ -275,3 +286,9 @@ if __name__ == '__main__':
     # get_kpts_gmm(o3dpcd.points, rgba=(0, 1, 0, 1))
     #
     # base.run()
+
+    o3dpcd = o3d.io.read_point_cloud(f"tst/0_0_0.pcd")
+    o3dpcd_occ = add_random_occ(o3dpcd)
+    gm.gen_pointcloud(o3dpcd.points, pntsize=5, rgbas=[[1, 1, 1, .5]]).attach_to(base)
+    gm.gen_pointcloud(o3dpcd_occ.points, pntsize=5, rgbas=[[1, 0, 0, .5]]).attach_to(base)
+    base.run()
