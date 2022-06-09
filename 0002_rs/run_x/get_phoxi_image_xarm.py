@@ -38,7 +38,7 @@ def get_img(f_name, img_num, path=''):
         i += 1
 
 
-def get_img_rbt(f_name, img_num, path='', jnt_range=(-np.pi/2, np.pi/4)):
+def get_img_rbt(f_name, img_num, path='', jnt_range=(-np.pi, np.pi)):
     phxi = phoxi.Phoxi(host=config.PHOXI_HOST)
     rbtx = xarmx.XArmShuidiX(ip="10.2.0.201")
     rbtx.arm_jaw_to(0)
@@ -48,14 +48,14 @@ def get_img_rbt(f_name, img_num, path='', jnt_range=(-np.pi/2, np.pi/4)):
         jnts_new = copy.deepcopy(jnts)
         jnts_new[6] = a
         rbtx.arm_move_jspace_path([jnts, jnts_new])
-        grayimg, _, _ = phxi.dumpalldata(f_name="img/" + path + "_".join([f_name, str(i)]) + ".pkl")
+        grayimg, _, _ = phxi.dumpalldata(f_name="img/" + path + "_".join([f_name, str(i).zfill(3)]) + ".pkl")
         i += 1
         # cv2.imshow("grayimg", grayimg)
         # cv2.waitKey(0)
 
 
 if __name__ == '__main__':
-    folder_name = "plate_as"
+    folder_name = "plate_a"
     f_name = "plate"
-    img_num = 10
+    img_num = 30
     get_img_rbt(f_name, img_num, path=f'phoxi/seq/{folder_name}/')

@@ -14,6 +14,8 @@ transmat = np.asarray([[0.00320929, -1.00401041, 0.00128358, 0.31255359],
 def loadalldata(folder_name, show=True):
     files = os.listdir(folder_name)
     alldata = []
+    if not os.path.exists(os.path.join(folder_name, "grayimg/")):
+        os.mkdir(os.path.join(folder_name, "grayimg/"))
     for file in files:
         if not os.path.isdir(file) and file[-4:] == ".pkl" and file[2:] != "bg":
             print(file)
@@ -41,5 +43,5 @@ def show_pcd(folder_name):
 if __name__ == '__main__':
     import visualization.panda.world as wd
 
-    loadalldata('./seq/plate_as/')
+    loadalldata('./seq/plate/')
     # show_pcd('./')
