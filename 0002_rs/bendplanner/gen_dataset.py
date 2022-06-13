@@ -1,7 +1,8 @@
+import copy
 import math
-import pickle
-import random
 import os
+import random
+
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,10 +13,8 @@ from sklearn.neighbors import KDTree
 import basis.o3dhelper as o3dh
 import basis.robot_math as rm
 import basis.trimesh as trm
-import bendplanner.bender_config as bconfig
 import modeling.collision_model as cm
 import modeling.geometric_model as gm
-import copy
 
 
 def gen_sgl_curve(pseq, step=.001, toggledebug=False):
@@ -180,6 +179,7 @@ def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolus
         os.mkdir(path)
     vis = o3d.visualization.Visualizer()
     vis.create_window('win', width=resolusion[0], height=resolusion[1], left=0, top=0)
+    ctr = o3d.visualization.ViewControl()
     o3dmesh = o3d.geometry.TriangleMesh(vertices=o3d.utility.Vector3dVector(objcm.objtrm.vertices),
                                         triangles=o3d.utility.Vector3iVector(objcm.objtrm.faces))
     o3dmesh.rotate(rot, center=rot_center)
@@ -191,11 +191,12 @@ def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolus
                                   convert_to_world_coordinate=True)
     if add_occ:
         o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f_name + '.pcd'))
-        o3dpcd = add_random_occ(o3dpcd)
+        o3dpcd = add_random_occ_by_nrml(o3dpcd)
         o3d.io.write_point_cloud(os.path.join(path, f_name + '.pcd'), o3dpcd)
-    # o3d.io.write_triangle_mesh(os.path.join(path, f_name + '.ply'), o3dmesh)
+    o3d.io.write_triangle_mesh(os.path.join(path, f_name + '.ply'), o3dmesh)
     vis.capture_screen_image(os.path.join(path, f_name + '.png'), do_render=False)
     vis.destroy_window()
+    o3d.visualization.draw_geometries([o3dpcd], point_show_normal=True)
     if toggledebug:
         o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f_name + '.pcd'))
         print(o3dpcd.get_center())
@@ -245,6 +246,32 @@ def add_random_occ(o3dpcd, occ_ratio_rng=(.05, .1)):
     return o3dh.nparray2o3dpcd(pcd)
 
 
+def add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=(.2, .4)):
+    kdt = KDTree(np.asarray(o3dpcd.points), leaf_size=100, metric='euclidean')
+    seed = random.choice(range(len(o3dpcd.points)))
+    _, indices = kdt.query([np.asarray(o3dpcd.points)[seed]],
+                           k=int(len(o3dpcd.points) * random.uniform(occ_ratio_rng[0], occ_ratio_rng[1])),
+                           return_distance=True)
+    o3dpcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.001, max_nn=10))
+
+    nrmls = np.asarray(o3dpcd.normals)[indices[0]]
+    pts = np.asarray(o3dpcd.points)[indices[0]]
+
+    # pcv, pcaxmat = rm.compute_pca(pts)
+    # inx = sorted(range(len(pcv)), key=lambda k: pcv[k])
+    # nrml_0 = pcaxmat[:, inx[0]]
+    nrml_0 = np.asarray(o3dpcd.normals)[seed]
+
+    del_indices = []
+    for i, v in enumerate(nrmls):
+        a = rm.angle_between_vectors(v, nrml_0)
+        if a < np.pi / 2:
+            del_indices.append(indices[0][i])
+    pcd = np.delete(np.asarray(o3dpcd.points), del_indices, axis=0)
+
+    return o3dh.nparray2o3dpcd(pcd)
+
+
 def get_kpts_gmm(objpcd, n_components=20, show=True, rgba=(1, 0, 0, 1)):
     X = np.array(objpcd)
     gmix = GaussianMixture(n_components=n_components, random_state=0).fit(X)
@@ -274,7 +301,6 @@ if __name__ == '__main__':
     '''
     rot_center = (0, 0, 0)
     icomats = rm.gen_icorotmats(rotation_interval=math.radians(90))
-    print(np.asarray(icomats).shape)
     for i, mats in enumerate(icomats):
         for j, rot in enumerate(mats):
             get_objpcd_partial_o3d(objcm, rot, rot_center, path='tst', f_name='_'.join([str(i), str(j)]),

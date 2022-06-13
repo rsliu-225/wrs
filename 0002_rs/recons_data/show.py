@@ -1,7 +1,7 @@
 import os
 import open3d as o3d
 
-folder_name = 'plate_a'
+folder_name = 'plate_a_cubic'
 for f in sorted(os.listdir(folder_name)):
     if f[-3:] != 'pcd':
         continue
