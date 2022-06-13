@@ -137,7 +137,7 @@ def registration_ptpt(src, tgt, downsampling_voxelsize=1, toggledebug=False):
         down_radius_normal = voxel_size * 15
         pcd_down.estimate_normals(o3d.geometry.KDTreeSearchParamHybrid(radius=down_radius_normal, max_nn=30))
         radius_feature = voxel_size * 15
-        pcd_fpfh = o3d.registration.compute_fpfh_feature(
+        pcd_fpfh = o3d.pipelines.registration.compute_fpfh_feature(
             pcd_down,
             o3d.geometry.KDTreeSearchParamHybrid(radius=radius_feature, max_nn=100))
         return pcd_down, pcd_fpfh
@@ -154,9 +154,9 @@ def registration_ptpt(src, tgt, downsampling_voxelsize=1, toggledebug=False):
     #     print("   Since the downsampling voxel size is %.3f," % downsampling_voxelsize)
     #     print("   we use a liberal distance threshold %.3f." % distance_threshold)
 
-    result_global = o3d.registration.registration_fast_based_on_feature_matching(
+    result_global = o3d.pipelines.registration.registration_fast_based_on_feature_matching(
         source_down, target_down, source_fpfh, target_fpfh,
-        o3d.registration.FastGlobalRegistrationOption(
+        o3d.pipelines.registration.FastGlobalRegistrationOption(
             maximum_correspondence_distance=distance_threshold))
     if toggledebug:
         __draw_registration_result(source_down, target_down, result_global.transformation)
@@ -196,7 +196,7 @@ def registration_ptpln(src, tgt, downsampling_voxelsize=2, toggledebug=False):
         down_radius_normal = voxel_size * 2
         pcd_down.estimate_normals(o3d.geometry.KDTreeSearchParamHybrid(radius=down_radius_normal, max_nn=30))
         radius_feature = voxel_size * 5
-        pcd_fpfh = o3d.registration.compute_fpfh_feature(
+        pcd_fpfh = o3d.pipelines.registration.compute_fpfh_feature(
             pcd_down,
             o3d.geometry.KDTreeSearchParamHybrid(radius=radius_feature, max_nn=100))
         return pcd_down, pcd_fpfh
@@ -213,12 +213,12 @@ def registration_ptpln(src, tgt, downsampling_voxelsize=2, toggledebug=False):
         print("   Since the downsampling voxel size is %.3f," % downsampling_voxelsize)
         print("   we use a liberal distance threshold %.3f." % distance_threshold)
 
-    result_global = o3d.registration.registration_ransac_based_on_feature_matching(
+    result_global = o3d.pipelines.registration.registration_ransac_based_on_feature_matching(
         source_down, target_down, source_fpfh, target_fpfh, distance_threshold,
-        o3d.registration.TransformationEstimationPointToPoint(False), 4, [
-            o3d.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9),
-            o3d.registration.CorrespondenceCheckerBasedOnDistance(distance_threshold)],
-        o3d.registration.RANSACConvergenceCriteria(4000000, 500))
+        o3d.pipelines.registration.TransformationEstimationPointToPoint(False), 4, [
+            o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9),
+            o3d.pipelines.registration.CorrespondenceCheckerBasedOnDistance(distance_threshold)],
+        o3d.pipelines.registration.RANSACConvergenceCriteria(4000000, 500))
     if toggledebug:
         __draw_registration_result(source_down, target_down, result_global.transformation)
 
@@ -227,9 +227,9 @@ def registration_ptpln(src, tgt, downsampling_voxelsize=2, toggledebug=False):
         print(":: Point-to-plane ICP registration is applied on original point")
         print("   clouds to refine the alignment. This time we use a strict")
         print("   distance threshold %.3f." % distance_threshold)
-    result_icp = o3d.registration.registration_icp(
+    result_icp = o3d.pipelines.registration.registration_icp(
         src_o3d, tgt_o3d, distance_threshold, result_global.transformation,
-        o3d.registration.TransformationEstimationPointToPlane())
+        o3d.pipelines.registration.TransformationEstimationPointToPlane())
     if toggledebug:
         __draw_registration_result(src_o3d, tgt_o3d, result_icp.transformation)
     return [result_icp.inlier_rmse, result_icp.transformation]
@@ -307,12 +307,12 @@ def _registration_icp_ptpt_o3d(src, tgt, inithomomat=np.eye(4), maxcorrdist=2, t
     date: 20191229
     """
 
-    criteria = o3d.registration.ICPConvergenceCriteria(relative_fitness=1e-6,
+    criteria = o3d.pipelines.registration.ICPConvergenceCriteria(relative_fitness=1e-6,
                                                                  # converge if fitnesss smaller than this
                                                                  relative_rmse=1e-6,
                                                                  # converge if rmse smaller than this
                                                                  max_iteration=2000)
-    result_icp = o3d.registration.registration_icp(src, tgt, maxcorrdist, inithomomat, criteria=criteria)
+    result_icp = o3d.pipelines.registration.registration_icp(src, tgt, maxcorrdist, inithomomat, criteria=criteria)
     if toggledebug:
         __draw_registration_result(src, tgt, result_icp.transformation)
     return [result_icp.inlier_rmse, result_icp.fitness, result_icp.transformation]

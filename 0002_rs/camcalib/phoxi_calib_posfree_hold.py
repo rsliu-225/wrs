@@ -9,6 +9,7 @@ from scipy.optimize import leastsq
 
 import config
 from localenv import envloader as el
+from localenv import envloader as el
 import motionplanner.motion_planner as m_planner
 import motionplanner.rbtx_motion_planner as m_plannerx
 import utils.pcd_utils as pcdu

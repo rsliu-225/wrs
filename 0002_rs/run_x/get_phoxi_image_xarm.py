@@ -39,6 +39,8 @@ def get_img(f_name, img_num, path=''):
 
 
 def get_img_rbt(f_name, img_num, path='', jnt_range=(-np.pi, np.pi)):
+    if not os.path.exists(os.path.join(config.ROOT, "img", path)):
+        os.mkdir(os.path.join(config.ROOT, "img", path))
     phxi = phoxi.Phoxi(host=config.PHOXI_HOST)
     rbtx = xarmx.XArmShuidiX(ip="10.2.0.201")
     rbtx.arm_jaw_to(0)
@@ -48,14 +50,17 @@ def get_img_rbt(f_name, img_num, path='', jnt_range=(-np.pi, np.pi)):
         jnts_new = copy.deepcopy(jnts)
         jnts_new[6] = a
         rbtx.arm_move_jspace_path([jnts, jnts_new])
-        grayimg, _, _ = phxi.dumpalldata(f_name="img/" + path + "_".join([f_name, str(i).zfill(3)]) + ".pkl")
-        i += 1
-        # cv2.imshow("grayimg", grayimg)
-        # cv2.waitKey(0)
+        if f_name != '':
+            grayimg, _, _ = phxi.dumpalldata(f_name="img/" + path + "_".join([f_name, str(i).zfill(3)]) + ".pkl")
+        else:
+            grayimg, _, _ = phxi.dumpalldata(f_name="img/" + path + str(i).zfill(3) + ".pkl")
+            i += 1
+            # cv2.imshow("grayimg", grayimg)
+            # cv2.waitKey(0)
 
 
 if __name__ == '__main__':
-    folder_name = "plate_a"
-    f_name = "plate"
+    folder_name = "plate_a_linear"
+    f_name = ""
     img_num = 30
     get_img_rbt(f_name, img_num, path=f'phoxi/seq/{folder_name}/')

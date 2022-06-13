@@ -126,4 +126,4 @@ def serve(serialno="2019-09-051-LC3", host="127.0.0.1:18300"):
         server.stop(0)
 
 if __name__ == "__main__":
-    serve(serialno="2019-09-051-LC3", host="10.1.1.199:18300")
+    serve(serialno="2019-09-051-LC3", host="10.2.0.199:18300")
