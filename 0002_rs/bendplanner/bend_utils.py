@@ -269,7 +269,7 @@ def avg_polylines_dist_err(pts1, pts2, toggledebug=False):
     return err, pts1_on_2
 
 
-def mindist_err(res_pts, goal_pts, res_rs=None, goal_rs=None, toggledebug=False):
+def mindist_err(res_pts, goal_pts, res_rs=None, goal_rs=None, toggledebug=False, type='max'):
     res_pts, goal_pts = np.asarray(res_pts), np.asarray(goal_pts)
     nearest_pts = []
     nearest_rs = []
@@ -283,7 +283,7 @@ def mindist_err(res_pts, goal_pts, res_rs=None, goal_rs=None, toggledebug=False)
     kdt = KDTree(res_pts, leaf_size=100, metric='euclidean')
     for i in range(len(goal_pts)):
         distances, indices = kdt.query([goal_pts[i]], k=1, return_distance=True)
-        pos_err_list.append(distances[0][0])
+        pos_err_list.append(distances[0][0] * 1000)
         nearest_pts.append(res_pts[indices[0][0]])
         if res_rs is not None:
             n_err_list.append(np.degrees(rm.angle_between_vectors(goal_rs[i][:, 0], res_rs[indices[0][0]][:, 0])))
@@ -313,7 +313,10 @@ def mindist_err(res_pts, goal_pts, res_rs=None, goal_rs=None, toggledebug=False)
             plot_frameseq(ax, goal_pts, goal_rs, skip=10)
         plt.show()
     # err = np.asarray(pos_err_list).sum() * 10 + np.asarray(n_err_list).sum()/10
-    err = np.asarray(pos_err_list).sum() * 10
+    if type == 'max':
+        err = max(pos_err_list)
+    else:
+        err = np.asarray(pos_err_list).sum()
 
     return err, nearest_pts
 

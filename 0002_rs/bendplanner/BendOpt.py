@@ -18,13 +18,15 @@ import config
 
 
 class BendOptimizer(object):
-    def __init__(self, bs, init_pseq, init_rotseq, goal_pseq, goal_rotseq, bend_times=1):
+    def __init__(self, bs, init_pseq, init_rotseq, goal_pseq, goal_rotseq, bend_times=1, obj_type='max'):
         self.bs = bs
         self.bend_times = bend_times
         self.goal_pseq = goal_pseq
         self.goal_rotseq = goal_rotseq
         self.init_pseq = copy.deepcopy(init_pseq)
         self.init_rotseq = copy.deepcopy(init_rotseq)
+        self.obj_type = obj_type
+
         self.bs.reset(self.init_pseq, self.init_rotseq, extend=False)
         self.total_len = bu.cal_length(goal_pseq)
         self.init_l = bconfig.INIT_L
@@ -67,15 +69,16 @@ class BendOptimizer(object):
             # err, _ = bu.avg_polylines_dist_err(np.asarray(res_pseq), np.asarray(goal_pseq), toggledebug=False)
             # err, _ = bu.mindist_err(self.bs.pseq[1:], goal_pseq, toggledebug=True)
             if goal_rotseq is None:
-                err, _ = bu.mindist_err(self.bs.pseq[1:], goal_pseq, toggledebug=False)
+                err, _ = bu.mindist_err(self.bs.pseq[1:], goal_pseq, type=self.obj_type, toggledebug=False)
             else:
-                err, _ = bu.mindist_err(self.bs.pseq[1:], goal_pseq, self.bs.rotseq[1:], goal_rotseq, toggledebug=False)
+                err, _ = bu.mindist_err(self.bs.pseq[1:], goal_pseq, self.bs.rotseq[1:], goal_rotseq,
+                                        type=self.obj_type, toggledebug=False)
         except:
             err = 100
         print('cost:', err)
         self.cost_list.append(err)
 
-        return err / 10
+        return err
 
     def bend_x(self, x):
         x = np.asarray(x)
@@ -161,9 +164,6 @@ class BendOptimizer(object):
     def solve(self, method='SLSQP', init=None):
         """
 
-        :param seedjntagls:
-        :param tgtpos:
-        :param tgtrot:
         :param method: 'SLSQP' or 'COBYLA'
         :return:
         """
@@ -254,7 +254,6 @@ if __name__ == '__main__':
     gm.gen_frame(thickness=.0005, alpha=.1, length=.01).attach_to(base)
     bs = b_sim.BendSim(show=True, granularity=np.pi / 90, cm_type='stick')
 
-    # goal_pseq = bu.gen_polygen(5, .05)
     goal_pseq = pickle.load(open('../data/bend/pseq/random_curve.pkl', 'rb'))
     goal_rotseq = None
     # goal_pseq, goal_rotseq = pickle.load(open('../data/bend/rotpseq/skull2.pkl', 'rb'))
@@ -263,7 +262,7 @@ if __name__ == '__main__':
     init_rotseq = [np.eye(3), np.eye(3)]
 
     opt = BendOptimizer(bs, init_pseq, init_rotseq, goal_pseq, goal_rotseq=goal_rotseq, bend_times=1)
-    res_bendseq, cost = opt.solve()
+    res_bendseq, cost = opt.solve(method='SLSQP')
 
     bs.gen_by_bendseq(res_bendseq, cc=False)
     goal_pseq, goal_rotseq = bu.align_with_init(bs, goal_pseq, opt.init_rot, goal_rotseq)
