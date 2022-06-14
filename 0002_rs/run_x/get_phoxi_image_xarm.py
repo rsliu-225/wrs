@@ -60,7 +60,7 @@ def get_img_rbt(f_name, img_num, path='', jnt_range=(-np.pi, np.pi)):
 
 
 if __name__ == '__main__':
-    folder_name = "plate_a_linear"
+    folder_name = "wire_3d"
     f_name = ""
     img_num = 30
     get_img_rbt(f_name, img_num, path=f'phoxi/seq/{folder_name}/')

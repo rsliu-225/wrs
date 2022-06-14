@@ -131,12 +131,10 @@ def get_objpcd_full_sample_o3d(o3dmesh, smp_num=16384, toggledebug=False, method
 
 
 def save_complete_pcd(name, mesh):
-    pcd = get_objpcd_full_sample_o3d(mesh)
     path = "./complete/"
     if not os.path.exists(path):
         os.mkdir(path)
-    o3d.io.write_triangle_mesh(path + name + '.ply', mesh)
-    o3d.io.write_point_cloud(path + name + '.pcd', pcd)
+    o3d.io.write_point_cloud(path + name + '_complete.pcd', get_objpcd_full_sample_o3d(mesh))
 
 
 def gen_swap(pseq, rotseq, cross_sec, toggledebug=False):
@@ -187,21 +185,22 @@ def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolus
         o3dmesh = noisy_mesh(o3dmesh)
     vis.add_geometry(o3dmesh)
     vis.poll_events()
-    vis.capture_depth_point_cloud(os.path.join(path, f_name + '.pcd'), do_render=False,
+    vis.capture_depth_point_cloud(os.path.join(path, f_name + '_partial_depth.pcd'), do_render=False,
                                   convert_to_world_coordinate=True)
     if add_occ:
-        o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f_name + '.pcd'))
+        o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f_name + '_partial_depth.pcd'))
         o3dpcd = add_random_occ_by_nrml(o3dpcd)
-        o3d.io.write_point_cloud(os.path.join(path, f_name + '.pcd'), o3dpcd)
-    o3d.io.write_triangle_mesh(os.path.join(path, f_name + '.ply'), o3dmesh)
-    vis.capture_screen_image(os.path.join(path, f_name + '.png'), do_render=False)
+        o3d.io.write_point_cloud(os.path.join(path, f_name + '_partial.pcd'), o3dpcd)
+    # o3d.io.write_triangle_mesh(os.path.join(path, f_name + '.ply'), o3dmesh)
+    # vis.capture_screen_image(os.path.join(path, f_name + '.png'), do_render=False)
+    save_complete_pcd(f_name, o3dmesh)
     vis.destroy_window()
-    o3d.visualization.draw_geometries([o3dpcd], point_show_normal=True)
+    # o3d.visualization.draw_geometries([o3dpcd], point_show_normal=True)
     if toggledebug:
         o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f_name + '.pcd'))
         print(o3dpcd.get_center())
         o3d.visualization.draw_geometries([o3dmesh, o3dpcd])
-    return o3dmesh
+    return o3dpcd
 
 
 def get_objpcd_partial(objcm, img_size=(50, 50), granurity=0.2645 / 1000):
@@ -246,7 +245,7 @@ def add_random_occ(o3dpcd, occ_ratio_rng=(.05, .1)):
     return o3dh.nparray2o3dpcd(pcd)
 
 
-def add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=(.2, .4)):
+def add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=(.3, .6)):
     kdt = KDTree(np.asarray(o3dpcd.points), leaf_size=100, metric='euclidean')
     seed = random.choice(range(len(o3dpcd.points)))
     _, indices = kdt.query([np.asarray(o3dpcd.points)[seed]],
@@ -284,27 +283,27 @@ if __name__ == '__main__':
     import visualization.panda.world as wd
     from sklearn.mixture import GaussianMixture
 
-    cam_pos = np.asarray([0, 0, .5])
-    base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
-    width = .005
-    thickness = .0015
-
-    pseq = gen_sgl_curve(pseq=np.asarray([[0, 0, 0], [.018, .03, .02], [.06, .06, 0], [.12, 0, 0]]))
-    rotseq = get_rotseq_by_pseq(pseq)
-    cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
-
-    objcm = gen_swap(pseq, rotseq, cross_sec)
+    # cam_pos = np.asarray([0, 0, .5])
+    # base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
+    # width = .005
+    # thickness = .0015
+    #
+    # pseq = gen_sgl_curve(pseq=np.asarray([[0, 0, 0], [.018, .03, .02], [.06, .06, 0], [.12, 0, 0]]))
+    # rotseq = get_rotseq_by_pseq(pseq)
+    # cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
+    #
+    # objcm = gen_swap(pseq, rotseq, cross_sec)
     # objcm.attach_to(base)
 
     '''
     gen data
     '''
-    rot_center = (0, 0, 0)
-    icomats = rm.gen_icorotmats(rotation_interval=math.radians(90))
-    for i, mats in enumerate(icomats):
-        for j, rot in enumerate(mats):
-            get_objpcd_partial_o3d(objcm, rot, rot_center, path='tst', f_name='_'.join([str(i), str(j)]),
-                                   add_noise=False, add_occ=True)
+    # rot_center = (0, 0, 0)
+    # icomats = rm.gen_icorotmats(rotation_interval=math.radians(90))
+    # for i, mats in enumerate(icomats):
+    #     for j, rot in enumerate(mats):
+    #         get_objpcd_partial_o3d(objcm, rot, rot_center, path='tst', f_name='_'.join([str(i), str(j)]),
+    #                                add_noise=False, add_occ=True)
 
     # '''
     # show data

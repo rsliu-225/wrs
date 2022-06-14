@@ -13,6 +13,9 @@ import config
 import modeling.geometric_model as gm
 import utils.pcd_utils as pcdu
 import utils.vision_utils as vu
+from skimage.morphology import skeletonize
+import matplotlib.pyplot as plt
+import sknw
 
 
 def load_frame_seq(folder_name=None, root_path=os.path.join(config.ROOT, 'img/phoxi/seq/'), path=None):
@@ -154,16 +157,63 @@ def crop_maker(img, pcd):
         return None, None
     # gm.gen_frame(pos=center, rotmat=rotmat).attach_to(base)
     pcd_trans = pcdu.trans_pcd(pcd, np.linalg.inv(gripperframe))
-    # pcdu.show_pcd(pcd_trans, rgba=(1, 1, 1, .1))
+    pcdu.show_pcd(pcd_trans, rgba=(1, 1, 1, .1))
     gm.gen_frame().attach_to(base)
-    return ids[0], pcdu.crop_pcd(pcd_trans, x_range=(.08, .215), y_range=(-.2, .2), z_range=(-.2, -.03))
+    # base.run()
+    return ids[0], pcdu.crop_pcd(pcd_trans, x_range=(.08, .215), y_range=(-.4, .4), z_range=(-.2, -.02))
+    # return ids[0], pcdu.crop_pcd(pcd_trans, x_range=(.08, .215), y_range=(-.4, .4), z_range=(.05, .3))
+
+
+def make_3dax(grid=False):
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("z")
+    ax.grid(grid)
+    return ax
+
+
+def skeleton(pcd):
+    pcd = o3dh.nparray2o3dpcd(np.asarray(pcd))
+    voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(input=pcd, voxel_size=.001)
+    voxel_bin = np.zeros([100, 100, 100])
+    for v in voxel_grid.get_voxels():
+        voxel_bin[v.grid_index[0]][v.grid_index[1]][v.grid_index[2]] = 1
+    ax = make_3dax(True)
+    ax.voxels(voxel_bin,  shade=False)
+    skeleton = skeletonize(voxel_bin)
+    graph = sknw.build_sknw(skeleton, multi=True)
+
+    exit_node = list(set([s for s, e in graph.edges()] + [e for s, e in graph.edges()]))
+    nodes = graph.nodes()
+    stroke_list = [[nodes[i]['o'][::-1]] for i in nodes if i not in exit_node]
+
+    for (s, e) in graph.edges():
+        for cnt in range(10):
+            stroke = []
+            try:
+                ps = graph[s][e][cnt]['pts']
+                for i in range(len(ps)):
+                    if i % 3 == 0:
+                        stroke.append([ps[i][0],ps[i][1],ps[i][2]])
+                # stroke.append([ps[-1, 1], ps[-1, 0]])
+                stroke_list.append(stroke)
+                print(stroke)
+            except:
+                break
+
+    for stroke in np.asarray(stroke_list):
+        stroke = np.asarray(stroke)
+        ax.scatter(stroke[:, 0], stroke[:, 1], stroke[:, 2])
+    plt.show()
 
 
 if __name__ == '__main__':
     import visualization.panda.world as wd
 
     icp = False
-    folder_name = 'plate_a_cubic'
+    folder_name = 'wire_3d'
     if not os.path.exists(os.path.join(config.ROOT, 'recons_data', folder_name)):
         os.mkdir(os.path.join(config.ROOT, 'recons_data', folder_name))
 
@@ -179,9 +229,11 @@ if __name__ == '__main__':
     for i in range(len(grayimg_list)):
         pcd = np.asarray(pcd_list[i]) / 1000
         inx, pcd_cropped = crop_maker(grayimg_list[i], pcd)
+
         if pcd_cropped is not None:
-            pcd_cropped, _ = get_max_cluster(pcd_cropped, eps=.003, min_samples=100)
+            pcd_cropped, _ = get_max_cluster(pcd_cropped, eps=.005, min_samples=100)
             print(len(pcd_cropped))
+            # skeleton(pcd_cropped)
             if len(pcd_cropped) > 0:
                 o3dpcd = o3dh.nparray2o3dpcd(pcd_cropped)
                 print(fnlist[i])
