@@ -1,22 +1,16 @@
-import optuna
-
 import copy
 import math
-import numpy as np
-import modeling.geometric_model as gm
-import visualization.panda.world as wd
-import basis.robot_math as rm
-import BendSim
-from scipy.optimize import minimize
-import basis.o3dhelper as o3dh
 import time
-import random
+
 import matplotlib.pyplot as plt
+import numpy as np
+import optuna
+
 import bend_utils as bu
 import bender_config as bconfig
-import utils.math_utils as mu
-from direct.stdpy import threading
-import config
+import bendplanner.BendSim as b_sim
+import modeling.geometric_model as gm
+import visualization.panda.world as wd
 
 
 class BendOptimizer(object):
@@ -34,26 +28,36 @@ class BendOptimizer(object):
         self.init_l = bconfig.INIT_L
         self.init_rot = np.eye(3)
 
-        self.ba_b = (-math.pi / 9, math.pi / 9)
-        self.la_b = (-math.pi / 1e8, math.pi / 1e8)
-        self.ra_b = (-math.pi / 9, math.pi / 9)
-        self.l_b = (-.02, .02)
+        # self.ba_b = (-math.pi / 2, math.pi / 2)
+        # self.ra_b = (-math.pi / 2, math.pi / 2)
+        # self.la_b = (-math.pi / 3, math.pi / 3)
+        # self.l_b = (0, self.total_len + self.bs.bend_r * math.pi)
 
+        self.ba_relb = (-math.pi / 9, math.pi / 9)
+        # self.la_relb = (-math.pi / 1e8, math.pi / 1e8)
+        self.la_relb = None
+        self.ra_relb = (-math.pi / 9, math.pi / 9)
+        self.l_relb = (-.02, .02)
         self.init_bendset = None
 
         self.cost_list = []
+        self._param_name = ['theta', 'beta', 'alpha', 'l']
+        self._relbnds = [self.ba_relb, self.la_relb, self.ra_relb, self.l_relb]
 
     def bend_x(self, x):
-        x = np.asarray(x)
+        x = self._zfill_x(x)
         self.bs.gen_by_bendseq(x.reshape(self.bend_times, 4), cc=False)
         return self.bs.pseq
 
-    def fit_init(self, goal_pseq, goal_rotseq, tor=.001):
+    def fit_init(self, goal_pseq, goal_rotseq, tor=.001, cnt=None):
         if goal_rotseq is not None:
             fit_pseq, fit_rotseq = bu.decimate_rotpseq(goal_pseq, goal_rotseq, tor=tor, toggledebug=False)
             self.init_bendset = bu.rotpseq2bendset(fit_pseq, fit_rotseq, toggledebug=False)
         else:
-            fit_pseq, fit_rotseq = bu.decimate_pseq(goal_pseq, tor=tor, toggledebug=False)
+            if tor is not None:
+                fit_pseq, fit_rotseq = bu.decimate_pseq(goal_pseq, tor=tor, toggledebug=False)
+            else:
+                fit_pseq, fit_rotseq = bu.decimate_pseq_by_cnt(goal_pseq, cnt=cnt, toggledebug=False)
             self.init_bendset = bu.pseq2bendset(fit_pseq, toggledebug=False)
         self.init_rot = bu.get_init_rot(fit_pseq)
         self.bend_times = len(self.init_bendset)
@@ -62,12 +66,11 @@ class BendOptimizer(object):
     def objective(self, trial: optuna.Trial):
         x = []
         for i, b in enumerate(self.init_bendset):
-            theta = trial.suggest_uniform(f"theta{str(i)}", b[0] + self.ba_b[0], b[0] + self.ba_b[1])
-            alpha = trial.suggest_uniform(f"beta{str(i)}", b[1] + self.la_b[0], b[1] + self.la_b[1])
-            beta = trial.suggest_uniform(f"alpha{str(i)}", b[2] + self.ra_b[0], b[2] + self.ra_b[1])
-            l = trial.suggest_uniform(f"l{str(i)}", b[3] + self.la_b[0], b[3] + self.la_b[1])
-            x.extend([theta, alpha, beta, l])
-
+            for j in range(4):
+                if self._relbnds[j] is not None:
+                    param = trial.suggest_uniform(f"{self._param_name[j]}{str(i)}",
+                                                  b[j] + self._relbnds[j][0], b[j] + self._relbnds[j][1])
+                    x.append(param)
         self.bs.reset(self.init_pseq, self.init_rotseq, extend=False)
         try:
             self.bend_x(x)
@@ -84,102 +87,118 @@ class BendOptimizer(object):
 
         return err
 
-    def solve(self, n_trials=250):
-        self.fit_init(self.goal_pseq, self.goal_rotseq, tor=.0002)
+    def solve(self, n_trials=250, n_startup_trials=1, sigma0=None, tor=None, cnt=None):
+        self.fit_init(self.goal_pseq, self.goal_rotseq, tor=tor, cnt=cnt)
         x0 = {}
         for i, b in enumerate(self.init_bendset):
-            x0[f"theta{str(i)}"] = b[0]
-            x0[f"beta{str(i)}"] = b[1]
-            x0[f"alpha{str(i)}"] = b[2]
-            x0[f"l{str(i)}"] = b[3]
+            for j in range(4):
+                if self._relbnds[j] is not None:
+                    x0[f'{self._param_name[j]}{str(i)}'] = b[j]
 
         time_start = time.time()
-        sampler = optuna.samplers.CmaEsSampler(x0=x0, n_startup_trials=1, sigma0=.01)
+        sampler = optuna.samplers.CmaEsSampler(x0=x0, n_startup_trials=n_startup_trials, sigma0=sigma0)
         study = optuna.create_study(sampler=sampler)
         study.optimize(self.objective, n_trials=n_trials)
+        time_cost = time.time() - time_start
         print("time cost", time.time() - time_start)
         print(study.best_value)
-        print(len(list(study.best_params.values())))
-        res = np.asarray(list(study.best_params.values()))
+        print(list(study.best_params.values()))
+
+        sol_x = self._zfill_x(np.asarray(list(study.best_params.values())))
         init = np.asarray(self.init_bendset).flatten()
 
-        optuna.visualization.matplotlib.plot_optimization_history(study)
-        plt.show()
+        # self._plot_param(sol_x, init)
+        #
+        # optuna.visualization.matplotlib.plot_optimization_history(study)
+        # plt.show()
+        #
+        # ax = plt.axes()
+        # ax.set_title("Error")
+        # ax.plot([i for i in range(len(self.cost_list[1:]))], self.cost_list[1:], label=["Err"])
+        # # ax.savefig(f"{config.ROOT}/bendplanner/tst.png")
+        # plt.show()
 
-        ax = plt.axes()
-        ax.set_title("Error")
-        ax.plot([i for i in range(len(self.cost_list[1:]))], self.cost_list[1:], label=["Err"])
-        # ax.savefig(f"{config.ROOT}/bendplanner/tst.png")
-        plt.show()
+        return sol_x.reshape(self.bend_times, 4), study.best_value, time_cost
 
+    def _zfill_x(self, x):
+        x = np.asarray(x).reshape(self.bend_times, 4 - self._relbnds.count(None))
+        for i in range(4):
+            if self._relbnds[i] is None:
+                x = np.insert(x, i, 0, axis=1)
+        return x.flatten()
+
+    def _plot_param(self, sol, init):
         plt.grid()
         plt.subplot(131)
-        plt.scatter([v for i, v in enumerate(res) if i % 4 == 3],
-                    [np.degrees(v) for i, v in enumerate(res) if i % 4 == 0], color='red')
-        plt.plot([v for i, v in enumerate(res) if i % 4 == 3],
-                 [np.degrees(v) for i, v in enumerate(res) if i % 4 == 0], color='red')
+        plt.scatter([v for i, v in enumerate(sol) if i % 4 == 3],
+                    [np.degrees(v) for i, v in enumerate(sol) if i % 4 == 0], color='r')
+        plt.plot([v for i, v in enumerate(sol) if i % 4 == 3],
+                 [np.degrees(v) for i, v in enumerate(sol) if i % 4 == 0], color='r')
         plt.scatter([v for i, v in enumerate(init) if i % 4 == 3],
-                    [np.degrees(v) for i, v in enumerate(init) if i % 4 == 0], color='blue')
+                    [np.degrees(v) for i, v in enumerate(init) if i % 4 == 0], color='g')
         plt.plot([v for i, v in enumerate(init) if i % 4 == 3],
-                 [np.degrees(v) for i, v in enumerate(init) if i % 4 == 0], color='blue')
+                 [np.degrees(v) for i, v in enumerate(init) if i % 4 == 0], color='g')
 
         plt.subplot(132)
-        plt.scatter([v for i, v in enumerate(res) if i % 4 == 3],
-                    [np.degrees(v) for i, v in enumerate(res) if i % 4 == 1], color='red')
-        plt.plot([v for i, v in enumerate(res) if i % 4 == 3],
-                 [np.degrees(v) for i, v in enumerate(res) if i % 4 == 1], color='red')
+        plt.scatter([v for i, v in enumerate(sol) if i % 4 == 3],
+                    [np.degrees(v) for i, v in enumerate(sol) if i % 4 == 1], color='r')
+        plt.plot([v for i, v in enumerate(sol) if i % 4 == 3],
+                 [np.degrees(v) for i, v in enumerate(sol) if i % 4 == 1], color='r')
         plt.scatter([v for i, v in enumerate(init) if i % 4 == 3],
-                    [np.degrees(v) for i, v in enumerate(init) if i % 4 == 1], color='blue')
+                    [np.degrees(v) for i, v in enumerate(init) if i % 4 == 1], color='g')
         plt.plot([v for i, v in enumerate(init) if i % 4 == 3],
-                 [np.degrees(v) for i, v in enumerate(init) if i % 4 == 1], color='blue')
+                 [np.degrees(v) for i, v in enumerate(init) if i % 4 == 1], color='g')
 
         plt.subplot(133)
-        plt.scatter([v for i, v in enumerate(res) if i % 4 == 3],
-                    [np.degrees(v) for i, v in enumerate(res) if i % 4 == 2], color='red')
-        plt.plot([v for i, v in enumerate(res) if i % 4 == 3],
-                 [np.degrees(v) for i, v in enumerate(res) if i % 4 == 2], color='red')
+        plt.scatter([v for i, v in enumerate(sol) if i % 4 == 3],
+                    [np.degrees(v) for i, v in enumerate(sol) if i % 4 == 2], color='r')
+        plt.plot([v for i, v in enumerate(sol) if i % 4 == 3],
+                 [np.degrees(v) for i, v in enumerate(sol) if i % 4 == 2], color='r')
         plt.scatter([v for i, v in enumerate(init) if i % 4 == 3],
-                    [np.degrees(v) for i, v in enumerate(init) if i % 4 == 2], color='blue')
+                    [np.degrees(v) for i, v in enumerate(init) if i % 4 == 2], color='g')
         plt.plot([v for i, v in enumerate(init) if i % 4 == 3],
-                 [np.degrees(v) for i, v in enumerate(init) if i % 4 == 2], color='blue')
+                 [np.degrees(v) for i, v in enumerate(init) if i % 4 == 2], color='g')
         plt.show()
-
-        return res.reshape(self.bend_times, 4), study.best_value
 
 
 if __name__ == '__main__':
     import pickle
-    import bendplanner.BendSim as b_sim
 
     base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
     gm.gen_frame(thickness=.0005, alpha=.1, length=.01).attach_to(base)
     bs = b_sim.BendSim(show=True, granularity=np.pi / 90, cm_type='stick')
-
-    goal_pseq = pickle.load(open('../data/bend/pseq/random_curve.pkl', 'rb'))
+    f_name = 'random_curve'
+    goal_pseq = pickle.load(open(f'goal/pseq/{f_name}.pkl', 'rb'))
     goal_rotseq = None
-    # goal_pseq, goal_rotseq = pickle.load(open('../data/bend/rotpseq/skull2.pkl', 'rb'))
+    # goal_pseq, goal_rotseq = pickle.load(open('../data/goal/rotpseq/skull2.pkl', 'rb'))
 
     init_pseq = [(0, 0, 0), (0, .05 + bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
 
-    opt = BendOptimizer(bs, init_pseq, init_rotseq, goal_pseq, goal_rotseq=goal_rotseq, bend_times=1, obj_type='max')
-    res_bendseq, cost = opt.solve(n_trials=100)
-    for i in range(len(opt.init_bendset)):
-        b1 = opt.init_bendset[i]
-        b2 = res_bendseq[i]
-        print(np.degrees(b1[0]), np.degrees(b2[0]))
-        print(np.degrees(b1[1]), np.degrees(b2[1]))
-        print(np.degrees(b1[2]), np.degrees(b2[2]))
-        print(b1[3], b2[3])
-        print('------------')
+    '''
+    fit init param
+    '''
+    n_trials = 1000
+    n_startup_trials = 1
+    sigma0 = None
+    tor = None
+    cnt = 10
+    obj_type = 'max'
 
+    '''
+    opt
+    '''
+    opt = BendOptimizer(bs, init_pseq, init_rotseq, goal_pseq, goal_rotseq=goal_rotseq, bend_times=1, obj_type=obj_type)
+    res_bendseq, cost, time_cost = opt.solve(n_trials=n_trials, sigma0=sigma0, tor=tor, cnt=cnt,
+                                             n_startup_trials=n_startup_trials)
+
+    bs.reset(init_pseq, init_rotseq, extend=False)
     bs.gen_by_bendseq(res_bendseq, cc=False)
     goal_pseq, goal_rotseq = bu.align_with_init(bs, goal_pseq, opt.init_rot, goal_rotseq)
     bs.show(rgba=(0, 1, 0, 1))
     # goal_cm = bu.gen_surface(goal_pseq, goal_rotseq, bconfig.THICKNESS / 2, width=bconfig.WIDTH)
     # goal_cm.attach_to(base)
-    # _, _, _ = o3dh.registration_ptpt(np.asarray(bu.linear_inp3d_by_step(res_pseq[:-1])), np.asarray(goal_pseq),
-    #                                  toggledebug=True)
+
     res_pseq_opt = bs.pseq[1:]
     err, _ = bu.mindist_err(res_pseq_opt, goal_pseq, toggledebug=True)
     print(err)

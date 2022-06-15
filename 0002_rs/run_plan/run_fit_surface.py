@@ -1,23 +1,14 @@
-import copy
-import math
 import pickle
 
-import visualization.panda.world as wd
-import modeling.geometric_model as gm
 import numpy as np
+
 import basis.robot_math as rm
-import basis.trimesh as trm
-import modeling.collision_model as cm
+import bendplanner.BendSim as b_sim
 import bendplanner.bend_utils as bu
 import bendplanner.bender_config as bconfig
-import time
-import motionplanner.motion_planner as m_planner
-import bendplanner.BendSim as b_sim
-import bendplanner.BendRbtPlanner as br_planner
-import utils.panda3d_utils as p3u
-import bendplanner.InvalidPermutationTree as ip_tree
 import config
-import matplotlib.pyplot as plt
+import modeling.geometric_model as gm
+import visualization.panda.world as wd
 
 if __name__ == '__main__':
     # base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])

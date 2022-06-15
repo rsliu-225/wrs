@@ -37,7 +37,7 @@ if __name__ == '__main__':
     # goal_pseq = np.asarray([[.1, 0, .1], [0, 0, .1], [0, 0, 0]]) * .4
 
     # pickle.dump(goal_pseq, open('random_curve.pkl', 'wb'))
-    goal_pseq = pickle.load(open(config.ROOT + '/data/bend/pseq/random_curve.pkl', 'rb'))
+    goal_pseq = pickle.load(open(config.ROOT + '/bendplanner/goal/pseq/random_curve.pkl', 'rb'))
     init_pseq = [(0, 0, 0), (0, bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
 

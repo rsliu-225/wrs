@@ -1,13 +1,13 @@
-import bendplanner.BendSim as bsim
-import bendplanner.bend_utils as bu
-import numpy as np
 import pickle
+
+import numpy as np
+
+import basis.robot_math as rm
+import bendplanner.BendSim as bsim
 import config
 import modeling.geometric_model as gm
-import modeling.collision_model as cm
 import robot_sim.end_effectors.gripper.robotiqhe.robotiqhe as rtqe
 import visualization.panda.world as wd
-import basis.robot_math as rm
 
 
 def show_pseq(pseq):
@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
     base = wd.World(cam_pos=[.2, .2, 0], lookat_pos=[0, 0, 0])
     bs = bsim.BendSim(show=False, cm_type='surface', granularity=np.pi / 90)
-    # goal_pseq, goal_rotseq = pickle.load(open(config.ROOT + f'/data/bend/rotpseq/skull2.pkl', 'rb'))
+    # goal_pseq, goal_rotseq = pickle.load(open(config.ROOT + f'/bendplanner/goal/rotpseq/skull2.pkl', 'rb'))
 
     # goal_pseq = bu.gen_sgl_curve(pseq=np.asarray([[0, 0, 0], [.018, .03, 0], [.06, .06, 0], [.12, 0, 0]]))
     # goal_rotseq = bu.get_rotseq_by_pseq(goal_pseq)

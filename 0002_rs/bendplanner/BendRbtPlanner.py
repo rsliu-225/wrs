@@ -1,24 +1,19 @@
 import copy
 import math
-import visualization.panda.world as wd
-import modeling.geometric_model as gm
+import pickle
+
 import numpy as np
+
 import basis.robot_math as rm
-import basis.trimesh as trm
-import modeling.collision_model as cm
+import bendplanner.BendSim as b_sim
+import bendplanner.InvalidPermutationTree as ip_tree
+import bendplanner.PremutationTree as p_tree
 import bendplanner.bend_utils as bu
 import bendplanner.bender_config as bconfig
-import time
-import robot_sim.end_effectors.gripper.robotiqhe.robotiqhe as rtqhe
-import motionplanner.motion_planner as m_planner
-import bendplanner.BendSim as b_sim
-import utils.panda3d_utils as p3u
-import bendplanner.PremutationTree as p_tree
-import bendplanner.InvalidPermutationTree as ip_tree
-from scipy import interpolate
-import matplotlib.pyplot as plt
 import config
-import pickle
+import motionplanner.motion_planner as m_planner
+import robot_sim.end_effectors.gripper.robotiqhe.robotiqhe as rtqhe
+import utils.panda3d_utils as p3u
 
 
 class BendRbtPlanner(object):

@@ -304,8 +304,8 @@ def mindist_err(res_pts, goal_pts, res_rs=None, goal_rs=None, toggledebug=False,
         ax.set_zlim([center[2] - 0.05, center[2] + 0.05])
         # ax.scatter3D(x1, y1, z1, color='red')
         plot_pseq(ax, res_pts, c='r')
-        scatter_pseq(ax, res_pts, c='r')
-        plot_pseq(ax, goal_pts, c='g')
+        # scatter_pseq(ax, res_pts, c='r')
+        plot_pseq(ax, goal_pts, c='black')
         # scatter_pseq(ax, goal_pts, c='g', s=10)
         # scatter_pseq(ax, nearest_pts, c='black', s=10)
         if res_rs is not None:
@@ -315,8 +315,10 @@ def mindist_err(res_pts, goal_pts, res_rs=None, goal_rs=None, toggledebug=False,
     # err = np.asarray(pos_err_list).sum() * 10 + np.asarray(n_err_list).sum()/10
     if type == 'max':
         err = max(pos_err_list)
-    else:
+    elif type == 'sum':
         err = np.asarray(pos_err_list).sum()
+    else:
+        err = np.asarray(pos_err_list).mean()
 
     return err, nearest_pts
 
@@ -399,6 +401,31 @@ def decimate_pseq(pseq, tor=.001, toggledebug=False):
             res_pids = sorted(res_pids)
         else:
             ptr += 1
+        if toggledebug:
+            ax = plt.axes(projection='3d')
+            plot_pseq(ax, pseq)
+            plot_pseq(ax, linear_inp3d_by_step(pseq[res_pids]))
+            plot_pseq(ax, pseq[res_pids])
+            plt.show()
+    print(f'Num. of fitting result:{len(res_pids)}/{len(pseq)}')
+    return np.asarray(pseq[res_pids]), get_rotseq_by_pseq(pseq[res_pids])
+
+
+def decimate_pseq_by_cnt(pseq, cnt=10, toggledebug=False):
+    pseq = np.asarray(pseq)
+    rotseq = []
+    res_pids = [0, len(pseq) - 1]
+    while len(res_pids) < cnt:
+        max_err = 0
+        max_inx = -1
+        for i in range(len(res_pids) - 1):
+            max_err_tmp, max_inx_tmp = __ps2seg_max_dist(pseq[res_pids[i]], pseq[res_pids[i + 1]],
+                                                         pseq[res_pids[i]:res_pids[i + 1]])
+            if max_err_tmp > max_err:
+                max_err = max_err_tmp
+                max_inx = res_pids[i] + max_inx_tmp
+        res_pids.append(max_inx)
+        res_pids = sorted(res_pids)
         if toggledebug:
             ax = plt.axes(projection='3d')
             plot_pseq(ax, pseq)
