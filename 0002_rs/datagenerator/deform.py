@@ -3,17 +3,17 @@ import open3d as o3d
 import modeling.collision_model as cm
 
 objcm = cm.CollisionModel('../obstacles/plate.stl')
-mesh = o3d.geometry.TriangleMesh(vertices=o3d.utility.Vector3dVector(objcm.objtrm.vertices),
+mesh = o3d.geometry.TriangleMesh(vertices=o3d.utility.Vector3dVector(objcm.objtrm.vs),
                                  triangles=o3d.utility.Vector3iVector(objcm.objtrm.faces))
 
 vertices = np.asarray(mesh.vertices)
 print(vertices)
-static_ids = [idx for idx in np.where(vertices[:, 1] < 0)[0]]
+static_ids = [idx for idx in np.where(vertices[:, 1] > 0)[0]]
 static_pos = []
 for id in static_ids:
     static_pos.append(vertices[id])
-handle_ids = [500]
-handle_pos = [vertices[500] + np.array((-.1, -.1, -.1))]
+handle_ids = list(range(100,500))
+handle_pos = [vertices[handle_ids] + np.array((0, 0, .01))]
 constraint_ids = o3d.utility.IntVector(static_ids + handle_ids)
 constraint_pos = o3d.utility.Vector3dVector(static_pos + handle_pos)
 

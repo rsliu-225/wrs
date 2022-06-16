@@ -1,20 +1,17 @@
 import copy
 import math
-import modeling.geometric_model as gm
+import random
+
 import numpy as np
-import open3d as o3d
-import basis.o3dhelper as o3dh
+
 import basis.robot_math as rm
 import basis.trimesh as trm
-import modeling.collision_model as cm
 import bendplanner.bend_utils as bu
 import bendplanner.bender_config as bconfig
-import time
-from panda3d.core import *
-import robot_sim.end_effectors.gripper.robotiqhe.robotiqhe as rtqhe
-import utils.panda3d_utils as p3u
-import random
 import config
+import modeling.collision_model as cm
+import modeling.geometric_model as gm
+import utils.panda3d_utils as p3u
 
 
 def draw_plane(p, n):

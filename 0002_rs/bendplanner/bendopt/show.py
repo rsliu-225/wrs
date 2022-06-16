@@ -29,14 +29,14 @@ def align(pseq_tgt, pseq_src):
 
 if __name__ == '__main__':
     f_name = 'random_curve'
-    obj_type = 'max'
+    obj_type = 'avg'
     # method = 'cmaes'
     method = 'SLSQP'
 
     '''
     load files
     '''
-    opt_max_res = pickle.load(open(f'{f_name}_{method}_{obj_type}.pkl', 'rb'))
+    opt_res_dict = pickle.load(open(f'{f_name}_{method}_{obj_type}.pkl', 'rb'))
     # goal_pseq = pickle.load(open(f'../goal/pseq/{f_name}.pkl', 'rb'))
     # goal_rotseq = None
 
@@ -49,9 +49,8 @@ if __name__ == '__main__':
     time_cost_list = []
 
     x = []
-    for k, v in opt_max_res.items():
-        if int(k) > 24:
-            break
+    print(opt_res_dict.keys())
+    for k, v in opt_res_dict.items():
         x.append(int(k))
         goal_pseq = v['goal_pseq']
 

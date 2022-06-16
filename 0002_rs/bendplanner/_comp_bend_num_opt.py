@@ -28,7 +28,7 @@ if __name__ == '__main__':
     fit init param
     '''
     tor = None
-    obj_type = 'max'
+    obj_type = 'avg'
     method = 'SLSQP'
     # method = 'cmaes'
 
@@ -61,7 +61,7 @@ if __name__ == '__main__':
                                   bend_times=1,
                                   obj_type=obj_type)
 
-    for i in range(25, 30):
+    for i in range(28, 31):
         if method == 'cmaes':
             res_bendseq, cost, time_cost = opt.solve(tor=tor, cnt=i,
                                                      n_trials=n_trials, sigma0=sigma0,

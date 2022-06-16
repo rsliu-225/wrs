@@ -45,6 +45,7 @@ def get_rotseq_by_pseq(pseq):
                 n = -n
         n_pre = n
         x = np.cross(v1, n)
+
         rot = np.asarray([rm.unit_vector(x), rm.unit_vector(v1), rm.unit_vector(n)]).T
         rotseq.append(rot)
     rotseq = [rotseq[0]] + rotseq + [rotseq[-1]]
