@@ -156,7 +156,7 @@ class BendOptimizer(object):
 
         return np.asarray(init)
 
-    def fit_init(self, goal_pseq, goal_rotseq, tor=.001, cnt=None):
+    def fit_init(self, goal_pseq, goal_rotseq, tor=None, cnt=None):
         if goal_rotseq is not None:
             fit_pseq, fit_rotseq = bu.decimate_rotpseq(goal_pseq, goal_rotseq, tor=tor, toggledebug=False)
             self.init_bendset = bu.rotpseq2bendset(fit_pseq, fit_rotseq, toggledebug=False)
@@ -292,8 +292,8 @@ if __name__ == '__main__':
     fit init param
     '''
     method = 'SLSQP'
-    tor = None
-    cnt = 5
+    tor = .0002
+    cnt = None
     obj_type = 'sum'
 
     '''

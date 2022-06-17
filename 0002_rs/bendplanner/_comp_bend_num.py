@@ -28,9 +28,11 @@ if __name__ == '__main__':
 
     init_pseq = [(0, 0, 0), (0, .05 + bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
-    fit_err_list = []
-    bend_err_list = []
-    for i in range(5, 15):
+    fit_max_err_list = []
+    bend_max_err_list = []
+    fit_avg_err_list = []
+    bend_avg_err_list = []
+    for i in range(5, 50):
         bs.reset(init_pseq, init_rotseq)
         fit_pseq, fit_rotseq = bu.decimate_pseq_by_cnt(goal_pseq, cnt=i, toggledebug=False)
         init_rot = bu.get_init_rot(fit_pseq)
@@ -39,17 +41,37 @@ if __name__ == '__main__':
         goal_pseq_trans, goal_rotseq = bu.align_with_init(bs, goal_pseq, init_rot, goal_rotseq)
         bs.show(rgba=(0, 1, 0, 1))
 
-        fit_err, _ = bu.mindist_err(fit_pseq, goal_pseq, toggledebug=False)
-        bend_err, _ = bu.mindist_err(bs.pseq[1:], goal_pseq_trans, toggledebug=False)
+        fit_max_err, _ = bu.mindist_err(fit_pseq, goal_pseq, toggledebug=False, type='max')
+        bend_max_err, _ = bu.mindist_err(bs.pseq[1:], goal_pseq_trans, toggledebug=False, type='max')
+        fit_max_err_list.append(fit_max_err)
+        bend_max_err_list.append(bend_max_err)
 
-        fit_err_list.append(fit_err)
-        bend_err_list.append(bend_err)
+        fit_avg_err, _ = bu.mindist_err(fit_pseq, goal_pseq, toggledebug=False, type='avg')
+        bend_avg_err, _ = bu.mindist_err(bs.pseq[1:], goal_pseq_trans, toggledebug=False, type='avg')
+        fit_avg_err_list.append(fit_avg_err)
+        bend_avg_err_list.append(bend_avg_err)
 
-    x = np.linspace(5, 15, len(fit_err_list))
-    fig, ax = plt.subplots()
-    ax.grid()
+    x = np.linspace(5, 50, len(fit_max_err_list))
+
+    fig = plt.figure(figsize=(12, 5))
+    plt.rcParams["font.family"] = "Times New Roman"
+    plt.rcParams["font.size"] = 12
+    ax1 = fig.add_subplot(1, 2, 1)
+    ax1.grid()
     # plt.scatter(x, fit_err_list, color='r')
-    ax.plot(x, fit_err_list, color='r')
+    ax1.plot(x, fit_max_err_list, color='r', linestyle="dashed")
     # plt.scatter(x, bend_err_list, color='g')
-    ax.plot(x, bend_err_list, color='g')
+    ax1.plot(x, bend_max_err_list, color='r')
+    ax1.set_xlabel('Num. of key point')
+    ax1.set_ylabel('Max. point to point error(mm)')
+
+    ax2 = fig.add_subplot(1, 2, 2)
+    ax2.grid()
+    # plt.scatter(x, fit_err_list, color='r')
+    ax2.plot(x, fit_avg_err_list, color='r', linestyle="dashed")
+    # plt.scatter(x, bend_err_list, color='g')
+    ax2.plot(x, bend_avg_err_list, color='r')
+    ax2.set_xlabel('Num. of key point')
+    ax2.set_ylabel('Avg. point to point error(mm)')
+
     plt.show()

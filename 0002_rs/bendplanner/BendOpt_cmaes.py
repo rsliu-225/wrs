@@ -178,7 +178,7 @@ if __name__ == '__main__':
     '''
     fit init param
     '''
-    n_trials = 1000
+    n_trials = 50
     n_startup_trials = 1
     sigma0 = None
     tor = None

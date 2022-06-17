@@ -270,20 +270,20 @@ def avg_polylines_dist_err(pts1, pts2, toggledebug=False):
 
 
 def mindist_err(res_pts, goal_pts, res_rs=None, goal_rs=None, toggledebug=False, type='max'):
-    res_pts, goal_pts = np.asarray(res_pts), np.asarray(goal_pts)
+    res_pts, goal_pts = np.asarray(res_pts)*1000, np.asarray(goal_pts)*1000
     nearest_pts = []
     nearest_rs = []
     pos_err_list = []
     n_err_list = []
     if res_rs is None:
-        res_pts = linear_inp3d_by_step(res_pts, step=.0001)
+        res_pts = linear_inp3d_by_step(res_pts, step=.1)
     else:
         res_rs, goal_rs = np.asarray(res_rs), np.asarray(goal_rs)
-        res_pts, res_rs = inp_rotp_by_step(res_pts, res_rs, step=.0001)
+        res_pts, res_rs = inp_rotp_by_step(res_pts, res_rs, step=.1)
     kdt = KDTree(res_pts, leaf_size=100, metric='euclidean')
     for i in range(len(goal_pts)):
         distances, indices = kdt.query([goal_pts[i]], k=1, return_distance=True)
-        pos_err_list.append(distances[0][0] * 1000)
+        pos_err_list.append(distances[0][0])
         nearest_pts.append(res_pts[indices[0][0]])
         if res_rs is not None:
             n_err_list.append(np.degrees(rm.angle_between_vectors(goal_rs[i][:, 0], res_rs[indices[0][0]][:, 0])))
@@ -299,9 +299,12 @@ def mindist_err(res_pts, goal_pts, res_rs=None, goal_rs=None, toggledebug=False,
         print('Max. angel err between polylines:', max(n_err_list))
         ax = plt.axes(projection='3d')
         center = np.mean(res_pts, axis=0)
-        ax.set_xlim([center[0] - 0.05, center[0] + 0.05])
-        ax.set_ylim([center[1] - 0.05, center[1] + 0.05])
-        ax.set_zlim([center[2] - 0.05, center[2] + 0.05])
+        ax.set_xlim([center[0] - 50, center[0] + 50])
+        ax.set_ylim([center[1] - 50, center[1] + 50])
+        ax.set_zlim([center[2] - 50, center[2] + 50])
+        ax.set_xlabel('X(mm)')
+        ax.set_ylabel('Y(mm)')
+        ax.set_zlabel('Z(mm)')
         # ax.scatter3D(x1, y1, z1, color='red')
         plot_pseq(ax, res_pts, c='r')
         # scatter_pseq(ax, res_pts, c='r')
@@ -320,7 +323,7 @@ def mindist_err(res_pts, goal_pts, res_rs=None, goal_rs=None, toggledebug=False,
     else:
         err = np.asarray(pos_err_list).mean()
 
-    return err, nearest_pts
+    return err, np.asarray(nearest_pts)/1000
 
 
 def mindist_err_sfc(res_pts, goal_pts, toggledebug=False):

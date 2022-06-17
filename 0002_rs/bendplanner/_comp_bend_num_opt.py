@@ -28,16 +28,16 @@ if __name__ == '__main__':
     fit init param
     '''
     tor = None
-    obj_type = 'avg'
-    method = 'SLSQP'
-    # method = 'cmaes'
+    obj_type = 'max'
+    # method = 'SLSQP'
+    method = 'cmaes'
 
-    n_trials = 100
+    n_trials = 1000
     n_startup_trials = 1
     sigma0 = None
     cnt = None
 
-    f_name = f'{goal_f_name}_{method}_{obj_type}.pkl'
+    f_name = f'{goal_f_name}_{method}_{obj_type}_10.pkl'
 
     '''
     opt
@@ -61,7 +61,7 @@ if __name__ == '__main__':
                                   bend_times=1,
                                   obj_type=obj_type)
 
-    for i in range(28, 31):
+    for i in range(5, 31):
         if method == 'cmaes':
             res_bendseq, cost, time_cost = opt.solve(tor=tor, cnt=i,
                                                      n_trials=n_trials, sigma0=sigma0,
@@ -74,7 +74,7 @@ if __name__ == '__main__':
         goal_pseq_aligned, goal_rotseq_aligned = bu.align_with_init(bs, goal_pseq, opt.init_rot, goal_rotseq)
         # bs.show(rgba=(1, 0, 0, 1))
         init_res_pseq = bs.pseq[1:]
-        init_err, init_res_kpts = bu.mindist_err(init_res_pseq, goal_pseq_aligned, toggledebug=False)
+        init_err, init_res_kpts = bu.mindist_err(init_res_pseq, goal_pseq_aligned, type=obj_type, toggledebug=False)
         print('org error:', init_err)
         org_err_list.append(init_err)
 
@@ -84,8 +84,8 @@ if __name__ == '__main__':
             _, _ = bu.align_with_init(bs, goal_pseq, opt.init_rot, goal_rotseq)
             # bs.show(rgba=(0, 1, 0, 1))
             opt_res_pseq = bs.pseq[1:]
-            opt_err, opt_res_kpts = bu.mindist_err(opt_res_pseq, goal_pseq_aligned, toggledebug=False)
-            print('opt_err', opt_err)
+            opt_err, opt_res_kpts = bu.mindist_err(opt_res_pseq, goal_pseq_aligned, type=obj_type, toggledebug=False)
+            print('opt err', opt_err)
         else:
             opt_res_kpts = None
             opt_res_pseq = None

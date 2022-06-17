@@ -28,15 +28,16 @@ def align(pseq_tgt, pseq_src):
 
 
 if __name__ == '__main__':
-    f_name = 'random_curve'
-    obj_type = 'avg'
-    # method = 'cmaes'
-    method = 'SLSQP'
+    goal_f_name = 'random_curve'
+    obj_type = 'max'
+    method = 'cmaes'
+    # method = 'SLSQP'
 
     '''
     load files
     '''
-    opt_res_dict = pickle.load(open(f'{f_name}_{method}_{obj_type}.pkl', 'rb'))
+    f_name = f'{goal_f_name}_{method}_{obj_type}_10.pkl'
+    opt_res_dict = pickle.load(open(f_name, 'rb'))
     # goal_pseq = pickle.load(open(f'../goal/pseq/{f_name}.pkl', 'rb'))
     # goal_rotseq = None
 
@@ -50,6 +51,12 @@ if __name__ == '__main__':
 
     x = []
     print(opt_res_dict.keys())
+
+    # for k, v in opt_res_dict.items():
+    #     opt_res_dict[k]['init_res_kpts'] = np.asarray(v['init_res_kpts'])/1000
+    #     opt_res_dict[k]['opt_res_kpts'] = np.asarray(v['opt_res_kpts'])/1000
+    # pickle.dump(opt_res_dict, open(f'{f_name}', 'wb'))
+
     for k, v in opt_res_dict.items():
         x.append(int(k))
         goal_pseq = v['goal_pseq']
@@ -81,15 +88,16 @@ if __name__ == '__main__':
             opt_avg_err_list.append(None)
         # ax = plt.axes(projection='3d')
         # center = np.mean(goal_pseq, axis=0)
-        # ax.set_xlim([center[0] - 0.05, center[0] + 0.05])
-        # ax.set_ylim([center[1] - 0.05, center[1] + 0.05])
-        # ax.set_zlim([center[2] - 0.05, center[2] + 0.05])
+        # ax.set_xlim([center[0] - 50, center[0] + 50])
+        # ax.set_ylim([center[1] - 50, center[1] + 50])
+        # ax.set_zlim([center[2] - 50, center[2] + 50])
         # ax.set_xlabel('X(mm)')
         # ax.set_ylabel('Y(mm)')
         # ax.set_zlabel('Z(mm)')
-        # bu.plot_pseq(ax, init_res_pseq, c='r')
-        # bu.plot_pseq(ax, opt_res_pseq, c='g')
-        # bu.plot_pseq(ax, goal_pseq, c='black')
+        # bu.plot_pseq(ax, np.asarray(init_res_pseq) * 1000, c='r')
+        # if opt_res_pseq is not None:
+        #     bu.plot_pseq(ax, np.asarray(opt_res_pseq) * 1000, c='g')
+        # bu.plot_pseq(ax, np.asarray(goal_pseq) * 1000, c='black')
         # plt.show()
 
     fig = plt.figure(figsize=(18, 5))
