@@ -100,7 +100,7 @@ def get_nearest_cluster(pts, seed=(0, 0, 0), eps=.003, min_samples=2):
     mask = []
     max_len = 0
     min_dist = 100
-    gm.gen_sphere(seed, radius=.001).attach_to(base)
+    # gm.gen_sphere(seed, radius=.001).attach_to(base)
 
     for k in unique_labels:
         if k == -1:
@@ -122,7 +122,7 @@ def get_nearest_cluster(pts, seed=(0, 0, 0), eps=.003, min_samples=2):
     return np.asarray(res), mask
 
 
-def get_center_frame(corners, id, img, colors=None):
+def get_center_frame(corners, id, img, pcd, colors=None):
     ps = []
     if id == 1:
         seq = [1, 0, 0, 3]
@@ -188,7 +188,7 @@ def crop_maker(img, pcd):
     #     return None, None
     # pcdu.show_pcd(pcd, rgba=(1, 1, 1, 1))
     # gripperframe = get_center_frame(corners[ids.index(tgt_id)], tgt_id, img)
-    gripperframe = get_center_frame(corners[0], ids[0], img)
+    gripperframe = get_center_frame(corners[0], ids[0], img, pcd)
     if gripperframe is None:
         return None, None
     # gm.gen_frame(pos=center, rotmat=rotmat).attach_to(base)
@@ -255,36 +255,23 @@ def display_inlier_outlier(cloud, ind):
     o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
 
 
-if __name__ == '__main__':
-    import visualization.panda.world as wd
-
-    base = wd.World(cam_pos=[0, 0, .5], lookat_pos=[0, 0, 0])
-    # base = wd.World(cam_pos=[0, 0, 0], lookat_pos=[0, 0, 1])
-    icp = False
-    colors = [(1, 0, 0, 1), (1, 1, 0, 1), (1, 0, 1, 1),
-              (0, 1, 0, 1), (0, 1, 1, 1), (0, 0, 1, 1)]
-    folder_name = 'plate_a_quadratic'
+def extract_plate(folder_name, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False, toggledebug=True):
     if not os.path.exists(os.path.join(config.ROOT, 'recons_data', folder_name)):
         os.mkdir(os.path.join(config.ROOT, 'recons_data', folder_name))
-
     fnlist, grayimg_list, depthimg_list, pcd_list = load_frame_seq_withf(folder_name=folder_name)
     pcd_cropped_list = []
     inx_list = []
     trans = np.eye(4)
 
-    seed = (.116, 0, -.1)
-    center = (.116, 0, -.0155)
     gm.gen_frame(center, np.eye(3)).attach_to(base)
     for i in range(len(grayimg_list)):
         pcd = np.asarray(pcd_list[i]) / 1000
         inx, pcd_cropped = crop_maker(grayimg_list[i], pcd)
-        pcdu.cal_conf(pcd_cropped, voxel_size=0.005, radius=.005)
-        base.run()
+
         if pcd_cropped is not None:
-            # pcd_cropped, _ = get_nearest_cluster(pcd_cropped, seed=seed, eps=.01, min_samples=200)
+            pcd_cropped, _ = get_nearest_cluster(pcd_cropped, seed=seed, eps=.01, min_samples=200)
             seed = np.mean(pcd_cropped, axis=0)
             print(len(pcd_cropped))
-            # skeleton(pcd_cropped)
             if len(pcd_cropped) > 0:
                 pcd_cropped = pcd_cropped - np.asarray(center)
                 o3dpcd = o3dh.nparray2o3dpcd(pcd_cropped)
@@ -295,6 +282,8 @@ if __name__ == '__main__':
                 pcd_cropped_list.append(pcd_cropped)
                 inx_list.append(inx)
 
+    colors = [(1, 0, 0, 1), (1, 1, 0, 1), (1, 0, 1, 1),
+              (0, 1, 0, 1), (0, 1, 1, 1), (0, 0, 1, 1)]
     for i in range(1, len(pcd_cropped_list)):
         print(len(pcd_cropped_list[i - 1]))
         if icp:
@@ -302,9 +291,34 @@ if __name__ == '__main__':
                                                     downsampling_voxelsize=.005,
                                                     toggledebug=False)
             trans = trans_tmp.dot(trans)
-            pcdu.show_pcd(pcdu.trans_pcd(pcd_cropped_list[i], trans), rgba=colors[inx_list[i] - 1])
+        #     pcdu.show_pcd(pcdu.trans_pcd(pcd_cropped_list[i], trans), rgba=colors[inx_list[i] - 1])
+        # else:
+        #     pcdu.show_pcd(pcd_cropped_list[i - 1], rgba=colors[inx_list[i] - 1])
+    if toggledebug:
+        o3dpcd_list = []
+        for i in range(len(pcd_cropped_list)):
+            o3dpcd = o3dh.nparray2o3dpcd(np.asarray(pcd_cropped_list[i]))
+            o3dpcd_list.append(o3dpcd)
+            o3dpcd.paint_uniform_color(list(colors[inx_list[i]-1][:3]))
+        o3d.visualization.draw_geometries(o3dpcd_list)
+    return pcd_cropped_list
 
-        else:
-            pcdu.show_pcd(pcd_cropped_list[i - 1], rgba=colors[inx_list[i] - 1])
 
-    base.run()
+if __name__ == '__main__':
+    import visualization.panda.world as wd
+
+    base = wd.World(cam_pos=[0, 0, .5], lookat_pos=[0, 0, 0])
+    # base = wd.World(cam_pos=[0, 0, 0], lookat_pos=[0, 0, 1])
+    icp = False
+
+    # folder_name = 'plate_a_quadratic'
+
+    seed = (.116, 0, -.1)
+    center = (.116, 0, -.0155)
+    for f in sorted(os.listdir(os.path.join(config.ROOT, 'recons_data'))):
+        if f[:2] == 'pl':
+            print(f)
+            pcd_cropped_list = extract_plate(f, seed, center)
+    # skeleton(pcd_cropped)
+    # pcdu.cal_conf(pcd_cropped, voxel_size=0.005, radius=.005)
+    # base.run()
