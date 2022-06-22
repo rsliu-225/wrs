@@ -17,6 +17,10 @@ import basis.trimesh as trm
 import modeling.collision_model as cm
 import modeling.geometric_model as gm
 
+'''
+basic func
+'''
+
 
 def trans_pcd(pcd, transmat):
     pcd = np.asarray(pcd)
@@ -34,6 +38,27 @@ def rot_new_orgin(pts, new_orgin, rot):
     trans_pts = trans_pos(pts, new_orgin)
     trans_pts = rm.homomat_transform_points(rm.homomat_from_posrot(np.asarray([0, 0, 0]), rot), trans_pts)
     return trans_pos(trans_pts, -new_orgin).tolist()
+
+
+def cubic_inp(pseq, step=.001, toggledebug=False):
+    length = np.sum(np.linalg.norm(np.diff(np.asarray(pseq), axis=0), axis=1))
+    inp = interpolate.interp1d(pseq[:, 0], pseq[:, 1], kind='cubic')
+    inp_z = interpolate.interp1d(pseq[:, 0], pseq[:, 2], kind='cubic')
+    x = np.linspace(0, pseq[-1][0], int(length / step))
+    y = inp(x)
+    z = inp_z(x)
+    if toggledebug:
+        ax = plt.axes(projection='3d')
+        ax.plot3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], color='red')
+        ax.scatter3D(x, y, z, color='green')
+        plt.show()
+
+    return np.asarray(list(zip(x, y, z)))
+
+
+def uni_length(pseq, goal_len):
+    org_len = np.linalg.norm(np.diff(pseq, axis=0), axis=1).sum()
+    return goal_len * np.asarray(pseq) / org_len
 
 
 def get_rotseq_by_pseq_1d(pseq):
@@ -84,6 +109,39 @@ def get_kpts_gmm(objpcd, n_components=20, show=True, rgba=(1, 0, 0, 1)):
     if show:
         for p in gmix.means_:
             gm.gen_sphere(p, radius=.001, rgba=rgba).attach_to(base)
+
+
+'''
+gen cm
+'''
+
+
+def gen_swap(pseq, rotseq, cross_sec, toggledebug=False):
+    vertices = []
+    faces = []
+    cross_sec.append(cross_sec[0])
+    for i, p in enumerate(pseq):
+        for n in cross_sec:
+            vertices.append(p + rotseq[i][:, 0] * n[0] + rotseq[i][:, 2] * n[1])
+    for i in range(len(cross_sec) - 3):
+        faces.append([0, i + 1, i + 2])
+    for i in range((len(cross_sec)) * (len(pseq) - 1)):
+        if i % (len(cross_sec)) == 0:
+            for v in range(i, i + len(cross_sec) - 1):
+                faces.extend([[v, v + len(cross_sec), v + len(cross_sec) + 1],
+                              [v, v + len(cross_sec) + 1, v + 1]])
+    for i in range(len(cross_sec) - 3):
+        faces.append([len(vertices) - 1, len(vertices) - 2 - i, len(vertices) - 3 - i])
+    if toggledebug:
+        show_pseq(pseq, rgba=[1, 0, 0, 1], radius=0.0002)
+        show_pseq(vertices, rgba=[1, 1, 0, 1], radius=0.0002)
+        tmp_trm = trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces))
+        tmp_cm = cm.CollisionModel(initor=tmp_trm, btwosided=True)
+        tmp_cm.set_rgba((.7, .7, 0, .7))
+        tmp_cm.attach_to(base)
+    objtrm = trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces))
+
+    return cm.CollisionModel(initor=objtrm, btwosided=True, name='obj')
 
 
 '''

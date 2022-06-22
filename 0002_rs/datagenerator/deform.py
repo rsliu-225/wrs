@@ -44,7 +44,6 @@ def gen_deformed_ctr_pts(ctr_pts, goal_pseq, rot_diff=None):
     goal_pseq = org_len * goal_pseq / goal_diff.sum()
 
     org_kpts = ctr_pts.reshape((int(len(ctr_pts) / 4), 4, 3)).mean(axis=1)
-
     deformed_ctr_pts = []
     if len(ctr_pts) != len(goal_pseq) * 4:
         print('Wrong goal_diff size!', ctr_pts.shape, goal_pseq.shape)
