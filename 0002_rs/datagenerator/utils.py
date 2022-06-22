@@ -199,7 +199,7 @@ def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolus
     o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f_name + '_partial_org.pcd'))
     if add_occ:
         o3dpcd = add_random_occ_by_nrml(o3dpcd)
-        o3d.io.write_point_cloud(os.path.join(path, 'partial', f_name + '_partial.pcd'), o3dpcd)
+        o3d.io.write_point_cloud(os.path.join(path, 'partial', f_name + '.pcd'), o3dpcd)
     # o3d.io.write_triangle_mesh(os.path.join(path, f_name + '.ply'), o3dmesh)
     # vis.capture_screen_image(os.path.join(path, f_name + '.png'), do_render=False)
     save_complete_pcd(f_name, o3dmesh, path=path)
@@ -207,11 +207,12 @@ def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolus
     # o3d.visualization.draw_geometries([o3dpcd], point_show_normal=True)
     if toggledebug:
         o3dpcd_org = o3d.io.read_point_cloud(os.path.join(path, f_name + '_partial_org.pcd'))
-        o3dpcd = o3d.io.read_point_cloud(os.path.join(path, 'partial', f_name + '_partial.pcd'))
+        o3dpcd = o3d.io.read_point_cloud(os.path.join(path, 'partial', f_name + '.pcd'))
         o3dpcd_org.paint_uniform_color([0, 0.706, 1])
         o3dpcd.paint_uniform_color([0, 0.706, 1])
         # print(o3dpcd_org.get_center())
         o3d.visualization.draw_geometries([o3dpcd, o3dpcd_org])
+    os.remove(os.path.join(path, f_name + '_partial_org.pcd'))
     return o3dpcd
 
 
@@ -259,6 +260,7 @@ def add_random_occ(o3dpcd, occ_ratio_rng=(.05, .1)):
     pcd = np.delete(np.asarray(o3dpcd.points), indices[0], axis=0)
     return o3dh.nparray2o3dpcd(pcd)
 
+
 def add_random_occ_narry(pcd, occ_ratio_rng=(.05, .1)):
     kdt = KDTree(pcd, leaf_size=100, metric='euclidean')
     seed = random.choice(pcd)
@@ -266,6 +268,7 @@ def add_random_occ_narry(pcd, occ_ratio_rng=(.05, .1)):
                            return_distance=True)
     pcd = np.delete(np.asarray(pcd), indices[0], axis=0)
     return pcd
+
 
 def add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=(.3, .6)):
     kdt = KDTree(np.asarray(o3dpcd.points), leaf_size=100, metric='euclidean')
@@ -301,4 +304,4 @@ def save_complete_pcd(name, mesh, path="./"):
     path = os.path.join(path, 'complete/')
     if not os.path.exists(path):
         os.mkdir(path)
-    o3d.io.write_point_cloud(path + name + '_complete.pcd', get_objpcd_full_sample_o3d(mesh))
+    o3d.io.write_point_cloud(path + name + '.pcd', get_objpcd_full_sample_o3d(mesh))

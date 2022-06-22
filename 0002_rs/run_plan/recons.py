@@ -197,7 +197,7 @@ def crop_maker(img, pcd):
     gm.gen_frame().attach_to(base)
     # base.run()
     return ids[0], pcdu.crop_pcd(pcd_trans, x_range=(.05, .215), y_range=(-.4, .4), z_range=(-.2, -.0155))
-    # return ids[0], pcdu.crop_pcd(pcd_trans, x_range=(.08, .215), y_range=(-.4, .4), z_range=(.05, .3))
+    # return ids[0], pcdu.crop_pcd(pcd_trans, x_range=(0, .215), y_range=(-.4, .4), z_range=(-.2, .2))
 
 
 def make_3dax(grid=False):
@@ -261,7 +261,9 @@ if __name__ == '__main__':
     base = wd.World(cam_pos=[0, 0, .5], lookat_pos=[0, 0, 0])
     # base = wd.World(cam_pos=[0, 0, 0], lookat_pos=[0, 0, 1])
     icp = False
-    folder_name = 'plate_a_cubic_2'
+    colors = [(1, 0, 0, 1), (1, 1, 0, 1), (1, 0, 1, 1),
+              (0, 1, 0, 1), (0, 1, 1, 1), (0, 0, 1, 1)]
+    folder_name = 'plate_a_quadratic'
     if not os.path.exists(os.path.join(config.ROOT, 'recons_data', folder_name)):
         os.mkdir(os.path.join(config.ROOT, 'recons_data', folder_name))
 
@@ -269,8 +271,6 @@ if __name__ == '__main__':
     pcd_cropped_list = []
     inx_list = []
     trans = np.eye(4)
-    colors = [(1, 0, 0, 1), (1, 1, 0, 1), (1, 0, 1, 1),
-              (0, 1, 0, 1), (0, 1, 1, 1), (0, 0, 1, 1)]
 
     seed = (.116, 0, -.1)
     center = (.116, 0, -.0155)
@@ -278,8 +278,10 @@ if __name__ == '__main__':
     for i in range(len(grayimg_list)):
         pcd = np.asarray(pcd_list[i]) / 1000
         inx, pcd_cropped = crop_maker(grayimg_list[i], pcd)
+        pcdu.cal_conf(pcd_cropped, voxel_size=0.005, radius=.005)
+        base.run()
         if pcd_cropped is not None:
-            pcd_cropped, _ = get_nearest_cluster(pcd_cropped, seed=seed, eps=.01, min_samples=200)
+            # pcd_cropped, _ = get_nearest_cluster(pcd_cropped, seed=seed, eps=.01, min_samples=200)
             seed = np.mean(pcd_cropped, axis=0)
             print(len(pcd_cropped))
             # skeleton(pcd_cropped)
@@ -298,10 +300,9 @@ if __name__ == '__main__':
         if icp:
             _, _, trans_tmp = o3h.registration_ptpt(pcd_cropped_list[i], pcd_cropped_list[i - 1],
                                                     downsampling_voxelsize=.005,
-                                                    toggledebug=True)
+                                                    toggledebug=False)
             trans = trans_tmp.dot(trans)
-            print(trans)
-            pcdu.show_pcd(pcdu.trans_pcd(pcd_cropped_list[i], trans), rgba=colors[inx_list[i]])
+            pcdu.show_pcd(pcdu.trans_pcd(pcd_cropped_list[i], trans), rgba=colors[inx_list[i] - 1])
 
         else:
             pcdu.show_pcd(pcd_cropped_list[i - 1], rgba=colors[inx_list[i] - 1])

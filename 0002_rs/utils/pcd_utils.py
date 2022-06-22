@@ -31,7 +31,7 @@ def get_knn(p, kdt, k=3):
     return np.asarray([pcd[p_inx] for p_inx in p_nearest_inx])
 
 
-def get_nn_indices_by_distance(p, kdt, step=1.0):
+def get_nn_indices_by_dist(p, kdt, step=1.0):
     result_indices = []
     distances, indices = kdt.query([p], k=1000, return_distance=True)
     distances = distances[0]
@@ -40,6 +40,12 @@ def get_nn_indices_by_distance(p, kdt, step=1.0):
         if distances[i] < step:
             result_indices.append(indices[i])
     return result_indices
+
+
+def get_knn_by_dist(p, kdt, radius=1.0):
+    p_nearest_inx = get_nn_indices_by_dist(p, kdt, step=radius)
+    pcd = list(np.array(kdt.data))
+    return np.asarray([pcd[p_inx] for p_inx in p_nearest_inx])
 
 
 def get_kdt(p_list, dimension=3):
@@ -612,6 +618,50 @@ def surface_interp(p, v, kdt_d3, inp=0.0005, max_nn=100):
         p = p_cur
         n = n_cur
     return pseq, rotseq
+
+
+def cal_conf(pcd_narry, voxel_size=.01, radius=.01):
+    show_pcd(pcd_narry)
+    o3dpcd = o3d_helper.nparray2o3dpcd(pcd_narry)
+    downpcd = o3dpcd.voxel_down_sample(voxel_size=voxel_size)
+    # o3d.visualization.draw_geometries([downpcd])
+    kdt_d3, _ = get_kdt(pcd_narry)
+    zeta1_list = []
+    d_list = []
+    p_list = []
+    nrml_list = []
+    conf_list = []
+    for p in np.asarray(downpcd.points):
+        knn = get_knn_by_dist(p, kdt_d3, radius=radius)
+        # knn = get_knn(p, kdt_d3, k=50)
+        if len(knn) < 5:
+            continue
+        pcv_unsort, pcaxmat = rm.compute_pca(knn)
+        pcv = sorted(pcv_unsort, reverse=True)
+        zeta1 = pcv[0] - pcv[1]
+        zeta2 = pcv[1] - pcv[2]
+        zeta3 = pcv[2]
+        d = [zeta1, zeta2, zeta3].index(max([zeta1, zeta2, zeta3]))
+        zeta1_list.append(zeta1)
+        d_list.append(d)
+        p_list.append(p)
+        inx = sorted(range(len(pcv_unsort)), key=lambda k: pcv_unsort[k])
+        nrml_list.append(pcaxmat[:, inx[0]])
+
+    for i in range(len(zeta1_list)):
+        c = 1 - (zeta1_list[i] - min(zeta1_list)) / (max(zeta1_list) - min(zeta1_list))
+        conf_list.append(c)
+        if d_list[i] == 0:
+            rgba = (c, 0, 1 - c, 1)
+            if c < .5:
+                gm.gen_arrow(spos=p_list[i], epos=p_list[i] + nrml_list[i] * radius * 10, thickness=.002,
+                             rgba=rgba).attach_to(base)
+        else:
+            rgba = (1, 1, 1, 1)
+        gm.gen_sphere(p_list[i], radius=.001, rgba=rgba).attach_to(base)
+
+    base.run()
+    return p_list, nrml_list, conf_list
 
 
 if __name__ == '__main__':

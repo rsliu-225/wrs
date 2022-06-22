@@ -61,7 +61,7 @@ def gen_swap(pseq, rotseq, cross_sec, toggledebug=False):
         tmp_cm.attach_to(base)
     objtrm = trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces))
 
-    return cm.CollisionModel(initor=objtrm, btwosided=True, name='obj', cdprimit_type='surface_balls')
+    return cm.CollisionModel(initor=objtrm, btwosided=True, name='obj')
 
 
 if __name__ == '__main__':
