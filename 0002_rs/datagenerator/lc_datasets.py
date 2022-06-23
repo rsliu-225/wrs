@@ -38,7 +38,7 @@ def gen_seed(input, random=True):
     input[-1][0] += (np.random.uniform(0, 0.015) if random else 0)  # defualt is 0.05
 
     # print(input)
-    pseq = gen_sgl_curve(step=.001, pseq=np.asarray(input))
+    pseq = cubic_inp(step=.001, pseq=np.asarray(input))
     rotseq = get_rotseq_by_pseq(pseq)
     objcm = gen_swap(pseq, rotseq, cross_sec)
     return objcm

@@ -12,19 +12,6 @@ import modeling.geometric_model as gm
 import visualization.panda.world as wd
 
 
-def gen_random_homomat4(trans_diff=(.01, .01, .01), rot_diff=np.radians((10, 10, 10))):
-    random_pos = np.asarray([random.uniform(-trans_diff[0], -trans_diff[0]),
-                             random.uniform(-trans_diff[1], -trans_diff[1]),
-                             random.uniform(-trans_diff[2], -trans_diff[2])])
-    if rot_diff is None:
-        random_rot = np.eye(3)
-    else:
-        random_rot = rm.rotmat_from_axangle((1, 0, 0), random.uniform(-rot_diff[0], -rot_diff[0])).dot(
-            rm.rotmat_from_axangle((0, 1, 0), random.uniform(-rot_diff[1], -rot_diff[1]))).dot(
-            rm.rotmat_from_axangle((0, 0, 1), random.uniform(-rot_diff[2], -rot_diff[2])))
-    return rm.homomat_from_posrot(random_pos, random_rot)
-
-
 def gen_multiview(view_num, comb_num=1, path='', trans_diff=(.01, .01, .01), rot_diff=np.radians((10, 10, 10)),
                   add_occ=True, toggledebug=False):
     if not os.path.exists(os.path.join(path, 'multiview/')):
@@ -46,7 +33,7 @@ def gen_multiview(view_num, comb_num=1, path='', trans_diff=(.01, .01, .01), rot
             for i, comb in enumerate(combs):
                 for rot_id in comb:
                     homomat4 = v[rot_id]
-                    random_homomat4 = gen_random_homomat4(trans_diff, rot_diff)
+                    random_homomat4 = utl.gen_random_homomat4(trans_diff, rot_diff)
                     o3dpcd = o3d.io.read_point_cloud(f"{path}/partial/{objid}_{rot_id}.pcd")
                     pcd = np.asarray(o3dpcd.points)
                     pcd = utl.trans_pcd(pcd, np.dot(init_homomat, np.linalg.inv(homomat4)))
@@ -87,7 +74,7 @@ if __name__ == '__main__':
     view_num = 3
     comb_num = 1
 
-    # gen_multiview(view_num=view_num, comb_num=comb_num, path=folder_name, trans_diff=trans_diff, rot_diff=rot_diff,
-    #               toggledebug=False)
+    gen_multiview(view_num=view_num, comb_num=comb_num, path=folder_name, trans_diff=trans_diff, rot_diff=rot_diff,
+                  toggledebug=False)
 
     show(folder_name)
