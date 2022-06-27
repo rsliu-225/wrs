@@ -620,8 +620,10 @@ def surface_interp(p, v, kdt_d3, inp=0.0005, max_nn=100):
     return pseq, rotseq
 
 
-def cal_conf(pcd_narry, voxel_size=.01, radius=.01):
+def cal_conf(pcd_narry, voxel_size=.01, radius=.01, cam_pos=(0, 0, 0)):
     show_pcd(pcd_narry)
+    center = pcd_narry.mean(axis=0)
+    gm.gen_arrow(cam_pos, center).attach_to(base)
     o3dpcd = o3d_helper.nparray2o3dpcd(pcd_narry)
     downpcd = o3dpcd.voxel_down_sample(voxel_size=voxel_size)
     # o3d.visualization.draw_geometries([downpcd])
@@ -660,7 +662,6 @@ def cal_conf(pcd_narry, voxel_size=.01, radius=.01):
             rgba = (1, 1, 1, 1)
         gm.gen_sphere(p_list[i], radius=.001, rgba=rgba).attach_to(base)
 
-    base.run()
     return p_list, nrml_list, conf_list
 
 

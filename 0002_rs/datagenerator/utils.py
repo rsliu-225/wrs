@@ -257,7 +257,7 @@ def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolus
     o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f_name + '_partial_org.pcd'))
     if add_occ:
         o3dpcd = add_random_occ_by_nrml(o3dpcd)
-        o3d.io.write_point_cloud(os.path.join(path, 'partial', f_name + '.pcd'), o3dpcd)
+        o3d.io.write_point_cloud(os.path.join(path, 'partial', f_name + '_partial.pcd'), o3dpcd)
     # o3d.io.write_triangle_mesh(os.path.join(path, f_name + '.ply'), o3dmesh)
     # vis.capture_screen_image(os.path.join(path, f_name + '.png'), do_render=False)
     save_complete_pcd(f_name, o3dmesh, path=path)
@@ -356,10 +356,36 @@ def add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=(.3, .6)):
 '''
 file io
 '''
+# Input: pcd file path
+def show_pcd(file_path):
+    pcd = o3d.io.read_point_cloud(file_path)
+    o3d.visualization.draw_geometries([pcd])
+    return len(pcd.points)
 
+# Ouput pcd in Numpy Array
+def read_pcd(filename):
+    pcd = o3d.io.read_point_cloud(filename)
+    return np.array(pcd.points)
+
+# Input is Numpy Array
+def show_pcd_pts(points):
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(points)
+    o3d.visualization.draw_geometries([pcd])
+
+def get_uniq_id(name, fact):
+    parts = name.split("_")
+    return int(parts[0])*fact + int(parts[1])
 
 def save_complete_pcd(name, mesh, path="./"):
     path = os.path.join(path, 'complete/')
     if not os.path.exists(path):
         os.mkdir(path)
-    o3d.io.write_point_cloud(path + name + '.pcd', get_objpcd_full_sample_o3d(mesh))
+
+    exist = False
+    for file in os.listdir(path):
+        if name.split("_")[0] == file.split("_")[0] and name.split("_")[2] == file.split("_")[2]:
+            exist = True
+    if not exist:
+        o3d.io.write_point_cloud(path + name + '_complete.pcd', get_objpcd_full_sample_o3d(mesh))
+

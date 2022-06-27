@@ -1,3 +1,4 @@
+import copy
 import os
 import pickle
 
@@ -11,6 +12,7 @@ import basis.o3dhelper as o3h
 import basis.robot_math as rm
 import config
 import modeling.geometric_model as gm
+import modeling.collision_model as cm
 import utils.pcd_utils as pcdu
 import utils.vision_utils as vu
 from skimage.morphology import skeletonize
@@ -175,7 +177,7 @@ def get_center_frame(corners, id, img, pcd, colors=None):
         return None
 
 
-def crop_maker(img, pcd):
+def crop_maker(img, pcd, tgt_id=None):
     # tgt_id = 1
     parameters = aruco.DetectorParameters_create()
     aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_250)
@@ -184,11 +186,13 @@ def crop_maker(img, pcd):
         return None, None
     ids = [v[0] for v in ids]
     print(ids)
-    # if tgt_id not in ids:
-    #     return None, None
-    # pcdu.show_pcd(pcd, rgba=(1, 1, 1, 1))
-    # gripperframe = get_center_frame(corners[ids.index(tgt_id)], tgt_id, img)
-    gripperframe = get_center_frame(corners[0], ids[0], img, pcd)
+    if tgt_id is not None:
+        if tgt_id not in ids:
+            return None, None
+        pcdu.show_pcd(pcd, rgba=(1, 1, 1, 1))
+        gripperframe = get_center_frame(corners[ids.index(tgt_id)], tgt_id, img)
+    else:
+        gripperframe = get_center_frame(corners[0], ids[0], img, pcd)
     if gripperframe is None:
         return None, None
     # gm.gen_frame(pos=center, rotmat=rotmat).attach_to(base)
@@ -196,7 +200,7 @@ def crop_maker(img, pcd):
     pcdu.show_pcd(pcd_trans, rgba=(1, 1, 1, .1))
     gm.gen_frame().attach_to(base)
     # base.run()
-    return ids[0], pcdu.crop_pcd(pcd_trans, x_range=(.05, .215), y_range=(-.4, .4), z_range=(-.2, -.0155))
+    return ids[0], pcdu.crop_pcd(pcd_trans, x_range=(.05, .215), y_range=(-.4, .4), z_range=(-.2, -.0155)), gripperframe
     # return ids[0], pcdu.crop_pcd(pcd_trans, x_range=(0, .215), y_range=(-.4, .4), z_range=(-.2, .2))
 
 
@@ -266,13 +270,15 @@ def extract_plate(folder_name, seed=(.116, 0, -.1), center=(.116, 0, -.0155), ic
     gm.gen_frame(center, np.eye(3)).attach_to(base)
     for i in range(len(grayimg_list)):
         pcd = np.asarray(pcd_list[i]) / 1000
-        inx, pcd_cropped = crop_maker(grayimg_list[i], pcd)
+        pcdu.show_pcd(pcd, rgba=(1, 0, 0, 1))
 
+        inx, pcd_cropped, gripperframe = crop_maker(grayimg_list[i], pcd)
         if pcd_cropped is not None:
             pcd_cropped, _ = get_nearest_cluster(pcd_cropped, seed=seed, eps=.01, min_samples=200)
             seed = np.mean(pcd_cropped, axis=0)
             print(len(pcd_cropped))
             if len(pcd_cropped) > 0:
+                cal_nbc(pcd, np.linalg.inv(gripperframe))
                 pcd_cropped = pcd_cropped - np.asarray(center)
                 o3dpcd = o3dh.nparray2o3dpcd(pcd_cropped)
                 # cl, ind = o3dpcd.remove_radius_outlier(nb_points=16, radius=0.005)
@@ -282,8 +288,7 @@ def extract_plate(folder_name, seed=(.116, 0, -.1), center=(.116, 0, -.0155), ic
                 pcd_cropped_list.append(pcd_cropped)
                 inx_list.append(inx)
 
-    colors = [(1, 0, 0, 1), (1, 1, 0, 1), (1, 0, 1, 1),
-              (0, 1, 0, 1), (0, 1, 1, 1), (0, 0, 1, 1)]
+    colors = [(1, 0, 0, 1), (1, 1, 0, 1), (1, 0, 1, 1), (0, 1, 0, 1), (0, 1, 1, 1), (0, 0, 1, 1)]
     for i in range(1, len(pcd_cropped_list)):
         print(len(pcd_cropped_list[i - 1]))
         if icp:
@@ -299,9 +304,33 @@ def extract_plate(folder_name, seed=(.116, 0, -.1), center=(.116, 0, -.0155), ic
         for i in range(len(pcd_cropped_list)):
             o3dpcd = o3dh.nparray2o3dpcd(np.asarray(pcd_cropped_list[i]))
             o3dpcd_list.append(o3dpcd)
-            o3dpcd.paint_uniform_color(list(colors[inx_list[i]-1][:3]))
+            o3dpcd.paint_uniform_color(list(colors[inx_list[i] - 1][:3]))
         o3d.visualization.draw_geometries(o3dpcd_list)
     return pcd_cropped_list
+
+
+def cal_nbc(pcd, transmat4=np.eye(4)):
+    import config
+    org_cam_dir = (0, 1, 0)
+    gm.gen_frame().attach_to(base)
+    cam_cm = cm.CollisionModel(os.path.join(config.ROOT, 'obstacles', 'Phoxi.stl'))
+    pcdu.show_pcd(pcd, rgba=(1, 0, 0, 1))
+
+    cam_mat4 = rm.homomat_from_posrot(transmat4[:3, 3],
+                                      rm.rotmat_between_vectors(transmat4[:3, 3] - np.mean(pcd, axis=0), org_cam_dir))
+    cam_cm.set_homomat(cam_mat4)
+    cam_cm.set_rgba((.7, 0, 0, .2))
+
+    cam_cm_trans = copy.deepcopy(cam_cm)
+    cam_cm_trans.set_homomat(np.dot(transmat4, cam_mat4))
+    cam_cm_trans.set_rgba((.7, .7, 0, .2))
+
+    cam_cm.attach_to(base)
+    cam_cm_trans.attach_to(base)
+
+    cam_dir = np.dot(cam_mat4[:3, :3], org_cam_dir)
+    gm.gen_arrow(spos=cam_dir, epos=(0, 0, 0)).attach_to(base)
+    base.run()
 
 
 if __name__ == '__main__':
