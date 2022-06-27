@@ -28,7 +28,7 @@ if __name__ == '__main__':
     fit init param
     '''
     tor = None
-    obj_type = 'max'
+    obj_type = 'avg'
     # method = 'SLSQP'
     method = 'cmaes'
 

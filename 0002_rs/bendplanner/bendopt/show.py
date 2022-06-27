@@ -30,8 +30,8 @@ def align(pseq_tgt, pseq_src):
 if __name__ == '__main__':
     goal_f_name = 'random_curve'
     obj_type = 'max'
-    method = 'cmaes'
-    # method = 'SLSQP'
+    # method = 'cmaes'
+    method = 'SLSQP'
 
     '''
     load files

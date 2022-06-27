@@ -36,6 +36,7 @@ class BendSim(object):
         self.thickness = bconfig.THICKNESS
         self.width = bconfig.WIDTH
         self.cm_type = cm_type
+        self.stick_sec = 5
 
         # bending device prop
         self.bend_r = self.r_center + self.thickness / 2
@@ -110,6 +111,9 @@ class BendSim(object):
             # self.pseq = [np.asarray(p) + np.asarray([self.bend_r, 0, 0]) for p in self.pseq]
             self.rotseq.append(np.eye(3))
         self.update_cm()
+
+    def set_stick_sec(self, stick_sec):
+        self.stick_sec = stick_sec
 
     def staticobs_list(self):
         return self.__staticobslist
@@ -233,7 +237,7 @@ class BendSim(object):
                 a = rm.angle_between_vectors(v_tmp - n * v_tmp, insert_rot[:, 1] - n * insert_rot[:, 1])
                 if np.cross(v_tmp - n * v_tmp, insert_rot[:, 1] - n * insert_rot[:, 1])[2] > 0:
                     a = -a
-            tmp_rotseq.append(rm.rotmat_from_axangle((0,0,1), a).dot(insert_rot))
+            tmp_rotseq.append(rm.rotmat_from_axangle((0, 0, 1), a).dot(insert_rot))
             if toggledebug:
                 gm.gen_sphere(np.asarray(tmp_pseq[-1]), rgba=[1, 0, 0, .5], radius=0.0002).attach_to(base)
                 gm.gen_frame(np.asarray(tmp_pseq[-1]), tmp_rotseq[-1], length=.005,
@@ -330,7 +334,8 @@ class BendSim(object):
     def update_cm(self):
         # ts = time.time()
         if self.cm_type == 'stick':
-            vertices, faces = self.__gen_stick(self.pseq[::-1], self.rotseq[::-1], self.thickness / 2)
+            vertices, faces = self.__gen_stick(self.pseq[::-1], self.rotseq[::-1], self.thickness / 2,
+                                               section=self.stick_sec)
         else:
             vertices, faces = self.__gen_surface(self.pseq[::-1], self.rotseq[::-1])
         objtrm = trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces))
@@ -753,7 +758,7 @@ class BendSim(object):
                 bendset.append([random.uniform(.1, .9) * np.pi * random.choice([-1, 1]),
                                 random.uniform(0, 1) * np.pi / 18,
                                 random.uniform(0, 1) * np.pi,
-                                 bendset[-1][-1] + self.bend_r * abs(bendset[-1][0] / np.cos(bendset[-1][1]))
+                                bendset[-1][-1] + self.bend_r * abs(bendset[-1][0] / np.cos(bendset[-1][1]))
                                 + random.uniform(self.bend_r * 2, self.bend_r * np.pi)])
             else:
                 bendset.append([random.uniform(.1, .9) * np.pi * random.choice([-1, 1]),
@@ -767,13 +772,14 @@ if __name__ == '__main__':
     import visualization.panda.world as wd
 
     base = wd.World(cam_pos=[.2, .2, 0], lookat_pos=[0, 0, 0])
-    bs = BendSim(show=True, cm_type='surface', granularity=np.pi / 30)
+    bs = BendSim(show=True, cm_type='stick', granularity=np.pi / 30)
 
     bendset = [
         # [np.radians(225), np.radians(0), np.radians(0), .04],
         # [np.radians(90), np.radians(0), np.radians(180), .08],
         # [np.radians(90), np.radians(0), np.radians(0), .1],
-        [np.radians(45), np.radians(30), np.radians(0), .04],
+        [np.radians(45), np.radians(0), np.radians(10), .04],
+        [np.radians(45), np.radians(0), np.radians(0), .04],
         # [np.radians(45), np.radians(10), np.radians(0), .04],
         # [np.radians(45), np.radians(0), np.radians(0), .04],
         # [np.radians(90), np.radians(0), np.radians(0), .04],
@@ -789,7 +795,7 @@ if __name__ == '__main__':
     is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, toggledebug=False)
     # bs.show(rgba=(.7, .7, 0, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
     bs.show(rgba=(.7, .7, 0, .7), show_frame=False)
-    bu.visualize_voxel([bs.voxelize()], colors=['r'])
+    # bu.visualize_voxel([bs.voxelize()], colors=['r'])
     bs.move_to_org(.04)
     bs.show(rgba=(.7, .7, .7, .7), show_frame=True, show_pseq=False)
 

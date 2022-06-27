@@ -47,7 +47,7 @@ def gen_multiview(view_num, comb_num=1, path='', trans_diff=(.01, .01, .01), rot
             for i, comb in enumerate(combs):
                 for rot_id in comb:
                     homomat4 = v[rot_id]
-                    random_homomat4 = gen_random_homomat4(trans_diff, rot_diff)
+                    random_homomat4 = utl.gen_random_homomat4(trans_diff, rot_diff)
                     o3dpcd = o3d.io.read_point_cloud(f"{path}/partial/{objid}_{rot_id}.pcd")
                     pcd = np.asarray(o3dpcd.points)
                     pcd = utl.trans_pcd(pcd, np.dot(init_homomat, np.linalg.inv(homomat4)))

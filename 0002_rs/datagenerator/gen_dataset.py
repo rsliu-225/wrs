@@ -26,7 +26,7 @@ if __name__ == '__main__':
     base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
     width = .005
     thickness = .0015
-    folder_name = 'tst'
+    path = './tst'
     cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
 
     pseq = utl.cubic_inp(pseq=np.asarray([[0, 0, 0], [.018, .03, .02], [.06, .06, 0], [.12, 0, 0]]))
@@ -58,12 +58,12 @@ if __name__ == '__main__':
     icomats = rm.gen_icorotmats(rotation_interval=np.radians(90))
     for i, mats in enumerate(icomats):
         for j, rot in enumerate(mats):
-            utl.get_objpcd_partial_o3d(objcm, rot, rot_center, path=folder_name,
+            utl.get_objpcd_partial_o3d(objcm, rot, rot_center, path=path,
                                        f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
                                        add_noise=False, add_occ=True, toggledebug=False)
             homomat4_dict[str(obj_id)][str(cnt).zfill(3)] = rm.homomat_from_posrot(rot_center, rot)
             cnt += 1
-            pickle.dump(homomat4_dict, open(f'{folder_name}/homomat4_dict.pkl', 'wb'))
+            pickle.dump(homomat4_dict, open(f'{path}/homomat4_dict.pkl', 'wb'))
 
     # '''
     # show data

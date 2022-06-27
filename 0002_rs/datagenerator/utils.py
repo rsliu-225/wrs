@@ -40,6 +40,19 @@ def rot_new_orgin(pts, new_orgin, rot):
     return trans_pos(trans_pts, -new_orgin).tolist()
 
 
+def gen_random_homomat4(trans_diff=(.01, .01, .01), rot_diff=np.radians((10, 10, 10))):
+    random_pos = np.asarray([random.uniform(-trans_diff[0], -trans_diff[0]),
+                             random.uniform(-trans_diff[1], -trans_diff[1]),
+                             random.uniform(-trans_diff[2], -trans_diff[2])])
+    if rot_diff is None:
+        random_rot = np.eye(3)
+    else:
+        random_rot = rm.rotmat_from_axangle((1, 0, 0), random.uniform(-rot_diff[0], -rot_diff[0])).dot(
+            rm.rotmat_from_axangle((0, 1, 0), random.uniform(-rot_diff[1], -rot_diff[1]))).dot(
+            rm.rotmat_from_axangle((0, 0, 1), random.uniform(-rot_diff[2], -rot_diff[2])))
+    return rm.homomat_from_posrot(random_pos, random_rot)
+
+
 def cubic_inp(pseq, step=.001, toggledebug=False):
     length = np.sum(np.linalg.norm(np.diff(np.asarray(pseq), axis=0), axis=1))
     inp = interpolate.interp1d(pseq[:, 0], pseq[:, 1], kind='cubic')
@@ -235,8 +248,8 @@ def get_objpcd_partial_sample(objcm, objmat4=np.eye(4), smp_num=100000, cam_pos=
     return objpcd_partial
 
 
-def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolusion=(1280, 720), toggledebug=False,
-                           add_noise=False, add_occ=False):
+def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolusion=(1280, 720), ext_name='.pcd',
+                           add_noise=False, add_occ=False,toggledebug=False):
     if not os.path.exists(path):
         os.mkdir(path)
     if not os.path.exists(os.path.join(path, 'partial/')):
@@ -252,11 +265,12 @@ def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolus
         o3dmesh = noisy_mesh(o3dmesh)
     vis.add_geometry(o3dmesh)
     vis.poll_events()
-    vis.capture_depth_point_cloud(os.path.join(path, f_name + '_partial_org.pcd'), do_render=False,
+    vis.capture_depth_point_cloud(os.path.join(path, f_name + f'_partial_org{ext_name}'), do_render=False,
                                   convert_to_world_coordinate=True)
-    o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f_name + '_partial_org.pcd'))
+    o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f_name + f'_partial_org{ext_name}'))
     if add_occ:
         o3dpcd = add_random_occ_by_nrml(o3dpcd)
+        o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
         o3d.io.write_point_cloud(os.path.join(path, 'partial', f_name + '_partial.pcd'), o3dpcd)
     # o3d.io.write_triangle_mesh(os.path.join(path, f_name + '.ply'), o3dmesh)
     # vis.capture_screen_image(os.path.join(path, f_name + '.png'), do_render=False)
@@ -264,13 +278,13 @@ def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolus
     vis.destroy_window()
     # o3d.visualization.draw_geometries([o3dpcd], point_show_normal=True)
     if toggledebug:
-        o3dpcd_org = o3d.io.read_point_cloud(os.path.join(path, f_name + '_partial_org.pcd'))
-        o3dpcd = o3d.io.read_point_cloud(os.path.join(path, 'partial', f_name + '.pcd'))
+        o3dpcd_org = o3d.io.read_point_cloud(os.path.join(path, f_name + f'_partial_org{ext_name}'))
+        o3dpcd = o3d.io.read_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'))
         o3dpcd_org.paint_uniform_color([0, 0.706, 1])
         o3dpcd.paint_uniform_color([0, 0.706, 1])
         # print(o3dpcd_org.get_center())
         o3d.visualization.draw_geometries([o3dpcd, o3dpcd_org])
-    os.remove(os.path.join(path, f_name + '_partial_org.pcd'))
+    os.remove(os.path.join(path, f_name + f'_partial_org{ext_name}'))
     return o3dpcd
 
 
