@@ -249,7 +249,7 @@ def get_objpcd_partial_sample(objcm, objmat4=np.eye(4), smp_num=100000, cam_pos=
 
 
 def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolusion=(1280, 720), ext_name='.pcd',
-                           add_noise=False, add_occ=False,toggledebug=False):
+                           add_noise=False, add_occ=False, toggledebug=False):
     if not os.path.exists(path):
         os.mkdir(path)
     if not os.path.exists(os.path.join(path, 'partial/')):
@@ -370,16 +370,20 @@ def add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=(.3, .6)):
 '''
 file io
 '''
+
+
 # Input: pcd file path
 def show_pcd(file_path):
     pcd = o3d.io.read_point_cloud(file_path)
     o3d.visualization.draw_geometries([pcd])
     return len(pcd.points)
 
+
 # Ouput pcd in Numpy Array
 def read_pcd(filename):
     pcd = o3d.io.read_point_cloud(filename)
     return np.array(pcd.points)
+
 
 # Input is Numpy Array
 def show_pcd_pts(points):
@@ -387,9 +391,11 @@ def show_pcd_pts(points):
     pcd.points = o3d.utility.Vector3dVector(points)
     o3d.visualization.draw_geometries([pcd])
 
+
 def get_uniq_id(name, fact):
     parts = name.split("_")
-    return int(parts[0])*fact + int(parts[1])
+    return int(parts[0]) * fact + int(parts[1])
+
 
 def save_complete_pcd(name, mesh, path="./"):
     path = os.path.join(path, 'complete/')
@@ -402,4 +408,3 @@ def save_complete_pcd(name, mesh, path="./"):
             exist = True
     if not exist:
         o3d.io.write_point_cloud(path + name + '_complete.pcd', get_objpcd_full_sample_o3d(mesh))
-

@@ -54,7 +54,7 @@ class XArmShuidi(ri.RobotInterface):
         self.ft_sensor = jl.JLChain(pos=self.arm.jnts[-1]['gl_posq'],
                                     rotmat=self.arm.jnts[-1]['gl_rotmatq'],
                                     homeconf=np.zeros(0), name='ft_sensor_jl')
-        self.ft_sensor.jnts[1]['loc_pos'] = np.array([.0, .0, .065])
+        self.ft_sensor.jnts[1]['loc_pos'] = np.array([.0, .0, .087])
         self.ft_sensor.lnks[0]['name'] = "xs_ftsensor"
         self.ft_sensor.lnks[0]['loc_pos'] = np.array([0, 0, 0])
         self.ft_sensor.lnks[0]['collision_model'] = cm.gen_stick(spos=self.ft_sensor.jnts[0]['loc_pos'],

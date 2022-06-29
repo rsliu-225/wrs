@@ -69,7 +69,9 @@ class RobotInterface(object):
                                                         toggle_debug=toggle_debug)
 
     def manipulability(self, component_name='arm'):
-        return self.manipulator_dict[component_name].manipulability()
+        return self.manipulator_dict[component_name].manipulability(tcp_jnt_id=None,
+                                                                    tcp_loc_pos=None,
+                                                                    tcp_loc_rotmat=None)
 
     def manipulability_axmat(self, component_name='arm', type="translational"):
         return self.manipulator_dict[component_name].manipulability_axmat(type=type)

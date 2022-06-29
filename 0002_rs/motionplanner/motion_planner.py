@@ -32,9 +32,12 @@ class MotionPlanner(object):
         if self.armname == 'lft_arm':
             self.hnd_name = 'lft_hnd'
             self.arm = self.rbt.lft_arm
-        else:
+        elif self.armname == 'rgt_arm':
             self.hnd_name = 'rgt_hnd'
             self.arm = self.rbt.rgt_arm
+        else:
+            self.hnd_name = 'hnd'
+            self.arm = self.rbt.arm
 
         self.obscmlist = []
         # for obscm in self.obscmlist:
@@ -55,7 +58,10 @@ class MotionPlanner(object):
         self.obscmlist.append(obs)
 
     def init_obs(self):
-        self.obscmlist = self.env.getstationaryobslist() + self.env.getchangableobslist()
+        if self.env is not None:
+            self.obscmlist = self.env.getstationaryobslist() + self.env.getchangableobslist()
+        else:
+            self.obscmlist = []
 
     def get_ee(self, armjnts=None, relmat4=np.eye(4)):
         return self.rbth.get_ee(armjnts, relmat4)

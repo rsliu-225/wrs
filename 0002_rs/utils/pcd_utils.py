@@ -6,18 +6,32 @@ import time
 
 import numpy as np
 import open3d as o3d
+import sknw
 from matplotlib import pyplot as plt
+from skimage.morphology import skeletonize
 from sklearn import linear_model
+from sklearn.neighbors import KDTree
+from sklearn.cluster import DBSCAN
 
+import basis.o3dhelper as o3d_helper
+import basis.o3dhelper as o3dh
+import basis.robot_math as rm
+import basis.trimesh.sample as ts
 import modeling.collision_model as cm
 import modeling.geometric_model as gm
-import basis.trimesh.sample as ts
 import utils.math_utils as mu
-import basis.robot_math as rm
-import basis.o3dhelper as o3d_helper
 from basis import trimesh
 from localenv import envloader as el
-from sklearn.neighbors import KDTree
+
+
+def make_3dax(grid=False):
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("z")
+    ax.grid(grid)
+    return ax
 
 
 def get_knn_indices(p, kdt, k=3):
@@ -92,6 +106,22 @@ def remove_pcd_zeros(pcd):
     return pcd[np.all(pcd != 0, axis=1)]
 
 
+def get_pcd_center(pcd):
+    return np.array((np.mean(pcd[:, 0]), np.mean(pcd[:, 1]), np.mean(pcd[:, 2])))
+
+
+def get_pcd_tip(pcd, axis=0):
+    """
+    get the smallest point along an axis
+
+    :param pcd:
+    :param axis: 0-x,1-y,2-z
+    :return: 3D point
+    """
+
+    return pcd[list(pcd[:, axis]).index(min(list(pcd[:, axis])))]
+
+
 def crop_pcd(pcd, x_range, y_range, z_range, zeros=False):
     pcd_res = []
     for p in pcd:
@@ -115,100 +145,6 @@ def trans_p(p, transmat=None):
     if transmat is None:
         return p
     return trans_pcd(np.asarray([p]), transmat)[0]
-
-
-def show_pcd(pcd, rgba=(1, 1, 1, 1)):
-    gm.gen_pointcloud(pcd, rgbas=[rgba]).attach_to(base)
-
-
-def show_pcd_withrgb(pcd, rgbas, show_percentage=1):
-    n = int(1 / show_percentage)
-    pcd = [p for i, p in enumerate(list(pcd)) if i % n == 0]
-    rgbas = [c for i, c in enumerate(list(rgbas)) if i % n == 0]
-    if len(rgbas[0]) == 3:
-        rgbas = np.hstack((np.asarray(rgbas),
-                           np.repeat(1, [len(rgbas)]).reshape((len(rgbas), 1))))
-    gm.gen_pointcloud(np.asarray(pcd), rgbas=list(rgbas), pntsize=2).attach_to(base)
-
-
-def show_pcdseq(pcdseq, rgba=(1, 1, 1, 1), time_sleep=.1):
-    def __update(pcldnp, counter, pcdseq, task):
-        if counter[0] >= len(pcdseq):
-            counter[0] = 0
-        if counter[0] < len(pcdseq):
-            if pcldnp[0] is not None:
-                pcldnp[0].detach()
-            pcd = np.asarray(pcdseq[counter[0]])
-            pcldnp[0] = gm.gen_pointcloud(pcd, rgbas=[rgba], pntsize=1)
-            pcldnp[0].attach_to(base)
-            counter[0] += 1
-        else:
-            counter[0] = 0
-        return task.again
-
-    counter = [0]
-    pcldnp = [None]
-    print(f'num of frames: {len(pcdseq)}')
-    taskMgr.doMethodLater(time_sleep, __update, 'update', extraArgs=[pcldnp, counter, np.asarray(pcdseq)],
-                          appendTask=True)
-
-
-def show_pcdseq_withrgb(pcdseq, rgbasseq, time_sleep=.1):
-    def __update(pcldnp, counter, pcdseq, rgbasseq, task):
-        if counter[0] >= len(pcdseq):
-            counter[0] = 0
-        if counter[0] < len(pcdseq):
-            if pcldnp[0] is not None:
-                pcldnp[0].detach()
-            pcd = np.asarray(pcdseq[counter[0]])
-            rgbas = list(rgbasseq[counter[0]])
-            if len(rgbas[0]) == 3:
-                rgbas = np.hstack((rgbasseq[counter[0]],
-                                   np.repeat(1, [len(pcd)]).reshape((len(pcd), 1))))
-            pcldnp[0] = gm.gen_pointcloud(pcd, rgbas=list(rgbas), pntsize=1.5)
-            pcldnp[0].attach_to(base)
-            counter[0] += 1
-        else:
-            counter[0] = 0
-        return task.again
-
-    counter = [0]
-    pcldnp = [None]
-    print(f'num of frames: {len(pcdseq)}')
-    taskMgr.doMethodLater(time_sleep, __update, 'update',
-                          extraArgs=[pcldnp, counter, np.asarray(pcdseq), np.asarray(rgbasseq, dtype=object)],
-                          appendTask=True)
-
-
-def show_pcd_withrbt(pcd, rgba=(1, 1, 1, 1), rbtx=None, toggleendcoord=False):
-    rbt = el.loadUr3e()
-    env = el.Env_wrs(boundingradius=7.0)
-    env.reparentTo(base)
-
-    if rbtx is not None:
-        for armname in ["lft_arm", "rgt_arm"]:
-            tmprealjnts = rbtx.getjnts(armname)
-            print(armname, tmprealjnts)
-            rbt.fk(armname, tmprealjnts)
-
-    rbt.gen_meshmodel(toggle_tcpcs=toggleendcoord).attach_to(base)
-    gm.gen_pointcloud(pcd, rgbas=[rgba]).attach_to(base)
-
-
-def get_pcd_center(pcd):
-    return np.array((np.mean(pcd[:, 0]), np.mean(pcd[:, 1]), np.mean(pcd[:, 2])))
-
-
-def get_pcd_tip(pcd, axis=0):
-    """
-    get the smallest point along an axis
-
-    :param pcd:
-    :param axis: 0-x,1-y,2-z
-    :return: 3D point
-    """
-
-    return pcd[list(pcd[:, axis]).index(min(list(pcd[:, axis])))]
 
 
 def get_pcd_w_h(objpcd_std):
@@ -345,6 +281,66 @@ def get_rot_frompcd(pcd, toggledebug=False, toggleransac=True):
         return math.degrees(math.atan(coef))
     else:
         return math.degrees(math.atan(1 / coef))
+
+
+def get_max_cluster(pts, eps=.003, min_samples=2):
+    pts_narray = np.array(pts)
+    db = DBSCAN(eps=eps, min_samples=min_samples).fit(pts)
+    core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
+    core_samples_mask[db.core_sample_indices_] = True
+    labels = db.labels_
+    unique_labels = set(labels)
+    # print("cluster:", unique_labels)
+    res = []
+    mask = []
+    max_len = 0
+
+    for k in unique_labels:
+        if k == -1:
+            continue
+        else:
+            class_member_mask = (labels == k)
+            cluster = pts_narray[class_member_mask & core_samples_mask]
+            if len(cluster) > max_len:
+                max_len = len(cluster)
+                res = cluster
+                mask = [class_member_mask & core_samples_mask]
+
+    return np.asarray(res), mask
+
+
+def get_nearest_cluster(pts, seed=(0, 0, 0), eps=.003, min_samples=2):
+    pts_narray = np.array(pts)
+    db = DBSCAN(eps=eps, min_samples=min_samples).fit(pts)
+    core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
+    core_samples_mask[db.core_sample_indices_] = True
+    labels = db.labels_
+    unique_labels = set(labels)
+    # print("cluster:", unique_labels)
+    res = []
+    mask = []
+    max_len = 0
+    min_dist = 100
+    # gm.gen_sphere(seed, radius=.001).attach_to(base)
+
+    for k in unique_labels:
+        if k == -1:
+            continue
+        else:
+            class_member_mask = (labels == k)
+            cluster = pts_narray[class_member_mask & core_samples_mask]
+            center = np.mean(cluster, axis=0)
+            dist = np.linalg.norm(np.asarray(seed) - center)
+            # if len(cluster) > max_len:
+            #     max_len = len(cluster)
+            #     res = cluster
+            #     mask = [class_member_mask & core_samples_mask]
+            if dist < min_dist:
+                min_dist = dist
+                res = cluster
+                mask = [class_member_mask & core_samples_mask]
+
+    return np.asarray(res), mask
 
 
 def reconstruct_surface(pcd, radii=[5], toggledebug=False):
@@ -620,10 +616,43 @@ def surface_interp(p, v, kdt_d3, inp=0.0005, max_nn=100):
     return pseq, rotseq
 
 
-def cal_conf(pcd_narry, voxel_size=.01, radius=.01, cam_pos=(0, 0, 0)):
+def skeleton(pcd):
+    pcd = o3dh.nparray2o3dpcd(np.asarray(pcd))
+    voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(input=pcd, voxel_size=.001)
+    voxel_bin = np.zeros([100, 100, 100])
+    for v in voxel_grid.get_voxels():
+        voxel_bin[v.grid_index[0]][v.grid_index[1]][v.grid_index[2]] = 1
+    ax = make_3dax(True)
+    ax.voxels(voxel_bin, shade=False)
+    skeleton = skeletonize(voxel_bin)
+    graph = sknw.build_sknw(skeleton, multi=True)
+
+    exit_node = list(set([s for s, e in graph.edges()] + [e for s, e in graph.edges()]))
+    nodes = graph.nodes()
+    stroke_list = [[nodes[i]['o'][::-1]] for i in nodes if i not in exit_node]
+
+    for (s, e) in graph.edges():
+        for cnt in range(10):
+            stroke = []
+            try:
+                ps = graph[s][e][cnt]['pts']
+                for i in range(len(ps)):
+                    if i % 3 == 0:
+                        stroke.append([ps[i][0], ps[i][1], ps[i][2]])
+                # stroke.append([ps[-1, 1], ps[-1, 0]])
+                stroke_list.append(stroke)
+                print(stroke)
+            except:
+                break
+
+    for stroke in np.asarray(stroke_list):
+        stroke = np.asarray(stroke)
+        ax.scatter(stroke[:, 0], stroke[:, 1], stroke[:, 2])
+    plt.show()
+
+
+def cal_conf(pcd_narry, voxel_size=.01, radius=.01, cam_pos=(0, 0, 0), theta=np.pi / 6):
     show_pcd(pcd_narry)
-    center = pcd_narry.mean(axis=0)
-    gm.gen_arrow(cam_pos, center).attach_to(base)
     o3dpcd = o3d_helper.nparray2o3dpcd(pcd_narry)
     downpcd = o3dpcd.voxel_down_sample(voxel_size=voxel_size)
     # o3d.visualization.draw_geometries([downpcd])
@@ -648,21 +677,172 @@ def cal_conf(pcd_narry, voxel_size=.01, radius=.01, cam_pos=(0, 0, 0)):
         d_list.append(d)
         p_list.append(p)
         inx = sorted(range(len(pcv_unsort)), key=lambda k: pcv_unsort[k])
-        nrml_list.append(pcaxmat[:, inx[0]])
+        n = pcaxmat[:, inx[0]]
+        if rm.angle_between_vectors(n, cam_pos - p) > np.pi / 2:
+            n = -n
+        nrml_list.append(n)
 
     for i in range(len(zeta1_list)):
         c = 1 - (zeta1_list[i] - min(zeta1_list)) / (max(zeta1_list) - min(zeta1_list))
         conf_list.append(c)
         if d_list[i] == 0:
             rgba = (c, 0, 1 - c, 1)
-            if c < .5:
-                gm.gen_arrow(spos=p_list[i], epos=p_list[i] + nrml_list[i] * radius * 10, thickness=.002,
-                             rgba=rgba).attach_to(base)
+            # if c < .5:
+            #     gm.gen_arrow(spos=p_list[i], epos=p_list[i] + nrml_list[i] * .05, thickness=.002,
+            #                  rgba=rgba).attach_to(base)
         else:
             rgba = (1, 1, 1, 1)
         gm.gen_sphere(p_list[i], radius=.001, rgba=rgba).attach_to(base)
 
+    if theta is not None:
+        res_inx_list = []
+        for i in range(len(p_list)):
+            if rm.angle_between_vectors(nrml_list[i], cam_pos - p_list[i]) > theta:
+                res_inx_list.append(i)
+        print(res_inx_list)
+        p_list = np.asarray(p_list)[res_inx_list]
+        nrml_list = np.asarray(nrml_list)[res_inx_list]
+        conf_list = np.asarray(conf_list)[res_inx_list]
     return p_list, nrml_list, conf_list
+
+
+def cal_nbv(pts, nrmls, confs, cam_pos=np.asarray([0, 0, 0]), toggledebug=False):
+    inx = sorted(range(len(confs)), key=lambda k: confs[k])
+    confs = np.asarray(confs)[inx]
+    pts = np.asarray(pts)[inx]
+    nrmls = np.asarray(nrmls)[inx]
+    res_list = list(range(len(confs)))
+    nbv_inx_dict = {}
+    threshold = np.radians(30)
+
+    while len(res_list) > 0:
+        i = res_list[0]
+        n = np.asarray(nrmls[i])
+        a_narry = np.arccos(np.dot(np.asarray(nrmls[res_list]), n))
+        res_list_tmp = list(np.argwhere(a_narry > threshold).flatten())
+        rm_list_tmp = list(np.argwhere(a_narry <= threshold).flatten())
+        nbv_inx_dict[i] = np.asarray(res_list)[rm_list_tmp]
+        res_list = np.asarray(res_list)[res_list_tmp]
+
+    if toggledebug:
+        for k, v in nbv_inx_dict.items():
+            print(k, v, confs[k])
+            p = np.asarray(pts[k])
+            n = np.asarray(nrmls[k])
+            gm.gen_arrow(p, p + n * .05, thickness=.002, rgba=(confs[k], 0, 1 - confs[k], 1)).attach_to(base)
+            for i in v:
+                p = np.asarray(pts[i])
+                n = np.asarray(nrmls[i])
+                gm.gen_arrow(p, p + n * .05, thickness=.002, rgba=(confs[k], 0, 1 - confs[k], .1)).attach_to(base)
+                gm.gen_stick(cam_pos, p, rgba=(1, 1, 0, .2)).attach_to(base)
+
+    nbv_inx_list = list(nbv_inx_dict.keys())
+    return np.asarray(pts)[nbv_inx_list], np.asarray(nrmls)[nbv_inx_list], np.asarray(confs)[nbv_inx_list]
+
+
+def show_pcd(pcd, rgba=(1, 1, 1, 1)):
+    gm.gen_pointcloud(pcd, rgbas=[rgba]).attach_to(base)
+
+
+def show_pcd_withrgb(pcd, rgbas, show_percentage=1):
+    n = int(1 / show_percentage)
+    pcd = [p for i, p in enumerate(list(pcd)) if i % n == 0]
+    rgbas = [c for i, c in enumerate(list(rgbas)) if i % n == 0]
+    if len(rgbas[0]) == 3:
+        rgbas = np.hstack((np.asarray(rgbas),
+                           np.repeat(1, [len(rgbas)]).reshape((len(rgbas), 1))))
+    gm.gen_pointcloud(np.asarray(pcd), rgbas=list(rgbas), pntsize=2).attach_to(base)
+
+
+def show_pcdseq(pcdseq, rgba=(1, 1, 1, 1), time_sleep=.1):
+    def __update(pcldnp, counter, pcdseq, task):
+        if counter[0] >= len(pcdseq):
+            counter[0] = 0
+        if counter[0] < len(pcdseq):
+            if pcldnp[0] is not None:
+                pcldnp[0].detach()
+            pcd = np.asarray(pcdseq[counter[0]])
+            pcldnp[0] = gm.gen_pointcloud(pcd, rgbas=[rgba], pntsize=1)
+            pcldnp[0].attach_to(base)
+            counter[0] += 1
+        else:
+            counter[0] = 0
+        return task.again
+
+    counter = [0]
+    pcldnp = [None]
+    print(f'num of frames: {len(pcdseq)}')
+    taskMgr.doMethodLater(time_sleep, __update, 'update', extraArgs=[pcldnp, counter, np.asarray(pcdseq)],
+                          appendTask=True)
+
+
+def show_pcdseq_withrgb(pcdseq, rgbasseq, time_sleep=.1):
+    def __update(pcldnp, counter, pcdseq, rgbasseq, task):
+        if counter[0] >= len(pcdseq):
+            counter[0] = 0
+        if counter[0] < len(pcdseq):
+            if pcldnp[0] is not None:
+                pcldnp[0].detach()
+            pcd = np.asarray(pcdseq[counter[0]])
+            rgbas = list(rgbasseq[counter[0]])
+            if len(rgbas[0]) == 3:
+                rgbas = np.hstack((rgbasseq[counter[0]],
+                                   np.repeat(1, [len(pcd)]).reshape((len(pcd), 1))))
+            pcldnp[0] = gm.gen_pointcloud(pcd, rgbas=list(rgbas), pntsize=1.5)
+            pcldnp[0].attach_to(base)
+            counter[0] += 1
+        else:
+            counter[0] = 0
+        return task.again
+
+    counter = [0]
+    pcldnp = [None]
+    print(f'num of frames: {len(pcdseq)}')
+    taskMgr.doMethodLater(time_sleep, __update, 'update',
+                          extraArgs=[pcldnp, counter, np.asarray(pcdseq), np.asarray(rgbasseq, dtype=object)],
+                          appendTask=True)
+
+
+def show_pcd_withrbt(pcd, rgba=(1, 1, 1, 1), rbtx=None, toggleendcoord=False):
+    rbt = el.loadUr3e()
+    env = el.Env_wrs(boundingradius=7.0)
+    env.reparentTo(base)
+
+    if rbtx is not None:
+        for armname in ["lft_arm", "rgt_arm"]:
+            tmprealjnts = rbtx.getjnts(armname)
+            print(armname, tmprealjnts)
+            rbt.fk(armname, tmprealjnts)
+
+    rbt.gen_meshmodel(toggle_tcpcs=toggleendcoord).attach_to(base)
+    gm.gen_pointcloud(pcd, rgbas=[rgba]).attach_to(base)
+
+
+def show_cam(pcd, transmat4=np.eye(4)):
+    import config
+    import os
+
+    org_cam_dir = (0, 1, 0)
+    gm.gen_frame().attach_to(base)
+    cam_cm = cm.CollisionModel(os.path.join(config.ROOT, 'obstacles', 'Phoxi.stl'))
+    show_pcd(pcd, rgba=(1, 0, 0, 1))
+
+    cam_mat4 = rm.homomat_from_posrot(np.asarray([0, 0, 0]),
+                                      rm.rotmat_between_vectors(-np.mean(pcd, axis=0), org_cam_dir))
+    cam_cm.set_homomat(cam_mat4)
+    cam_cm.set_rgba((.7, 0, 0, .2))
+
+    cam_cm_trans = copy.deepcopy(cam_cm)
+    cam_cm_trans.set_homomat(np.dot(transmat4, cam_mat4))
+    cam_cm_trans.set_rgba((.7, .7, 0, .2))
+
+    cam_cm.attach_to(base)
+    cam_cm_trans.attach_to(base)
+
+    cam_dir = np.dot(cam_mat4[:3, :3], org_cam_dir)
+    gm.gen_arrow(spos=cam_dir, epos=(0, 0, 0)).attach_to(base)
+    cam_dir_trans = trans_pcd([cam_dir], transmat4)[0]
+    gm.gen_arrow(spos=np.mean(pcd, axis=0), epos=transmat4[:3, 3], rgba=(1, 1, 0, 1)).attach_to(base)
 
 
 if __name__ == '__main__':

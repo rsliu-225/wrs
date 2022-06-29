@@ -353,7 +353,10 @@ class IkSolver(object):
         self.rbt = rbt
         self.armname = armname
         self.env = env
-        self.obscmlist = self.env.getstationaryobslist() + self.env.getchangableobslist()
+        if self.env is not None:
+            self.obscmlist = self.env.getstationaryobslist() + self.env.getchangableobslist()
+        else:
+            self.obscmlist = []
         self.rbth = rbt_helper.RobotHelper(self.env, self.rbt, self.armname)
 
         self.initjnts = self.rbt.get_jnt_values(self.armname)

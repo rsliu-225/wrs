@@ -12,14 +12,20 @@ class AnimationHelper(object):
     def __init__(self, env, rbt, armname="lft_arm"):
         self.rbt = rbt
         self.env = env
-        self.obscmlist = self.env.getstationaryobslist() + self.env.getchangableobslist()
+        if env is not None:
+            self.obscmlist = self.env.getstationaryobslist() + self.env.getchangableobslist()
+        else:
+            self.obscmlist = []
         self.armname = armname
         if self.armname == 'lft_arm':
             self.hnd_name = 'lft_hnd'
             self.arm = self.rbt.lft_arm
-        else:
+        elif self.armname == 'rgt_arm':
             self.hnd_name = 'rgt_hnd'
             self.arm = self.rbt.rgt_arm
+        else:
+            self.hnd_name = 'hnd'
+            self.arm = self.rbt.arm
         self.rbth = rbt_helper.RobotHelper(self.env, self.rbt, self.armname)
         self.gripper = rtqhe.RobotiqHE()
 
@@ -151,7 +157,7 @@ class AnimationHelper(object):
 
     def show_armjnts(self, rgba=None, armjnts=None, toggleendcoord=False, jawwidth=50, genmnp=True):
         if armjnts is not None:
-            self.rbt.fk(self.armname, armjnts)
+            self.rbt.fk(self.armname, jnt_values=armjnts)
 
         if genmnp:
             self.__genmnp_by_armname(rgba=rgba, toggleendcoord=toggleendcoord, jawwidth=jawwidth)

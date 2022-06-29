@@ -10,7 +10,10 @@ class RobotHelper(object):
     def __init__(self, env, rbt, armname="lft_arm"):
         self.rbt = rbt
         self.env = env
-        self.obscmlist = self.env.getstationaryobslist() + self.env.getchangableobslist()
+        if env is not None:
+            self.obscmlist = self.env.getstationaryobslist() + self.env.getchangableobslist()
+        else:
+            self.obscmlist = []
         self.armname = armname
         self.initjnts = self.rbt.get_jnt_values(self.armname)
 
