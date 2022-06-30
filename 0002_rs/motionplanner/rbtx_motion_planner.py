@@ -1,11 +1,9 @@
 import numpy as np
-import time
-import pickle
+
 import basis.robot_math as rm
-from forcecontrol.force_controller import ForceController
 import motion.probabilistic.rrt_connect as rrtc
+from forcecontrol.force_controller import ForceController
 from motionplanner.motion_planner import MotionPlanner
-import utils.run_utils as ru
 
 
 class MotionPlannerRbtX(MotionPlanner):
@@ -13,19 +11,33 @@ class MotionPlannerRbtX(MotionPlanner):
         MotionPlanner.__init__(self, env, rbt, armname)
         self.rbtx = rbtx
         self.force_controller = ForceController(self.rbt, self.rbtx, armname)
-        self.arm = self.rbtx.rgt_arm_hnd if armname == "rgt_arm" else self.rbtx.lft_arm_hnd
+        if self.armname == 'lft_arm':
+            self.hnd_name = 'lft_hnd'
+            self.arm = self.rbt.lft_arm
+        elif self.armname == 'rgt_arm':
+            self.hnd_name = 'rgt_hnd'
+            self.arm = self.rbt.rgt_arm
+        else:
+            self.hnd_name = 'hnd'
+            self.arm = self.rbt.arm
 
     def movepath(self, path):
         print("--------------move path---------------")
-
-        self.rbtx.move_jnts(path, self.armname, wait=True)
+        try:
+            self.rbtx.move_jnts(path, self.armname, wait=True)
+        except:
+            self.rbtx.arm_move_jspace_path(path)
 
     def get_armjnts(self):
-        return self.rbtx.get_jnt_values(component_name=self.armname)
+        try:
+            jnts = self.rbtx.arm_get_jnt_values()
+        except:
+            jnts = self.rbtx.get_jnt_values(component_name=self.armname)
+        return jnts
 
     def goto_init_x(self):
-        start = self.rbtx.get_jnt_values(component_name=self.armname)
-        goal = self.rbt.get_jnt_values(self.armname)
+        start = self.get_armjnts()
+        goal = self.rbt.arm_get_jnt_values(self.armname)
         print("--------------go to init(rrt)---------------")
         planner = rrtc.RRTConnect(self.rbt)
         path_gotoinit = planner.plan(component_name=self.armname, start_conf=start, goal_conf=goal,
@@ -38,7 +50,7 @@ class MotionPlannerRbtX(MotionPlanner):
             time.sleep(.5)
 
     def goto_init_hold_x(self, grasp, objcm, objrelpos, objrelrot):
-        start = self.rbtx.get_jnt_values(component_name=self.armname)
+        start = self.get_armjnts()
         if self.armname == "lft_arm":
             goal = self.rbt.initlftjnts
         else:
@@ -56,7 +68,7 @@ class MotionPlannerRbtX(MotionPlanner):
             return True
         return False
 
-    def move_up_x(self,  direction=np.array([0, 0, 1]), length=20):
+    def move_up_x(self, direction=np.array([0, 0, 1]), length=20):
         print(f"--------------move up {length}---------------")
         path_up = self.get_linear_path_from(self.get_armjnts(), length=length, direction=direction)
         self.rbtx.movejntssgl_cont(path_up, self.armname, wait=True)
@@ -77,7 +89,6 @@ class MotionPlannerRbtX(MotionPlanner):
     def attachfirm(self, direction=np.array([0, 0, -1]), forcethreshold=2.0):
         self.force_controller.attachfirm(direction=direction, forcethreshold=forcethreshold)
         time.sleep(5)
-
 
     def get_objmat4_inhand(self, phxilocator, phoxi_f_name, stl_f_name, objmat4_sim, armjnts=None, load=True,
                            toggledubug=False, showicp=False, showcluster=False):

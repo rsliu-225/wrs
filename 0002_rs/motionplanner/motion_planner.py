@@ -1,27 +1,15 @@
-import copy
-import pickle
-import random
-import time
-from collections import Counter
-
-import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
-from scipy.spatial.transform import Rotation, Slerp
+from scipy.spatial.transform import Rotation
 
-import config
 import graspplanner.grasp_planner as gp
-import robot_sim.end_effectors.gripper.robotiqhe.robotiqhe as rtqhe
+import modeling.geometric_model as gm
+import motion.optimization_based.incremental_nik as inik
+import motion.probabilistic.rrt_connect as rrtc
 import motionplanner.animation_helper as ani_helper
 import motionplanner.ik_solver as iks
 import motionplanner.robot_helper as rbt_helper
-import utils.graph_utils as gh
-import basis.robot_math as rm
-import modeling.geometric_model as gm
-import motion.probabilistic.rrt_connect as rrtc
-import manipulation.approach_depart_planner as adp
-import math
-import motion.optimization_based.incremental_nik as inik
+import robot_sim.end_effectors.gripper.robotiqhe.robotiqhe as rtqhe
 
 
 class MotionPlanner(object):
@@ -68,6 +56,9 @@ class MotionPlanner(object):
 
     def get_tcp(self, armjnts=None):
         return self.rbth.get_tcp(armjnts)
+
+    def get_armjnts(self):
+        return self.rbt.get_jnt_values(self.armname)
 
     def get_numik(self, eepos, eerot, msc=None):
         if msc is None:

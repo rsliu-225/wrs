@@ -1,24 +1,30 @@
-import time
-import os
-import numpy as np
-import robot_con.ur.program_builder as pb
-import basis.robot_math as rm
-import time
-import pickle
-import config
 import socket
 import struct
-import math
-import motion.trajectory.piecewisepoly_fullcode as pwp
+import time
+import os
 
-import matplotlib.pyplot as plt
+import numpy as np
+
+import basis.robot_math as rm
+import config
+import motion.trajectory.piecewisepoly_fullcode as pwp
+import robot_con.ur.program_builder as pb
+
 
 class ForceController(object):
     def __init__(self, rbt, rbtx, armname="lft"):
         self.rbtx = rbtx
         self.rbt = rbt
         self.armname = armname
-        self.arm = self.rbtx.rgt_arm_hnd.arm if self.armname == "rgt" else self.rbtx.lft_arm_hnd.arm
+        if self.armname == 'lft_arm':
+            self.hnd_name = 'lft_hnd'
+            self.arm = self.rbt.lft_arm
+        elif self.armname == 'rgt_arm':
+            self.hnd_name = 'rgt_hnd'
+            self.arm = self.rbt.rgt_arm
+        else:
+            self.hnd_name = 'hnd'
+            self.arm = self.rbt.arm
         self.__scriptpath = os.path.dirname(__file__)
         self.__programbuilder = pb.ProgramBuilder()
         self.__rrx = 90

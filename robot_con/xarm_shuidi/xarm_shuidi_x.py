@@ -30,7 +30,7 @@ class XArmShuidiX(object):
         self._arm_x.set_gripper_mode(0)
         self.__speed = 5000
         self._arm_x.set_gripper_speed(self.__speed)  # 1000-5000
-        self._arm_x.set_gripper_position(850)  # 1000-5000
+        # self._arm_x.set_gripper_position(850)  # 1000-5000
         self._agv_x = agv.ShuidiX(ip=ip)
         print("The Shuidi server is started!")
 

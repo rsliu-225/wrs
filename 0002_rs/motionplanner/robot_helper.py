@@ -47,7 +47,7 @@ class RobotHelper(object):
     def get_tcp(self, armjnts=None):
         if armjnts is not None:
             self.goto_armjnts(armjnts)
-        return self.rbt.get_gl_tcp(manipulator_name=self.armname)
+        return self.rbt.arm.lnks[-1]['gl_pos'], self.rbt.arm.lnks[-1]['gl_rotmat']
 
     def draw_axis(self, pos, rot, rgbmatrix=None, length=50, thickness=5):
         gm.gen_frame(pos=pos, rotmat=rot, length=length, thickness=thickness, rgbmatrix=rgbmatrix)

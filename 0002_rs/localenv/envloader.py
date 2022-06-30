@@ -12,6 +12,7 @@ import localenv.item as item
 import modeling.collision_model as cm
 import modeling.geometric_model as gm
 import robot_con.ur.ur3e_dual_x as ur3ex
+import robot_con.xarm_shuidi.xarm_shuidi_x as xarmx
 import robot_sim.robots.ur3e_dual.ur3e_dual as ur3edual
 import robot_sim.robots.xarm_shuidi.xarm_shuidi as xarm_shuidi
 
@@ -182,7 +183,7 @@ def loadEnv_yumi(camp=[4, 0, 1.7], lookatpos=[0, 0, 1]):
     return base, env
 
 
-def __pcd_trans(pcd, amat):
+def _pcd_trans(pcd, amat):
     homopcd = np.ones((4, len(pcd)))
     homopcd[:3, :] = pcd.T
     realpcd = np.dot(amat, homopcd).T
@@ -217,6 +218,11 @@ def loadUr3ex(pc_ip='10.0.2.11'):
     return rbtx
 
 
+def loadXarmx(ip="10.2.0.203"):
+    rbtx = xarmx.XArmShuidiX(ip=ip)
+    return rbtx
+
+
 def loadObj(f_name, pos=(0, 0, 0), rot=(0, 0, 0), color=(1, 1, 1), transparency=0.5):
     obj = cm.CollisionModel(initor=os.path.join(config.ROOT, "obstacles", f_name))
     obj.set_pos(pos)
@@ -232,9 +238,9 @@ def loadObjpcd(f_name, pos=(0, 0, 0), rot=(0, 0, 0), sample_num=100000, togglede
     rotmat4[:3, :3] = rm.rotmat_from_euler(rot[0], rot[1], rot[2], axes="sxyz")
     rotmat4[:3, 3] = pos
 
-    obj_surface = np.asarray(ts.sample_surface(obj.trimesh, count=sample_num))
+    obj_surface = np.asarray(ts.sample_surface(obj.objtrm, count=sample_num))
     # obj_surface = obj_surface[obj_surface[:, 2] > 2]
-    obj_surface_real = __pcd_trans(obj_surface, rotmat4)
+    obj_surface_real = _pcd_trans(obj_surface, rotmat4)
 
     if toggledebug:
         obj_surface = o3d_helper.nparray2o3dpcd(copy.deepcopy(obj_surface))
