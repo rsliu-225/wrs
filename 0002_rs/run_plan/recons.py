@@ -19,37 +19,46 @@ import motionplanner.motion_planner as mp
 if __name__ == '__main__':
     base = wd.World(cam_pos=[2, 2, 2], lookat_pos=[0, 0, 0])
     # base = wd.World(cam_pos=[0, 0, 0], lookat_pos=[0, 0, 1])
-    fo = 'plate_cubic_2'
+    # fo = 'nbc/plate_cubic_2'
+    fo = 'seq/plate_a_cubic_2'
 
     rbt = el.loadXarm(showrbt=False)
 
     m_planner = mp.MotionPlanner(env=None, rbt=rbt, armname="arm")
     m_planner.ah.show_armjnts(rgba=(1, 0, 0, .5))
 
-    gm.gen_frame(rbt.arm.lnks[-1]['gl_pos'] + np.asarray([.03466 + .087, 0, 0]),
-                 rbt.arm.lnks[-1]['gl_rotmat']).attach_to(base)
-
-    gl_transrot = rm.rotmat_from_axangle((1, 0, 0), np.pi)
-    gl_transpos = rbt.arm.lnks[-1]['gl_pos'] + np.asarray([.03466 + .087, 0, 0])
+    seedjntagls = m_planner.get_armjnts()
+    m_planner.ah.show_armjnts(armjnts=seedjntagls, rgba=(1, 0, 0, .5))
+    tcppos, tcprot = m_planner.get_tcp(armjnts=seedjntagls)
+    gm.gen_frame(tcppos + tcprot[:, 2] * (.03466 + .065), tcprot).attach_to(base)
+    # relrot = np.asarray([[0, 0, 1], [0, -1, 0], [1, 0, 0]])
+    relrot = np.asarray([[0, 0, -1], [0, -1, 0], [1, 0, 0]])
+    gl_transrot = np.dot(tcprot, relrot)
+    gl_transpos = tcppos + tcprot[:, 2] * (.03466 + .065)
     gl_transmat4 = rm.homomat_from_posrot(gl_transpos, gl_transrot)
 
     icp = False
 
-    seed = (.116, 0, .1)
+    seed = (.116, 0, -.1)
     center = (.116, 0, -.0155)
 
-    pcd_cropped_list = rcu.reg_plate(fo, seed, center)
-    base.run()
+    x_range = (.06, .215)
+    y_range = (-.15, .15)
+    # z_range = (.0155, .2)
+    z_range = (-.2, -.0155)
+    # pcd_cropped_list = rcu.reg_plate(fo, seed, center, x_range=x_range, y_range=y_range, z_range=z_range)
+    # base.run()
 
     textureimg, depthimg, pcd = rcu.load_frame(fo, f_name='000.pkl')
-    cv2.imshow("grayimg", textureimg)
-    cv2.waitKey(0)
+    # cv2.imshow("grayimg", textureimg)
+    # cv2.waitKey(0)
 
     seedjntagls = rbt.get_jnt_values('arm')
-    jnts = rcu.cal_nbc(textureimg, pcd, rbt=rbt, seedjntagls=seedjntagls, gl_transmat4=gl_transmat4)
-    m_planner.ah.show_armjnts(armjnts=jnts)
-    path = m_planner.plan_start2end(start=seedjntagls, end=jnts)
-    m_planner.ah.show_ani(path)
+    jnts = rcu.cal_nbc(textureimg, pcd, rbt=rbt, seedjntagls=seedjntagls, gl_transmat4=gl_transmat4,
+                       x_range=x_range, y_range=y_range, z_range=z_range)
+    m_planner.ah.show_armjnts(armjnts=jnts, rgba=(0, 1, 0, .5))
+    # path = m_planner.plan_start2end(start=seedjntagls, end=jnts)
+    # m_planner.ah.show_ani(path)
     base.run()
 
     # for fo in sorted(os.listdir(os.path.join(config.ROOT, 'recons_data'))):

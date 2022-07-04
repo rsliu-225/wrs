@@ -17,7 +17,7 @@ import utils.vision_utils as vu
 import motionplanner.nbc_solver as nbcs
 
 
-def load_frame_seq(folder_name=None, root_path=os.path.join(config.ROOT, 'img/phoxi/seq/'), path=None):
+def load_frame_seq(folder_name=None, root_path=os.path.join(config.ROOT, 'img/phoxi/'), path=None):
     if path is None:
         path = os.path.join(root_path, folder_name)
     depthimg_list = []
@@ -38,7 +38,7 @@ def load_frame_seq(folder_name=None, root_path=os.path.join(config.ROOT, 'img/ph
     return [depthimg_list, rgbimg_list, pcd_list]
 
 
-def load_frame_seq_withf(folder_name=None, root_path=os.path.join(config.ROOT, 'img/phoxi/nbc/'), path=None):
+def load_frame_seq_withf(folder_name=None, root_path=os.path.join(config.ROOT, 'img/phoxi/'), path=None):
     if path is None:
         path = os.path.join(root_path, folder_name)
     depthimg_list = []
@@ -61,7 +61,7 @@ def load_frame_seq_withf(folder_name=None, root_path=os.path.join(config.ROOT, '
     return [fname_list, depthimg_list, textureimg_list, pcd_list]
 
 
-def load_frame(folder_name, f_name, root_path=os.path.join(config.ROOT, 'img/phoxi/seq/'), path=None):
+def load_frame(folder_name, f_name, root_path=os.path.join(config.ROOT, 'img/phoxi/'), path=None):
     if path is None:
         path = os.path.join(root_path, folder_name, f_name)
     tmp = pickle.load(open(os.path.join(path, path), 'rb'))
@@ -169,7 +169,8 @@ def display_inlier_outlier(cloud, ind):
     o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
 
 
-def reg_plate(folder_name, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False, toggledebug=True):
+def reg_plate(folder_name, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False,
+              x_range=(.05, .215), y_range=(-.4, .4), z_range=(-.2, -.0155), toggledebug=True):
     if not os.path.exists(os.path.join(config.ROOT, 'recons_data', folder_name)):
         os.mkdir(os.path.join(config.ROOT, 'recons_data', folder_name))
     fnlist, grayimg_list, depthimg_list, pcd_list = load_frame_seq_withf(folder_name=folder_name)
@@ -179,11 +180,12 @@ def reg_plate(folder_name, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=Fa
     # gm.gen_frame(center, np.eye(3)).attach_to(base)
     for i in range(len(grayimg_list)):
         pcd = np.asarray(pcd_list[i]) / 1000
-        inx, gripperframe, pcd, pcd_cropped, = crop_maker(grayimg_list[i], pcd)
+        inx, gripperframe, pcd, pcd_cropped, = \
+            crop_maker(grayimg_list[i], pcd, x_range=x_range, y_range=y_range, z_range=z_range)
         if pcd_cropped is not None:
             pcd_cropped, _ = pcdu.get_nearest_cluster(pcd_cropped, seed=seed, eps=.01, min_samples=200)
             seed = np.mean(pcd_cropped, axis=0)
-            print(len(pcd_cropped))
+            print('Num. of points in cropped pcd:', len(pcd_cropped))
             if len(pcd_cropped) > 0:
                 pcd_cropped = pcd_cropped - np.asarray(center)
                 o3dpcd = o3dh.nparray2o3dpcd(pcd_cropped)
@@ -215,8 +217,9 @@ def reg_plate(folder_name, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=Fa
     return pcd_cropped_list
 
 
-def cal_nbc(textureimg, pcd, rbt, seedjntagls, seed=(.116, 0, -.1), gl_transmat4=np.eye(4),
-            x_range=(.05, .215), y_range=(-.4, .4), z_range=(-.2, -.0155), toggledebug=True):
+def cal_nbc(textureimg, pcd, rbt, seedjntagls, seed=(.116, 0, -.1), gl_transmat4=np.eye(4), theta=np.pi / 3,
+            x_range=(.05, .215), y_range=(-.4, .4), z_range=(-.2, -.0155),
+            toggledebug=True, show_cam=True):
     pcd = np.asarray(pcd) / 1000
     inx, gripperframe, pcd, pcd_cropped = \
         crop_maker(textureimg, pcd, x_range=x_range, y_range=y_range, z_range=z_range)
@@ -228,19 +231,25 @@ def cal_nbc(textureimg, pcd, rbt, seedjntagls, seed=(.116, 0, -.1), gl_transmat4
     pcd_cropped, _ = pcdu.get_nearest_cluster(pcd_cropped, seed=seed, eps=.01, min_samples=200)
     gm.gen_sphere(seed).attach_to(base)
     print('Num. of points in cropped pcd:', len(pcd_cropped))
+
     if len(pcd_cropped) < 0:
         return None, None
-    # pcdu.show_cam(pcd, np.linalg.inv(gripperframe))
+
     pts, nrmls, confs = \
-        pcdu.cal_conf(pcd_cropped, voxel_size=.005, radius=.005, cam_pos=cam_pos, theta=np.pi / 3)
+        pcdu.cal_conf(pcd_cropped, voxel_size=.005, radius=.005, cam_pos=cam_pos, theta=theta)
     nbv_pts, nbv_nrmls, nbv_confs = \
         pcdu.cal_nbv(pts, nrmls, confs, cam_pos=np.linalg.inv(gripperframe)[:3, 3])
+    print('Num. of NBV:', len(nbv_pts))
 
     pcd = pcdu.trans_pcd(pcd, gl_transmat4)
     pcd_cropped = pcdu.trans_pcd(pcd_cropped, gl_transmat4)
     nbv_pts = pcdu.trans_pcd(nbv_pts, gl_transmat4)
     nbv_nrmls = pcdu.trans_pcd(nbv_nrmls, gl_transmat4)
     cam_pos = pcdu.trans_pcd([cam_pos], gl_transmat4)[0]
+
+    if show_cam:
+        pcdu.show_cam(rm.homomat_from_posrot(cam_pos, rot=np.dot(rm.rotmat_from_axangle((0, 0, 1), np.pi / 2),
+                                                                 rm.rotmat_from_axangle((1, 0, 0), -np.pi / 3))))
     if toggledebug:
         pcdu.show_pcd(pcd, rgba=(1, 0, 0, 1))
         for i in range(len(nbv_pts)):
@@ -259,4 +268,5 @@ def cal_nbc(textureimg, pcd, rbt, seedjntagls, seed=(.116, 0, -.1), gl_transmat4
     gm.gen_arrow(p_new, p_new + n_new * .05, rgba=(0, 1, 0, 1)).attach_to(base)
     gm.gen_arrow(nbv_pts[0], nbv_pts[0] + nbv_nrmls[0] * .05, rgba=(1, 0, 0, 1)).attach_to(base)
     gm.gen_stick(cam_pos, p_new, rgba=(0, 1, 1, 1)).attach_to(base)
-    return jnts
+
+    return pcd_cropped, nbv_pts, nbv_nrmls, jnts

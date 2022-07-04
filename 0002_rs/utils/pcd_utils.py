@@ -1,6 +1,7 @@
 import copy
 import itertools
 import math
+import os
 import random
 import time
 
@@ -10,13 +11,14 @@ import sknw
 from matplotlib import pyplot as plt
 from skimage.morphology import skeletonize
 from sklearn import linear_model
-from sklearn.neighbors import KDTree
 from sklearn.cluster import DBSCAN
+from sklearn.neighbors import KDTree
 
 import basis.o3dhelper as o3d_helper
 import basis.o3dhelper as o3dh
 import basis.robot_math as rm
 import basis.trimesh.sample as ts
+import config
 import modeling.collision_model as cm
 import modeling.geometric_model as gm
 import utils.math_utils as mu
@@ -818,31 +820,36 @@ def show_pcd_withrbt(pcd, rgba=(1, 1, 1, 1), rbtx=None, toggleendcoord=False):
     gm.gen_pointcloud(pcd, rgbas=[rgba]).attach_to(base)
 
 
-def show_cam(pcd, transmat4=np.eye(4)):
-    import config
-    import os
+# def show_cam(pcd, transmat4=np.eye(4)):
+#     import config
+#
+#     org_cam_dir = (0, 1, 0)
+#     gm.gen_frame().attach_to(base)
+#     cam_cm = cm.CollisionModel(os.path.join(config.ROOT, 'obstacles', 'Phoxi.stl'))
+#     show_pcd(pcd, rgba=(1, 0, 0, 1))
+#
+#     cam_mat4 = rm.homomat_from_posrot(np.asarray([0, 0, 0]),
+#                                       rm.rotmat_between_vectors(-np.mean(pcd, axis=0), org_cam_dir))
+#     # cam_cm.set_homomat(cam_mat4)
+#     # cam_cm.set_rgba((.7, 0, 0, .2))
+#
+#     cam_cm_trans = copy.deepcopy(cam_cm)
+#     cam_cm_trans.set_homomat(np.dot(transmat4, cam_mat4))
+#     cam_cm_trans.set_rgba((.7, .7, .7, .2))
+#
+#     cam_cm.attach_to(base)
+#     cam_cm_trans.attach_to(base)
+#
+#     cam_dir = np.dot(cam_mat4[:3, :3], org_cam_dir)
+#     gm.gen_arrow(spos=cam_dir, epos=(0, 0, 0)).attach_to(base)
+#     cam_dir_trans = trans_pcd([cam_dir], transmat4)[0]
+#     gm.gen_arrow(spos=np.mean(pcd, axis=0), epos=transmat4[:3, 3], rgba=(1, 1, 0, 1)).attach_to(base)
 
-    org_cam_dir = (0, 1, 0)
-    gm.gen_frame().attach_to(base)
+def show_cam(transmat4):
     cam_cm = cm.CollisionModel(os.path.join(config.ROOT, 'obstacles', 'Phoxi.stl'))
-    show_pcd(pcd, rgba=(1, 0, 0, 1))
-
-    cam_mat4 = rm.homomat_from_posrot(np.asarray([0, 0, 0]),
-                                      rm.rotmat_between_vectors(-np.mean(pcd, axis=0), org_cam_dir))
-    cam_cm.set_homomat(cam_mat4)
-    cam_cm.set_rgba((.7, 0, 0, .2))
-
-    cam_cm_trans = copy.deepcopy(cam_cm)
-    cam_cm_trans.set_homomat(np.dot(transmat4, cam_mat4))
-    cam_cm_trans.set_rgba((.7, .7, 0, .2))
-
+    cam_cm.set_homomat(transmat4)
+    cam_cm.set_rgba((.7, .7, .7, .2))
     cam_cm.attach_to(base)
-    cam_cm_trans.attach_to(base)
-
-    cam_dir = np.dot(cam_mat4[:3, :3], org_cam_dir)
-    gm.gen_arrow(spos=cam_dir, epos=(0, 0, 0)).attach_to(base)
-    cam_dir_trans = trans_pcd([cam_dir], transmat4)[0]
-    gm.gen_arrow(spos=np.mean(pcd, axis=0), epos=transmat4[:3, 3], rgba=(1, 1, 0, 1)).attach_to(base)
 
 
 if __name__ == '__main__':
