@@ -13,6 +13,8 @@ import modeling.collision_model as cm
 import modeling.geometric_model as gm
 import robot_con.ur.ur3e_dual_x as ur3ex
 import robot_con.xarm_shuidi.xarm_shuidi_x as xarmx
+import robot_con.yumi.yumi_con as yumix
+
 import robot_sim.robots.ur3e_dual.ur3e_dual as ur3edual
 import robot_sim.robots.xarm_shuidi.xarm_shuidi as xarm_shuidi
 
@@ -202,6 +204,7 @@ def loadYumi(showrbt=False):
     rbt = ym.Yumi()
     if showrbt:
         rbt.gen_meshmodel().attach_to(base)
+
     return rbt
 
 
@@ -209,7 +212,14 @@ def loadXarm(showrbt=False):
     rbt = xarm_shuidi.XArmShuidi()
     if showrbt:
         rbt.gen_meshmodel().attach_to(base)
+
     return rbt
+
+
+def loadYumiX():
+    rbtx = yumix.Yumi_Controller(debug=False)
+
+    return rbtx
 
 
 def loadUr3ex(pc_ip='10.0.2.11'):
@@ -220,6 +230,7 @@ def loadUr3ex(pc_ip='10.0.2.11'):
 
 def loadXarmx(ip="10.2.0.203"):
     rbtx = xarmx.XArmShuidiX(ip=ip)
+
     return rbtx
 
 

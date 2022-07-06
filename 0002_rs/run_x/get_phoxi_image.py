@@ -32,13 +32,16 @@ def get_img(f_name, img_num, path=''):
         else:
             grayimg, depthnparray_float32, pcd = \
                 phxi.dumpalldata(f_name="img/" + path + "_".join([f_name, str(i)]) + ".pkl")
-        cv2.imshow("grayimg", grayimg)
+        cv2.imshow("grayimg", depthnparray_float32)
         cv2.waitKey(0)
         i += 1
 
 
 if __name__ == '__main__':
-    f_name = "plate_5"
+    # {"affine_mat": [[0.00282079054, -1.00400178, -0.000574846621, 0.31255359],
+    #                 [-0.98272743, -0.00797055, 0.19795055, -0.15903892],
+    #                 [-0.202360828, 0.00546017392, -0.96800006, 0.94915224], [0.0, 0.0, 0.0, 1.0]]}
+    f_name = "2"
     img_num = 1
-    get_img(f_name, img_num, path='phoxi/seq/plate/')
+    get_img(f_name, img_num, path='phoxi/springback/steel/')
     # get_jnt(f_name, img_num, armname="rgt")

@@ -20,7 +20,8 @@ ID_DICT = {
     "box": [25],
 }
 
-PHOXI_HOST = "10.2.0.199:18300"
+# PHOXI_HOST = "10.0.1.191:18300"
+PHOXI_HOST = "127.0.0.1:18300"
 ROOT = os.path.abspath(os.path.dirname(__file__))
 # AMAT_F_NAME = "phoxi_calibmat_0217.pkl"
 # AMAT_F_NAME = "phoxi_calibmat_0615.pkl"
