@@ -29,7 +29,7 @@ def align(pseq_tgt, pseq_src):
 
 if __name__ == '__main__':
     goal_f_name = 'random_curve'
-    obj_type = 'max'
+    obj_type = 'avg'
     # method = 'cmaes'
     method = 'SLSQP'
 
@@ -67,6 +67,7 @@ if __name__ == '__main__':
         init_res_kpts = v['init_res_kpts']
 
         opt_bendset = v['opt_bendset']
+
         opt_err = v['opt_err']
         opt_res_pseq = v['opt_res_pseq']
         opt_res_kpts = v['opt_res_kpts']

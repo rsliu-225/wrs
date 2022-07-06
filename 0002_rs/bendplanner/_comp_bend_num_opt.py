@@ -16,7 +16,7 @@ if __name__ == '__main__':
     base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
     gm.gen_frame(thickness=.0005, alpha=.1, length=.01).attach_to(base)
     bs = b_sim.BendSim(show=True, granularity=np.pi / 90, cm_type='stick')
-    goal_f_name = 'random_curve'
+    goal_f_name = 'randomc'
     goal_pseq = pickle.load(open(f'goal/pseq/{goal_f_name}.pkl', 'rb'))
     goal_rotseq = None
     # goal_pseq, goal_rotseq = pickle.load(open('../data/goal/rotpseq/skull2.pkl', 'rb'))
@@ -29,8 +29,8 @@ if __name__ == '__main__':
     '''
     tor = None
     obj_type = 'avg'
-    # method = 'SLSQP'
-    method = 'cmaes'
+    method = 'SLSQP'
+    # method = 'cmaes'
 
     n_trials = 1000
     n_startup_trials = 1
@@ -61,7 +61,7 @@ if __name__ == '__main__':
                                   bend_times=1,
                                   obj_type=obj_type)
 
-    for i in range(5, 31):
+    for i in range(18, 31):
         if method == 'cmaes':
             res_bendseq, cost, time_cost = opt.solve(tor=tor, cnt=i,
                                                      n_trials=n_trials, sigma0=sigma0,

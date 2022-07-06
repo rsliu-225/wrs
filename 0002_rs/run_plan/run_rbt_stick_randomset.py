@@ -46,5 +46,5 @@ if __name__ == '__main__':
             if fail_index != -1:
                 continue
             else:
-                brp.show_bendresseq_withrbt(bendresseq, transmat4, armjntsseq_list[0][1])
+                brp.show_bendresseq_withrbt(bendresseq, armjntsseq_list[0][1])
                 base.run()

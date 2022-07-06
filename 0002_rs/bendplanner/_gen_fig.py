@@ -59,8 +59,8 @@ if __name__ == '__main__':
     mp = m_planner.MotionPlanner(env, rbt, armname="rgt_arm")
     armjntsseq_list = pickle.load(open('planres/stick/penta_armjntsseq.pkl', 'rb'))
     is_success, bendresseq = pickle.load(open('planres/stick/penta_bendresseq.pkl', 'rb'))
-    brp.show_bendresseq_withrbt(bendresseq, transmat4, armjntsseq_list[0][1])
-    brp.show_bendresseq(bendresseq, transmat4)
+    brp.show_bendresseq_withrbt(bendresseq, armjntsseq_list[0][1])
+    brp.show_bendresseq(bendresseq)
     # base.run()
     for g_tmp, armjntsseq in armjntsseq_list:
         _, gl_jaw_center_pos, gl_jaw_center_rotmat, hnd_pos, hnd_rotmat = g_tmp

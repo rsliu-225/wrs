@@ -31,20 +31,14 @@ if __name__ == '__main__':
 
     pseq = utl.cubic_inp(pseq=np.asarray([[0, 0, 0], [.018, .03, .02], [.06, .06, 0], [.12, 0, 0]]))
     # pseq = gen_sgl_curve(pseq=np.asarray([[0, 0, 0], [.018, .03, 0], [.06, .06, 0], [.12, 0, 0]]))
-    pseq = utl.uni_length(pseq, goal_len=.15)
-    rotseq = utl.get_rotseq_by_pseq(pseq)
-
-    objcm = utl.gen_swap(pseq, rotseq, cross_sec)
-    objcm.attach_to(base)
-
-    pseq = utl.uni_length(pseq, goal_len=.1)
+    pseq = utl.uni_length(pseq, goal_len=.2)
     rotseq = utl.get_rotseq_by_pseq(pseq)
 
     objcm = utl.gen_swap(pseq, rotseq, cross_sec)
     objcm.set_rgba((1, 1, 0, 1))
     objcm.attach_to(base)
 
-    base.run()
+    # base.run()
 
     '''
     gen data

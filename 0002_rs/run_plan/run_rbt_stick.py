@@ -20,46 +20,52 @@ if __name__ == '__main__':
 
     base, env = el.loadEnv_yumi()
     rbt = el.loadYumi(showrbt=False)
-    # transmat4 = rm.homomat_from_posrot((.4, .2, bconfig.BENDER_H), rm.rotmat_from_axangle((0, 0, 1), np.pi))
-    transmat4 = rm.homomat_from_posrot((.4, -.1, bconfig.BENDER_H))
+    transmat4 = rm.homomat_from_posrot((.4, .3, bconfig.BENDER_H), rm.rotmat_from_axangle((0, 0, 1), np.pi))
+    # transmat4 = rm.homomat_from_posrot((.4, -.1, bconfig.BENDER_H))
 
     bs = b_sim.BendSim(show=True)
-    mp = m_planner.MotionPlanner(env, rbt, armname="rgt_arm")
+    mp = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
 
-    f_name = 'randomc'
+    f_name = 'chair'
     folder_name = 'stick'
+
+    # goal_pseq = pickle.load(open(f'../bendplanner/goal/pseq/{f_name}.pkl', 'rb'))
+    # goal_pseq = bu.gen_polygen(5, .05)
+    # goal_pseq = bu.gen_ramdom_curve(kp_num=5, length=.12, step=.0005, z_max=.005, toggledebug=False)
+    # goal_pseq = bu.gen_screw_thread(r=.02, lift_a=np.radians(5), rot_num=2)
+    # goal_pseq = bu.gen_circle(.05)
+    # goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
+    #                         [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1],
+    #                         [.1, .1, .1], [.1, .1, .2]]) * .4
+    goal_pseq = np.asarray([[.1, 0, .1], [0, 0, .1], [0, 0, 0],
+                            [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1],
+                            [.1, .1, .1]]) * .4
+    pickle.dump(goal_pseq, open(f'{config.ROOT}/bendplanner/goal/pseq/{f_name}.pkl', 'wb'))
+
+    plan = True
 
     '''
     plan
     '''
-    # goal_pseq = pickle.load(open(f'../bendplanner/goal/pseq/random_curve.pkl', 'rb'))
-    # # goal_pseq = bu.gen_polygen(5, .05)
-    # # goal_pseq = bu.gen_ramdom_curve(kp_num=5, length=.12, step=.0005, z_max=.005, toggledebug=False)
-    # # goal_pseq = bu.gen_screw_thread(r=.02, lift_a=np.radians(5), rot_num=2)
-    # # goal_pseq = bu.gen_circle(.05)
-    # # goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
-    # #                         [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1],
-    # #                         [.1, .1, .1], [.1, .1, .2]]) * .4
-    # # goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
-    # #                         [.1, 0, 0], [.1, .1, 0]])
-    #
-    # fit_pseq, _ = bu.decimate_pseq(goal_pseq, tor=.001, toggledebug=False)
-    # bendset = bu.pseq2bendset(fit_pseq, init_l=.1, toggledebug=True)[::-1]
-    # init_rot = bu.get_init_rot(fit_pseq)
-    # pickle.dump([goal_pseq, bendset],
-    #             open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_bendseq.pkl', 'wb'))
-    #
-    # for b in bendset:
-    #     print(b)
-    # init_pseq = [(0, 0, 0), (0, max([b[-1] for b in bendset]), 0)]
-    # init_rotseq = [np.eye(3), np.eye(3)]
-    # brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp)
-    #
-    # grasp_list = mp.load_all_grasp('stick')
-    # grasp_list = grasp_list[:200]
-    #
-    # brp.set_up(bendset, grasp_list, transmat4)
-    # brp.run(f_name=f_name, folder_name=folder_name)
+    if plan:
+        fit_pseq, _ = bu.decimate_pseq(goal_pseq, tor=.002, toggledebug=False)
+        bendset = bu.pseq2bendset(fit_pseq, init_l=.1, toggledebug=True)[::-1]
+        init_rot = bu.get_init_rot(fit_pseq)
+        pickle.dump([goal_pseq, bendset],
+                    open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_bendseq.pkl', 'wb'))
+
+        for b in bendset:
+            print(b)
+
+        init_pseq = [(0, 0, 0), (0, max([b[-1] for b in bendset]), 0)]
+        init_rotseq = [np.eye(3), np.eye(3)]
+        brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp)
+
+        grasp_list = mp.load_all_grasp('stick')
+        grasp_list = grasp_list[:200]
+
+        brp.set_up(bendset, grasp_list, transmat4)
+        brp.run(f_name=f_name, folder_name=folder_name)
 
     '''
     show result
@@ -79,10 +85,8 @@ if __name__ == '__main__':
     brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp)
 
     brp.set_up(bendset, [], transmat4)
-    brp.set_bs_stick_sec(20)
-    brp.show_motion_withrbt(bendresseq, transmat4, pathseq_list[0][1])
+    brp.set_bs_stick_sec(180)
+    brp.show_motion_withrbt(bendresseq, pathseq_list[1][1])
     for p in pathseq_list:
-        for v in p:
-            print(v)
-            print(len(v))
+        grasp, pathseq = p
     base.run()

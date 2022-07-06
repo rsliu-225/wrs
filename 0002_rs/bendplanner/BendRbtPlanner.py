@@ -97,7 +97,7 @@ class BendRbtPlanner(object):
             if fail_cnt == 0:
                 all_result.append([g_tmp, armjntsseq])
         if len(all_result) == 0:
-            self.show_bendresseq_withrbt(bendresseq, self.transmat4, armjntsseq)
+            self.show_bendresseq_withrbt(bendresseq, armjntsseq)
             base.run()
             return [str(v) for v in armjntsseq].index('None'), all_result
 
@@ -280,7 +280,7 @@ class BendRbtPlanner(object):
                 pathseq = pathseq_tmp
             if fail_cnt == 0:
                 all_result.append([grasp_tmp, pathseq_tmp])
-                self.show_motion_withrbt(bendresseq, transmat4, pathseq_tmp)
+                self.show_motion_withrbt(bendresseq, pathseq_tmp)
                 base.run()
 
         if len(all_result) == 0:
@@ -289,21 +289,20 @@ class BendRbtPlanner(object):
 
     def run(self, f_name='tmp', grasp_l=0.0, folder_name='stick'):
         seqs, _ = self._iptree.get_potential_valid()
-
         while len(seqs) != 0:
-            bendseq = [self.bendset[i] for i in seqs]
-            self._iptree.show()
-            print(seqs)
-            self.reset_bs(self.init_pseq, self.init_rotseq)
-            is_success, bendresseq, _ = self.bs.gen_by_bendseq(bendseq, cc=True, prune=False, toggledebug=False)
-            # self.show_bendresseq(bendresseq, self.transmat4)
-            # base.run()
-            if not all(is_success):
-                self._iptree.add_invalid_seq(seqs[:is_success.index(False) + 1])
-                seqs, _ = self._iptree.get_potential_valid()
-                continue
-            pickle.dump([is_success, bendresseq],
-                        open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_bendresseq.pkl', 'wb'))
+            # bendseq = [self.bendset[i] for i in seqs]
+            # self._iptree.show()
+            # print(seqs)
+            # self.reset_bs(self.init_pseq, self.init_rotseq)
+            # is_success, bendresseq, _ = self.bs.gen_by_bendseq(bendseq, cc=True, prune=True, toggledebug=False)
+            # # self.show_bendresseq(bendresseq, self.transmat4)
+            # # base.run()
+            # if not all(is_success):
+            #     self._iptree.add_invalid_seq(seqs[:is_success.index(False) + 1])
+            #     seqs, _ = self._iptree.get_potential_valid()
+            #     continue
+            # pickle.dump([is_success, bendresseq],
+            #             open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_bendresseq.pkl', 'wb'))
             _, bendresseq = pickle.load(
                 open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_bendresseq.pkl', 'rb'))
 
@@ -320,9 +319,8 @@ class BendRbtPlanner(object):
                 open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_bendresseq.pkl', 'rb'))
             armjntsseq_list = pickle.load(
                 open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_armjntsseq.pkl', 'rb'))
-            # fail_index, pathseq_list = self.check_motion(bendresseq, armjntsseq_list)
-            fail_index, pathseq_list = self.check_pull_motion(bendseq, bendresseq, armjntsseq_list)
-            print(fail_index, pathseq_list)
+            fail_index, pathseq_list = self.check_motion(bendresseq, armjntsseq_list)
+            # fail_index, pathseq_list = self.check_pull_motion(bendseq, bendresseq, armjntsseq_list)
             if fail_index != -1:
                 self._iptree.add_invalid_seq(seqs[:fail_index + 1])
                 seqs = self._iptree.get_potential_valid()
@@ -337,27 +335,27 @@ class BendRbtPlanner(object):
             # self.show_motion_withrbt(bendresseq, self.transmat4, pathseq_list[1][1])
             # base.run()
 
-    def show_bendresseq(self, bendresseq, transmat4):
+    def show_bendresseq(self, bendresseq):
         motioncounter = [0]
-        taskMgr.doMethodLater(.05, self.__update, "update_bendresseq",
-                              extraArgs=[motioncounter, bendresseq, transmat4], appendTask=True)
+        taskMgr.doMethodLater(.05, self._update, "update_bendresseq",
+                              extraArgs=[motioncounter, bendresseq, self.transmat4], appendTask=True)
 
-    def show_bendresseq_withrbt(self, bendresseq, transmat4, armjntsseq):
+    def show_bendresseq_withrbt(self, bendresseq, armjntsseq):
         motioncounter = [0]
         rbtmnp = [None, None]
-        taskMgr.doMethodLater(.05, self.__update_rbt, "update_rbt_bendresseq",
-                              extraArgs=[rbtmnp, motioncounter, bendresseq, transmat4, armjntsseq], appendTask=True)
+        taskMgr.doMethodLater(.05, self._update_rbt, "update_rbt_bendresseq",
+                              extraArgs=[rbtmnp, motioncounter, bendresseq, self.transmat4, armjntsseq], appendTask=True)
 
-    def show_motion_withrbt(self, bendresseq, transmat4, pathseq):
+    def show_motion_withrbt(self, bendresseq, pathseq):
         motioncounter = [0]
         # rbtmnp = [None, None]
         # path = [None]
         obj_hold = None
-        taskMgr.doMethodLater(.05, self.__update_rbt_motion, "update_rbt_motion",
-                              extraArgs=[motioncounter, bendresseq, transmat4, pathseq, obj_hold, self.rbt],
+        taskMgr.doMethodLater(.05, self._update_rbt_motion, "update_rbt_motion",
+                              extraArgs=[motioncounter, bendresseq, self.transmat4, pathseq, obj_hold, self.rbt],
                               appendTask=True)
 
-    def __update(self, motioncounter, bendresseq, transmat4, task):
+    def _update(self, motioncounter, bendresseq, transmat4, task):
         if base.inputmgr.keymap['space']:
             p3u.clearobj_by_name(['obj'])
             self.bs.move_posrot(transmat4)
@@ -402,7 +400,7 @@ class BendRbtPlanner(object):
             base.inputmgr.keymap['space'] = False
         return task.again
 
-    def __update_rbt(self, rbtmnp, motioncounter, bendresseq, transmat4, armjntsseq, task):
+    def _update_rbt(self, rbtmnp, motioncounter, bendresseq, transmat4, armjntsseq, task):
         if base.inputmgr.keymap['space']:
             p3u.clearobj_by_name(['obj'])
             self.bs.move_posrot(transmat4)
@@ -455,7 +453,7 @@ class BendRbtPlanner(object):
             base.inputmgr.keymap['space'] = False
         return task.again
 
-    def __update_rbt_motion(self, motioncounter, bendresseq, transmat4, pathseq, obj_hold, rbt, task):
+    def _update_rbt_motion(self, motioncounter, bendresseq, transmat4, pathseq, obj_hold, rbt, task):
         if base.inputmgr.keymap['space']:
             p3u.clearobj_by_name(['obj', 'auto'])
             self.bs.move_posrot(transmat4)
@@ -491,11 +489,13 @@ class BendRbtPlanner(object):
                 _, _ = rbt.hold(objcm=objcm_init.copy(), hnd_name=self.mp.hnd_name)
 
                 tmp_p = np.asarray([self.bs.c2c_dist * math.cos(init_a), self.bs.c2c_dist * math.sin(init_a), 0])
+                tmp_p = np.dot(transmat4[:3, :3], tmp_p)
                 self.bs.pillar_punch.set_homomat(np.dot(rm.homomat_from_posrot(tmp_p, np.eye(3)), transmat4))
                 self.bs.pillar_punch.set_rgba(rgba=[.7, 0, 0, .7])
                 self.bs.pillar_punch.attach_to(base)
 
                 tmp_p = np.asarray([self.bs.c2c_dist * math.cos(end_a), self.bs.c2c_dist * math.sin(end_a), 0])
+                tmp_p = np.dot(transmat4[:3, :3], tmp_p)
                 self.bs.pillar_punch_end.set_homomat(np.dot(rm.homomat_from_posrot(tmp_p, np.eye(3)), transmat4))
                 self.bs.pillar_punch_end.set_rgba(rgba=[0, .7, 0, .7])
                 self.bs.pillar_punch_end.attach_to(base)
