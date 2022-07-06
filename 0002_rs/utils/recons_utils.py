@@ -63,8 +63,8 @@ def load_frame_seq_withf(folder_name=None, root_path=os.path.join(config.ROOT, '
 
 def load_frame(folder_name, f_name, root_path=os.path.join(config.ROOT, 'img/phoxi/'), path=None):
     if path is None:
-        path = os.path.join(root_path, folder_name, f_name)
-    tmp = pickle.load(open(os.path.join(path, path), 'rb'))
+        path = os.path.join(root_path, folder_name)
+    tmp = pickle.load(open(os.path.join(path, f_name), 'rb'))
     print(tmp[0].shape, tmp[1].shape)
     if tmp[0].shape[-1] == 3:
         depthimg = tmp[1]
