@@ -17,8 +17,8 @@ import robot_con.yumi.yumi_con as yumix
 
 import robot_sim.robots.ur3e_dual.ur3e_dual as ur3edual
 import robot_sim.robots.xarm_shuidi.xarm_shuidi as xarm_shuidi
-
 import robot_sim.robots.yumi.yumi as ym
+
 import visualization.panda.world as wd
 from basis.trimesh.primitives import Box
 
