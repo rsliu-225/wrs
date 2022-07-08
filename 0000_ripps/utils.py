@@ -20,16 +20,17 @@ class Base(cm.CollisionModel):
         self._reinitialize()
 
     def _reinitialize(self):
-        self._hole_pos_list = []
+        self._hole_pos_list_0 = []
         pos_z = self._pos_z0
         for id_x in range(self._x_holes):
             pos_x = self._pos_x0 - self._x_step * id_x
             for id_y in range(self._y_holes):
                 pos_y = self._pos_y0 - self._y_step * id_y
-                self._hole_pos_list.append(np.array([pos_x, pos_y, pos_z]))
+                self._hole_pos_list_0.append(np.array([pos_x, pos_y, pos_z]))
+        self._hole_pos_list = self._hole_pos_list_0
 
     def _update_hole_pos_list(self):
-        self._hole_pos_list = list(self.get_rotmat().dot(np.asarray(self._hole_pos_list).T).T + self.get_pos())
+        self._hole_pos_list = list(self.get_rotmat().dot(np.asarray(self._hole_pos_list_0).T).T + self.get_pos())
 
     def set_pos(self, pos):
         super().set_pos(pos)
@@ -136,7 +137,8 @@ def search_reachable_configuration(rbt_s,
         rotmat = rm.rotmat_from_axangle([0, 0, 1], 0).dot(rm.rotmat_from_normal(cone_axis))
         for angle in np.linspace(0, np.pi * 2, int(np.pi * 2 / rotation_interval), endpoint=False):
             rotmat_list.append(rm.rotmat_from_axangle([0, 0, 1], -angle).dot(rotmat))
-    for rotmat in rotmat_list:
+    print("======new search!")
+    for i, rotmat in enumerate(rotmat_list):
         jnt_values = rbt_s.ik(component_name=component_name,
                               tgt_pos=tgt_pos,
                               tgt_rotmat=rotmat,
@@ -152,6 +154,7 @@ def search_reachable_configuration(rbt_s,
                 if not toggle_debug:
                     rbt_s.fk(component_name=component_name,
                              jnt_values=jnt_values_bk)
+                    print("times tried ", i)
                     return jnt_values
         else:
             if toggle_debug:

@@ -24,7 +24,7 @@ class RobotiqHE(gp.GripperInterface):
         self.coupling.jnts[1]['loc_rotmat'] = coupling_offset_rotmat
         self.coupling.lnks[0]['collision_model'] = cm.gen_stick(self.coupling.jnts[0]['loc_pos'],
                                                                 self.coupling.jnts[1]['loc_pos'],
-                                                                thickness=.07, rgba=[.2,.2,.2,1],
+                                                                thickness=.07, rgba=[.2, .2, .2, 1],
                                                                 sections=24)
         self.coupling.reinitialize()
         cpl_end_pos = self.coupling.jnts[-1]['gl_posq']

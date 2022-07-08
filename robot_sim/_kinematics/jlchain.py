@@ -83,7 +83,7 @@ class JLChain(object):
             lnks[id]['collision_model'] = None
             lnks[id]['cdprimit_childid'] = -1  # id of the CollisionChecker.np.Child
             lnks[id]['scale'] = [1, 1, 1]  # 3 list
-            lnks[id]['rgba'] = [.7, .7, .7, 1]  # 4 list
+            lnks[id]['rgba'] = [.57, .57, .57, 1]  # 4 list
         for id in range(self.ndof + 2):
             jnts[id]['type'] = 'revolute'
             jnts[id]['parent'] = id - 1
@@ -253,7 +253,7 @@ class JLChain(object):
         date: 20220326toyonaka
         """
         jnt_values = np.asarray(jnt_values)
-        if np.all(self.jnt_ranges[:, 0] <= jnt_values) and np.all(jnt_values <= self.jnt_ranges[:,1]):
+        if np.all(self.jnt_ranges[:, 0] <= jnt_values) and np.all(jnt_values <= self.jnt_ranges[:, 1]):
             return True
         else:
             return False
@@ -371,8 +371,15 @@ class JLChain(object):
                                         tcp_loc_pos=tcp_loc_pos,
                                         tcp_loc_rotmat=tcp_loc_rotmat)
 
-    def manipulability_axmat(self, type="translational"):
-        return self._ikt.manipulability_axmat(type=type)
+    def manipulability_axmat(self,
+                             tcp_jnt_id,
+                             tcp_loc_pos,
+                             tcp_loc_rotmat,
+                             type="translational"):
+        return self._ikt.manipulability_axmat(tcp_jnt_id=tcp_jnt_id,
+                                              tcp_loc_pos=tcp_loc_pos,
+                                              tcp_loc_rotmat=tcp_loc_rotmat,
+                                              type=type)
 
     def jacobian(self,
                  tcp_jnt_id,

@@ -33,13 +33,14 @@ class CobottaRIPPS(ri.RobotInterface):
                                    homeconf=arm_homeconf,
                                    name='arm', enable_cc=False)
         # gripper
+        self.gripper_loc_rotmat = rm.rotmat_from_axangle([0,0,1], np.pi) # 20220607 rotate the pipetting end with 180^o.
         self.hnd = cbtp.CobottaPipette(pos=self.arm.jnts[-1]['gl_posq'],
-                                       rotmat=self.arm.jnts[-1]['gl_rotmatq'],
+                                       rotmat=self.arm.jnts[-1]['gl_rotmatq'].dot(self.gripper_loc_rotmat),
                                        name='hnd_s', enable_cc=False)
         # tool center point
         self.arm.jlc.tcp_jnt_id = -1
-        self.arm.jlc.tcp_loc_pos = self.hnd.jaw_center_pos
-        self.arm.jlc.tcp_loc_rotmat = self.hnd.jaw_center_rotmat
+        self.arm.jlc.tcp_loc_pos = self.gripper_loc_rotmat.dot(self.hnd.jaw_center_pos)
+        self.arm.jlc.tcp_loc_rotmat = self.gripper_loc_rotmat.dot(self.hnd.jaw_center_rotmat)
         # a list of detailed information about objects in hand, see CollisionChecker.add_objinhnd
         self.oih_infos = []
         # collision detection
@@ -99,7 +100,7 @@ class CobottaRIPPS(ri.RobotInterface):
         self.rotmat = rotmat
         self.base_plate.fix_to(pos=pos, rotmat=rotmat)
         self.arm.fix_to(pos=self.base_plate.jnts[-1]['gl_posq'], rotmat=self.base_plate.jnts[-1]['gl_rotmatq'])
-        self.hnd.fix_to(pos=self.arm.jnts[-1]['gl_posq'], rotmat=self.arm.jnts[-1]['gl_rotmatq'])
+        self.hnd.fix_to(pos=self.arm.jnts[-1]['gl_posq'], rotmat=self.arm.jnts[-1]['gl_rotmatq'].dot(self.gripper_loc_rotmat))
         # update objects in hand if available
         for obj_info in self.oih_infos:
             gl_pos, gl_rotmat = self.arm.cvt_loc_tcp_to_gl(obj_info['rel_pos'], obj_info['rel_rotmat'])
@@ -125,7 +126,7 @@ class CobottaRIPPS(ri.RobotInterface):
             status = self.manipulator_dict[component_name].fk(jnt_values=jnt_values)
             self.hnd_dict[component_name].fix_to(
                 pos=self.manipulator_dict[component_name].jnts[-1]['gl_posq'],
-                rotmat=self.manipulator_dict[component_name].jnts[-1]['gl_rotmatq'])
+                rotmat=self.manipulator_dict[component_name].jnts[-1]['gl_rotmatq'].dot(self.gripper_loc_rotmat))
             update_oih(component_name=component_name)
             return status
 
@@ -230,29 +231,46 @@ class CobottaRIPPS(ri.RobotInterface):
                       toggle_tcpcs=False,
                       toggle_jntscs=False,
                       rgba=None,
-                      name='xarm_shuidi_mobile_meshmodel'):
+                      name='xarm_shuidi_mobile_meshmodel',
+                      option='full'):
+        """
+
+        :param tcp_jnt_id:
+        :param tcp_loc_pos:
+        :param tcp_loc_rotmat:
+        :param toggle_tcpcs:
+        :param toggle_jntscs:
+        :param rgba:
+        :param name:
+        :param option: 'full', 'hand_only', 'body_only'
+        :return:
+        """
         meshmodel = mc.ModelCollection(name=name)
-        self.base_plate.gen_meshmodel(tcp_jnt_id=tcp_jnt_id,
-                                      tcp_loc_pos=tcp_loc_pos,
-                                      tcp_loc_rotmat=tcp_loc_rotmat,
-                                      toggle_tcpcs=False,
-                                      toggle_jntscs=toggle_jntscs).attach_to(meshmodel)
-        self.arm.gen_meshmodel(tcp_jnt_id=tcp_jnt_id,
-                               tcp_loc_pos=tcp_loc_pos,
-                               tcp_loc_rotmat=tcp_loc_rotmat,
-                               toggle_tcpcs=toggle_tcpcs,
-                               toggle_jntscs=toggle_jntscs,
-                               rgba=rgba).attach_to(meshmodel)
-        self.hnd.gen_meshmodel(toggle_tcpcs=False,
-                               toggle_jntscs=toggle_jntscs,
-                               rgba=rgba).attach_to(meshmodel)
-        for obj_info in self.oih_infos:
-            objcm = obj_info['collision_model'].copy()
-            objcm.set_pos(obj_info['gl_pos'])
-            objcm.set_rotmat(obj_info['gl_rotmat'])
-            if rgba is not None:
-                objcm.set_rgba(rgba)
-            objcm.attach_to(meshmodel)
+        if option == 'full' or option == 'body_only':
+            self.base_plate.gen_meshmodel(tcp_jnt_id=tcp_jnt_id,
+                                          tcp_loc_pos=tcp_loc_pos,
+                                          tcp_loc_rotmat=tcp_loc_rotmat,
+                                          toggle_tcpcs=False,
+                                          toggle_jntscs=toggle_jntscs,
+                                          rgba=rgba).attach_to(meshmodel)
+            self.arm.gen_meshmodel(tcp_jnt_id=tcp_jnt_id,
+                                   tcp_loc_pos=tcp_loc_pos,
+                                   tcp_loc_rotmat=tcp_loc_rotmat,
+                                   toggle_tcpcs=toggle_tcpcs,
+                                   toggle_jntscs=toggle_jntscs,
+                                   rgba=rgba).attach_to(meshmodel)
+        if option == 'full' or option == 'hand_only':
+            self.hnd.gen_meshmodel(toggle_tcpcs=False,
+                                   toggle_jntscs=toggle_jntscs,
+                                   rgba=rgba).attach_to(meshmodel)
+        if option == 'full':
+            for obj_info in self.oih_infos:
+                objcm = obj_info['collision_model'].copy()
+                objcm.set_pos(obj_info['gl_pos'])
+                objcm.set_rotmat(obj_info['gl_rotmat'])
+                if rgba is not None:
+                    objcm.set_rgba(rgba)
+                objcm.attach_to(meshmodel)
         return meshmodel
 
 
@@ -266,11 +284,11 @@ if __name__ == '__main__':
 
     gm.gen_frame().attach_to(base)
     robot_s = CobottaRIPPS(enable_cc=True)
-    robot_s.jaw_to(.02)
+    # robot_s.jaw_to(.02)
     # robot_s.gen_meshmodel(toggle_tcpcs=True, toggle_jntscs=True).attach_to(base)
     robot_s.gen_meshmodel(toggle_tcpcs=True, toggle_jntscs=False).attach_to(base)
     # robot_s.gen_stickmodel(toggle_tcpcs=True, toggle_jntscs=True).attach_to(base)
-    robot_s.show_cdprimit()
+    # robot_s.show_cdprimit()
     base.run()
     tgt_pos = np.array([.25, .2, .15])
     tgt_rotmat = rm.rotmat_from_axangle([0, 1, 0], math.pi * 2 / 3)

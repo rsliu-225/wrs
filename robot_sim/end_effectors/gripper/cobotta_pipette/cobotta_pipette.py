@@ -110,7 +110,7 @@ class CobottaPipette(gp.GripperInterface):
                 if side_jawwidth <= .007:
                     self.jlc.jnts[8]['motion_val'] = .0
                 else:
-                    self.jlc.jnts[8]['motion_val'] = (jaw_width-.014)/2
+                    self.jlc.jnts[8]['motion_val'] = (jaw_width - .014) / 2
             else:
                 raise ValueError("The angle parameter is out of range!")
         self.coupling.fix_to(self.pos, self.rotmat)
@@ -128,7 +128,7 @@ class CobottaPipette(gp.GripperInterface):
         if side_jawwidth <= .007:
             self.jlc.jnts[8]['motion_val'] = .0
         else:
-            self.jlc.jnts[8]['motion_val'] = (jaw_width-.014)/2
+            self.jlc.jnts[8]['motion_val'] = (jaw_width - .014) / 2
         self.jlc.fk()
 
     def get_jawwidth(self):
