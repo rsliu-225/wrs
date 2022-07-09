@@ -8,11 +8,9 @@ import utils.phoxi as phoxi
 
 
 def get_jnt(f_name, img_num, armname="rgt"):
-    import manipulation.grip.robotiqhe.robotiqhe as rtqhe
-    import robotcon.ur3edual as ur3ex
-    hndfa = rtqhe.HandFactory()
-    rbtx = ur3ex.Ur3EDualUrx(hndfa)
-    jnts = rbtx.getjnts(armname)
+    import robot_con.ur.ur3e_dual_x as ur3ex
+    rbtx = ur3ex.Ur3EDualUrx()
+    jnts = rbtx.get_jnt_values(armname)
     i = 0
     while i < img_num:
         if img_num == 1:

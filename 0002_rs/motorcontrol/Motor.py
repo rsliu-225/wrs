@@ -1,6 +1,6 @@
 import serial
 import time
-import Communication
+import motorcontrol.Communication as Communication
 import pickle
 import config
 
@@ -18,7 +18,7 @@ class MotorNema23():
         self.limit = 180
         self.max_step = self.cal_counter(self.limit)
         try:
-            self.state = pickle.load(open('./motor_state.pkl', 'rb'))
+            self.state = pickle.load(open(config.MOTOR_STATE_PATH, 'rb'))
             print(self.state)
         except:
             self.goto_init()
@@ -122,8 +122,10 @@ if __name__ == '__main__':
     # motor.goto_init()
     # time.sleep(1)
 
-    motor.goto_pos(-11000)
-    time.sleep(2)
+    # motor.goto_pos(-10000)
+    # time.sleep(2)
+    # motor.rot_degree(clockwise=1, rot_deg=160)
+    motor.rot_degree(clockwise=1, rot_deg=1)
     # motor.goto_pos(-3000)
     # time.sleep(1)
     # motor.goto_pos(-9500)

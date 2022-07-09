@@ -36,3 +36,5 @@ GRASPMAP_REL_PATH = ROOT + "/graspplanner/graspmap/"
 # GRASPMAP_REL_PATH = ROOT + "/graspplanner/graspmap/temp/"
 MOTIONSCRIPT_REL_PATH = ROOT + "/motionscript/"
 PENPOSE_REL_PATH = ROOT + "/log/penpose/"
+
+MOTOR_STATE_PATH = ROOT + "/motorcontrol/motor_state.pkl"
