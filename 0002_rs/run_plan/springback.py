@@ -47,16 +47,45 @@ def enhance_grayimg(grayimg):
     return cv2.equalizeHist(grayimg)
 
 
+def hough_lines(img):
+    img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+    dst = cv2.Canny(img, 0, 100, None, 3)
+    lines = cv2.HoughLines(dst, 1, np.pi / 180, 100, None, 0, 0)
+    line_set = []
+
+    if lines is not None:
+        for i in range(len(lines)):
+            rho = lines[i][0][0]
+            theta = lines[i][0][1]
+            a = np.cos(theta)
+            b = np.sin(theta)
+            x0 = a * rho
+            y0 = b * rho
+            pt1 = (int(x0 + 1000 * (-b)), int(y0 + 1000 * a))
+            pt2 = (int(x0 - 1000 * (-b)), int(y0 - 1000 * a))
+
+            if x0 > 540 or x0 < 300:
+                continue
+            # print(x0, y0)
+            print(np.degrees(theta), pt1, pt2)
+            cv2.line(img, pt1, pt2, (0, 0, 255), 1, cv2.LINE_AA)
+            line_set.append((pt1, pt2))
+        cv2.imshow('', dst)
+        cv2.waitKey(0)
+        cv2.imshow('', img)
+        cv2.waitKey(0)
+    return line_set
+
+
 if __name__ == '__main__':
     import visualization.panda.world as wd
     import modeling.geometric_model as gm
     import basis.robot_math as rm
 
-    base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
+    base = wd.World(cam_pos=[1.5, 1.5, 1.5], lookat_pos=[0, 0, 0])
     rbt = el.loadYumi(showrbt=True)
 
-    fo = 'springback/steel'
-    line_set = []
+    fo = 'springback/alu'
     clr = 0
     vecs = []
     pcd_color = [(1, 0, 0, 1), (0, 1, 0, 1), (1, 1, 0, 1)]
@@ -94,39 +123,21 @@ if __name__ == '__main__':
         # kpts = get_kpts_gmm(pcd_crop, rgba=kpts_color[clr])
 
         clr += 1
-        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
 
         # cv2.imshow('', mask)
         # cv2.waitKey(0)
         # cv2.imshow('', img)
         # cv2.waitKey(0)
 
-        dst = cv2.Canny(img, 0, 100, None, 3)
-        lines = cv2.HoughLines(dst, 1, np.pi / 180, 100, None, 0, 0)
+    goal = np.degrees(rm.angle_between_vectors(vecs[0], vecs[1]))
+    res = np.degrees(rm.angle_between_vectors(vecs[0], vecs[2]))
+    if goal > 90 and res < 90:
+        goal = 180 - goal
+    elif goal < 90 and res > 90:
+        res = 180 - res
+    diff = abs(goal - res)
 
-        if lines is not None:
-            for i in range(len(lines)):
-                rho = lines[i][0][0]
-                theta = lines[i][0][1]
-                a = np.cos(theta)
-                b = np.sin(theta)
-                x0 = a * rho
-                y0 = b * rho
-                pt1 = (int(x0 + 1000 * (-b)), int(y0 + 1000 * a))
-                pt2 = (int(x0 - 1000 * (-b)), int(y0 - 1000 * a))
-
-                if x0 > 540 or x0 < 300:
-                    continue
-                # print(x0, y0)
-                print(np.degrees(theta), pt1, pt2)
-                cv2.line(img, pt1, pt2, (0, 0, 255), 1, cv2.LINE_AA)
-                line_set.append((pt1, pt2))
-
-        # cv2.imshow('', dst)
-        # cv2.waitKey(0)
-        # cv2.imshow('', img)
-        # cv2.waitKey(0)
-
-    print(np.degrees(rm.angle_between_vectors(vecs[0], vecs[1])))
-    print(np.degrees(rm.angle_between_vectors(vecs[0], vecs[2])))
+    print(goal)
+    print(res)
+    print('spring back:', diff)
     base.run()
