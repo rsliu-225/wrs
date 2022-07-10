@@ -8,6 +8,7 @@ import utils.vision_utils as vu
 import utils.pcd_utils as pcdu
 import localenv.envloader as el
 from sklearn.mixture import GaussianMixture
+import matplotlib.pyplot as plt
 
 import pyransac3d as pyrsc
 
@@ -77,33 +78,34 @@ def hough_lines(img):
     return line_set
 
 
-if __name__ == '__main__':
-    import visualization.panda.world as wd
-    import modeling.geometric_model as gm
-    import basis.robot_math as rm
-
-    base = wd.World(cam_pos=[1.5, 1.5, 1.5], lookat_pos=[0, 0, 0])
-    rbt = el.loadYumi(showrbt=True)
-
-    fo = 'springback/alu'
-    clr = 0
-    vecs = []
-    pcd_color = [(1, 0, 0, 1), (0, 1, 0, 1), (1, 1, 0, 1)]
-    kpts_color = [(1, 0, 0, 1), (0, 1, 0, 1), (1, 1, 0, 1)]
+def springback_from_img(fo, z_range, line_thresh=0.002, line_size_thresh=300):
+    sb_dict = {}
+    pcd_color = {'init': (1, 0, 0, 1), 'goal': (0, 1, 0, 1), 'res': (1, 1, 0, 1)}
+    kpts_color = {'init': (1, 0, 0, 1), 'goal': (0, 1, 0, 1), 'res': (1, 1, 0, 1)}
     for f in os.listdir(os.path.join(config.ROOT, 'img/phoxi', fo)):
         if f[-3:] != 'pkl':
             continue
         print(f'------------{f}------------')
+        if f.split('.pkl')[0] == 'init':
+            key = 'init'
+            angle = 0
+        else:
+            angle = f.split('.pkl')[0].split('_')[0]
+            if f.split('.pkl')[0].split('_')[1] == 'res':
+                key = 'res'
+            else:
+                key = 'goal'
+        if angle not in sb_dict.keys():
+            sb_dict[angle] = {}
+        sb_dict[angle][key] = []
+
         textureimg, _, pcd = pickle.load(open(os.path.join(config.ROOT, 'img/phoxi', fo, f), 'rb'))
         img = enhance_grayimg(textureimg)
         # cv2.imshow('', img)
         # cv2.waitKey(0)
 
         pcd = rm.homomat_transform_points(affine_mat, np.asarray(pcd) / 1000)
-        # pcdu.show_pcd(pcd)
-        # base.run()
         pcd_pix = pcd.reshape(textureimg.shape[0], textureimg.shape[1], 3)
-        z_range = (.12, .15)
         mask_1 = np.where(pcd_pix[:, :, 2] < z_range[1], 255, 0).reshape((img.shape[0], img.shape[1], 1)).astype(
             np.uint8)
         mask_2 = np.where(pcd_pix[:, :, 2] > z_range[0], 255, 0).reshape((img.shape[0], img.shape[1], 1)).astype(
@@ -112,32 +114,85 @@ if __name__ == '__main__':
         img = cv2.bitwise_and(img, mask)
 
         pcd_crop = pcdu.crop_pcd(pcd, x_range=(0, 1), y_range=(-1, 1), z_range=z_range)
+        pcdu.show_pcd(pcd_crop, rgba=(1, 1, 1, .5))
 
-        line = pyrsc.Line()
-        line.fit(pcd_crop, thresh=0.002, maxIteration=1000)
-        pcdu.show_pcd(pcd_crop[line.inliers], rgba=pcd_color[clr])
-        print(line.A, line.B)
-        vecs.append(line.A)
+        while 1:
+            print(f'------------{len(pcd_crop)}------------')
+            line = pyrsc.Line()
+            line.fit(pcd_crop, thresh=line_thresh, maxIteration=1000)
+            if len(line.inliers) > line_size_thresh:
+                pcdu.show_pcd(pcd_crop[line.inliers], rgba=pcd_color[key])
+                # gm.gen_sphere(line.B, rgba=(0, 0, 1, 1), radius=.002).attach_to(base)
+                print(line.A, line.B)
+                pcd_crop = np.delete(pcd_crop, line.inliers, axis=0)
+                sb_dict[angle][key].append(line.A)
+            else:
+                break
+
         # gm.gen_stick(spos=line.B, epos=line.A + line.B, rgba=pcd_color[clr]).attach_to(base)
-        # pcdu.show_pcd(pcd_crop, rgba=pcd_color[clr])
         # kpts = get_kpts_gmm(pcd_crop, rgba=kpts_color[clr])
-
-        clr += 1
 
         # cv2.imshow('', mask)
         # cv2.waitKey(0)
         # cv2.imshow('', img)
         # cv2.waitKey(0)
+    pickle.dump(sb_dict, open(f'./{fo.split("/")[1]}_springback.pkl', 'wb'))
+    return sb_dict
 
-    goal = np.degrees(rm.angle_between_vectors(vecs[0], vecs[1]))
-    res = np.degrees(rm.angle_between_vectors(vecs[0], vecs[2]))
-    if goal > 90 and res < 90:
-        goal = 180 - goal
-    elif goal < 90 and res > 90:
-        res = 180 - res
-    diff = abs(goal - res)
 
-    print(goal)
-    print(res)
-    print('spring back:', diff)
+if __name__ == '__main__':
+    import visualization.panda.world as wd
+    import modeling.geometric_model as gm
+    import basis.robot_math as rm
+
+    base = wd.World(cam_pos=[1.5, 1.5, 1.5], lookat_pos=[0, 0, 0])
+    rbt = el.loadYumi(showrbt=True)
+
+    fo = 'springback/steel'
+    z_range = (.12, .15)
+    sb_dict = springback_from_img(fo, z_range)
+    sb_dict = pickle.load(open('./alu_springback.pkl', 'rb'))
+    # print(sb_dict)
+    X = []
+    sb_err = []
+    bend_err = []
+    for k, v in sb_dict.items():
+        if int(k) == 0:
+            continue
+        # goal = np.degrees(rm.angle_between_vectors(sb_dict[0]['init'][0], sb_dict[k]['goal'][1]))
+        # res = np.degrees(rm.angle_between_vectors(sb_dict[0]['init'][0], sb_dict[k]['res'][1]))
+        # if goal > 90 and res < 90:
+        #     goal = 180 - goal
+        # elif goal < 90 and res > 90:
+        #     res = 180 - res
+        # diff = abs(goal - res)
+        # print(goal)
+        # print(res)
+
+        res = np.degrees(rm.angle_between_vectors(sb_dict[k]['res'][0], sb_dict[k]['res'][1]))
+        goal = np.degrees(rm.angle_between_vectors(sb_dict[k]['goal'][0], sb_dict[k]['goal'][1]))
+        print(k, goal, res)
+
+        if abs(res - int(k)) > 30:
+            res = abs(180 - res)
+        if abs(goal - int(k)) > 30:
+            goal = abs(180 - goal)
+        print(goal, res)
+        sb = goal - res
+        bend = int(k) + 15 - goal
+        # if diff > 90:
+        #     diff = 180 - diff
+
+        print('spring back:', sb)
+        print('------------')
+        sb_err.append(sb)
+        bend_err.append(bend)
+        X.append(k)
+
+    sort_inx = sorted(range(len(X)), key=lambda k: X[k])
+    print(sort_inx)
+    plt.plot(X, sb_err)
+    plt.plot(X, bend_err)
+    plt.plot(X, np.asarray(bend_err) + np.asarray(sb_err))
+    plt.show()
     base.run()
