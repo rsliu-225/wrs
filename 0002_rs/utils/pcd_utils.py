@@ -7,7 +7,6 @@ import time
 
 import numpy as np
 import open3d as o3d
-import sknw
 from matplotlib import pyplot as plt
 from skimage.morphology import skeletonize
 from sklearn import linear_model
@@ -619,6 +618,8 @@ def surface_interp(p, v, kdt_d3, inp=0.0005, max_nn=100):
 
 
 def skeleton(pcd):
+    import sknw
+
     pcd = o3dh.nparray2o3dpcd(np.asarray(pcd))
     voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(input=pcd, voxel_size=.001)
     voxel_bin = np.zeros([100, 100, 100])
@@ -653,7 +654,7 @@ def skeleton(pcd):
     plt.show()
 
 
-def cal_conf(pcd_narry, voxel_size=.01, radius=.01, cam_pos=(0, 0, 0), theta=np.pi / 6):
+def cal_conf(pcd_narry, voxel_size=.01, radius=.01, cam_pos=(0, 0, 0), theta=np.pi / 6, toggledebug=False):
     show_pcd(pcd_narry)
     o3dpcd = o3d_helper.nparray2o3dpcd(pcd_narry)
     downpcd = o3dpcd.voxel_down_sample(voxel_size=voxel_size)
@@ -694,7 +695,8 @@ def cal_conf(pcd_narry, voxel_size=.01, radius=.01, cam_pos=(0, 0, 0), theta=np.
             #                  rgba=rgba).attach_to(base)
         else:
             rgba = (1, 1, 1, 1)
-        gm.gen_sphere(p_list[i], radius=.001, rgba=rgba).attach_to(base)
+        if toggledebug:
+            gm.gen_sphere(p_list[i], radius=.001, rgba=rgba).attach_to(base)
 
     if theta is not None:
         res_inx_list = []

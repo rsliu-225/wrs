@@ -229,7 +229,8 @@ def cal_nbc(textureimg, pcd, rbt, seedjntagls, seed=(.116, 0, -.1), gl_transmat4
         print('No marker detected!')
         return None, None
     pcd_cropped, _ = pcdu.get_nearest_cluster(pcd_cropped, seed=seed, eps=.01, min_samples=200)
-    gm.gen_sphere(seed).attach_to(base)
+    if toggledebug:
+        gm.gen_sphere(seed).attach_to(base)
     print('Num. of points in cropped pcd:', len(pcd_cropped))
 
     if len(pcd_cropped) < 0:
