@@ -9,6 +9,8 @@ import config
 from sklearn.cluster import DBSCAN
 # from skimage.morphology import skeletonize
 import matplotlib.pyplot as plt
+
+
 # import sknw
 
 
@@ -243,3 +245,9 @@ def mask2skmask(mask, inp=5, shape=(772, 1032, 1), toggledebug=False):
         plt.title('Build Graph')
         plt.show()
     return pts2mask(pts_all, shape=shape)
+
+
+def enhance_grayimg(grayimg):
+    if len(grayimg.shape) == 2 or grayimg.shape[2] == 1:
+        grayimg = grayimg.reshape(grayimg.shape[:2])
+    return cv2.equalizeHist(grayimg)

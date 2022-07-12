@@ -54,7 +54,7 @@ class MotorNema23():
             if self.comm.in_waiting() == 0 and not waiting_for_reply:
                 self.comm.send_to_arduino(commond)
                 print('-------sent from PC--------')
-                print('BYTES SENT -> ' + self.comm.bytes2str(commond))
+                # print('BYTES SENT -> ' + self.comm.bytes2str(commond))
                 print('STR ' + commond)
                 waiting_for_reply = True
 

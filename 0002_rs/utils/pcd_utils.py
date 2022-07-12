@@ -23,6 +23,8 @@ import modeling.geometric_model as gm
 import utils.math_utils as mu
 from basis import trimesh
 from localenv import envloader as el
+import pyransac3d as pyrsc
+import cv2
 
 
 def make_3dax(grid=False):
@@ -654,6 +656,39 @@ def skeleton(pcd):
     plt.show()
 
 
+def extract_lines_from_pcd(img, pcd, z_range, line_thresh=0.002, line_size_thresh=300, toggledebug=False):
+    lines = []
+
+    if toggledebug:
+        pcd_pix = pcd.reshape(img.shape[0], img.shape[1], 3)
+        mask_1 = np.where(pcd_pix[:, :, 2] < z_range[1], 255, 0).reshape((img.shape[0], img.shape[1], 1)).astype(
+            np.uint8)
+        mask_2 = np.where(pcd_pix[:, :, 2] > z_range[0], 255, 0).reshape((img.shape[0], img.shape[1], 1)).astype(
+            np.uint8)
+        mask = cv2.bitwise_and(mask_1, mask_2)
+        img = cv2.bitwise_and(img, mask)
+        cv2.imshow('', mask)
+        cv2.waitKey(0)
+        cv2.imshow('', img)
+        cv2.waitKey(0)
+
+    pcd_crop = crop_pcd(pcd, x_range=(0, 1), y_range=(-1, 1), z_range=z_range)
+    show_pcd(pcd_crop, rgba=(1, 1, 1, .5))
+
+    while 1:
+        print(f'------------{len(pcd_crop)}------------')
+        line = pyrsc.Line()
+        line.fit(pcd_crop, thresh=line_thresh, maxIteration=1000)
+        if len(line.inliers) > line_size_thresh:
+            lines.append([line.A, pcd_crop[line.inliers]])
+            # gm.gen_sphere(line.B, rgba=(0, 0, 1, 1), radius=.002).attach_to(base)
+            print(line.A, line.B)
+            pcd_crop = np.delete(pcd_crop, line.inliers, axis=0)
+        else:
+            break
+    return lines
+
+
 def cal_conf(pcd_narry, voxel_size=.01, radius=.01, cam_pos=(0, 0, 0), theta=np.pi / 6, toggledebug=False):
     o3dpcd = o3d_helper.nparray2o3dpcd(pcd_narry)
     downpcd = o3dpcd.voxel_down_sample(voxel_size=voxel_size)
@@ -886,31 +921,6 @@ def show_pcd_withrbt(pcd, rgba=(1, 1, 1, 1), rbtx=None, toggleendcoord=False):
     rbt.gen_meshmodel(toggle_tcpcs=toggleendcoord).attach_to(base)
     gm.gen_pointcloud(pcd, rgbas=[rgba]).attach_to(base)
 
-
-# def show_cam(pcd, transmat4=np.eye(4)):
-#     import config
-#
-#     org_cam_dir = (0, 1, 0)
-#     gm.gen_frame().attach_to(base)
-#     cam_cm = cm.CollisionModel(os.path.join(config.ROOT, 'obstacles', 'Phoxi.stl'))
-#     show_pcd(pcd, rgba=(1, 0, 0, 1))
-#
-#     cam_mat4 = rm.homomat_from_posrot(np.asarray([0, 0, 0]),
-#                                       rm.rotmat_between_vectors(-np.mean(pcd, axis=0), org_cam_dir))
-#     # cam_cm.set_homomat(cam_mat4)
-#     # cam_cm.set_rgba((.7, 0, 0, .2))
-#
-#     cam_cm_trans = copy.deepcopy(cam_cm)
-#     cam_cm_trans.set_homomat(np.dot(transmat4, cam_mat4))
-#     cam_cm_trans.set_rgba((.7, .7, .7, .2))
-#
-#     cam_cm.attach_to(base)
-#     cam_cm_trans.attach_to(base)
-#
-#     cam_dir = np.dot(cam_mat4[:3, :3], org_cam_dir)
-#     gm.gen_arrow(spos=cam_dir, epos=(0, 0, 0)).attach_to(base)
-#     cam_dir_trans = trans_pcd([cam_dir], transmat4)[0]
-#     gm.gen_arrow(spos=np.mean(pcd, axis=0), epos=transmat4[:3, 3], rgba=(1, 1, 0, 1)).attach_to(base)
 
 def show_cam(transmat4):
     cam_cm = cm.CollisionModel(os.path.join(config.ROOT, 'obstacles', 'Phoxi.stl'))

@@ -217,7 +217,7 @@ def loadXarm(showrbt=False):
 
 
 def loadYumiX():
-    rbtx = yumix.Yumi_Controller(debug=False)
+    rbtx = yumix.YumiController(debug=False)
 
     return rbtx
 

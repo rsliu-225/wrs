@@ -20,6 +20,8 @@ from robot_con.yumi.yumi_util import message_to_state, message_to_pose
 from robot_con.yumi.yumi_exceptions import YuMiCommException, YuMiControlException
 # from robot_con.yumirapid.yumi_planner import YuMiMotionPlanner
 import pickle
+import time
+import struct
 
 _RAW_RES = namedtuple('_RAW_RES', 'mirror_code res_code message')
 _RES = namedtuple('_RES', 'raw_res data')
@@ -63,7 +65,7 @@ class _YuMiEthernet(Process):
                 res = self._send_request(req_packet)
                 if req_packet.return_res:
                     self._res_q.put(res)
-
+                    # print(res, self._socket)
                 sleep(YMC.PROCESS_SLEEP_TIME)
 
         except KeyboardInterrupt:
@@ -98,7 +100,7 @@ class _YuMiEthernet(Process):
 
             while True:
                 try:
-                    self._socket.send(req_packet.req.encode())
+                    self._socket.send(req_packet.req)
                     break
                 except socket.error as e:
                     # TODO: better way to handle this mysterious bad file descriptor error
@@ -305,8 +307,14 @@ class YuMiArm:
             return res
 
     @staticmethod
-    def _construct_req(code_name, body=''):
-        req = '{0:d} {1}#'.format(YMC.CMD_CODES[code_name], body)
+    def _construct_req(code_name, body: str = ""):
+        if len(body) < 1:
+            _body = []
+        else:
+            _body = [float(_) for _ in body.split(" ") if _ != ""]
+        num_params = len(_body)
+        req = struct.pack("HH" + "f" * num_params, num_params, YMC.CMD_CODES[code_name], *_body)
+        # print(f"{num_params} {YMC.CMD_CODES[code_name]} {_body}")
         return req
 
     @staticmethod
@@ -492,6 +500,31 @@ class YuMiArm:
             }
 
         return res
+
+    def contactL(self, state, desired_torque=.1, wait_for_res=True):
+        """ YUMi moves linearly toward a configuration. If the torque surpasses the desired torque during the movement, the robot stops.
+
+        Parameters
+        state: YuMiState: the target configuration
+        desired_torque: num: desired stop torque
+        wait_for_res: bool
+
+        Returns
+        -------------------
+        None if wait_for_res is False
+        True if robot reaches the target configuration
+        False if robot stops during the movement
+        Author: 1/14/2022 Chen Hao
+        """
+        body = YuMiArm._iter_to_str('{:.2f}', state.joints + [desired_torque])
+        req = YuMiArm._construct_req('contactL', body)
+        res = self._request(req, wait_for_res, timeout=self._motion_timeout)
+        return bool(int(res.message))
+
+    def set_speed_max(self, wait_for_res=True):
+        req = YuMiArm._construct_req('set_speed_max')
+        res = self._request(req, wait_for_res, timeout=self._motion_timeout)
+        return
 
     def _goto_state_sync(self, state, wait_for_res=True):
         body = YuMiArm._iter_to_str('{:.2f}', state.joints)
@@ -755,7 +788,7 @@ class YuMiArm:
         else:
             return self._request(req_move_by_circ_point, wait_for_res, timeout=self._motion_timeout)
 
-    def movetstate_cont(self, statelist, is_add_all=True, wait_for_res=True):
+    def movetstate_cont(self, statelist, is_add_all=True, wait_for_res=True) -> bool:
         """
         add states to buffer, execute, and clear
 
@@ -767,13 +800,43 @@ class YuMiArm:
         date: 20191024
         """
 
+        # # st = time.time()
+        # self.buffer_j_clear(wait_for_res)
+        # # et = time.time()
+        # # print("buffer j clear", et - st)
+        # # st = time.time()
+        # self.buffer_j_add_all(statelist, wait_for_res)
+        # # et = time.time()
+        # # print("buffer j add all", et - st)
+        # # st = time.time()
+        # self.buffer_j_move(wait_for_res)
+        # # et = time.time()
+        # # print("move j time", et - st)
+        # # st = time.time()
+        # self.buffer_j_clear(wait_for_res)
+        # # et = time.time()
+        # # print("buffer clear time", et - st)
+
+        st = time.time()
         self.buffer_j_clear(wait_for_res)
+        et = time.time()
+        # print("buffer j clear", et - st)
+        st = time.time()
         if is_add_all:
-            self.buffer_j_add_all_atonce(statelist, wait_for_res=wait_for_res)
+            self.buffer_j_add_all2(statelist, wait_for_res=wait_for_res)
         else:
-            self.buffer_j_add_all(statelist, wait_for_res)
-        self.buffer_j_move(wait_for_res)
+            self.buffer_j_add_all(statelist, wait_for_res=wait_for_res)
+        et = time.time()
+        # print("buffer j add all", et - st)
+        st = time.time()
+        exec_result = self.buffer_j_move(wait_for_res)
+        et = time.time()
+        # print("move j time", et - st)
+        st = time.time()
         self.buffer_j_clear(wait_for_res)
+        et = time.time()
+        # print("buffer clear time", et - st)
+        return exec_result
 
     def movetstate_sgl(self, state, wait_for_res=True):
         """
@@ -834,16 +897,6 @@ class YuMiArm:
             If communication times out or socket error.
         '''
         ress = [self.buffer_c_add_single(pose, wait_for_res) for pose in pose_list]
-        return ress
-
-    def buffer_j_add_single_atonce(self, state_list, wait_for_res):
-        body = YuMiArm._iter_to_str('{:.2f}', [v for state in state_list for v in state.joints])
-        req = YuMiArm._construct_req('buffer_j_add_all', f"{len(state_list)} " + body)
-        return self._request(req, wait_for_res)
-
-    def buffer_j_add_all_atonce(self, state_list, msg_len=35, wait_for_res=False):
-        ress = [self.buffer_j_add_single_atonce(_, wait_for_res) for _ in
-                [state_list[x:x + msg_len] for x in range(0, len(state_list), msg_len)]]
         return ress
 
     def buffer_c_clear(self, wait_for_res=True):
@@ -969,6 +1022,16 @@ class YuMiArm:
         ress = [self.buffer_j_add_single(state, wait_for_res) for state in state_list]
         return ress
 
+    def buffer_j_add_single2(self, state_list, wait_for_res):
+        body = YuMiArm._iter_to_str('{:.2f}', [v for state in state_list for v in state.joints])
+        req = YuMiArm._construct_req('buffer_j_add_all', f"{len(state_list)} " + body)
+        return self._request(req, wait_for_res)
+
+    def buffer_j_add_all2(self, state_list, msg_len=35, wait_for_res=False):
+        ress = [self.buffer_j_add_single2(_, wait_for_res) for _ in
+                [state_list[x:x + msg_len] for x in range(0, len(state_list), msg_len)]]
+        return ress
+
     def buffer_j_clear(self, wait_for_res=True):
         '''Clears the joint movement buffer in RAPID
 
@@ -1043,7 +1106,8 @@ class YuMiArm:
             If communication times out or socket error.
         '''
         req = YuMiArm._construct_req('buffer_j_move')
-        return self._request(req, wait_for_res, timeout=self._motion_timeout)
+        res = self._request(req, wait_for_res, timeout=self._motion_timeout)
+        return bool(int(res.message))
 
     def write_handcamimg_ftp(self):
         """

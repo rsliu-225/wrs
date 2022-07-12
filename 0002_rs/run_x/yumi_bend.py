@@ -6,16 +6,16 @@ import basis.robot_math as rm
 from utils.run_script_utils import *
 
 if __name__ == '__main__':
-    '''
+    """
     set up env and param
-    '''
+    """
     base, env = el.loadEnv_wrs()
     rbt = el.loadYumi()
-    rbtx = el.loadYumi()
+    rbtx = el.loadYumiX()
 
-    '''
+    """
     init class
-    '''
+    """
     mp_rgt = m_planner.MotionPlanner(env, rbt, armname="rgt_arm")
     mp_lft = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
     mp_x_rgt = m_plannerx.MotionPlannerRbtX(env, rbt, rbtx, armname="rgt_arm")
