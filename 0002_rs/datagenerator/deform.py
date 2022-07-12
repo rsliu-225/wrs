@@ -1,5 +1,6 @@
 import os
 import pickle
+import random
 
 import numpy as np
 import open3d as o3d
@@ -83,12 +84,20 @@ if __name__ == '__main__':
 
     vs = objcm.objtrm.vertices
     radius = .05
+    # goal_pseq = np.asarray([[0, 0, 0],
+    #                         [.04 + random.uniform(-.005, .005), 0, random.uniform(0, .005)],
+    #                         [.08 + random.uniform(-.005, .005), 0, random.uniform(-.005, .005)],
+    #                         [.12 + random.uniform(-.005, .005), 0, random.uniform(-.005, 0)],
+    #                         [.16, 0, 0]])
     goal_pseq = np.asarray([[0, 0, 0],
-                            [.05, 0, .003],
-                            [.08, 0, 0],
-                            [.10, 0, -.003],
-                            [.16, 0, -.001]])
-
+                            [.04 + random.uniform(-.01, .01), 0, random.uniform(0, .003)],
+                            [.08 + random.uniform(-.005, .005), 0, random.uniform(.004, .01)],
+                            [.12 + random.uniform(-.01, .01), 0, random.uniform(0, .003)],
+                            [.16, 0, 0]])
+    # goal_pseq = np.asarray([[0, 0, 0],
+    #                         [.08 + random.uniform(-.02, .02), 0, random.uniform(.004, .01)],
+    #                         [.16, 0, 0]])
+    goal_pseq = utl.uni_length(goal_pseq, goal_len=.16)
     original_ctr_pts = gen_plate_ctr_pts(vs, goal_pseq)
 
     # rot_diff = np.radians([0, 5, 10, -10, 0])
@@ -100,8 +109,9 @@ if __name__ == '__main__':
     new_vs = rbf(vs)
     deformed_objtrm = trm.Trimesh(vertices=np.asarray(new_vs), faces=objcm.objtrm.faces)
     deformed_objcm = cm.CollisionModel(initor=deformed_objtrm, btwosided=True, name='plate_deform')
-    deformed_objcm.set_rgba((.7, .7, 0, 1))
-    deformed_objcm.attach_to(base)
+    # deformed_objcm.set_rgba((.7, .7, 0, 1))
+    # deformed_objcm.attach_to(base)
+    # base.run()
 
     '''
     gen data
@@ -117,7 +127,8 @@ if __name__ == '__main__':
         for j, rot in enumerate(mats):
             utl.get_objpcd_partial_o3d(deformed_objcm, rot, rot_center, path=folder_name,
                                        f_name=f'{obj_id}_{str(cnt).zfill(3)}',
-                                       add_noise=False, add_occ=True, toggledebug=False)
+                                       occ_vt_ratio=random.uniform(.05, .1), noise_vt_ration=random.uniform(.5, 1),
+                                       add_noise=True, add_occ=True, toggledebug=True)
             homomat4_dict[str(obj_id)][str(cnt).zfill(3)] = rm.homomat_from_posrot(rot_center, rot)
             cnt += 1
             pickle.dump(homomat4_dict, open(f'{folder_name}/homomat4_dict.pkl', 'wb'))

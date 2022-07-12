@@ -58,24 +58,24 @@ class RobotHelper(object):
         gm.gen_arrow(spos=pos, epos=pos + scale * rot[:3, 1], rgba=(0, 1, 0, 1), thickness=thickness)
         gm.gen_arrow(spos=pos, epos=pos + scale * rot[:3, 2], rgba=(0, 0, 1, 1), thickness=thickness)
 
-    def plot_armjnts(self, path, scatter=False, title="armjnts", show=True):
+    def plot_armjnts(self, ax, path, scatter=False, title="armjnts", show=True):
         path = np.array(path)
         x = range(len(path))
         if scatter:
-            plt.scatter(x, [p for p in path[:, 0]])
-            plt.scatter(x, [p for p in path[:, 1]])
-            plt.scatter(x, [p for p in path[:, 2]])
-            plt.scatter(x, [p for p in path[:, 3]])
-            plt.scatter(x, [p for p in path[:, 4]])
-            plt.scatter(x, [p for p in path[:, 5]])
+            ax.scatter(x, [p for p in path[:, 0]])
+            ax.scatter(x, [p for p in path[:, 1]])
+            ax.scatter(x, [p for p in path[:, 2]])
+            ax.scatter(x, [p for p in path[:, 3]])
+            ax.scatter(x, [p for p in path[:, 4]])
+            ax.scatter(x, [p for p in path[:, 5]])
         else:
-            plt.plot(x, [p for p in path[:, 0]])
-            plt.plot(x, [p for p in path[:, 1]])
-            plt.plot(x, [p for p in path[:, 2]])
-            plt.plot(x, [p for p in path[:, 3]])
-            plt.plot(x, [p for p in path[:, 4]])
-            plt.plot(x, [p for p in path[:, 5]])
-        plt.title(title)
+            ax.plot(x, [p for p in path[:, 0]])
+            ax.plot(x, [p for p in path[:, 1]])
+            ax.plot(x, [p for p in path[:, 2]])
+            ax.plot(x, [p for p in path[:, 3]])
+            ax.plot(x, [p for p in path[:, 4]])
+            ax.plot(x, [p for p in path[:, 5]])
+        ax.set_title(title)
         # plt.legend(range(6))
         if show:
             plt.show()
@@ -88,10 +88,10 @@ class RobotHelper(object):
         if show:
             plt.show()
 
-    def plot_vlist(self, vlist, label=None, title=None, show=True):
-        plt.plot(range(len(vlist)), vlist, label=label)
+    def plot_vlist(self, ax, vlist, label=None, title=None, show=True):
+        ax.plot(range(len(vlist)), vlist, label=label)
         if title is not None:
-            plt.title(title)
+            ax.set_title(title)
         if show:
             plt.show()
 

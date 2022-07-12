@@ -12,12 +12,12 @@ import os
 from time import sleep, time
 from collections import namedtuple
 import numpy as np
-from robotconn.yumirapid.autolab_core import RigidTransform
-from robotconn.yumirapid.yumi_constants import YuMiConstants as YMC
-from robotconn.yumirapid.yumi_state import YuMiState
-from robotconn.yumirapid.yumi_motion_logger import YuMiMotionLogger
-from robotconn.yumirapid.yumi_util import message_to_state, message_to_pose
-from robotconn.yumirapid.yumi_exceptions import YuMiCommException, YuMiControlException
+from robot_con.yumi.autolab_core import RigidTransform
+from robot_con.yumi.yumi_constants import YuMiConstants as YMC
+from robot_con.yumi.yumi_state import YuMiState
+from robot_con.yumi.yumi_motion_logger import YuMiMotionLogger
+from robot_con.yumi.yumi_util import message_to_state, message_to_pose
+from robot_con.yumi.yumi_exceptions import YuMiCommException, YuMiControlException
 # from robot_con.yumirapid.yumi_planner import YuMiMotionPlanner
 import pickle
 

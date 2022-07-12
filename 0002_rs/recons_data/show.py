@@ -42,7 +42,7 @@ if __name__ == '__main__':
     import visualization.panda.world as wd
 
     base = wd.World(cam_pos=[0, 0, .5], lookat_pos=[0, 0, 0])
-    show_sgl(folder_name='plate_a_linear_2')
+    show_sgl(folder_name='nbc/plate_a_cubic')
     # show_sgl_p3d(folder_name='./test output(model-300000)/cubic/partial', fname=None)
     base.run()
     # show_tstngt(tst_folder_name='./test output(model-300000)/output(model-300000)/cubic',

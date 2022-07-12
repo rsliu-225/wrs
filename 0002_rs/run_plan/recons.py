@@ -1,6 +1,7 @@
 import copy
 import os
 import pickle
+import random
 
 import cv2
 import numpy as np
@@ -15,51 +16,31 @@ import utils.recons_utils as rcu
 import visualization.panda.world as wd
 import localenv.envloader as el
 import motionplanner.motion_planner as mp
+import utils.pcd_utils as pcdu
 
 if __name__ == '__main__':
     base = wd.World(cam_pos=[2, 2, 2], lookat_pos=[0, 0, 0])
     # base = wd.World(cam_pos=[0, 0, 0], lookat_pos=[0, 0, 1])
-    # fo = 'nbc/plate_cubic_2'
-    fo = 'seq/plate_a_cubic_2'
-
-    rbt = el.loadXarm(showrbt=False)
-
-    m_planner = mp.MotionPlanner(env=None, rbt=rbt, armname="arm")
-    m_planner.ah.show_armjnts(rgba=(1, 0, 0, .5))
-
-    seedjntagls = m_planner.get_armjnts()
-    m_planner.ah.show_armjnts(armjnts=seedjntagls, rgba=(1, 0, 0, .5))
-    tcppos, tcprot = m_planner.get_tcp(armjnts=seedjntagls)
-    gm.gen_frame(tcppos + tcprot[:, 2] * (.03466 + .065), tcprot).attach_to(base)
-    # relrot = np.asarray([[0, 0, 1], [0, -1, 0], [1, 0, 0]])
-    relrot = np.asarray([[0, 0, -1], [0, -1, 0], [1, 0, 0]])
-    gl_transrot = np.dot(tcprot, relrot)
-    gl_transpos = tcppos + tcprot[:, 2] * (.03466 + .065)
-    gl_transmat4 = rm.homomat_from_posrot(gl_transpos, gl_transrot)
+    fo = 'nbc_pcn/plate_a_cubic'
+    # fo = 'nbc/plate_a_cubic'
+    # fo = 'opti/plate_a_quadratic'
+    # fo = 'seq/plate_a_quadratic'
 
     icp = False
 
-    seed = (.116, 0, -.1)
-    center = (.116, 0, -.0155)
+    seed = (.116, -.1, .1)
+    center = (.116, 0, .0155)
 
     x_range = (.06, .215)
     y_range = (-.15, .15)
-    # z_range = (.0155, .2)
-    z_range = (-.2, -.0155)
-    # pcd_cropped_list = rcu.reg_plate(fo, seed, center, x_range=x_range, y_range=y_range, z_range=z_range)
-    # base.run()
-
-    textureimg, depthimg, pcd = rcu.load_frame(fo, f_name='000.pkl')
-    # cv2.imshow("grayimg", textureimg)
-    # cv2.waitKey(0)
-
-    seedjntagls = rbt.get_jnt_values('arm')
-    jnts = rcu.cal_nbc(textureimg, pcd, rbt=rbt, seedjntagls=seedjntagls, gl_transmat4=gl_transmat4,
-                       x_range=x_range, y_range=y_range, z_range=z_range)
-    m_planner.ah.show_armjnts(armjnts=jnts, rgba=(0, 1, 0, .5))
-    # path = m_planner.plan_start2end(start=seedjntagls, end=jnts)
-    # m_planner.ah.show_ani(path)
-    base.run()
+    z_range = (.0155, .2)
+    # z_range = (-.2, -.0155)
+    # gm.gen_frame().attach_to(base)
+    pcd_cropped_list = rcu.reg_armarker(fo, seed, center, x_range=x_range, y_range=y_range, z_range=z_range,
+                                        toggledebug=False)
+    rgba_list = [[1, 0, 0, 1], [0, 1, 0, 1]]
+    for i, pcd in enumerate(pcd_cropped_list):
+        pcdu.show_pcd(pcd, rgba=rgba_list[i])
 
     # for fo in sorted(os.listdir(os.path.join(config.ROOT, 'recons_data'))):
     #     if fo[:2] == 'pl':
@@ -68,4 +49,5 @@ if __name__ == '__main__':
 
     # skeleton(pcd_cropped)
     # pcdu.cal_conf(pcd_cropped, voxel_size=0.005, radius=.005)
-    # base.run()
+
+    base.run()

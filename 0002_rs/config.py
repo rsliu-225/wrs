@@ -1,4 +1,6 @@
 import os
+import numpy as np
+import basis.robot_math as rm
 
 '''
 param
@@ -38,3 +40,7 @@ MOTIONSCRIPT_REL_PATH = ROOT + "/motionscript/"
 PENPOSE_REL_PATH = ROOT + "/log/penpose/"
 
 MOTOR_STATE_PATH = ROOT + "/motorcontrol/motor_state.pkl"
+
+CAM_ROT = np.dot(rm.rotmat_from_axangle((0, 0, 1), np.pi / 2),
+                 rm.rotmat_from_axangle((1, 0, 0), -np.radians(55)))
+CAM_LS = CAM_ROT[:, 1]

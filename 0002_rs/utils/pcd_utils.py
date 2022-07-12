@@ -655,9 +655,9 @@ def skeleton(pcd):
 
 
 def cal_conf(pcd_narry, voxel_size=.01, radius=.01, cam_pos=(0, 0, 0), theta=np.pi / 6, toggledebug=False):
-    show_pcd(pcd_narry)
     o3dpcd = o3d_helper.nparray2o3dpcd(pcd_narry)
     downpcd = o3dpcd.voxel_down_sample(voxel_size=voxel_size)
+    # downpcd = o3dpcd.uniform_down_sample(10)
     # o3d.visualization.draw_geometries([downpcd])
     kdt_d3, _ = get_kdt(pcd_narry)
     zeta1_list = []
@@ -687,27 +687,48 @@ def cal_conf(pcd_narry, voxel_size=.01, radius=.01, cam_pos=(0, 0, 0), theta=np.
 
     for i in range(len(zeta1_list)):
         c = 1 - (zeta1_list[i] - min(zeta1_list)) / (max(zeta1_list) - min(zeta1_list))
-        conf_list.append(c)
         if d_list[i] == 0:
             rgba = (c, 0, 1 - c, 1)
+        else:
+            c = 1
+            rgba = (1, 1, 1, 1)
+        conf_list.append(c)
+        if toggledebug:
+            gm.gen_sphere(p_list[i], radius=.001, rgba=rgba).attach_to(base)
             # if c < .5:
             #     gm.gen_arrow(spos=p_list[i], epos=p_list[i] + nrml_list[i] * .05, thickness=.002,
             #                  rgba=rgba).attach_to(base)
-        else:
-            rgba = (1, 1, 1, 1)
-        if toggledebug:
-            gm.gen_sphere(p_list[i], radius=.001, rgba=rgba).attach_to(base)
 
     if theta is not None:
         res_inx_list = []
         for i in range(len(p_list)):
             if rm.angle_between_vectors(nrml_list[i], cam_pos - p_list[i]) > theta:
                 res_inx_list.append(i)
-        print(res_inx_list)
         p_list = np.asarray(p_list)[res_inx_list]
         nrml_list = np.asarray(nrml_list)[res_inx_list]
         conf_list = np.asarray(conf_list)[res_inx_list]
     return p_list, nrml_list, conf_list
+
+
+def extract_main_vec(pts, nrmls, confs, threshold=np.radians(30)):
+    inx = sorted(range(len(confs)), key=lambda k: confs[k])
+    confs = np.asarray(confs)[inx]
+    pts = np.asarray(pts)[inx]
+    nrmls = np.asarray(nrmls)[inx]
+    res_list = list(range(len(confs)))
+    nbv_inx_dict = {}
+
+    while len(res_list) > 0:
+        i = res_list[0]
+        n = np.asarray(nrmls[i])
+        a_narry = np.arccos(np.dot(np.asarray(nrmls[res_list]), n))
+        res_list_tmp = list(np.argwhere(a_narry > threshold).flatten())
+        rm_list_tmp = list(np.argwhere(a_narry <= threshold).flatten())
+        nbv_inx_dict[i] = np.asarray(res_list)[rm_list_tmp]
+        res_list = np.asarray(res_list)[res_list_tmp]
+
+    nbv_inx_list = list(nbv_inx_dict.keys())
+    return np.asarray(pts)[nbv_inx_list], np.asarray(nrmls)[nbv_inx_list], np.asarray(confs)[nbv_inx_list]
 
 
 def cal_nbv(pts, nrmls, confs, cam_pos=np.asarray([0, 0, 0]), toggledebug=False):
@@ -742,6 +763,50 @@ def cal_nbv(pts, nrmls, confs, cam_pos=np.asarray([0, 0, 0]), toggledebug=False)
 
     nbv_inx_list = list(nbv_inx_dict.keys())
     return np.asarray(pts)[nbv_inx_list], np.asarray(nrmls)[nbv_inx_list], np.asarray(confs)[nbv_inx_list]
+
+
+def cal_nbv_pcn(pts, pts_pcn, theta=np.pi / 6, toggledebug=False):
+    def _normalize(l):
+        return [(v - min(l)) / (max(l) - min(l)) for v in l]
+
+    _, _, trans = o3dh.registration_icp_ptpt(pts_pcn, pts, maxcorrdist=.02, toggledebug=False)
+    pts_pcn = trans_pcd(pts_pcn, trans)
+    show_pcd(pts_pcn, rgba=(1, 1, 0, .5))
+    show_pcd(pts, rgba=(1, 0, 0, .5))
+
+    pts, nrmls, confs = \
+        cal_conf(np.asarray(pts), voxel_size=.005, radius=.005, theta=None, toggledebug=False)
+    pts_pcn, nrmls_pcn, confs_pcn = \
+        cal_conf(np.asarray(pts_pcn), voxel_size=.005, radius=.005, theta=theta, toggledebug=False)
+    kdt, _ = get_kdt(pts)
+    confs_pcn_res = []
+    dist_list = []
+    for i, p in enumerate(pts_pcn):
+        knn_inx = get_knn_indices(p, kdt, k=1)[0]
+        gm.gen_stick(spos=pts[knn_inx], epos=p, rgba=(confs[knn_inx], 0, 1 - confs[knn_inx], .5),
+                     thickness=.0005).attach_to(base)
+        dist_list.append(np.linalg.norm(p - pts[knn_inx]) / (.1 - np.linalg.norm(p - pts[knn_inx])))
+        confs_pcn_res.append(confs[knn_inx])
+    dist_list = _normalize(dist_list)
+    for i, dist in enumerate(dist_list):
+        confs_pcn_res[i] = confs_pcn_res[i] * (1 - dist)
+    confs_pcn_res = _normalize(confs_pcn_res)
+
+    if toggledebug:
+        for i in range(len(confs_pcn_res)):
+            gm.gen_sphere(pts_pcn[i], radius=.001, rgba=(confs_pcn_res[i], 0, 1 - confs_pcn_res[i], 1)).attach_to(base)
+            # gm.gen_arrow(pts_pcn[i], pts_pcn[i] + nrmls_pcn[i] * .05,
+            #              rgba=(1 - confs_pcn_res[i], 0, confs_pcn_res[i], 1), thickness=.002).attach_to(base)
+
+    pts_nbv, nrmls_nbv, confs_nbv = extract_main_vec(pts_pcn, nrmls_pcn, confs_pcn_res)
+    if toggledebug:
+        for i in range(len(confs_nbv)):
+            # if confs_nbv[i] > .5:
+            gm.gen_sphere(pts_nbv[i], radius=.001, rgba=(confs_pcn_res[i], 0, 1 - confs_pcn_res[i], 1)).attach_to(base)
+            gm.gen_arrow(pts_nbv[i], pts_nbv[i] + nrmls_nbv[i] * .05,
+                         rgba=(confs_pcn_res[i], 0, 1 - confs_pcn_res[i], 1), thickness=.002).attach_to(base)
+
+    return pts_nbv, nrmls_nbv, confs_nbv
 
 
 def show_pcd(pcd, rgba=(1, 1, 1, 1)):
@@ -852,6 +917,7 @@ def show_cam(transmat4):
     cam_cm.set_homomat(transmat4)
     cam_cm.set_rgba((.7, .7, .7, .2))
     cam_cm.attach_to(base)
+    gm.gen_frame(transmat4[:3, 3], transmat4[:3, :3]).attach_to(base)
 
 
 if __name__ == '__main__':

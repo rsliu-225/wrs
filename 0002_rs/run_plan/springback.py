@@ -148,9 +148,9 @@ if __name__ == '__main__':
     base = wd.World(cam_pos=[1.5, 1.5, 1.5], lookat_pos=[0, 0, 0])
     rbt = el.loadYumi(showrbt=True)
 
-    fo = 'springback/steel'
+    fo = 'springback/alu_p3'
     z_range = (.12, .15)
-    sb_dict = springback_from_img(fo, z_range)
+    # sb_dict = springback_from_img(fo, z_range)
     sb_dict = pickle.load(open('./alu_springback.pkl', 'rb'))
     # print(sb_dict)
     X = []
@@ -171,13 +171,14 @@ if __name__ == '__main__':
 
         res = np.degrees(rm.angle_between_vectors(sb_dict[k]['res'][0], sb_dict[k]['res'][1]))
         goal = np.degrees(rm.angle_between_vectors(sb_dict[k]['goal'][0], sb_dict[k]['goal'][1]))
-        print(k, goal, res)
 
         if abs(res - int(k)) > 30:
             res = abs(180 - res)
         if abs(goal - int(k)) > 30:
             goal = abs(180 - goal)
-        print(goal, res)
+        print('gt:', int(k) + 15)
+        print('bend:', goal)
+        print('result:', res)
         sb = goal - res
         bend = int(k) + 15 - goal
         # if diff > 90:
@@ -187,10 +188,12 @@ if __name__ == '__main__':
         print('------------')
         sb_err.append(sb)
         bend_err.append(bend)
-        X.append(k)
-
-    sort_inx = sorted(range(len(X)), key=lambda k: X[k])
+        X.append(int(k))
+    sort_inx = np.argsort(X)
     print(sort_inx)
+    sb_err = [sb_err[i] for i in sort_inx]
+    bend_err = [bend_err[i] for i in sort_inx]
+    X = [X[i] for i in sort_inx]
     plt.plot(X, sb_err)
     plt.plot(X, bend_err)
     plt.plot(X, np.asarray(bend_err) + np.asarray(sb_err))

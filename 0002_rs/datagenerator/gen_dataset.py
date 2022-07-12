@@ -54,7 +54,8 @@ if __name__ == '__main__':
         for j, rot in enumerate(mats):
             utl.get_objpcd_partial_o3d(objcm, rot, rot_center, path=path,
                                        f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
-                                       add_noise=False, add_occ=True, toggledebug=False)
+                                       occ_vt_ratio=random.uniform(.5, 1), noise_vt_ration=random.uniform(.5, 1),
+                                       add_noise=True, add_occ=True, toggledebug=True)
             homomat4_dict[str(obj_id)][str(cnt).zfill(3)] = rm.homomat_from_posrot(rot_center, rot)
             cnt += 1
             pickle.dump(homomat4_dict, open(f'{path}/homomat4_dict.pkl', 'wb'))

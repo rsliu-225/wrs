@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import minimize
 
+import config
 import motionplanner.robot_helper as rbt_helper
 import modeling.geometric_model as gm
 import basis.robot_math as rm
@@ -37,6 +38,11 @@ class NBCOptimizer(object):
         self.jnts = []
         self.rot_err = []
         self.pos_err = []
+        self.jd_list = []  # joints displacement
+        self.mp_list = []  # manipulability
+        self.sr_list = []  # angle between line of sight
+        self.wo_list = []  # wrist obstruction
+        self.obj_list = []
 
         self.max_a = max_a
         self.max_dist = max_dist
@@ -44,9 +50,25 @@ class NBCOptimizer(object):
     def objctive(self, x):
         self.jnts.append(x)
         self.rbth.goto_armjnts(x)
-        we = np.linalg.norm(x - self.seedjntagls)
-        wm = self.rbt.manipulability(component_name='arm')
-        return we * wm
+        w_e = np.linalg.norm(x - self.seedjntagls)
+        w_m = self.rbt.manipulability(component_name='arm')
+
+        eepos, eerot = self.rbt.get_gl_tcp()
+        eemat4 = rm.homomat_from_posrot(eepos, eerot)
+        transmat4 = eemat4.dot(np.linalg.inv(self.init_eemat4))
+        p_new = pcdu.trans_pcd([self.nbv_pts[0]], transmat4)[0]
+        w_sr = rm.angle_between_vectors(config.CAM_LS, self.campos - p_new)
+        w_wo = rm.angle_between_vectors(eerot[:, 0], self.campos - p_new)
+
+        # obj = -(w_e * w_m * (-w_sr) * w_wo)
+        obj = w_e + (-w_m) + w_sr
+        self.jd_list.append(w_e)
+        self.mp_list.append(w_m)
+        self.sr_list.append(w_sr)
+        self.wo_list.append(w_wo)
+        self.obj_list.append(obj)
+
+        return obj
 
     def update_known(self, seedjntagls, nbv_pts, nbv_nrmls, campos, ):
         self.seedjntagls = seedjntagls
@@ -103,7 +125,7 @@ class NBCOptimizer(object):
         time_start = time.time()
         self.update_known(seedjntagls, nbv_pts, nbv_nrmls, campos)
         self.addconstraint(self.con_rot, condition="ineq")
-        self.addconstraint(self.con_dist, condition="ineq")
+        # self.addconstraint(self.con_dist, condition="ineq")
         self.addconstraint(self.con_diff_x, condition="ineq")
         self.addconstraint(self.con_diff_y, condition="ineq")
         self.addconstraint(self.con_diff_z, condition="ineq")
@@ -121,9 +143,8 @@ class NBCOptimizer(object):
         gm.gen_frame(self.init_eepos, self.init_eerot).attach_to(base)
 
         if self.toggledebug:
-            print(sol)
+            # print(sol)
             self.__debug()
-            # base.run()
 
         if sol.success:
             return sol.x, transmat4, sol.fun
@@ -131,12 +152,21 @@ class NBCOptimizer(object):
             return None, None, None
 
     def __debug(self):
-        plt.subplot(221)
-        self.rbth.plot_vlist(self.pos_err, title="cam dist")
-        plt.subplot(222)
-        self.rbth.plot_vlist(self.rot_err, title="normal/cam angle")
-        plt.subplot(223)
-        self.rbth.plot_armjnts(self.jnts)
+        plt.figure(figsize=(12, 12))
+        ax1 = plt.subplot(321)
+        self.rbth.plot_vlist(ax1, self.obj_list, title="objective", show=False)
+        ax2 = plt.subplot(322)
+        self.rbth.plot_vlist(ax2, self.rot_err, title="normal to cam angle", show=False)
+        ax3 = plt.subplot(323)
+        self.rbth.plot_vlist(ax3, self.jd_list, title="joints displacement", show=False)
+        ax4 = plt.subplot(324)
+        self.rbth.plot_vlist(ax4, self.mp_list, title="manipulability", show=False)
+        ax5 = plt.subplot(325)
+        self.rbth.plot_vlist(ax5, self.sr_list, title="line of sight", show=False)
+        ax6 = plt.subplot(326)
+        self.rbth.plot_vlist(ax6, self.wo_list, title="wrist obstruction", show=False)
+        # ax6 = plt.subplot(326)
+        # self.rbth.plot_armjnts(ax6, self.jnts, show=False)
         plt.show()
 
 

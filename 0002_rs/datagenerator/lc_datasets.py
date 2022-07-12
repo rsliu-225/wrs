@@ -17,12 +17,13 @@ def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=
     bar = fill * filledLength + '-' * (length - filledLength)
     return f'\r{prefix} |{bar}| {percent}% {suffix}'
 
-def gen_seed(input, random=True):
+
+def gen_seed(input, kind="cubic",random=True):
     # Width & Thickness of the stick
     width = .008  # + (np.random.uniform(0, 0.005) if random else 0)
     thickness = .0015
     cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
-    pseq = uni_length(cubic_inp(step=.001, pseq=np.asarray(input)), goal_len=0.2)
+    pseq = uni_length(cubic_inp(step=.001, kind=kind, pseq=np.asarray(input)), goal_len=0.2)
     return gen_swap(pseq, get_rotseq_by_pseq(pseq), cross_sec)
 
 
@@ -38,32 +39,99 @@ def test_seed(seed):
     show_pcd(os.path.join("complete", '_'.join(["test", "complete.pcd"])))
     # show_pcd(os.path.join("test", '_'.join(["test", "partial.pcd"])))
 
+
 # Name Composition: ObjectID_RotationID_ClassName_Type
-def init_gen(factor, class_name, res=(550, 550), rot_center = (0, 0, 0), max_num = 20):
+def init_gen(factor, class_name, seed, res=(550, 550), rot_center=(0, 0, 0), max_num=10):
     cache_data = dict()
-    icomats = rm.gen_icorotmats(rotation_interval=math.radians(360/factor))
+    icomats = rm.gen_icorotmats(rotation_interval=math.radians(360 / factor))
 
-    for i, mats in enumerate(icomats):
-        print(printProgressBar(i, len(icomats), prefix='Progress:', suffix='Complete', length=100), "\r")
-        objcm = gen_seed([[0, 0.03 + np.random.uniform(-0.01,0.05), 0], [.08, 0, 0], [0.14, 0, 0], [0.2, -0.03 - np.random.uniform(-0.01,0.05), 0]])
+    if seed == 0:
+        for i, mats in enumerate(icomats):
+            print(printProgressBar(i, len(icomats), prefix='Progress:', suffix='Complete', length=100), "\r")
+            x = random.uniform(0, 0.05)
+            objcm = gen_seed([[0, 0.03 + x, 0], [.08, 0, 0], [0.14, 0, 0], [0.2, -0.03 - x, 0]])
 
-        rot_dict = dict()
-        np.random.shuffle(mats)
-        for j, rot in enumerate(mats[:max_num]):
-            get_objpcd_partial_o3d(objcm, rot, (0, 0, 0), f_name='_'.join([str(i), str(j), class_name]),
-                                   resolusion=res, add_occ=True)
-            rot_dict[j] = rm.homomat_from_posrot(rot_center, rot)
+            rot_dict = dict()
+            np.random.shuffle(mats)
+            for j, rot in enumerate(mats[:max_num]):
+                get_objpcd_partial_o3d(objcm, rot, (0, 0, 0), f_name='_'.join([str(i), str(j), class_name]),
+                                       resolusion=res, add_occ=True, add_noise=True, occ_vt_ratio=random.uniform(.5, 1), noise_vt_ration=random.uniform(.5, 1),)
+                rot_dict[j] = rm.homomat_from_posrot(rot_center, rot)
 
-        cache_data[i] = rot_dict
+            cache_data[i] = rot_dict
 
-        if i == len(icomats) - 1:
-            print(printProgressBar(i+1, len(icomats), prefix='Progress:', suffix='Complete', length=100), "\r")
-            print(f"A total of {i+1} different objects created")
+            if i == len(icomats) - 1:
+                print(printProgressBar(i + 1, len(icomats), prefix='Progress:', suffix='Complete', length=100), "\r")
+                print(f"A total of {i + 1} different objects created")
 
-    pickle.dump(cache_data, open(f'partial/{class_name}.pkl', 'wb'))
-    cal_stats("partial", class_name)
+        pickle.dump(cache_data, open(f'partial/{class_name}.pkl', 'wb'))
+        cal_stats("partial", class_name)
+    elif seed == 1:
+        for i, mats in enumerate(icomats):
+            print(printProgressBar(i, len(icomats), prefix='Progress:', suffix='Complete', length=100), "\r")
+            x = random.uniform(-0.02, 0.02)
+            objcm = gen_seed([[0, 0, 0], [0.07, 0.05, 0.05 + x], [0.14, 0.15, -0.05 + x], [.2, 0.3, 0]])
 
+            rot_dict = dict()
+            np.random.shuffle(mats)
+            for j, rot in enumerate(mats[:max_num]):
+                get_objpcd_partial_o3d(objcm, rot, (0, 0, 0), f_name='_'.join([str(i), str(j), class_name]),
+                                       resolusion=res, add_occ=True, add_noise=True, occ_vt_ratio=random.uniform(.5, 1),
+                                       noise_vt_ration=random.uniform(.5, 1), )
+                rot_dict[j] = rm.homomat_from_posrot(rot_center, rot)
 
+            cache_data[i] = rot_dict
+
+            if i == len(icomats) - 1:
+                print(printProgressBar(i + 1, len(icomats), prefix='Progress:', suffix='Complete', length=100), "\r")
+                print(f"A total of {i + 1} different objects created")
+
+        pickle.dump(cache_data, open(f'partial/{class_name}.pkl', 'wb'))
+        cal_stats("partial", class_name)
+    elif seed == 2:
+        for i, mats in enumerate(icomats):
+            print(printProgressBar(i, len(icomats), prefix='Progress:', suffix='Complete', length=100), "\r")
+            x, x_2 = random.uniform(0, 0.02), random.uniform(0, 0.015)
+            objcm = gen_seed([[0, 0, 0.03 + x], [.08, 0.03 + x_2, 0], [0.14, 0, 0], [0.2, -0.03 + x_2, -0.03 - x]])
+
+            rot_dict = dict()
+            np.random.shuffle(mats)
+            for j, rot in enumerate(mats[:max_num]):
+                get_objpcd_partial_o3d(objcm, rot, (0, 0, 0), f_name='_'.join([str(i), str(j), class_name]),
+                                       resolusion=res, add_occ=True, add_noise=True, occ_vt_ratio=random.uniform(.5, 1),
+                                       noise_vt_ration=random.uniform(.5, 1), )
+                rot_dict[j] = rm.homomat_from_posrot(rot_center, rot)
+
+            cache_data[i] = rot_dict
+
+            if i == len(icomats) - 1:
+                print(printProgressBar(i + 1, len(icomats), prefix='Progress:', suffix='Complete', length=100), "\r")
+                print(f"A total of {i + 1} different objects created")
+
+        pickle.dump(cache_data, open(f'partial/{class_name}.pkl', 'wb'))
+        cal_stats("partial", class_name)
+    elif seed == 3:
+        for i, mats in enumerate(icomats):
+            print(printProgressBar(i, len(icomats), prefix='Progress:', suffix='Complete', length=100), "\r")
+            x, x_2 = random.uniform(0, 0.015), random.uniform(0, 0.02)
+            objcm = gen_seed([[0, 0, 0.03 - x_2], [.08, 0.04 + x, 0], [0.14, 0 - x, 0], [0.2 + x, -0.04, -0.03 - x_2]])
+
+            rot_dict = dict()
+            np.random.shuffle(mats)
+            for j, rot in enumerate(mats[:max_num]):
+                get_objpcd_partial_o3d(objcm, rot, (0, 0, 0), f_name='_'.join([str(i), str(j), class_name]),
+                                       resolusion=res, add_occ=True, add_noise=True, occ_vt_ratio=random.uniform(.5, 1),
+                                       noise_vt_ration=random.uniform(.5, 1), )
+                rot_dict[j] = rm.homomat_from_posrot(rot_center, rot)
+
+            cache_data[i] = rot_dict
+
+            if i == len(icomats) - 1:
+                print(printProgressBar(i + 1, len(icomats), prefix='Progress:', suffix='Complete', length=100), "\r")
+                print(f"A total of {i + 1} different objects created")
+
+        pickle.dump(cache_data, open(f'partial/{class_name}.pkl', 'wb'))
+        cal_stats("partial", class_name)
 
 def cal_stats(path, class_name):
     stats = [50000, 0, 0]
@@ -88,13 +156,13 @@ def cal_stats(path, class_name):
     return cnt, num_scan
 
 
-
 def show_pcd(file_path):
     pcd = o3d.io.read_point_cloud(file_path)
     o3d.visualization.draw_geometries([pcd])
     return len(pcd.points)
-def show_all_pcd(folder_path):
 
+
+def show_all_pcd(folder_path):
     for file in os.listdir(folder_path):
         if not "pcd" in file:
             continue
@@ -116,7 +184,7 @@ def show_some_pcd(path, num, class_name, dist=0.01):
                 pcd_np = read_pcd(file_path)
                 cnt += 1
                 continue
-            cur_pcd = read_pcd(file_path) + dist*cnt
+            cur_pcd = read_pcd(file_path) + dist * cnt
             pcd_np = np.append(pcd_np, cur_pcd, axis=0)
             cnt += 1
     show_pcd_pts(pcd_np)
@@ -135,12 +203,6 @@ def runInParallel(fn, args):
 def function(num_output, name, class_name):
     gen_multiview_lc(comb_num=num_output, cat=name, class_name=class_name)
 
-def get_args(name, num_class, num_output):
-    num_output = num_output
-    args_list = []
-    for i in range(num_class):
-        args_list.append([num_output, name, f"{name}{i+1}"])
-    return args_list
 
 def test_pcd():
     comeplte_dir = os.path.join("cubic", "complete")
@@ -155,20 +217,33 @@ def test_pcd():
 
             utils.show_pcd_pts(output)
 
-def gen_args(cat):
-    return [[cat, cat+str(i+1)] for i in range(16)]
 
+def get_args(name, num_class, num_output):
+    args_list = []
+    for i in range(num_class):
+        args_list.append([num_output, name, f"{name}{i + 1}"])
+    return args_list
+
+
+def gen_args(cat):
+    return [[cat, cat + str(i + 1)] for i in range(16)]
+
+def new_args(fact, cat, rng):
+    # seed_list = [[[0, 0, 0], [.03, 0, 0.005], [.07, 0, 0.01], [.15, 0.01, 0.01]], [[0, 0.001, 0.01], [.08, 0, 0.01], [0.14, 0, 0.0096], [.15, 0, 0.0096]], [[0, 0.001, 0.001], [.08, 0, 0.001], [0.14, 0, 0.001], [.15, 0.001, 0.001]]]
+    return [[fact, cat+str(i+1), i%4] for i in range(rng[0], rng[1])]
 
 if __name__ == '__main__':
-    # print(gen_args("cubic"))
-    runInParallel(gen_multiview_for_complete_pcd, gen_args("quad"))
-    runInParallel(gen_multiview_for_complete_pcd, gen_args("linear"))
+    args_list = new_args(60, "cubic", (0,8))
+    print(args_list)
+    runInParallel(init_gen, new_args(60, "cubic", (0, 8)))
+    runInParallel(init_gen, new_args(60, "cubic", (8,16)))
+    # runInParallel(gen_multiview_for_complete_pcd, gen_args("quad"))
+    # runInParallel(gen_multiview_for_complete_pcd, gen_args("linear"))
     # gen_multiview_for_complete_pcd("cubic", "cubic1")
     # test_pcd()
     # show_all_pcd("linear/multiview")
     # print(get_args("quad", 6, 3))
     # runInParallel(function, get_args("quad", 6, 2))
-
 
 # test_seed([[0, 0, 0.03], [.08, 0.05, 0], [0.14, 0, 0], [0.2, -0.05, -0.03]])
 
@@ -187,18 +262,18 @@ if __name__ == '__main__':
 """Record"""
 x, x_2 = 0, 0
 # Linear(total = 2*3*42*20)
-a = [[0, 0, 0], [.03, 0, 0.005], [.07, 0, 0.01], [.15, 0.01, 0.01]]                             # Twisting point near the ends
-b = [[0, 0.001, 0.01], [.08, 0, 0.01], [0.14, 0, 0.0096], [.15, 0, 0.0096]]                     # Twisting point near the middle
-c = [[0, 0.001, 0.001], [.08, 0, 0.001], [0.14, 0, 0.001], [.15, 0.001, 0.001]]                 # Flat
+a = [[0, 0, 0], [.03, 0, 0.005], [.07, 0, 0.01], [.15, 0.01, 0.01]]  # Twisting point near the ends
+b = [[0, 0.001, 0.01], [.08, 0, 0.01], [0.14, 0, 0.0096], [.15, 0, 0.0096]]  # Twisting point near the middle
+c = [[0, 0.001, 0.001], [.08, 0, 0.001], [0.14, 0, 0.001], [.15, 0.001, 0.001]]  # Flat
 
 # Quadratic (total = 2*3*42*20)
-aa = [[0, 0, 0], [.15, 0.005, 0.035], [.2, 0.01, 0]]                                             # 1 turning point with varying magnitude
-bb = [[0, 0, 0], [.05, 0.01, 0], [.1, 0.03, 0.015], [.15 + x, 0.06, 0.025 + x * 3]]              # 1 turning point with varying magnitude & twisting point (2 points are near) x=(0, 0.02)
-cc = [[0, 0, 0], [.05, 0.01, -0.02], [.1, 0.03, 0.01], [.15 + x, 0.07 + x, 0.055 + x]]           # 1 turning point with varying magnitude & twisting point (2 points are far) x=(0, 0.03)
+aa = [[0, 0, 0], [.15, 0.005, 0.035], [.2, 0.01, 0]]  # 1 turning point with varying magnitude
+bb = [[0, 0, 0], [.05, 0.01, 0], [.1, 0.03, 0.015], [.15 + x, 0.06, 0.025 + x * 3]]  # 1 turning point with varying magnitude & twisting point (2 points are near) x=(0, 0.02)
+cc = [[0, 0, 0], [.05, 0.01, -0.02], [.1, 0.03, 0.01], [.15 + x, 0.07 + x, 0.055 + x]]  # 1 turning point with varying magnitude & twisting point (2 points are far) x=(0, 0.03)
 
 # Cubic (total = 4*4*42*20)
-aaa = [[0, 0.03 + x, 0], [.08, 0, 0], [0.14, 0, 0], [0.2, -0.03 - x, 0]]                         # 2 turning points with varying magnitude & distance between each other x=(0, 0.05)
-bbb = [[0, 0, 0], [0.07, 0.05, 0.05 + x], [0.14, 0.15, -0.05 + x], [.2, 0.3, 0]]                 # Above aaa + twisting in the middle x=(-0.02, 0.02)
-ccc = [[0, 0, 0.03 + x], [.08, 0.03 + x_2, 0], [0.14, 0, 0], [0.2, -0.03 + x_2, -0.03 - x]]      # x=(0, 0.02), x_2=(0, 0.015)
+aaa = [[0, 0.03 + x, 0], [.08, 0, 0], [0.14, 0, 0], [0.2, -0.03 - x, 0]]  # 2 turning points with varying magnitude & distance between each other x=(0, 0.05)
+bbb = [[0, 0, 0], [0.07, 0.05, 0.05 + x], [0.14, 0.15, -0.05 + x], [.2, 0.3, 0]]  # Above aaa + twisting in the middle x=(-0.02, 0.02)
+ccc = [[0, 0, 0.03 + x], [.08, 0.03 + x_2, 0], [0.14, 0, 0], [0.2, -0.03 + x_2, -0.03 - x]]  # x=(0, 0.02), x_2=(0, 0.015)
 ddd = [[0, 0, 0.03 - x_2], [.08, 0.04 + x, 0], [0.14, 0 - x, 0], [0.2 + x, -0.04, -0.03 - x_2]]  # x=(0, 0.015), x_2=(0, 0.02)
-
+# [[0, 0.03 + np.random.uniform(-0.01, 0.05), 0], [.08, 0, 0], [0.14, 0, 0], [0.2, -0.03 - np.random.uniform(-0.01, 0.05), 0]]

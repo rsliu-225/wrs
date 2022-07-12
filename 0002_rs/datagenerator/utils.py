@@ -53,10 +53,10 @@ def gen_random_homomat4(trans_diff=(.01, .01, .01), rot_diff=np.radians((10, 10,
     return rm.homomat_from_posrot(random_pos, random_rot)
 
 
-def cubic_inp(pseq, step=.001, toggledebug=False):
+def cubic_inp(pseq, step=.001, toggledebug=False, kind="cubic"):
     length = np.sum(np.linalg.norm(np.diff(np.asarray(pseq), axis=0), axis=1))
-    inp = interpolate.interp1d(pseq[:, 0], pseq[:, 1], kind='cubic')
-    inp_z = interpolate.interp1d(pseq[:, 0], pseq[:, 2], kind='cubic')
+    inp = interpolate.interp1d(pseq[:, 0], pseq[:, 1], kind=kind)
+    inp_z = interpolate.interp1d(pseq[:, 0], pseq[:, 2], kind=kind)
     x = np.linspace(0, pseq[-1][0], int(length / step))
     y = inp(x)
     z = inp_z(x)
@@ -249,7 +249,7 @@ def get_objpcd_partial_sample(objcm, objmat4=np.eye(4), smp_num=100000, cam_pos=
 
 
 def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolusion=(1280, 720), ext_name='.pcd',
-                           add_noise=False, add_occ=False, toggledebug=False):
+                           occ_vt_ratio=1, noise_vt_ration=1, add_noise=False, add_occ=False, toggledebug=False):
     if not os.path.exists(path):
         os.mkdir(path)
     if not os.path.exists(os.path.join(path, 'partial/')):
@@ -260,18 +260,23 @@ def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolus
     ctr = o3d.visualization.ViewControl()
     o3dmesh = o3d.geometry.TriangleMesh(vertices=o3d.utility.Vector3dVector(objcm.objtrm.vertices),
                                         triangles=o3d.utility.Vector3iVector(objcm.objtrm.faces))
+    o3dmesh.compute_vertex_normals()
     o3dmesh.rotate(rot, center=rot_center)
-    if add_noise:
-        o3dmesh = noisy_mesh(o3dmesh)
+
     vis.add_geometry(o3dmesh)
     vis.poll_events()
     vis.capture_depth_point_cloud(os.path.join(path, f_name + f'_partial_org{ext_name}'), do_render=False,
                                   convert_to_world_coordinate=True)
     o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f_name + f'_partial_org{ext_name}'))
     if add_occ:
-        o3dpcd = add_random_occ_by_nrml(o3dpcd)
-        o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
-        o3d.io.write_point_cloud(os.path.join(path, 'partial', f_name + '_partial.pcd'), o3dpcd)
+        o3dpcd = add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=(.3, .6))
+        o3dpcd = add_random_occ_by_vt(o3dpcd, np.asarray(o3dmesh.vertices),
+                                      edg_radius=1e-3, edg_sigma=3e-4, ratio=occ_vt_ratio)
+        o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}_partial{ext_name}'), o3dpcd)
+    if add_noise:
+        o3dpcd = add_guassian_noise_by_vt(o3dpcd, np.asarray(o3dmesh.vertices), np.asarray(o3dmesh.vertex_normals),
+                                          noise_mean=1e-4, noise_sigma=1e-4, ratio=noise_vt_ration)
+        o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}_partial{ext_name}'), o3dpcd)
     # o3d.io.write_triangle_mesh(os.path.join(path, f_name + '.ply'), o3dmesh)
     # vis.capture_screen_image(os.path.join(path, f_name + '.png'), do_render=False)
     save_complete_pcd(f_name, o3dmesh, path=path)
@@ -281,9 +286,9 @@ def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolus
         o3dpcd_org = o3d.io.read_point_cloud(os.path.join(path, f_name + f'_partial_org{ext_name}'))
         o3dpcd = o3d.io.read_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'))
         o3dpcd_org.paint_uniform_color([0, 0.706, 1])
-        o3dpcd.paint_uniform_color([0, 0.706, 1])
+        o3dpcd.paint_uniform_color([0.706, 0, 1])
         # print(o3dpcd_org.get_center())
-        o3d.visualization.draw_geometries([o3dpcd, o3dpcd_org])
+        o3d.visualization.draw_geometries([o3dpcd])
     os.remove(os.path.join(path, f_name + f'_partial_org{ext_name}'))
     return o3dpcd
 
@@ -351,18 +356,54 @@ def add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=(.3, .6)):
     o3dpcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.001, max_nn=10))
 
     nrmls = np.asarray(o3dpcd.normals)[indices[0]]
-    # pts = np.asarray(o3dpcd.points)[indices[0]]
-    # pcv, pcaxmat = rm.compute_pca(pts)
-    # inx = sorted(range(len(pcv)), key=lambda k: pcv[k])
-    # nrml_0 = pcaxmat[:, inx[0]]
     nrml_0 = np.asarray(o3dpcd.normals)[seed]
 
     del_indices = []
     for i, v in enumerate(nrmls):
         a = rm.angle_between_vectors(v, nrml_0)
-        if a < np.pi / 2:
+        if a < np.random.normal(np.pi / 2, np.pi / 18):
             del_indices.append(indices[0][i])
     pcd = np.delete(np.asarray(o3dpcd.points), del_indices, axis=0)
+
+    return o3dh.nparray2o3dpcd(pcd)
+
+
+def add_random_occ_by_vt(o3dpcd, vts, edg_radius=1e-3, edg_sigma=3e-4, ratio=1.0):
+    kdt = KDTree(np.asarray(o3dpcd.points), leaf_size=100, metric='euclidean')
+    seeds = random.choices(vts, k=random.choice(range(int(len(vts) * ratio))))
+    del_indices = []
+    for seed in seeds:
+        indices, dists = kdt.query_radius(np.asarray([seed]),
+                                          r=random.uniform(0, edg_radius + edg_sigma),
+                                          return_distance=True, count_only=False)
+        if len(indices[0]) == 0:
+            continue
+        pts = np.asarray(o3dpcd.points)[indices[0]]
+        for i, p in enumerate(pts):
+            l = np.linalg.norm(p - seed)
+            if l < np.random.normal(np.mean(dists[0]), np.mean(dists[0]) / 5):
+                del_indices.append(indices[0][i])
+    pcd = np.delete(np.asarray(o3dpcd.points), del_indices, axis=0)
+
+    return o3dh.nparray2o3dpcd(pcd)
+
+
+def add_guassian_noise_by_vt(o3dpcd, vts, nrmls, noise_mean=1e-4, noise_sigma=1e-4, ratio=1.0):
+    o3dpcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.001, max_nn=10))
+    pcd = np.asarray(o3dpcd.points)
+    kdt = KDTree(pcd, leaf_size=100, metric='euclidean')
+    # seeds = random.choices(vts, k=random.choice(range(len(vts))))
+    inx_seeds = random.choices(range(len(vts)), k=random.choice(range(int(len(vts) * ratio))))
+    diff = np.zeros(pcd.shape)
+    for inx in inx_seeds:
+        dists, indices = kdt.query(np.asarray([vts[inx]]), k=random.randint(100, min(len(pcd),500)), return_distance=True)
+        if len(indices[0]) == 0:
+            continue
+        dist_inv = (1 / dists[0]) / np.linalg.norm((1 / dists[0]))
+        noise = np.repeat(np.random.normal(dist_inv * noise_mean, noise_sigma), 3).reshape(len(dists[0]), 3)
+        diff[indices[0]] = nrmls[inx] * noise
+
+    pcd = pcd + diff
 
     return o3dh.nparray2o3dpcd(pcd)
 
@@ -401,10 +442,12 @@ def save_complete_pcd(name, mesh, path="./"):
     path = os.path.join(path, 'complete/')
     if not os.path.exists(path):
         os.mkdir(path)
-
     exist = False
-    for file in os.listdir(path):
-        if name.split("_")[0] == file.split("_")[0] and name.split("_")[2] == file.split("_")[2]:
-            exist = True
-    if not exist:
-        o3d.io.write_point_cloud(path + name + '_complete.pcd', get_objpcd_full_sample_o3d(mesh))
+    # for file in os.listdir(path):
+    #     try:
+    #         if name.split("_")[0] == file.split("_")[0] and name.split("_")[2] == file.split("_")[2]:
+    #             exist = True
+    #     except:
+    #         continue
+    # if not exist:
+    o3d.io.write_point_cloud(path + name + '_complete.pcd', get_objpcd_full_sample_o3d(mesh))

@@ -1,6 +1,7 @@
 import copy
 import os
 import pickle
+import random
 
 import cv2
 import numpy as np
@@ -17,9 +18,9 @@ import utils.vision_utils as vu
 import motionplanner.nbc_solver as nbcs
 
 
-def load_frame_seq(folder_name=None, root_path=os.path.join(config.ROOT, 'img/phoxi/'), path=None):
+def load_frame_seq(fo=None, root_path=os.path.join(config.ROOT, 'img/phoxi/'), path=None):
     if path is None:
-        path = os.path.join(root_path, folder_name)
+        path = os.path.join(root_path, fo)
     depthimg_list = []
     rgbimg_list = []
     pcd_list = []
@@ -38,15 +39,15 @@ def load_frame_seq(folder_name=None, root_path=os.path.join(config.ROOT, 'img/ph
     return [depthimg_list, rgbimg_list, pcd_list]
 
 
-def load_frame_seq_withf(folder_name=None, root_path=os.path.join(config.ROOT, 'img/phoxi/'), path=None):
+def load_frame_seq_withf(fo=None, root_path=os.path.join(config.ROOT, 'img/phoxi/'), path=None):
     if path is None:
-        path = os.path.join(root_path, folder_name)
+        path = os.path.join(root_path, fo)
     depthimg_list = []
     textureimg_list = []
     pcd_list = []
     fname_list = []
     for f in sorted(os.listdir(path)):
-        if f[-3:] != 'pkl':
+        if f[-3:] != 'pkl' or '_' in f:
             continue
         fname_list.append(f[:-4])
         tmp = pickle.load(open(os.path.join(path, f), 'rb'))
@@ -57,7 +58,7 @@ def load_frame_seq_withf(folder_name=None, root_path=os.path.join(config.ROOT, '
             depthimg_list.append(tmp[0])
             textureimg_list.append(tmp[1])
         if len(tmp) == 3:
-            pcd_list.append(tmp[2])
+            pcd_list.append(np.asarray(tmp[2])/1000)
     return [fname_list, depthimg_list, textureimg_list, pcd_list]
 
 
@@ -65,7 +66,6 @@ def load_frame(folder_name, f_name, root_path=os.path.join(config.ROOT, 'img/pho
     if path is None:
         path = os.path.join(root_path, folder_name)
     tmp = pickle.load(open(os.path.join(path, f_name), 'rb'))
-    print(tmp[0].shape, tmp[1].shape)
     if tmp[0].shape[-1] == 3:
         depthimg = tmp[1]
         textureimg = tmp[0]
@@ -76,7 +76,26 @@ def load_frame(folder_name, f_name, root_path=os.path.join(config.ROOT, 'img/pho
     return depthimg, textureimg, pcd
 
 
-def get_center_frame(corners, id, img, pcd, colors=None, show_frame=True):
+def load_opti_seq(fo=None, root_path=os.path.join(config.ROOT, 'img/phoxi/'), path=None):
+    if path is None:
+        path = os.path.join(root_path, fo)
+    opti_list = []
+    for f in sorted(os.listdir(path)):
+        if 'opti' not in f:
+            continue
+        opti_list.append(pickle.load(open(os.path.join(path, f), 'rb')).rigidbody_set_dict)
+    return opti_list
+
+
+def load_opti(fo, f_name, root_path=os.path.join(config.ROOT, 'img/phoxi/'), path=None):
+    if path is None:
+        path = os.path.join(root_path, fo)
+    opti_data = pickle.load(open(os.path.join(path, f_name), 'rb'))
+
+    return opti_data.rigidbody_set_dict
+
+
+def get_center_frame(corners, id, img, pcd, colors=None, show_frame=False):
     ps = []
     if id == 1:
         seq = [1, 0, 0, 3]
@@ -129,24 +148,25 @@ def get_center_frame(corners, id, img, pcd, colors=None, show_frame=True):
         return None
 
 
-def crop_maker(img, pcd, x_range=(.05, .215), y_range=(-.4, .4), z_range=(-.2, -.0155), tgt_id=None, show_frame=True):
+def trans_by_armaker(img, pcd, x_range=(.05, .215), y_range=(-.4, .4), z_range=(-.2, -.0155), tgt_id=None,
+                     show_frame=True):
     parameters = aruco.DetectorParameters_create()
     aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_250)
     corners, ids, rejectedImgPoints = aruco.detectMarkers(img, aruco_dict, parameters=parameters)
     if ids is None:
-        return None, None
+        return None, None, None, None
     ids = [v[0] for v in ids]
-    print(ids)
+    print('AR marker ids in image:', ids)
     if tgt_id is not None:
         if tgt_id not in ids:
-            return None, None
-        gripperframe = get_center_frame(corners[ids.index(tgt_id)], tgt_id, img, pcd)
+            return None, None, None, None
+        gripperframe = get_center_frame(corners[ids.index(tgt_id)], tgt_id, img, pcd, show_frame=show_frame)
     else:
-        gripperframe = get_center_frame(corners[0], ids[0], img, pcd)
+        gripperframe = get_center_frame(corners[0], ids[0], img, pcd, show_frame=show_frame)
     if gripperframe is None:
-        return None, None
+        return None, None, None, None
     pcd_trans = pcdu.trans_pcd(pcd, np.linalg.inv(gripperframe))
-    pcdu.show_pcd(pcd_trans, rgba=(1, 1, 1, .1))
+    # pcdu.show_pcd(pcd_trans, rgba=(1, 1, 1, .1))
     if show_frame:
         gm.gen_stick(np.asarray((x_range[0], y_range[0], z_range[0])), np.asarray((x_range[1], y_range[0], z_range[0])),
                      rgba=(1, 0, 0, 1)).attach_to(base)
@@ -169,29 +189,30 @@ def display_inlier_outlier(cloud, ind):
     o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
 
 
-def reg_plate(folder_name, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False,
-              x_range=(.05, .215), y_range=(-.4, .4), z_range=(-.2, -.0155), toggledebug=True):
-    if not os.path.exists(os.path.join(config.ROOT, 'recons_data', folder_name)):
-        os.mkdir(os.path.join(config.ROOT, 'recons_data', folder_name))
-    fnlist, grayimg_list, depthimg_list, pcd_list = load_frame_seq_withf(folder_name=folder_name)
+def reg_armarker(fo, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False,
+                 x_range=(.05, .215), y_range=(-.4, .4), z_range=(-.2, -.0155), toggledebug=False):
+    if not os.path.exists(os.path.join(config.ROOT, 'recons_data', fo)):
+        os.mkdir(os.path.join(config.ROOT, 'recons_data', fo))
+    fnlist, grayimg_list, depthimg_list, pcd_list = load_frame_seq_withf(fo=fo)
     pcd_cropped_list = []
     inx_list = []
     trans = np.eye(4)
     # gm.gen_frame(center, np.eye(3)).attach_to(base)
     for i in range(len(grayimg_list)):
-        pcd = np.asarray(pcd_list[i]) / 1000
+        pcd = np.asarray(pcd_list[i])
         inx, gripperframe, pcd, pcd_cropped, = \
-            crop_maker(grayimg_list[i], pcd, x_range=x_range, y_range=y_range, z_range=z_range)
+            trans_by_armaker(grayimg_list[i], pcd, x_range=x_range, y_range=y_range, z_range=z_range,
+                             show_frame=toggledebug)
         if pcd_cropped is not None:
-            pcd_cropped, _ = pcdu.get_nearest_cluster(pcd_cropped, seed=seed, eps=.01, min_samples=200)
-            seed = np.mean(pcd_cropped, axis=0)
+            pcd_cropped, _ = pcdu.get_nearest_cluster(pcd_cropped, seed=seed, eps=.02, min_samples=200)
+            # seed = np.mean(pcd_cropped, axis=0)
             print('Num. of points in cropped pcd:', len(pcd_cropped))
             if len(pcd_cropped) > 0:
                 pcd_cropped = pcd_cropped - np.asarray(center)
                 o3dpcd = o3dh.nparray2o3dpcd(pcd_cropped)
                 # cl, ind = o3dpcd.remove_radius_outlier(nb_points=16, radius=0.005)
                 # display_inlier_outlier(o3dpcd, ind)
-                o3d.io.write_point_cloud(os.path.join(config.ROOT, 'recons_data', folder_name, f'{fnlist[i]}' + '.pcd'),
+                o3d.io.write_point_cloud(os.path.join(config.ROOT, 'recons_data', fo, f'{fnlist[i]}' + '.pcd'),
                                          o3dpcd)
                 pcd_cropped_list.append(pcd_cropped)
                 inx_list.append(inx)
@@ -201,8 +222,80 @@ def reg_plate(folder_name, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=Fa
         print(len(pcd_cropped_list[i - 1]))
         if icp:
             _, _, trans_tmp = o3dh.registration_ptpt(pcd_cropped_list[i], pcd_cropped_list[i - 1],
-                                                     downsampling_voxelsize=.005,
-                                                     toggledebug=False)
+                                                     downsampling_voxelsize=.005, toggledebug=False)
+            trans = trans_tmp.dot(trans)
+        #     pcdu.show_pcd(pcdu.trans_pcd(pcd_cropped_list[i], trans), rgba=colors[inx_list[i] - 1])
+        # else:
+        #     pcdu.show_pcd(pcd_cropped_list[i - 1], rgba=colors[inx_list[i] - 1])
+    if toggledebug:
+        o3dpcd_list = []
+        for i in range(len(pcd_cropped_list)):
+            o3dpcd = o3dh.nparray2o3dpcd(np.asarray(pcd_cropped_list[i]))
+            o3dpcd_list.append(o3dpcd)
+            o3dpcd.paint_uniform_color(list(colors[inx_list[i] - 1][:3]))
+        o3d.visualization.draw_geometries(o3dpcd_list)
+    return pcd_cropped_list
+
+
+def optidata2homomat4(seg):
+    if not any([seg.x, seg.z, seg.y]):
+        return None
+    # rot = rm.rotmat_from_axangle((1, 0, 0), seg.qx) \
+    #     .dot(rm.rotmat_from_axangle((0, 1, 0), seg.qy)) \
+    #     .dot(rm.rotmat_from_axangle((0, 0, 1), seg.qz))
+    rot = rm.rotmat_from_axangle((0, 0, 1), seg.qz) \
+        .dot(rm.rotmat_from_axangle((0, 1, 0), seg.qy)) \
+        .dot(rm.rotmat_from_axangle((1, 0, 0), seg.qx))
+    # homomat = rm.homomat_from_posrot([seg.x, seg.z, seg.y], rot)
+    homomat = rm.homomat_from_posrot([0, 0, 0], rot)
+    return homomat
+
+
+def reg_opti(fo, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False,
+             x_range=(.05, .215), y_range=(-.4, .4), z_range=(-.2, -.0155), toggledebug=True):
+    if not os.path.exists(os.path.join(config.ROOT, 'recons_data', fo)):
+        os.mkdir(os.path.join(config.ROOT, 'recons_data', fo))
+    fnlist, grayimg_list, depthimg_list, pcd_list = load_frame_seq_withf(fo=fo)
+    optidata_list = load_opti_seq(fo=fo)
+
+    pcd_cropped_list = []
+    inx_list = []
+    trans = np.eye(4)
+    # gm.gen_frame(center, np.eye(3)).attach_to(base)
+    for i in range(len(grayimg_list)):
+        pcd = np.asarray(pcd_list[i])
+        homomat4 = optidata2homomat4(optidata_list[i][1])
+        if homomat4 is None:
+            continue
+        # pcdu.show_pcd(pcd, rgba=(1, 1, 1, .1))
+        gm.gen_frame(homomat4[:3, 3], homomat4[:3, :3]).attach_to(base)
+        inx, gripperframe, pcd, pcd_cropped, = \
+            trans_by_armaker(grayimg_list[i], pcd, x_range=x_range, y_range=y_range, z_range=z_range)
+        if pcd_cropped is not None:
+            # pcd_cropped, _ = pcdu.get_nearest_cluster(pcd_cropped, seed=seed, eps=.01, min_samples=200)
+            pcd_cropped_org = pcdu.trans_pcd(pcd_cropped, gripperframe)
+            print('Num. of points in cropped pcd:', len(pcd_cropped))
+            if len(pcd_cropped) > 0:
+                print(homomat4)
+                seed = np.mean(pcd_cropped, axis=0)
+                pcd_cropped = pcd_cropped - np.asarray(center)
+                o3dpcd = o3dh.nparray2o3dpcd(pcd_cropped)
+                # cl, ind = o3dpcd.remove_radius_outlier(nb_points=16, radius=0.005)
+                # display_inlier_outlier(o3dpcd, ind)
+                o3d.io.write_point_cloud(os.path.join(config.ROOT, 'recons_data', fo, f'{fnlist[i]}' + '.pcd'),
+                                         o3dpcd)
+                pcd_cropped_list.append(pcd_cropped)
+                pcdu.show_pcd(pcd_cropped_org, rgba=(1, 0, 0, 1))
+                pcdu.show_pcd(pcdu.trans_pcd(pcd_cropped_org, np.linalg.inv(homomat4)),
+                              rgba=(1, 1, 0, 1))
+                inx_list.append(inx)
+
+    colors = [(1, 0, 0, 1), (1, 1, 0, 1), (1, 0, 1, 1), (0, 1, 0, 1), (0, 1, 1, 1), (0, 0, 1, 1)]
+    for i in range(1, len(pcd_cropped_list)):
+        print(len(pcd_cropped_list[i - 1]))
+        if icp:
+            _, _, trans_tmp = o3dh.registration_ptpt(pcd_cropped_list[i], pcd_cropped_list[i - 1],
+                                                     downsampling_voxelsize=.005, toggledebug=True)
             trans = trans_tmp.dot(trans)
             pcdu.show_pcd(pcdu.trans_pcd(pcd_cropped_list[i], trans), rgba=colors[inx_list[i] - 1])
         else:
@@ -217,57 +310,90 @@ def reg_plate(folder_name, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=Fa
     return pcd_cropped_list
 
 
-def cal_nbc(textureimg, pcd, rbt, seedjntagls, seed=(.116, 0, -.1), gl_transmat4=np.eye(4), theta=np.pi / 3,
-            x_range=(.05, .215), y_range=(-.4, .4), z_range=(-.2, -.0155),
-            toggledebug=True, show_cam=True):
-    pcd = np.asarray(pcd) / 1000
-    inx, gripperframe, pcd, pcd_cropped = \
-        crop_maker(textureimg, pcd, x_range=x_range, y_range=y_range, z_range=z_range)
-    cam_pos = np.linalg.inv(gripperframe)[:3, 3]
-
-    if pcd_cropped is None:
+def extract_roi_by_armarker(textureimg, pcd, seed,
+                            x_range=(.06, .215), y_range=(-.15, .15), z_range=(-.2, -.0155), toggledebug=False):
+    _, gripperframe, pcd_trans, pcd_roi = \
+        trans_by_armaker(textureimg, pcd, x_range=x_range, y_range=y_range, z_range=z_range, show_frame=toggledebug)
+    if pcd_roi is None:
         print('No marker detected!')
-        return None, None
-    pcd_cropped, _ = pcdu.get_nearest_cluster(pcd_cropped, seed=seed, eps=.01, min_samples=200)
+        return None, None, None
+    pcd_roi, _ = pcdu.get_nearest_cluster(pcd_roi, seed=seed, eps=.02, min_samples=200)
+
+    print('Num. of points in extracted pcd:', len(pcd_roi))
+    if len(pcd) < 0:
+        return None, None, None
     if toggledebug:
         gm.gen_sphere(seed).attach_to(base)
-    print('Num. of points in cropped pcd:', len(pcd_cropped))
+    return pcd_roi, pcd_trans, gripperframe
 
-    if len(pcd_cropped) < 0:
-        return None, None
 
-    pts, nrmls, confs = \
-        pcdu.cal_conf(pcd_cropped, voxel_size=.005, radius=.005, cam_pos=cam_pos, theta=theta)
-    nbv_pts, nbv_nrmls, nbv_confs = \
-        pcdu.cal_nbv(pts, nrmls, confs, cam_pos=np.linalg.inv(gripperframe)[:3, 3])
-    print('Num. of NBV:', len(nbv_pts))
+def cal_nbc(pcd, gripperframe, rbt, seedjntagls, gl_transmat4=np.eye(4),
+            theta=np.pi / 3, max_a=np.pi / 18, max_dist=1, toggledebug=True, show_cam=True):
+    cam_pos = np.linalg.inv(gripperframe)[:3, 3]
+
+    pts, nrmls, confs = pcdu.cal_conf(pcd, voxel_size=.005, radius=.005, cam_pos=cam_pos, theta=theta)
+    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv(pts, nrmls, confs, cam_pos=np.linalg.inv(gripperframe)[:3, 3])
+    print('Num. of NBV:', len(pts_nbv))
 
     pcd = pcdu.trans_pcd(pcd, gl_transmat4)
-    pcd_cropped = pcdu.trans_pcd(pcd_cropped, gl_transmat4)
-    nbv_pts = pcdu.trans_pcd(nbv_pts, gl_transmat4)
-    nbv_nrmls = pcdu.trans_pcd(nbv_nrmls, gl_transmat4)
+    pts_nbv = pcdu.trans_pcd(pts_nbv, gl_transmat4)
+    nrmls_nbv = pcdu.trans_pcd(nrmls_nbv, gl_transmat4)
     cam_pos = pcdu.trans_pcd([cam_pos], gl_transmat4)[0]
 
     if show_cam:
-        pcdu.show_cam(rm.homomat_from_posrot(cam_pos, rot=np.dot(rm.rotmat_from_axangle((0, 0, 1), np.pi / 2),
-                                                                 rm.rotmat_from_axangle((1, 0, 0), -np.pi / 3))))
+        pcdu.show_cam(rm.homomat_from_posrot(cam_pos, rot=config.CAM_ROT))
     if toggledebug:
-        pcdu.show_pcd(pcd, rgba=(1, 0, 0, 1))
-        for i in range(len(nbv_pts)):
-            p = np.asarray(nbv_pts[i])
-            n = np.asarray(nbv_nrmls[i])
+        for i in range(len(pts_nbv)):
+            p = np.asarray(pts_nbv[i])
+            n = np.asarray(nrmls_nbv[i])
             gm.gen_arrow(p, p + n * .05, thickness=.002,
-                         rgba=(nbv_confs[i], 0, 1 - nbv_confs[i], 1)).attach_to(base)
+                         rgba=(confs_nbv[i], 0, 1 - confs_nbv[i], 1)).attach_to(base)
             gm.gen_stick(cam_pos, p, rgba=(1, 1, 0, 1)).attach_to(base)
 
-    nbc_solver = nbcs.NBCOptimizer(rbt, max_a=np.pi / 18)
-    jnts, transmat4, _ = nbc_solver.solve(seedjntagls, nbv_pts, nbv_nrmls, cam_pos)
-    pcd_cropped_new = pcdu.trans_pcd(pcd_cropped, transmat4)
-    n_new = pcdu.trans_pcd([nbv_nrmls[0]], transmat4)[0]
-    p_new = pcdu.trans_pcd([nbv_pts[0]], transmat4)[0]
+    nbc_solver = nbcs.NBCOptimizer(rbt, max_a=max_a, max_dist=max_dist)
+    jnts, transmat4, _ = nbc_solver.solve(seedjntagls, pts_nbv, nrmls_nbv, cam_pos)
+    pcd_cropped_new = pcdu.trans_pcd(pcd, transmat4)
+    n_new = pcdu.trans_pcd([nrmls_nbv[0]], transmat4)[0]
+    p_new = pcdu.trans_pcd([pts_nbv[0]], transmat4)[0]
     pcdu.show_pcd(pcd_cropped_new, rgba=(0, 1, 0, 1))
     gm.gen_arrow(p_new, p_new + n_new * .05, rgba=(0, 1, 0, 1)).attach_to(base)
-    gm.gen_arrow(nbv_pts[0], nbv_pts[0] + nbv_nrmls[0] * .05, rgba=(1, 0, 0, 1)).attach_to(base)
+    gm.gen_arrow(pts_nbv[0], pts_nbv[0] + nrmls_nbv[0] * .05, rgba=(1, 0, 0, 1)).attach_to(base)
     gm.gen_stick(cam_pos, p_new, rgba=(0, 1, 1, 1)).attach_to(base)
 
-    return pcd_cropped, nbv_pts, nbv_nrmls, jnts
+    return pts_nbv, nrmls_nbv, jnts
+
+
+def cal_nbc_pcn(pcd, pcd_pcn, gripperframe, rbt, seedjntagls, gl_transmat4=np.eye(4),
+                theta=np.pi / 3, max_a=np.pi / 18, max_dist=1, toggledebug=False, show_cam=True):
+    cam_pos = np.linalg.inv(gripperframe)[:3, 3]
+
+    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd, pcd_pcn, theta=theta)
+    print(confs_nbv)
+    print('Num. of NBV:', len(pts_nbv))
+
+    pcd = pcdu.trans_pcd(pcd, gl_transmat4)
+    pts_nbv = pcdu.trans_pcd(pts_nbv, gl_transmat4)
+    nrmls_nbv = pcdu.trans_pcd(nrmls_nbv, gl_transmat4)
+    cam_pos = pcdu.trans_pcd([cam_pos], gl_transmat4)[0]
+
+    if show_cam:
+        pcdu.show_cam(rm.homomat_from_posrot(cam_pos, rot=config.CAM_ROT))
+    if toggledebug:
+        for i in range(len(pts_nbv)):
+            p = np.asarray(pts_nbv[i])
+            n = np.asarray(nrmls_nbv[i])
+            gm.gen_arrow(p, p + n * .05, thickness=.002,
+                         rgba=(confs_nbv[i], 0, 1 - confs_nbv[i], 1)).attach_to(base)
+            gm.gen_stick(cam_pos, p, rgba=(1, 1, 0, 1)).attach_to(base)
+
+    nbc_solver = nbcs.NBCOptimizer(rbt, max_a=max_a, max_dist=max_dist)
+    jnts, transmat4, _ = nbc_solver.solve(seedjntagls, pts_nbv, nrmls_nbv, cam_pos)
+    pcd_cropped_new = pcdu.trans_pcd(pcd, transmat4)
+    n_new = pcdu.trans_pcd([nrmls_nbv[0]], transmat4)[0]
+    p_new = pcdu.trans_pcd([pts_nbv[0]], transmat4)[0]
+    pcdu.show_pcd(pcd_cropped_new, rgba=(0, 1, 0, 1))
+    gm.gen_arrow(p_new, p_new + n_new * .05, rgba=(0, 1, 0, 1)).attach_to(base)
+    gm.gen_arrow(pts_nbv[0], pts_nbv[0] + nrmls_nbv[0] * .05, rgba=(1, 0, 0, 1)).attach_to(base)
+    gm.gen_stick(cam_pos, p_new, rgba=(0, 1, 1, 1)).attach_to(base)
+
+    return pts_nbv, nrmls_nbv, jnts
