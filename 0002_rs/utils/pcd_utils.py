@@ -679,6 +679,7 @@ def extract_lines_from_pcd(img, pcd, z_range, line_thresh=0.002, line_size_thres
         print(f'------------{len(pcd_crop)}------------')
         line = pyrsc.Line()
         line.fit(pcd_crop, thresh=line_thresh, maxIteration=1000)
+        print('Candidate line segment size:', len(line.inliers))
         if len(line.inliers) > line_size_thresh:
             lines.append([line.A, pcd_crop[line.inliers]])
             # gm.gen_sphere(line.B, rgba=(0, 0, 1, 1), radius=.002).attach_to(base)

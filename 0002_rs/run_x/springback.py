@@ -67,15 +67,14 @@ def uniform_bend_fb(s_angle, e_angle, interval, z_range, line_thresh=.002, line_
     textureimg, depthimg, pcd = phxi.dumpalldata(f_name=os.path.join('img/phoxi/springback', fo, f"init.pkl"))
     cv2.imshow("depthimg", depthimg)
     cv2.waitKey(0)
-    # textureimg = vu.enhance_grayimg(textureimg)
-    # pcd = rm.homomat_transform_points(affine_mat, np.asarray(pcd) / 1000)
-    # lines = pcdu.extract_lines_from_pcd(textureimg, pcd, z_range=z_range, line_thresh=line_thresh,
-    #                                     line_size_thresh=line_size_thresh, toggledebug=False)
+    textureimg = vu.enhance_grayimg(textureimg)
+    pcd = rm.homomat_transform_points(affine_mat, np.asarray(pcd) / 1000)
+    lines = pcdu.extract_lines_from_pcd(textureimg, pcd, z_range=z_range, line_thresh=line_thresh,
+                                        line_size_thresh=line_size_thresh, toggledebug=True)
     sb_list = []
     for a in range(s_angle, e_angle + 1, interval):
         print('=============================')
         print('bending angle:', a)
-        print('spring back:', sb_list)
         print('Avg. spring back:', np.mean(np.asarray(sb_list)))
 
         if a == 0:
@@ -87,23 +86,22 @@ def uniform_bend_fb(s_angle, e_angle, interval, z_range, line_thresh=.002, line_
 
         motor.rot_degree(clockwise=0, rot_deg=bend_angle)
         goal = _action(goal_angle=a + interval, fo=fo, f_name=f"{str(a)}_goal.pkl", rgba=(0, 1, 0, 1))
-        print('goal:', goal)
+        print('***************************************** goal:', goal)
 
         motor.rot_degree(clockwise=1, rot_deg=reverse_angle)
         res = _action(goal_angle=a + interval, fo=fo, f_name=f"{str(a)}_res.pkl", rgba=(1, 1, 0, 1))
-        print('result:', res)
-        if abs(goal - res) > 5:
-            sb_list.append(5)
+        print('***************************************** result:', res)
+        if abs(goal - res) > 10:
+            sb_list.append(np.mean(np.asarray(sb_list)))
         else:
             sb_list.append(abs(goal - res))
-
-        print('spring back:', sb_list)
+        print('***************************************** spring back:', sb_list)
 
         motor.rot_degree(clockwise=0, rot_deg=reverse_angle + np.mean(np.asarray(sb_list)))
         time.sleep(1)
         motor.rot_degree(clockwise=1, rot_deg=reverse_angle + np.mean(np.asarray(sb_list)))
         refined = _action(goal_angle=a + interval, fo=fo, f_name=f"{str(a)}_refine.pkl", rgba=(0, 0, 1, 1))
-        print('refined:', refined)
+        print('***************************************** refined:', refined)
 
 
 if __name__ == '__main__':
@@ -113,12 +111,12 @@ if __name__ == '__main__':
     phxi = phoxi.Phoxi(host=config.PHOXI_HOST)
     base = wd.World(cam_pos=[1.5, 1.5, 1.5], lookat_pos=[0, 0, 0])
 
-    fo = 'alu_refine'
+    fo = 'steel_refine'
     z_range = (.12, .15)
-    line_thresh = 0.004
-    line_size_thresh = 500
+    line_thresh = 0.0025
+    line_size_thresh = 250
 
-    # motor.rot_degree(clockwise=1, rot_deg=5)
+    # motor.rot_degree(clockwise=1, rot_deg=150)
     uniform_bend_fb(s_angle=0, e_angle=150, interval=15, fo=fo,
                     z_range=z_range, line_thresh=line_thresh, line_size_thresh=line_size_thresh)
     base.run()
