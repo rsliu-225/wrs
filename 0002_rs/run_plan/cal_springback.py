@@ -73,21 +73,24 @@ def hough_lines(img):
 
 def springback_from_img(fo, z_range, line_thresh=.002, line_size_thresh=300):
     sb_dict = {}
-    pcd_color = {'init': (1, 0, 0, 1), 'goal': (0, 1, 0, 1), 'res': (1, 1, 0, 1)}
-    kpts_color = {'init': (1, 0, 0, 1), 'goal': (0, 1, 0, 1), 'res': (1, 1, 0, 1)}
+    pcd_color = {'init': (1, 0, 0, 1), 'goal': (0, 1, 0, 1), 'res': (1, 1, 0, 1), 'refine': (0, 0, 1, 1)}
+    kpts_color = {'init': (1, 0, 0, 1), 'goal': (0, 1, 0, 1), 'res': (1, 1, 0, 1), 'refine': (0, 0, 1, 1)}
+    ext_str = '.pkl'
     for f in os.listdir(os.path.join(config.ROOT, 'img/phoxi', fo)):
         if f[-3:] != 'pkl':
             continue
         print(f'------------{f}------------')
-        if f.split('.pkl')[0] == 'init':
+        if f.split(ext_str)[0] == 'init':
             key = 'init'
             angle = 0
         else:
-            angle = f.split('.pkl')[0].split('_')[0]
-            if f.split('.pkl')[0].split('_')[1] == 'res':
+            angle = f.split(ext_str)[0].split('_')[0]
+            if f.split(ext_str)[0].split('_')[1] == 'res':
                 key = 'res'
-            else:
+            elif f.split(ext_str)[0].split('_')[1] == 'goal':
                 key = 'goal'
+            else:
+                key = 'refine'
         if angle not in sb_dict.keys():
             sb_dict[angle] = {}
         sb_dict[angle][key] = []
@@ -100,12 +103,18 @@ def springback_from_img(fo, z_range, line_thresh=.002, line_size_thresh=300):
         for slope, pts in lines:
             pcdu.show_pcd(pts, rgba=pcd_color[key])
             sb_dict[angle][key].append(slope)
-
         # gm.gen_stick(spos=line.B, epos=line.A + line.B, rgba=pcd_color[clr]).attach_to(base)
         # kpts = get_kpts_gmm(pcd_crop, rgba=kpts_color[clr])
 
     pickle.dump(sb_dict, open(f'./{fo.split("/")[1]}_springback.pkl', 'wb'))
     return sb_dict
+
+
+def _get_angle_from_vecs(v1, v2, limit):
+    angle = np.degrees(rm.angle_between_vectors(v1, v2))
+    if abs(angle - limit) > 30:
+        angle = abs(180 - angle)
+    return angle
 
 
 if __name__ == '__main__':
@@ -116,42 +125,39 @@ if __name__ == '__main__':
     base = wd.World(cam_pos=[1.5, 1.5, 1.5], lookat_pos=[0, 0, 0])
     rbt = el.loadYumi(showrbt=True)
 
-    fo = 'springback/steel'
+    fo = 'springback/alu_refine'
     z_range = (.12, .15)
-    line_thresh = 0.002
-    line_size_thresh = 300
-    sb_dict = springback_from_img(fo, z_range, line_thresh, line_size_thresh)
-    # sb_dict = pickle.load(open('./steel_springback.pkl', 'rb'))
+    line_thresh = 0.004
+    line_size_thresh = 500
+    # sb_dict = springback_from_img(fo, z_range, line_thresh, line_size_thresh)
+    sb_dict = pickle.load(open('./alu_refine_springback.pkl', 'rb'))
     # print(sb_dict)
     X = []
     sb_err = []
     bend_err = []
+    refined_err = []
     for k, v in sb_dict.items():
         if int(k) == 0:
             continue
-        res = np.degrees(rm.angle_between_vectors(sb_dict[k]['res'][0], sb_dict[k]['res'][1]))
-        goal = np.degrees(rm.angle_between_vectors(sb_dict[k]['goal'][0], sb_dict[k]['goal'][1]))
-        print(goal, res)
-        if abs(res - int(k)) > 30:
-            res = abs(180 - res)
-        if abs(goal - int(k)) > 30:
-            goal = abs(180 - goal)
+        res = _get_angle_from_vecs(sb_dict[k]['res'][0], sb_dict[k]['res'][1], int(k))
+        goal = _get_angle_from_vecs(sb_dict[k]['goal'][0], sb_dict[k]['goal'][1], int(k))
+        refine = _get_angle_from_vecs(sb_dict[k]['refine'][0], sb_dict[k]['refine'][1], int(k))
         print(int(k) + 15, goal, res)
         sb = goal - res
         bend = int(k) + 15 - goal
-        # if diff > 90:
-        #     diff = 180 - diff
 
         print('spring back:', sb)
         print('------------')
         sb_err.append(sb)
         bend_err.append(bend)
+        refined_err.append(refine-goal)
         X.append(int(k))
 
     sort_inx = np.argsort(X)
     X = [X[i] for i in sort_inx]
     sb_err = [sb_err[i] for i in sort_inx]
     bend_err = [bend_err[i] for i in sort_inx]
+    refined_err = [refined_err[i] for i in sort_inx]
 
     plt.grid()
     plt.xticks(X)
@@ -159,6 +165,9 @@ if __name__ == '__main__':
     plt.plot(X, [np.mean(sb_err)] * len(X), c='gold', linestyle='dashed')
     plt.plot(X, bend_err, c='limegreen')
     plt.plot(X, [np.mean(bend_err)] * len(X), c='limegreen', linestyle='dashed')
+
+    plt.plot(X, refined_err, c='b')
+    plt.plot(X, [np.mean(refined_err)] * len(X), c='b', linestyle='dashed')
 
     # plt.plot(X, np.asarray(bend_err) + np.asarray(sb_err))
     plt.show()
