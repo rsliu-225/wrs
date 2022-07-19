@@ -249,15 +249,24 @@ def get_objpcd_partial_sample(objcm, objmat4=np.eye(4), smp_num=100000, cam_pos=
 
 
 def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolusion=(1280, 720), ext_name='.pcd',
-                           occ_vt_ratio=1, noise_vt_ration=1, add_noise=False, add_occ=False, toggledebug=False):
+                           occ_vt_ratio=1, noise_vt_ration=1, add_noise=False, add_occ=False, toggledebug=False,
+                           savemesh=False, savedepthimg=False, savergbimg=False):
     if not os.path.exists(path):
         os.mkdir(path)
     if not os.path.exists(os.path.join(path, 'partial/')):
         os.mkdir(os.path.join(path, 'partial/'))
+    if savemesh:
+        if not os.path.exists(os.path.join(path, 'mesh/')):
+            os.mkdir(os.path.join(path, 'mesh/'))
+    if savedepthimg:
+        if not os.path.exists(os.path.join(path, 'depthimg/')):
+            os.mkdir(os.path.join(path, 'depthimg/'))
+    if savergbimg:
+        if not os.path.exists(os.path.join(path, 'rgbimg/')):
+            os.mkdir(os.path.join(path, 'rgbimg/'))
 
     vis = o3d.visualization.Visualizer()
     vis.create_window('win', width=resolusion[0], height=resolusion[1], left=0, top=0)
-    ctr = o3d.visualization.ViewControl()
     o3dmesh = o3d.geometry.TriangleMesh(vertices=o3d.utility.Vector3dVector(objcm.objtrm.vertices),
                                         triangles=o3d.utility.Vector3iVector(objcm.objtrm.faces))
     o3dmesh.compute_vertex_normals()
@@ -277,7 +286,83 @@ def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolus
         o3dpcd = add_guassian_noise_by_vt(o3dpcd, np.asarray(o3dmesh.vertices), np.asarray(o3dmesh.vertex_normals),
                                           noise_mean=1e-4, noise_sigma=1e-4, ratio=noise_vt_ration)
         o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}_partial{ext_name}'), o3dpcd)
-    # o3d.io.write_triangle_mesh(os.path.join(path, f_name + '.ply'), o3dmesh)
+    save_complete_pcd(f_name, o3dmesh, path=path)
+
+    if savemesh:
+        o3d.io.write_triangle_mesh(os.path.join(path, 'mesh', f_name + '.ply'), o3dmesh)
+    if savergbimg:
+        vis.capture_screen_image(os.path.join(path, f_name + '.jpg'), do_render=False)
+    if savedepthimg:
+        depthimg = np.asarray(vis.capture_depth_float_buffer()) * 1000
+        cv2.imwrite(os.path.join(path, f_name + '.jpg'), depthimg)
+
+    vis.destroy_window()
+
+    if toggledebug:
+        o3dpcd_org = o3d.io.read_point_cloud(os.path.join(path, f_name + f'_partial_org{ext_name}'))
+        o3dpcd = o3d.io.read_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'))
+        o3dpcd_org.paint_uniform_color([0, 0.706, 1])
+        o3dpcd.paint_uniform_color([0.706, 0, 1])
+        o3d.visualization.draw_geometries([o3dpcd, o3dpcd_org])
+    os.remove(os.path.join(path, f_name + f'_partial_org{ext_name}'))
+    return o3dpcd
+
+
+def get_objpcd_partial_o3d_vctrl(objcm, path='./', f_name='', resolusion=(1280, 720), ext_name='.pcd',
+                                 occ_vt_ratio=1, noise_vt_ration=1, add_noise=False, add_occ=False, toggledebug=False):
+    if not os.path.exists(path):
+        os.mkdir(path)
+    if not os.path.exists(os.path.join(path, 'partial/')):
+        os.mkdir(os.path.join(path, 'partial/'))
+    if not os.path.exists(os.path.join(path, 'mesh/')):
+        os.mkdir(os.path.join(path, 'mesh/'))
+
+    vis = o3d.visualization.Visualizer()
+    vis.create_window('win', width=resolusion[0], height=resolusion[1], left=0, top=0)
+    o3dmesh = o3d.geometry.TriangleMesh(vertices=o3d.utility.Vector3dVector(objcm.objtrm.vertices),
+                                        triangles=o3d.utility.Vector3iVector(objcm.objtrm.faces))
+    o3dmesh.compute_vertex_normals()
+
+    vis.add_geometry(o3dmesh)
+
+    ctr = o3d.visualization.ViewControl()
+    vis.get_render_option().load_from_json("./renderoption.json")
+
+    init_param = ctr.convert_to_pinhole_camera_parameters()
+    w, h = 4000, 3000
+    K = np.asarray([[0.744375, 0.0, 0.0],
+                    [0.0, 0.744375, 0.0],
+                    [0.4255, 0.2395, 1.0]])
+    fx = K[0, 0]
+    fy = K[1, 1]
+    cx = K[0, 2]
+    cy = K[1, 2]
+    init_param.intrinsic.width = w
+    init_param.intrinsic.height = h
+    init_param.intrinsic.set_intrinsics(init_param.intrinsic.width, init_param.intrinsic.height, fx, fy, cx, cy)
+    init_param.extrinsic = np.eye(4)
+    ctr.convert_from_pinhole_camera_parameters(init_param)
+    vis.poll_events()
+
+    ctr.rotate(10, 0)
+    image = vis.capture_screen_float_buffer()
+    cv2.imshow('', cv2.cvtColor(np.asarray(image), cv2.COLOR_BGR2RGB))
+    cv2.waitKey(0)
+
+    vis.capture_depth_point_cloud(os.path.join(path, f_name + f'_partial_org{ext_name}'), do_render=False,
+                                  convert_to_world_coordinate=True)
+    o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f_name + f'_partial_org{ext_name}'))
+    if add_occ:
+        o3dpcd = add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=(.3, .6))
+        o3dpcd = add_random_occ_by_vt(o3dpcd, np.asarray(o3dmesh.vertices),
+                                      edg_radius=1e-3, edg_sigma=3e-4, ratio=occ_vt_ratio)
+        o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}_partial{ext_name}'), o3dpcd)
+    if add_noise:
+        o3dpcd = add_guassian_noise_by_vt(o3dpcd, np.asarray(o3dmesh.vertices), np.asarray(o3dmesh.vertex_normals),
+                                          noise_mean=1e-4, noise_sigma=1e-4, ratio=noise_vt_ration)
+        o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}_partial{ext_name}'), o3dpcd)
+    o3d.io.write_triangle_mesh(os.path.join(path, 'mesh', f_name + '.ply'), o3dmesh)
+
     # vis.capture_screen_image(os.path.join(path, f_name + '.png'), do_render=False)
     save_complete_pcd(f_name, o3dmesh, path=path)
     vis.destroy_window()
@@ -288,7 +373,7 @@ def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolus
         o3dpcd_org.paint_uniform_color([0, 0.706, 1])
         o3dpcd.paint_uniform_color([0.706, 0, 1])
         # print(o3dpcd_org.get_center())
-        o3d.visualization.draw_geometries([o3dpcd])
+        o3d.visualization.draw_geometries([o3dpcd, o3dpcd_org])
     os.remove(os.path.join(path, f_name + f'_partial_org{ext_name}'))
     return o3dpcd
 
@@ -396,7 +481,8 @@ def add_guassian_noise_by_vt(o3dpcd, vts, nrmls, noise_mean=1e-4, noise_sigma=1e
     inx_seeds = random.choices(range(len(vts)), k=random.choice(range(int(len(vts) * ratio))))
     diff = np.zeros(pcd.shape)
     for inx in inx_seeds:
-        dists, indices = kdt.query(np.asarray([vts[inx]]), k=random.randint(100, min(len(pcd),500)), return_distance=True)
+        dists, indices = kdt.query(np.asarray([vts[inx]]), k=random.randint(100, min(len(pcd), 500)),
+                                   return_distance=True)
         if len(indices[0]) == 0:
             continue
         dist_inv = (1 / dists[0]) / np.linalg.norm((1 / dists[0]))
@@ -406,6 +492,20 @@ def add_guassian_noise_by_vt(o3dpcd, vts, nrmls, noise_mean=1e-4, noise_sigma=1e
     pcd = pcd + diff
 
     return o3dh.nparray2o3dpcd(pcd)
+
+
+'''
+view control
+'''
+
+
+def custom_draw_geometry_with_rotation(geo):
+    def rotate_view(vis):
+        ctr = vis.get_view_control()
+        ctr.rotate(10.0, 0.0)
+        return False
+
+    o3d.visualization.draw_geometries_with_animation_callback([geo], rotate_view)
 
 
 '''

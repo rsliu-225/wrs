@@ -21,8 +21,8 @@ import utils.pcd_utils as pcdu
 if __name__ == '__main__':
     base = wd.World(cam_pos=[2, 2, 2], lookat_pos=[0, 0, 0])
     # base = wd.World(cam_pos=[0, 0, 0], lookat_pos=[0, 0, 1])
-    fo = 'nbc_pcn/plate_a_cubic'
-    # fo = 'nbc/plate_a_cubic'
+    # fo = 'nbc_pcn/plate_a_cubic'
+    fo = 'nbc/plate_a_cubic'
     # fo = 'opti/plate_a_quadratic'
     # fo = 'seq/plate_a_quadratic'
 

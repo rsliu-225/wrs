@@ -58,7 +58,7 @@ def load_frame_seq_withf(fo=None, root_path=os.path.join(config.ROOT, 'img/phoxi
             depthimg_list.append(tmp[0])
             textureimg_list.append(tmp[1])
         if len(tmp) == 3:
-            pcd_list.append(np.asarray(tmp[2])/1000)
+            pcd_list.append(np.asarray(tmp[2]) / 1000)
     return [fname_list, depthimg_list, textureimg_list, pcd_list]
 
 
@@ -199,6 +199,8 @@ def reg_armarker(fo, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False,
     trans = np.eye(4)
     # gm.gen_frame(center, np.eye(3)).attach_to(base)
     for i in range(len(grayimg_list)):
+        cv2.imshow('', grayimg_list[i])
+        cv2.waitKey(0)
         pcd = np.asarray(pcd_list[i])
         inx, gripperframe, pcd, pcd_cropped, = \
             trans_by_armaker(grayimg_list[i], pcd, x_range=x_range, y_range=y_range, z_range=z_range,
@@ -332,7 +334,8 @@ def cal_nbc(pcd, gripperframe, rbt, seedjntagls, gl_transmat4=np.eye(4),
     cam_pos = np.linalg.inv(gripperframe)[:3, 3]
 
     pts, nrmls, confs = pcdu.cal_conf(pcd, voxel_size=.005, radius=.005, cam_pos=cam_pos, theta=theta)
-    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv(pts, nrmls, confs, cam_pos=np.linalg.inv(gripperframe)[:3, 3])
+    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv(pts, nrmls, confs, cam_pos=np.linalg.inv(gripperframe)[:3, 3],
+                                                 toggledebug=True)
     print('Num. of NBV:', len(pts_nbv))
 
     pcd = pcdu.trans_pcd(pcd, gl_transmat4)
@@ -384,6 +387,8 @@ def cal_nbc_pcn(pcd, pcd_pcn, gripperframe, rbt, seedjntagls, gl_transmat4=np.ey
             n = np.asarray(nrmls_nbv[i])
             gm.gen_arrow(p, p + n * .05, thickness=.002,
                          rgba=(confs_nbv[i], 0, 1 - confs_nbv[i], 1)).attach_to(base)
+            # gm.gen_arrow(p, p + n * .05, thickness=.002,
+            #              rgba=(0, 0, 1, 1)).attach_to(base)
             gm.gen_stick(cam_pos, p, rgba=(1, 1, 0, 1)).attach_to(base)
 
     nbc_solver = nbcs.NBCOptimizer(rbt, max_a=max_a, max_dist=max_dist)
@@ -392,8 +397,9 @@ def cal_nbc_pcn(pcd, pcd_pcn, gripperframe, rbt, seedjntagls, gl_transmat4=np.ey
     n_new = pcdu.trans_pcd([nrmls_nbv[0]], transmat4)[0]
     p_new = pcdu.trans_pcd([pts_nbv[0]], transmat4)[0]
     pcdu.show_pcd(pcd_cropped_new, rgba=(0, 1, 0, 1))
-    gm.gen_arrow(p_new, p_new + n_new * .05, rgba=(0, 1, 0, 1)).attach_to(base)
-    gm.gen_arrow(pts_nbv[0], pts_nbv[0] + nrmls_nbv[0] * .05, rgba=(1, 0, 0, 1)).attach_to(base)
-    gm.gen_stick(cam_pos, p_new, rgba=(0, 1, 1, 1)).attach_to(base)
+
+    # gm.gen_arrow(p_new, p_new + n_new * .05, rgba=(0, 1, 0, 1)).attach_to(base)
+    # gm.gen_arrow(pts_nbv[0], pts_nbv[0] + nrmls_nbv[0] * .05, rgba=(1, 0, 0, 1)).attach_to(base)
+    # gm.gen_stick(cam_pos, p_new, rgba=(0, 1, 1, 1)).attach_to(base)
 
     return pts_nbv, nrmls_nbv, jnts

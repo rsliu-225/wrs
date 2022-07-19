@@ -27,20 +27,7 @@ def align(pseq_tgt, pseq_src):
     return pseq_src
 
 
-if __name__ == '__main__':
-    goal_f_name = 'random_curve'
-    obj_type = 'avg'
-    # method = 'cmaes'
-    method = 'SLSQP'
-
-    '''
-    load files
-    '''
-    f_name = f'{goal_f_name}_{method}_{obj_type}_10.pkl'
-    opt_res_dict = pickle.load(open(f_name, 'rb'))
-    # goal_pseq = pickle.load(open(f'../goal/pseq/{f_name}.pkl', 'rb'))
-    # goal_rotseq = None
-
+def _load_result_dict(res_dict):
     init_max_err_list = []
     opt_max_err_list = []
     init_avg_err_list = []
@@ -50,14 +37,16 @@ if __name__ == '__main__':
     time_cost_list = []
 
     x = []
-    print(opt_res_dict.keys())
+    print(res_dict.keys())
 
     # for k, v in opt_res_dict.items():
     #     opt_res_dict[k]['init_res_kpts'] = np.asarray(v['init_res_kpts'])/1000
     #     opt_res_dict[k]['opt_res_kpts'] = np.asarray(v['opt_res_kpts'])/1000
     # pickle.dump(opt_res_dict, open(f'{f_name}', 'wb'))
 
-    for k, v in opt_res_dict.items():
+    for k, v in res_dict.items():
+        if k > 22:
+            continue
         x.append(int(k))
         goal_pseq = v['goal_pseq']
 
@@ -87,19 +76,18 @@ if __name__ == '__main__':
             opt_max_err_list.append(None)
             opt_sum_err_list.append(None)
             opt_avg_err_list.append(None)
-        # ax = plt.axes(projection='3d')
-        # center = np.mean(goal_pseq, axis=0)
-        # ax.set_xlim([center[0] - 50, center[0] + 50])
-        # ax.set_ylim([center[1] - 50, center[1] + 50])
-        # ax.set_zlim([center[2] - 50, center[2] + 50])
-        # ax.set_xlabel('X(mm)')
-        # ax.set_ylabel('Y(mm)')
-        # ax.set_zlabel('Z(mm)')
-        # bu.plot_pseq(ax, np.asarray(init_res_pseq) * 1000, c='r')
-        # if opt_res_pseq is not None:
-        #     bu.plot_pseq(ax, np.asarray(opt_res_pseq) * 1000, c='g')
-        # bu.plot_pseq(ax, np.asarray(goal_pseq) * 1000, c='black')
-        # plt.show()
+
+    return x, init_max_err_list, opt_max_err_list, init_avg_err_list, opt_avg_err_list, \
+           init_sum_err_list, opt_sum_err_list, time_cost_list
+
+
+def show_sgl_method(f_name):
+    opt_res_dict = pickle.load(open(f_name, 'rb'))
+    # goal_pseq = pickle.load(open(f'../goal/pseq/{f_name}.pkl', 'rb'))
+    # goal_rotseq = None
+
+    x, init_max_err_list, opt_max_err_list, init_avg_err_list, opt_avg_err_list, \
+    init_sum_err_list, opt_sum_err_list, time_cost_list = _load_result_dict(opt_res_dict)
 
     fig = plt.figure(figsize=(18, 5))
     plt.rcParams["font.family"] = "Times New Roman"
@@ -126,3 +114,59 @@ if __name__ == '__main__':
     ax3.set_ylabel('Time cost(s)')
 
     plt.show()
+
+
+def compare(f_name_1, f_name_2):
+    opt_res_dict_1 = pickle.load(open(f_name_1, 'rb'))
+    opt_res_dict_2 = pickle.load(open(f_name_2, 'rb'))
+    # goal_pseq = pickle.load(open(f'../goal/pseq/{f_name}.pkl', 'rb'))
+    # goal_rotseq = None
+    x, init_max_err_list_1, opt_max_err_list_1, init_avg_err_list_1, opt_avg_err_list_1, \
+    init_sum_err_list_1, opt_sum_err_list_1, time_cost_list_1 = _load_result_dict(opt_res_dict_1)
+    x, init_max_err_list_2, opt_max_err_list_2, init_avg_err_list_2, opt_avg_err_list_2, \
+    init_sum_err_list_2, opt_sum_err_list_2, time_cost_list_2 = _load_result_dict(opt_res_dict_2)
+
+    fig = plt.figure(figsize=(18, 5))
+    plt.rcParams["font.family"] = "Times New Roman"
+    plt.rcParams["font.size"] = 12
+
+    ax1 = fig.add_subplot(1, 3, 1)
+    ax1.grid()
+    ax1.plot(x, init_max_err_list_1, color='r')
+    ax1.plot(x, opt_max_err_list_1, color='g')
+    ax1.plot(x, opt_max_err_list_2, color='dodgerblue')
+    ax1.set_xlabel('Num. of key point')
+    ax1.set_ylabel('Max. point to point error(mm)')
+
+    ax2 = fig.add_subplot(1, 3, 2)
+    ax2.grid()
+    ax2.plot(x, init_avg_err_list_1, color='r')
+    ax2.plot(x, opt_avg_err_list_1, color='g')
+    ax2.plot(x, opt_avg_err_list_2, color='dodgerblue')
+    ax2.set_xlabel('Num. of key point')
+    ax2.set_ylabel('Avg. point to point error(mm)')
+
+    ax3 = fig.add_subplot(1, 3, 3)
+    ax3.grid()
+    ax3.plot(x, time_cost_list_1, color='g')
+    ax3.plot(x, time_cost_list_2, color='dodgerblue')
+    ax3.set_xlabel('Num. of key point')
+    ax3.set_ylabel('Time cost(s)')
+
+    plt.show()
+
+
+if __name__ == '__main__':
+    goal_f_name = 'randomc'
+    obj_type = 'max'
+    method = 'cmaes'
+    # method = 'SLSQP'
+
+    '''
+    load files
+    '''
+    # f_name = f'{goal_f_name}_{method}_{obj_type}.pkl'
+    # f_name = f'{goal_f_name}_{method}_{obj_type}_10.pkl'
+    # show_sgl_method(f_name)
+
+    compare(f'{goal_f_name}_{method}_max.pkl', f'{goal_f_name}_{method}_avg.pkl')

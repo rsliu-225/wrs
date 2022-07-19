@@ -79,6 +79,8 @@ def springback_from_img(fo, z_range, line_thresh=.002, line_size_thresh=300):
     for f in os.listdir(os.path.join(config.ROOT, 'img/phoxi', fo)):
         if f[-3:] != 'pkl':
             continue
+        if f[0] != '0':
+            continue
         print(f'------------{f}------------')
         if f.split(ext_str)[0] == 'init':
             key = 'init'
@@ -97,14 +99,16 @@ def springback_from_img(fo, z_range, line_thresh=.002, line_size_thresh=300):
 
         textureimg, _, pcd = pickle.load(open(os.path.join(config.ROOT, 'img/phoxi', fo, f), 'rb'))
         pcd = rm.homomat_transform_points(affine_mat, np.asarray(pcd) / 1000)
+        pcdu.show_pcd(pcd, rgba=(1, 1, 1, .1))
         img = vu.enhance_grayimg(textureimg)
         lines = pcdu.extract_lines_from_pcd(img, pcd, z_range=z_range, line_thresh=line_thresh,
-                                            line_size_thresh=line_size_thresh)
+                                            line_size_thresh=line_size_thresh, toggledebug=True)
         for slope, pts in lines:
             pcdu.show_pcd(pts, rgba=pcd_color[key])
             sb_dict[angle][key].append(slope)
         # gm.gen_stick(spos=line.B, epos=line.A + line.B, rgba=pcd_color[clr]).attach_to(base)
         # kpts = get_kpts_gmm(pcd_crop, rgba=kpts_color[clr])
+    base.run()
 
     pickle.dump(sb_dict, open(f'./{fo.split("/")[1]}_springback.pkl', 'wb'))
     return sb_dict
@@ -112,7 +116,7 @@ def springback_from_img(fo, z_range, line_thresh=.002, line_size_thresh=300):
 
 def _get_angle_from_vecs(v1, v2, limit):
     angle = np.degrees(rm.angle_between_vectors(v1, v2))
-    if abs(angle - limit) > 30:
+    if abs(angle - limit) > 20:
         angle = abs(180 - angle)
     return angle
 
@@ -129,8 +133,8 @@ if __name__ == '__main__':
     z_range = (.12, .15)
     line_thresh = 0.004
     line_size_thresh = 500
-    # sb_dict = springback_from_img(fo, z_range, line_thresh, line_size_thresh)
-    sb_dict = pickle.load(open('./alu_refine_springback.pkl', 'rb'))
+    sb_dict = springback_from_img(fo, z_range, line_thresh, line_size_thresh)
+    # sb_dict = pickle.load(open(f'./{fo.split("/")[1]}_springback.pkl', 'rb'))
     # print(sb_dict)
     X = []
     sb_err = []
@@ -139,18 +143,23 @@ if __name__ == '__main__':
     for k, v in sb_dict.items():
         if int(k) == 0:
             continue
-        res = _get_angle_from_vecs(sb_dict[k]['res'][0], sb_dict[k]['res'][1], int(k))
-        goal = _get_angle_from_vecs(sb_dict[k]['goal'][0], sb_dict[k]['goal'][1], int(k))
-        refine = _get_angle_from_vecs(sb_dict[k]['refine'][0], sb_dict[k]['refine'][1], int(k))
-        print(int(k) + 15, goal, res)
-        sb = goal - res
-        bend = int(k) + 15 - goal
+        gt = int(k) + 15
+        res = _get_angle_from_vecs(sb_dict[k]['res'][0], sb_dict[k]['res'][1], gt)
+        goal = _get_angle_from_vecs(sb_dict[k]['goal'][0], sb_dict[k]['goal'][1], gt)
+        refine = _get_angle_from_vecs(sb_dict[k]['refine'][0], sb_dict[k]['refine'][1], gt)
+        print(f'------------{int(k) + 15}------------')
+        sb = gt - res
+        if sb < 0:
+            res = 180 - res
+            sb = gt - res
+        bend = gt - goal
 
+        print('goal, result, refined', goal, res, refine)
         print('spring back:', sb)
-        print('------------')
+
         sb_err.append(sb)
         bend_err.append(bend)
-        refined_err.append(refine-goal)
+        refined_err.append(gt - refine)
         X.append(int(k))
 
     sort_inx = np.argsort(X)
@@ -163,8 +172,8 @@ if __name__ == '__main__':
     plt.xticks(X)
     plt.plot(X, sb_err, c='gold')
     plt.plot(X, [np.mean(sb_err)] * len(X), c='gold', linestyle='dashed')
-    plt.plot(X, bend_err, c='limegreen')
-    plt.plot(X, [np.mean(bend_err)] * len(X), c='limegreen', linestyle='dashed')
+    plt.plot(X, bend_err, c='g')
+    plt.plot(X, [np.mean(bend_err)] * len(X), c='g', linestyle='dashed')
 
     plt.plot(X, refined_err, c='b')
     plt.plot(X, [np.mean(refined_err)] * len(X), c='b', linestyle='dashed')

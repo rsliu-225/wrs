@@ -29,15 +29,15 @@ if __name__ == '__main__':
     '''
     tor = None
     obj_type = 'avg'
-    method = 'SLSQP'
-    # method = 'cmaes'
+    # method = 'SLSQP'
+    method = 'cmaes'
 
-    n_trials = 1000
-    n_startup_trials = 1
+    n_trials = 2000
+    n_startup_trials = 10
     sigma0 = None
     cnt = None
 
-    f_name = f'{goal_f_name}_{method}_{obj_type}_10.pkl'
+    f_name = f'{goal_f_name}_{method}_{obj_type}.pkl'
 
     '''
     opt
@@ -61,7 +61,7 @@ if __name__ == '__main__':
                                   bend_times=1,
                                   obj_type=obj_type)
 
-    for i in range(18, 31):
+    for i in range(5, 31):
         if method == 'cmaes':
             res_bendseq, cost, time_cost = opt.solve(tor=tor, cnt=i,
                                                      n_trials=n_trials, sigma0=sigma0,

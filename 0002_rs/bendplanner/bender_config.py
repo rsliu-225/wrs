@@ -1,7 +1,7 @@
 import numpy as np
 
 R_SIDE = .015 / 2
-R_CENTER = .01 / 2
+R_CENTER = .02 / 2
 R_BASE = .015 / 2
 C2C_DIST = .0245
 PILLAR_H = .02

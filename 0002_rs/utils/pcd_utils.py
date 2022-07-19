@@ -660,6 +660,8 @@ def extract_lines_from_pcd(img, pcd, z_range, line_thresh=0.002, line_size_thres
     lines = []
 
     if toggledebug:
+        cv2.imshow('', img)
+        cv2.waitKey(0)
         pcd_pix = pcd.reshape(img.shape[0], img.shape[1], 3)
         mask_1 = np.where(pcd_pix[:, :, 2] < z_range[1], 255, 0).reshape((img.shape[0], img.shape[1], 1)).astype(
             np.uint8)
@@ -790,12 +792,12 @@ def cal_nbv(pts, nrmls, confs, cam_pos=np.asarray([0, 0, 0]), toggledebug=False)
             print(k, v, confs[k])
             p = np.asarray(pts[k])
             n = np.asarray(nrmls[k])
-            gm.gen_arrow(p, p + n * .05, thickness=.002, rgba=(confs[k], 0, 1 - confs[k], 1)).attach_to(base)
+            gm.gen_arrow(p, p + n * .03, thickness=.002, rgba=(confs[k], 0, 1 - confs[k], 1)).attach_to(base)
             for i in v:
                 p = np.asarray(pts[i])
                 n = np.asarray(nrmls[i])
-                gm.gen_arrow(p, p + n * .05, thickness=.002, rgba=(confs[k], 0, 1 - confs[k], .1)).attach_to(base)
-                gm.gen_stick(cam_pos, p, rgba=(1, 1, 0, .2)).attach_to(base)
+                gm.gen_arrow(p, p + n * .03, thickness=.002, rgba=(confs[k], 0, 1 - confs[k], .1)).attach_to(base)
+                # gm.gen_stick(cam_pos, p, rgba=(1, 1, 0, .2)).attach_to(base)
 
     nbv_inx_list = list(nbv_inx_dict.keys())
     return np.asarray(pts)[nbv_inx_list], np.asarray(nrmls)[nbv_inx_list], np.asarray(confs)[nbv_inx_list]
@@ -837,10 +839,12 @@ def cal_nbv_pcn(pts, pts_pcn, theta=np.pi / 6, toggledebug=False):
     pts_nbv, nrmls_nbv, confs_nbv = extract_main_vec(pts_pcn, nrmls_pcn, confs_pcn_res)
     if toggledebug:
         for i in range(len(confs_nbv)):
-            # if confs_nbv[i] > .5:
-            gm.gen_sphere(pts_nbv[i], radius=.001, rgba=(confs_pcn_res[i], 0, 1 - confs_pcn_res[i], 1)).attach_to(base)
-            gm.gen_arrow(pts_nbv[i], pts_nbv[i] + nrmls_nbv[i] * .05,
-                         rgba=(confs_pcn_res[i], 0, 1 - confs_pcn_res[i], 1), thickness=.002).attach_to(base)
+            if confs_nbv[i] > .3:
+                gm.gen_sphere(pts_nbv[i], radius=.001, rgba=(confs_pcn_res[i], 0, 1 - confs_pcn_res[i], 1)).attach_to(base)
+                gm.gen_arrow(pts_nbv[i], pts_nbv[i] + nrmls_nbv[i] * .03,
+                             rgba=(confs_pcn_res[i], 0, 1 - confs_pcn_res[i], 1), thickness=.002).attach_to(base)
+            # gm.gen_arrow(pts_nbv[i], pts_nbv[i] + nrmls_nbv[i] * .05,
+            #              rgba=(0, 0, 1, 1), thickness=.002).attach_to(base)
 
     return pts_nbv, nrmls_nbv, confs_nbv
 

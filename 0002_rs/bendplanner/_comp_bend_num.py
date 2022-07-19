@@ -18,25 +18,20 @@ import config
 import bendplanner.BendSim as b_sim
 import pickle
 
-if __name__ == '__main__':
 
-    base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
-    gm.gen_frame(thickness=.0005, alpha=.1, length=.01).attach_to(base)
-    bs = b_sim.BendSim(show=True, granularity=np.pi / 90, cm_type='stick')
-    goal_pseq = pickle.load(open('goal/pseq/randomc.pkl', 'rb'))
-    goal_rotseq = None
-
-    init_pseq = [(0, 0, 0), (0, .05 + bu.cal_length(goal_pseq), 0)]
-    init_rotseq = [np.eye(3), np.eye(3)]
+def get_fit_err(goal_pseq, goal_rotseq, r, bend_num_range):
     fit_max_err_list = []
     bend_max_err_list = []
     fit_avg_err_list = []
     bend_avg_err_list = []
-    for i in range(5, 50):
+    bs.set_r_center(r)
+
+    for i in range(bend_num_range[0], bend_num_range[1]):
         bs.reset(init_pseq, init_rotseq)
         fit_pseq, fit_rotseq = bu.decimate_pseq_by_cnt(goal_pseq, cnt=i, toggledebug=False)
         init_rot = bu.get_init_rot(fit_pseq)
         init_bendset = bu.pseq2bendset(fit_pseq, toggledebug=False)
+
         bs.gen_by_bendseq(init_bendset, cc=False)
         goal_pseq_trans, goal_rotseq = bu.align_with_init(bs, goal_pseq, init_rot, goal_rotseq)
         bs.show(rgba=(0, 1, 0, 1))
@@ -50,27 +45,40 @@ if __name__ == '__main__':
         bend_avg_err, _ = bu.mindist_err(bs.pseq[1:], goal_pseq_trans, toggledebug=False, type='avg')
         fit_avg_err_list.append(fit_avg_err)
         bend_avg_err_list.append(bend_avg_err)
+    return fit_max_err_list, bend_max_err_list, fit_avg_err_list, bend_avg_err_list
 
-    x = np.linspace(5, 50, len(fit_max_err_list))
+
+if __name__ == '__main__':
+    base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
+    gm.gen_frame(thickness=.0005, alpha=.1, length=.01).attach_to(base)
+    bs = b_sim.BendSim(show=True, granularity=np.pi / 90, cm_type='stick')
+    goal_pseq = pickle.load(open('goal/pseq/randomc.pkl', 'rb'))
+    goal_rotseq = None
+
+    init_pseq = [(0, 0, 0), (0, .05 + bu.cal_length(goal_pseq), 0)]
+    init_rotseq = [np.eye(3), np.eye(3)]
+
+    bend_num_range = (5, 100)
+    r = .002 / 2
+    fit_max_err_list, bend_max_err_list, fit_avg_err_list, bend_avg_err_list = \
+        get_fit_err(goal_pseq, goal_rotseq, r, bend_num_range)
+
+    x = range(bend_num_range[0], bend_num_range[1])
 
     fig = plt.figure(figsize=(12, 5))
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams["font.size"] = 12
     ax1 = fig.add_subplot(1, 2, 1)
     ax1.grid()
-    # plt.scatter(x, fit_err_list, color='r')
-    ax1.plot(x, fit_max_err_list, color='r', linestyle="dashed")
-    # plt.scatter(x, bend_err_list, color='g')
-    ax1.plot(x, bend_max_err_list, color='r')
+    ax1.plot(x, fit_max_err_list, color='orange', linestyle="dashed")
+    ax1.plot(x, bend_max_err_list, color='orange')
     ax1.set_xlabel('Num. of key point')
     ax1.set_ylabel('Max. point to point error(mm)')
 
     ax2 = fig.add_subplot(1, 2, 2)
     ax2.grid()
-    # plt.scatter(x, fit_err_list, color='r')
-    ax2.plot(x, fit_avg_err_list, color='r', linestyle="dashed")
-    # plt.scatter(x, bend_err_list, color='g')
-    ax2.plot(x, bend_avg_err_list, color='r')
+    ax2.plot(x, fit_avg_err_list, color='orange', linestyle="dashed")
+    ax2.plot(x, bend_avg_err_list, color='orange')
     ax2.set_xlabel('Num. of key point')
     ax2.set_ylabel('Avg. point to point error(mm)')
 

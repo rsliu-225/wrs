@@ -112,6 +112,11 @@ class BendSim(object):
             self.rotseq.append(np.eye(3))
         self.update_cm()
 
+    def set_r_center(self, r):
+        self.r_center = r
+        self.bend_r = self.r_center + self.thickness / 2
+        self.slot_w = self.c2c_dist * np.cos(self.punch_pillar_init / 2) - self.r_center - self.r_side - .001
+
     def set_stick_sec(self, stick_sec):
         self.stick_sec = stick_sec
 

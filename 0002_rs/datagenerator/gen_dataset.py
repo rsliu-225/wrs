@@ -30,14 +30,12 @@ if __name__ == '__main__':
     cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
 
     pseq = utl.cubic_inp(pseq=np.asarray([[0, 0, 0], [.018, .03, .02], [.06, .06, 0], [.12, 0, 0]]))
-    # pseq = gen_sgl_curve(pseq=np.asarray([[0, 0, 0], [.018, .03, 0], [.06, .06, 0], [.12, 0, 0]]))
     pseq = utl.uni_length(pseq, goal_len=.2)
     rotseq = utl.get_rotseq_by_pseq(pseq)
 
     objcm = utl.gen_swap(pseq, rotseq, cross_sec)
-    objcm.set_rgba((1, 1, 0, 1))
-    objcm.attach_to(base)
-
+    # objcm.set_rgba((1, 1, 0, 1))
+    # objcm.attach_to(base)
     # base.run()
 
     '''
@@ -49,16 +47,24 @@ if __name__ == '__main__':
     homomat4_dict = dict()
     homomat4_dict[str(obj_id)] = {}
 
-    icomats = rm.gen_icorotmats(rotation_interval=np.radians(90))
-    for i, mats in enumerate(icomats):
-        for j, rot in enumerate(mats):
-            utl.get_objpcd_partial_o3d(objcm, rot, rot_center, path=path,
-                                       f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
-                                       occ_vt_ratio=random.uniform(.5, 1), noise_vt_ration=random.uniform(.5, 1),
-                                       add_noise=True, add_occ=True, toggledebug=True)
-            homomat4_dict[str(obj_id)][str(cnt).zfill(3)] = rm.homomat_from_posrot(rot_center, rot)
-            cnt += 1
-            pickle.dump(homomat4_dict, open(f'{path}/homomat4_dict.pkl', 'wb'))
+    # icomats = rm.gen_icorotmats(rotation_interval=np.radians(90))
+    # for i, mats in enumerate(icomats):
+    #     for j, rot in enumerate(mats):
+    #         utl.get_objpcd_partial_o3d(objcm, rot, rot_center, path=path,
+    #                                    f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
+    #                                    occ_vt_ratio=random.uniform(.5, 1), noise_vt_ration=random.uniform(.5, 1),
+    #                                    add_noise=True, add_occ=True, toggledebug=True)
+    #         homomat4_dict[str(obj_id)][str(cnt).zfill(3)] = rm.homomat_from_posrot(rot_center, rot)
+    #         cnt += 1
+    #         pickle.dump(homomat4_dict, open(f'{path}/homomat4_dict.pkl', 'wb'))
+    # cammat4_seq = []
+    # for i, mats in enumerate(icomats):
+    #     for j, rot in enumerate(mats):
+    #         cammat4_seq.append(rm.homomat_from_posrot())
+    utl.get_objpcd_partial_o3d_vctrl(objcm, path=path,
+                                     f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
+                                     occ_vt_ratio=random.uniform(.5, 1), noise_vt_ration=random.uniform(.5, 1),
+                                     add_noise=True, add_occ=True, toggledebug=True)
 
     # '''
     # show data
