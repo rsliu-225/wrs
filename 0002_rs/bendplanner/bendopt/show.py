@@ -45,7 +45,7 @@ def _load_result_dict(res_dict):
     # pickle.dump(opt_res_dict, open(f'{f_name}', 'wb'))
 
     for k, v in res_dict.items():
-        if k > 22:
+        if k > 18:
             continue
         x.append(int(k))
         goal_pseq = v['goal_pseq']
@@ -159,8 +159,8 @@ def compare(f_name_1, f_name_2):
 if __name__ == '__main__':
     goal_f_name = 'randomc'
     obj_type = 'max'
-    method = 'cmaes'
-    # method = 'SLSQP'
+    # method = 'cmaes'
+    method = 'SLSQP'
 
     '''
     load files
@@ -169,4 +169,4 @@ if __name__ == '__main__':
     # f_name = f'{goal_f_name}_{method}_{obj_type}_10.pkl'
     # show_sgl_method(f_name)
 
-    compare(f'{goal_f_name}_{method}_max.pkl', f'{goal_f_name}_{method}_avg.pkl')
+    compare(f'{goal_f_name}_{method}_max_10.pkl', f'{goal_f_name}_{method}_avg_10.pkl')

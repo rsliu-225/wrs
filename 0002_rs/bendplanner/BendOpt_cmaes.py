@@ -28,21 +28,21 @@ class BendOptimizer(object):
         self.init_l = bconfig.INIT_L
         self.init_rot = np.eye(3)
 
-        # self.ba_b = (-math.pi / 2, math.pi / 2)
-        # self.ra_b = (-math.pi / 2, math.pi / 2)
-        # self.la_b = (-math.pi / 3, math.pi / 3)
-        # self.l_b = (0, self.total_len + self.bs.bend_r * math.pi)
+        # self._ba_b = (-math.pi / 2, math.pi / 2)
+        # self._ra_b = (-math.pi / 2, math.pi / 2)
+        # self._la_b = (-math.pi / 3, math.pi / 3)
+        # self._l_b = (0, self.total_len + self.bs.bend_r * math.pi)
 
-        self.ba_relb = (-math.pi / 9, math.pi / 9)
-        # self.la_relb = (-math.pi / 1e8, math.pi / 1e8)
-        self.la_relb = None
-        self.ra_relb = (-math.pi / 9, math.pi / 9)
-        self.l_relb = (-.02, .02)
+        self._ba_relb = (-math.pi / 9, math.pi / 9)
+        # self._la_relb = (-math.pi / 1e8, math.pi / 1e8)
+        self._la_relb = None
+        self._ra_relb = (-math.pi / 9, math.pi / 9)
+        self._l_relb = (-.02, .02)
         self.init_bendset = None
 
         self.cost_list = []
         self._param_name = ['theta', 'beta', 'alpha', 'l']
-        self._relbnds = [self.ba_relb, self.la_relb, self.ra_relb, self.l_relb]
+        self._relbnds = [self._ba_relb, self._la_relb, self._ra_relb, self._l_relb]
 
     def bend_x(self, x):
         x = self._zfill_x(x)

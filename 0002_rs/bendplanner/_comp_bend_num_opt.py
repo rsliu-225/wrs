@@ -11,6 +11,63 @@ import bendplanner.BendSim as b_sim
 import modeling.geometric_model as gm
 import visualization.panda.world as wd
 
+from multiprocessing import Process
+
+
+def run_parallel(fn, args):
+    proc = []
+    for arg in args:
+        p = Process(target=fn, args=arg)
+        p.start()
+        proc.append(p)
+    for p in proc:
+        p.join()
+
+
+def opt_process(i, bs, opt, tor=None, obj_type='avg', method='SLSQP', n_trials=2000, n_startup_trials=10, sigma0=None):
+    if method == 'cmaes':
+        res_bendseq, cost, time_cost = opt.solve(tor=tor, cnt=i,
+                                                 n_trials=n_trials, sigma0=sigma0,
+                                                 n_startup_trials=n_startup_trials)
+    else:
+        res_bendseq, cost, time_cost = opt.solve(tor=tor, cnt=i,
+                                                 method=method)
+    bs.reset(opt.init_pseq, opt.init_rotseq, extend=False)
+    bs.gen_by_bendseq(opt.init_bendset, cc=False)
+    goal_pseq_aligned, goal_rotseq_aligned = bu.align_with_init(bs, opt.goal_pseq, opt.init_rot, opt.goal_rotseq)
+    # bs.show(rgba=(1, 0, 0, 1))
+    init_res_pseq = bs.pseq[1:]
+    init_err, init_res_kpts = bu.mindist_err(init_res_pseq, goal_pseq_aligned, type=obj_type, toggledebug=False)
+    print('org error:', init_err)
+
+    if cost is not None:
+        bs.reset(opt.init_pseq, opt.init_rotseq, extend=False)
+        bs.gen_by_bendseq(res_bendseq, cc=False)
+        _, _ = bu.align_with_init(bs, opt.goal_pseq, opt.init_rot, opt.goal_rotseq)
+        # bs.show(rgba=(0, 1, 0, 1))
+        opt_res_pseq = bs.pseq[1:]
+        opt_err, opt_res_kpts = bu.mindist_err(opt_res_pseq, goal_pseq_aligned, type=obj_type, toggledebug=False)
+        print('opt err', opt_err)
+    else:
+        opt_res_kpts = None
+        opt_res_pseq = None
+        opt_err = None
+    dump_dict[i] = {
+        'goal_pseq': goal_pseq_aligned,
+        'init_bendset': opt.init_bendset,
+        'init_err': init_err,
+        'init_res_pseq': init_res_pseq,
+        'init_res_kpts': init_res_kpts,
+        'opt_bendset': res_bendseq,
+        'opt_err': opt_err,
+        'opt_res_pseq': opt_res_pseq,
+        'opt_res_kpts': opt_res_kpts,
+        'opt_time_cost': time_cost
+    }
+    pickle.dump(dump_dict, open(f'bendopt/{f_name}', 'wb'))
+    return init_err, opt_err
+
+
 if __name__ == '__main__':
 
     base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
@@ -29,15 +86,15 @@ if __name__ == '__main__':
     '''
     tor = None
     obj_type = 'avg'
-    # method = 'SLSQP'
-    method = 'cmaes'
+    method = 'SLSQP'
+    # method = 'cmaes'
 
     n_trials = 2000
     n_startup_trials = 10
     sigma0 = None
-    cnt = None
 
-    f_name = f'{goal_f_name}_{method}_{obj_type}.pkl'
+    f_name = f'{goal_f_name}_{method}_{obj_type}_10.pkl'
+    bs.set_r_center(.01 / 2)
 
     '''
     opt
@@ -61,55 +118,10 @@ if __name__ == '__main__':
                                   bend_times=1,
                                   obj_type=obj_type)
 
-    for i in range(5, 31):
-        if method == 'cmaes':
-            res_bendseq, cost, time_cost = opt.solve(tor=tor, cnt=i,
-                                                     n_trials=n_trials, sigma0=sigma0,
-                                                     n_startup_trials=n_startup_trials)
-        else:
-            res_bendseq, cost, time_cost = opt.solve(tor=tor, cnt=i,
-                                                     method=method)
-        bs.reset(init_pseq, init_rotseq, extend=False)
-        bs.gen_by_bendseq(opt.init_bendset, cc=False)
-        goal_pseq_aligned, goal_rotseq_aligned = bu.align_with_init(bs, goal_pseq, opt.init_rot, goal_rotseq)
-        # bs.show(rgba=(1, 0, 0, 1))
-        init_res_pseq = bs.pseq[1:]
-        init_err, init_res_kpts = bu.mindist_err(init_res_pseq, goal_pseq_aligned, type=obj_type, toggledebug=False)
-        print('org error:', init_err)
-        org_err_list.append(init_err)
+    for i in range(19, 31):
+        init_err, opt_err = opt_process(i, bs, opt, tor=tor, obj_type=obj_type, method=method,
+                                        n_trials=n_trials, n_startup_trials=n_startup_trials, sigma0=sigma0)
 
-        if cost is not None:
-            bs.reset(init_pseq, init_rotseq, extend=False)
-            bs.gen_by_bendseq(res_bendseq, cc=False)
-            _, _ = bu.align_with_init(bs, goal_pseq, opt.init_rot, goal_rotseq)
-            # bs.show(rgba=(0, 1, 0, 1))
-            opt_res_pseq = bs.pseq[1:]
-            opt_err, opt_res_kpts = bu.mindist_err(opt_res_pseq, goal_pseq_aligned, type=obj_type, toggledebug=False)
-            print('opt err', opt_err)
-        else:
-            opt_res_kpts = None
-            opt_res_pseq = None
-            opt_err = None
-        opt_err_list.append(init_err)
-        dump_dict[i] = {
-            'goal_pseq': goal_pseq_aligned,
-            'init_bendset': opt.init_bendset,
-            'init_err': init_err,
-            'init_res_pseq': init_res_pseq,
-            'init_res_kpts': init_res_kpts,
-            'opt_bendset': res_bendseq,
-            'opt_err': opt_err,
-            'opt_res_pseq': opt_res_pseq,
-            'opt_res_kpts': opt_res_kpts,
-            'opt_time_cost': time_cost
-        }
-        pickle.dump(dump_dict, open(f'bendopt/{f_name}', 'wb'))
+    # run_parallel(opt_process, [[19, bs, opt, tor, obj_type, method, n_trials, n_startup_trials, sigma0]])
+    # run_parallel(opt_process, [[20, bs, opt, tor, obj_type, method, n_trials, n_startup_trials, sigma0]])
 
-    x = np.linspace(5, 10, len(org_err_list))
-    fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1)
-    ax.grid()
-    ax.plot(x, org_err_list, color='r')
-    ax.plot(x, opt_err_list, color='g')
-
-    plt.show()

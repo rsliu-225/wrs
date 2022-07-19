@@ -5,6 +5,7 @@ import time
 
 import matplotlib.pyplot as plt
 import numpy as np
+import scipy.optimize
 from direct.stdpy import threading
 from scipy.optimize import minimize
 
@@ -64,7 +65,7 @@ class BendOptimizer(object):
         except:
             err = 1
             fitness = .1
-        if len(self.cost_list) % 100 == 0:
+        if len(self.cost_list) % 10 == 0:
             print('cost:', err / fitness)
         return err
 
@@ -81,7 +82,7 @@ class BendOptimizer(object):
                                         type=self.obj_type, toggledebug=False)
         except:
             err = 100
-        if len(self.cost_list) % 100 == 0:
+        if len(self.cost_list) % 10 == 0:
             print('cost:', err)
         self.cost_list.append(err)
 
@@ -204,8 +205,9 @@ class BendOptimizer(object):
 
         # self._thread_plot.start()
         sol = minimize(self.objective, init, method=method, bounds=self.bnds, constraints=self.cons,
-                       options={'maxiter': 100, 'ftol': 1e-05, 'iprint': 1, 'disp': False,
+                       options={'maxiter': 100, 'ftol': 1e-04, 'iprint': 1, 'disp': True,
                                 'eps': 1.4901161193847656e-08, 'finite_diff_rel_step': None})
+
         time_cost = time.time() - time_start
         print("time cost", time_cost, sol.success)
         # self._thread_plot.join()
@@ -224,6 +226,8 @@ class BendOptimizer(object):
             self.bs.reset(self.init_pseq, self.init_rotseq, extend=False)
             return sol_x.reshape(self.bend_times, 4), sol.fun, time_cost
         else:
+            sol_x = self._zfill_x(sol.x)
+            print(sol_x)
             return None, None, time_cost
 
     def _plot(self):
