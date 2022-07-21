@@ -10,6 +10,7 @@ import config
 import localenv.envloader as el
 import utils.pcd_utils as pcdu
 import utils.vision_utils as vu
+from sklearn import linear_model
 
 affine_mat = np.asarray([[0.00282079054, -1.00400178, -0.000574846621, 0.31255359],
                          [-0.98272743, -0.00797055, 0.19795055, -0.15903892],
@@ -121,32 +122,62 @@ def _get_angle_from_vecs(v1, v2, limit):
     return angle
 
 
-if __name__ == '__main__':
-    import visualization.panda.world as wd
-    import modeling.geometric_model as gm
-    import basis.robot_math as rm
+def show_data(input_dict):
+    X = []
+    sb_err = []
+    bend_err = []
+    for k, v in input_dict.items():
+        if int(k) == 0:
+            continue
+        gt = int(k) + 15
+        res = _get_angle_from_vecs(input_dict[k]['res'][0], input_dict[k]['res'][1], gt)
+        goal = _get_angle_from_vecs(input_dict[k]['goal'][0], input_dict[k]['goal'][1], gt)
+        print(f'------------{int(k) + 15}------------')
+        sb = gt - res
+        if sb < 0:
+            res = 180 - res
+            sb = gt - res
+        bend = gt - goal
 
-    base = wd.World(cam_pos=[1.5, 1.5, 1.5], lookat_pos=[0, 0, 0])
-    rbt = el.loadYumi(showrbt=True)
+        print('goal, result', goal, res)
+        print('spring back:', sb)
 
-    fo = 'springback/alu_refine'
-    z_range = (.12, .15)
-    line_thresh = 0.004
-    line_size_thresh = 500
-    sb_dict = springback_from_img(fo, z_range, line_thresh, line_size_thresh)
-    # sb_dict = pickle.load(open(f'./{fo.split("/")[1]}_springback.pkl', 'rb'))
-    # print(sb_dict)
+        sb_err.append(sb)
+        bend_err.append(bend)
+        X.append(int(k))
+
+    sort_inx = np.argsort(X)
+    X = [X[i] for i in sort_inx]
+    sb_err = [sb_err[i] for i in sort_inx]
+    bend_err = [bend_err[i] for i in sort_inx]
+
+    plt.grid()
+    plt.xticks(X)
+    plt.plot(X, sb_err, c='gold')
+
+    plt.plot(X, [np.mean(sb_err)] * len(X), c='gold', linestyle='dashed')
+    plt.plot(X, bend_err, c='g')
+    plt.plot(X, [np.mean(bend_err)] * len(X), c='g', linestyle='dashed')
+
+    next = lasso_pre(X[:2], sb_err[:2], 45)
+    print(next)
+
+    # plt.plot(X, np.asarray(bend_err) + np.asarray(sb_err))
+    plt.show()
+
+
+def show_data_w_refine(input_dict):
     X = []
     sb_err = []
     bend_err = []
     refined_err = []
-    for k, v in sb_dict.items():
+    for k, v in input_dict.items():
         if int(k) == 0:
             continue
         gt = int(k) + 15
-        res = _get_angle_from_vecs(sb_dict[k]['res'][0], sb_dict[k]['res'][1], gt)
-        goal = _get_angle_from_vecs(sb_dict[k]['goal'][0], sb_dict[k]['goal'][1], gt)
-        refine = _get_angle_from_vecs(sb_dict[k]['refine'][0], sb_dict[k]['refine'][1], gt)
+        res = _get_angle_from_vecs(input_dict[k]['res'][0], input_dict[k]['res'][1], gt)
+        goal = _get_angle_from_vecs(input_dict[k]['goal'][0], input_dict[k]['goal'][1], gt)
+        refine = _get_angle_from_vecs(input_dict[k]['refine'][0], input_dict[k]['refine'][1], gt)
         print(f'------------{int(k) + 15}------------')
         sb = gt - res
         if sb < 0:
@@ -171,6 +202,7 @@ if __name__ == '__main__':
     plt.grid()
     plt.xticks(X)
     plt.plot(X, sb_err, c='gold')
+
     plt.plot(X, [np.mean(sb_err)] * len(X), c='gold', linestyle='dashed')
     plt.plot(X, bend_err, c='g')
     plt.plot(X, [np.mean(bend_err)] * len(X), c='g', linestyle='dashed')
@@ -178,6 +210,40 @@ if __name__ == '__main__':
     plt.plot(X, refined_err, c='b')
     plt.plot(X, [np.mean(refined_err)] * len(X), c='b', linestyle='dashed')
 
+    next = lasso_pre(X[:2], sb_err[:2], 45)
+    print(next)
+
     # plt.plot(X, np.asarray(bend_err) + np.asarray(sb_err))
     plt.show()
+
+
+def lasso_pre(X, y, x_pre):
+    model = linear_model.Lasso(alpha=10)
+    model.fit([[x] for x in X], y)
+    print(model.coef_, model.intercept_)
+    y_pre = model.predict([[x] for x in X])
+    plt.plot(X, y_pre, c='r')
+    return model.predict([[x_pre]])
+
+
+if __name__ == '__main__':
+    import visualization.panda.world as wd
+    import modeling.geometric_model as gm
+    import basis.robot_math as rm
+
+    base = wd.World(cam_pos=[1.5, 1.5, 1.5], lookat_pos=[0, 0, 0])
+    rbt = el.loadYumi(showrbt=True)
+
+    fo = 'springback/alu'
+    z_range = (.12, .15)
+    line_thresh = 0.004
+    line_size_thresh = 500
+    # sb_dict = springback_from_img(fo, z_range, line_thresh, line_size_thresh)
+    sb_dict = pickle.load(open(f'./{fo.split("/")[1]}_springback.pkl', 'rb'))
+    print(sb_dict['0'].keys())
+    if 'refine' in sb_dict['0'].keys():
+        show_data_w_refine(sb_dict)
+    else:
+        show_data(sb_dict)
+
     base.run()

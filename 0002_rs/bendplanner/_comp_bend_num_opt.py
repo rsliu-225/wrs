@@ -94,7 +94,6 @@ if __name__ == '__main__':
     sigma0 = None
 
     f_name = f'{goal_f_name}_{method}_{obj_type}_10.pkl'
-    bs.set_r_center(.01 / 2)
 
     '''
     opt
@@ -118,7 +117,7 @@ if __name__ == '__main__':
                                   bend_times=1,
                                   obj_type=obj_type)
 
-    for i in range(19, 31):
+    for i in range(27, 31):
         init_err, opt_err = opt_process(i, bs, opt, tor=tor, obj_type=obj_type, method=method,
                                         n_trials=n_trials, n_startup_trials=n_startup_trials, sigma0=sigma0)
 

@@ -149,7 +149,7 @@ def get_center_frame(corners, id, img, pcd, colors=None, show_frame=False):
 
 
 def trans_by_armaker(img, pcd, x_range=(.05, .215), y_range=(-.4, .4), z_range=(-.2, -.0155), tgt_id=None,
-                     show_frame=True):
+                     show_frame=False):
     parameters = aruco.DetectorParameters_create()
     aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_250)
     corners, ids, rejectedImgPoints = aruco.detectMarkers(img, aruco_dict, parameters=parameters)
@@ -197,7 +197,8 @@ def reg_armarker(fo, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False,
     pcd_cropped_list = []
     inx_list = []
     trans = np.eye(4)
-    # gm.gen_frame(center, np.eye(3)).attach_to(base)
+    if toggledebug:
+        gm.gen_frame(center, np.eye(3)).attach_to(base)
     for i in range(len(grayimg_list)):
         cv2.imshow('', grayimg_list[i])
         cv2.waitKey(0)
@@ -224,18 +225,19 @@ def reg_armarker(fo, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False,
         print(len(pcd_cropped_list[i - 1]))
         if icp:
             _, _, trans_tmp = o3dh.registration_ptpt(pcd_cropped_list[i], pcd_cropped_list[i - 1],
-                                                     downsampling_voxelsize=.005, toggledebug=False)
+                                                     downsampling_voxelsize=.001, toggledebug=False)
             trans = trans_tmp.dot(trans)
+            pcd_cropped_list[i] = pcdu.trans_pcd(pcd_cropped_list[i], trans)
         #     pcdu.show_pcd(pcdu.trans_pcd(pcd_cropped_list[i], trans), rgba=colors[inx_list[i] - 1])
         # else:
         #     pcdu.show_pcd(pcd_cropped_list[i - 1], rgba=colors[inx_list[i] - 1])
-    if toggledebug:
-        o3dpcd_list = []
-        for i in range(len(pcd_cropped_list)):
-            o3dpcd = o3dh.nparray2o3dpcd(np.asarray(pcd_cropped_list[i]))
-            o3dpcd_list.append(o3dpcd)
-            o3dpcd.paint_uniform_color(list(colors[inx_list[i] - 1][:3]))
-        o3d.visualization.draw_geometries(o3dpcd_list)
+    # if toggledebug:
+    #     o3dpcd_list = []
+    #     for i in range(len(pcd_cropped_list)):
+    #         o3dpcd = o3dh.nparray2o3dpcd(np.asarray(pcd_cropped_list[i]))
+    #         o3dpcd_list.append(o3dpcd)
+    #         o3dpcd.paint_uniform_color(list(colors[inx_list[i] - 1][:3]))
+    #     o3d.visualization.draw_geometries(o3dpcd_list)
     return pcd_cropped_list
 
 
