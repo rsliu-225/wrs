@@ -45,8 +45,6 @@ def _load_result_dict(res_dict):
     # pickle.dump(opt_res_dict, open(f'{f_name}', 'wb'))
 
     for k, v in res_dict.items():
-        if k > 18:
-            continue
         x.append(int(k))
         goal_pseq = v['goal_pseq']
 
@@ -166,7 +164,7 @@ if __name__ == '__main__':
     load files
     '''
     # f_name = f'{goal_f_name}_{method}_{obj_type}.pkl'
-    # f_name = f'{goal_f_name}_{method}_{obj_type}_10.pkl'
-    # show_sgl_method(f_name)
+    f_name = f'{goal_f_name}_{method}_{obj_type}_10.pkl'
+    show_sgl_method(f_name)
 
     compare(f'{goal_f_name}_{method}_max_10.pkl', f'{goal_f_name}_{method}_avg_10.pkl')

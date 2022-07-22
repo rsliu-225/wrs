@@ -59,27 +59,39 @@ def get_img_rbt(img_num, path='', jnt_range=(-np.pi, np.pi)):
         # cv2.waitKey(0)
 
 
-def get_img_rbt_opti(img_num, path='', jnt_range=(-np.pi, np.pi)):
+def get_img_rbt_opti(img_num, path='', jnt_range=(-np.pi, np.pi), capture_times=10):
     if not os.path.exists(os.path.join(config.ROOT, 'img', path)):
         os.mkdir(os.path.join(config.ROOT, 'img', path))
     phxi = phoxi.Phoxi(host=config.PHOXI_HOST)
     rbtx = xarmx.XArmShuidiX(ip='10.2.0.201')
     rbtx.arm_jaw_to(0)
+    nokov_server = nc.NokovClient(server_ip='10.1.1.198')
     i = 0
-    server = nc.NokovClient(server_ip='10.1.1.198')
-
     for a in np.linspace(jnt_range[0], jnt_range[1], img_num):
         jnts = rbtx.arm_get_jnt_values()
         jnts_new = copy.deepcopy(jnts)
         jnts_new[6] = a
         rbtx.arm_move_jspace_path([jnts, jnts_new])
         time.sleep(1)
-        opti_data = server.get_rigidbody_set_frame()
-        print(opti_data.rigidbody_set_dict)
-        print(opti_data.rigidbody_set_dict[1].qx)
+        # opti_data = nokov_server.get_rigidbody_set_frame()
+        # print(opti_data.rigidbody_set_dict)
+        # print(opti_data.rigidbody_set_dict[1].qx)
+
+        candidate = []
+        while len(candidate) < capture_times:
+            opti_data = nokov_server.get_marker_set_frame()
+            if opti_data:
+                for v in opti_data.marker_set_dict.values():
+                    if len(v) != 4:
+                        continue
+                    candidate.append(v)
+        opti_data = np.mean(np.asarray(candidate), axis=0)
+        print(opti_data)
 
         grayimg, _, _ = phxi.dumpalldata(f_name=os.path.join('img', path, f'{str(i).zfill(3)}.pkl'))
         pickle.dump(opti_data, open(os.path.join(config.ROOT, 'img', path, f'{str(i).zfill(3)}_opti.pkl'), 'wb'))
+        pickle.dump(rbtx.arm_get_jnt_values(),
+                    open(os.path.join(config.ROOT, 'img', path, f'{str(i).zfill(3)}_armjnts.pkl'), 'wb'))
 
         i += 1
         # cv2.imshow('grayimg', grayimg)
@@ -87,7 +99,7 @@ def get_img_rbt_opti(img_num, path='', jnt_range=(-np.pi, np.pi)):
 
 
 if __name__ == '__main__':
-    folder_name = 'plate_a_quadratic'
+    folder_name = 'plate_a_cubic'
     img_num = 30
     # get_img_rbt(img_num, path=f'phoxi/seq/{folder_name}/')
     get_img_rbt_opti(img_num, path=f'phoxi/opti/{folder_name}/', jnt_range=(-np.pi, 0))

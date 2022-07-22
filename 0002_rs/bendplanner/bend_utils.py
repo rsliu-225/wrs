@@ -270,7 +270,7 @@ def avg_polylines_dist_err(pts1, pts2, toggledebug=False):
 
 
 def mindist_err(res_pts, goal_pts, res_rs=None, goal_rs=None, toggledebug=False, type='max'):
-    res_pts, goal_pts = np.asarray(res_pts)*1000, np.asarray(goal_pts)*1000
+    res_pts, goal_pts = np.asarray(res_pts) * 1000, np.asarray(goal_pts) * 1000
     nearest_pts = []
     nearest_rs = []
     pos_err_list = []
@@ -323,7 +323,7 @@ def mindist_err(res_pts, goal_pts, res_rs=None, goal_rs=None, toggledebug=False,
     else:
         err = np.asarray(pos_err_list).mean()
 
-    return err, np.asarray(nearest_pts)/1000
+    return err, np.asarray(nearest_pts) / 1000
 
 
 def mindist_err_sfc(res_pts, goal_pts, toggledebug=False):
@@ -465,13 +465,18 @@ def decimate_rotpseq(pseq, rotseq, tor=.001, toggledebug=False):
 
 def get_rotseq_by_pseq(pseq):
     rotseq = []
+    pre_n = None
     for i in range(1, len(pseq) - 1):
         v1 = pseq[i - 1] - pseq[i]
         v2 = pseq[i] - pseq[i + 1]
         n = np.cross(rm.unit_vector(v1), rm.unit_vector(v2))
+        if pre_n is not None:
+            if rm.angle_between_vectors(n, pre_n) > np.pi / 2:
+                n = -n
         x = np.cross(v1, n)
         rot = np.asarray([rm.unit_vector(x), rm.unit_vector(v1), rm.unit_vector(n)]).T
         rotseq.append(rot)
+        pre_n = n
     rotseq = [rotseq[0]] + rotseq + [rotseq[-1]]
     return rotseq
 

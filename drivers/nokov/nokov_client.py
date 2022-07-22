@@ -322,6 +322,10 @@ if __name__ == "__main__":
     # 160,
     server = NokovClient(server_ip='10.1.1.198')
     while True:
-        data = server.get_rigidbody_set_frame()
-        if data is not None:
-            print(data)
+        # data = server.get_rigidbody_set_frame()
+        data = server.get_marker_set_frame()
+        if data:
+            print(data.marker_set_dict)
+            for v in data.marker_set_dict.values():
+                print(v)
+

@@ -860,7 +860,7 @@ def show_pcd_withrgb(pcd, rgbas, show_percentage=1):
     if len(rgbas[0]) == 3:
         rgbas = np.hstack((np.asarray(rgbas),
                            np.repeat(1, [len(rgbas)]).reshape((len(rgbas), 1))))
-    gm.gen_pointcloud(np.asarray(pcd), rgbas=list(rgbas), pntsize=2).attach_to(base)
+    gm.gen_pointcloud(np.asarray(pcd), rgbas=list(rgbas), pntsize=50).attach_to(base)
 
 
 def show_pcdseq(pcdseq, rgba=(1, 1, 1, 1), time_sleep=.1):
