@@ -44,7 +44,7 @@ if __name__ == '__main__':
     init_rotseq = [np.eye(3), np.eye(3)]
 
     fit_pseq, fit_rotseq = bu.decimate_rotpseq(goal_pseq, goal_rotseq, tor=.0002, toggledebug=False)
-    bendset = bu.rotpseq2bendset(fit_pseq, fit_rotseq, toggledebug=True)
+    bendset = bu.rotpseq2bendset(fit_pseq, fit_rotseq, bend_r=bs.bend_r, init_l=bs.init_l, toggledebug=True)
     init_rot = fit_rotseq[0]
 
     bs.reset(init_pseq, init_rotseq, extend=True)

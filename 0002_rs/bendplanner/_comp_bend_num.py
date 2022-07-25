@@ -19,18 +19,17 @@ import bendplanner.BendSim as b_sim
 import pickle
 
 
-def get_fit_err(goal_pseq, goal_rotseq, r, bend_num_range):
+def get_fit_err(bs, goal_pseq, goal_rotseq, bend_num_range):
     fit_max_err_list = []
     bend_max_err_list = []
     fit_avg_err_list = []
     bend_avg_err_list = []
-    bs.set_r_center(r)
 
     for i in range(bend_num_range[0], bend_num_range[1]):
         bs.reset(init_pseq, init_rotseq)
         fit_pseq, fit_rotseq = bu.decimate_pseq_by_cnt(goal_pseq, cnt=i, toggledebug=False)
         init_rot = bu.get_init_rot(fit_pseq)
-        init_bendset = bu.pseq2bendset(fit_pseq, toggledebug=False)
+        init_bendset = bu.pseq2bendset(fit_pseq, bend_r=bs.bend_r, toggledebug=False)
 
         bs.gen_by_bendseq(init_bendset, cc=False)
         goal_pseq_trans, goal_rotseq = bu.align_with_init(bs, goal_pseq, init_rot, goal_rotseq)
@@ -58,10 +57,12 @@ if __name__ == '__main__':
     init_pseq = [(0, 0, 0), (0, .05 + bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
 
-    bend_num_range = (5, 100)
-    r = .002 / 2
+    bend_num_range = (5, 10)
+
+    r = .01 / 2
+    bs.set_r_center(r)
     fit_max_err_list, bend_max_err_list, fit_avg_err_list, bend_avg_err_list = \
-        get_fit_err(goal_pseq, goal_rotseq, r, bend_num_range)
+        get_fit_err(bs, goal_pseq, goal_rotseq, bend_num_range)
 
     x = range(bend_num_range[0], bend_num_range[1])
 
@@ -70,15 +71,15 @@ if __name__ == '__main__':
     plt.rcParams["font.size"] = 12
     ax1 = fig.add_subplot(1, 2, 1)
     ax1.grid()
-    ax1.plot(x, fit_max_err_list, color='orange', linestyle="dashed")
-    ax1.plot(x, bend_max_err_list, color='orange')
+    ax1.plot(x, fit_max_err_list, color='darkorange', linestyle="dashed")
+    ax1.plot(x, bend_max_err_list, color='darkorange')
     ax1.set_xlabel('Num. of key point')
     ax1.set_ylabel('Max. point to point error(mm)')
 
     ax2 = fig.add_subplot(1, 2, 2)
     ax2.grid()
-    ax2.plot(x, fit_avg_err_list, color='orange', linestyle="dashed")
-    ax2.plot(x, bend_avg_err_list, color='orange')
+    ax2.plot(x, fit_avg_err_list, color='darkorange', linestyle="dashed")
+    ax2.plot(x, bend_avg_err_list, color='darkorange')
     ax2.set_xlabel('Num. of key point')
     ax2.set_ylabel('Avg. point to point error(mm)')
 

@@ -31,6 +31,7 @@ class BendSim(object):
         self.r_center = bconfig.R_CENTER
         self.r_base = bconfig.R_BASE
         self.c2c_dist = bconfig.C2C_DIST
+        self.init_l = bconfig.INIT_L
 
         # bending meterial prop
         self.thickness = bconfig.THICKNESS
@@ -116,6 +117,7 @@ class BendSim(object):
         self.r_center = r
         self.bend_r = self.r_center + self.thickness / 2
         self.slot_w = self.c2c_dist * np.cos(self.punch_pillar_init / 2) - self.r_center - self.r_side - .001
+        self.init_l = self.bend_r * np.pi
 
     def set_stick_sec(self, stick_sec):
         self.stick_sec = stick_sec

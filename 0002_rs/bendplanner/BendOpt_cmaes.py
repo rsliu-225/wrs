@@ -15,7 +15,6 @@ import visualization.panda.world as wd
 
 class BendOptimizer(object):
     def __init__(self, bs, init_pseq, init_rotseq, goal_pseq, goal_rotseq, bend_times=1, obj_type='max'):
-        self.bs = bs
         self.bend_times = bend_times
         self.goal_pseq = goal_pseq
         self.goal_rotseq = goal_rotseq
@@ -23,11 +22,12 @@ class BendOptimizer(object):
         self.init_rotseq = copy.deepcopy(init_rotseq)
         self.obj_type = obj_type
 
-        self.bs.reset(self.init_pseq, self.init_rotseq, extend=False)
-        self.total_len = bu.cal_length(goal_pseq)
-        self.init_l = bconfig.INIT_L
-        self.init_rot = np.eye(3)
+        self._bs = bs
+        self._bs.reset(self.init_pseq, self.init_rotseq, extend=False)
 
+        self.total_len = bu.cal_length(goal_pseq)
+        self.init_l = self._bs.init_l
+        self.init_rot = np.eye(3)
         # self._ba_b = (-math.pi / 2, math.pi / 2)
         # self._ra_b = (-math.pi / 2, math.pi / 2)
         # self._la_b = (-math.pi / 3, math.pi / 3)
@@ -46,13 +46,13 @@ class BendOptimizer(object):
 
     def bend_x(self, x):
         x = self._zfill_x(x)
-        self.bs.gen_by_bendseq(x.reshape(self.bend_times, 4), cc=False)
-        return self.bs.pseq
+        self._bs.gen_by_bendseq(x.reshape(self.bend_times, 4), cc=False)
+        return self._bs.pseq
 
     def fit_init(self, goal_pseq, goal_rotseq, tor=.001, cnt=None):
         if goal_rotseq is not None:
             fit_pseq, fit_rotseq = bu.decimate_rotpseq(goal_pseq, goal_rotseq, tor=tor, toggledebug=False)
-            self.init_bendset = bu.rotpseq2bendset(fit_pseq, fit_rotseq, toggledebug=False)
+            self.init_bendset = bu.rotpseq2bendset(fit_pseq, fit_rotseq, bend_r=self._bs.r_bend, toggledebug=False)
         else:
             if tor is not None:
                 fit_pseq, fit_rotseq = bu.decimate_pseq(goal_pseq, tor=tor, toggledebug=False)
@@ -71,15 +71,15 @@ class BendOptimizer(object):
                     param = trial.suggest_uniform(f"{self._param_name[j]}{str(i)}",
                                                   b[j] + self._relbnds[j][0], b[j] + self._relbnds[j][1])
                     x.append(param)
-        self.bs.reset(self.init_pseq, self.init_rotseq, extend=False)
+        self._bs.reset(self.init_pseq, self.init_rotseq, extend=False)
         try:
             self.bend_x(x)
-            goal_pseq, goal_rotseq = bu.align_with_init(self.bs, self.goal_pseq, self.init_rot, self.goal_rotseq)
+            goal_pseq, goal_rotseq = bu.align_with_init(self._bs, self.goal_pseq, self.init_rot, self.goal_rotseq)
             # err, _ = bu.avg_polylines_dist_err(np.asarray(res_pseq), np.asarray(goal_pseq), toggledebug=False)
             if goal_rotseq is None:
-                err, _ = bu.mindist_err(self.bs.pseq[1:], goal_pseq, type=self.obj_type, toggledebug=False)
+                err, _ = bu.mindist_err(self._bs.pseq[1:], goal_pseq, type=self.obj_type, toggledebug=False)
             else:
-                err, _ = bu.mindist_err(self.bs.pseq[1:], goal_pseq, self.bs.rotseq[1:], goal_rotseq,
+                err, _ = bu.mindist_err(self._bs.pseq[1:], goal_pseq, self._bs.rotseq[1:], goal_rotseq,
                                         type=self.obj_type, toggledebug=False)
         except:
             err = 100

@@ -20,7 +20,6 @@ import visualization.panda.world as wd
 
 class BendOptimizer(object):
     def __init__(self, bs, init_pseq, init_rotseq, goal_pseq, goal_rotseq, bend_times=1, obj_type='max'):
-        self.bs = bs
         self.bend_times = bend_times
         self.goal_pseq = goal_pseq
         self.goal_rotseq = goal_rotseq
@@ -28,9 +27,10 @@ class BendOptimizer(object):
         self.init_rotseq = copy.deepcopy(init_rotseq)
         self.obj_type = obj_type
 
-        self.bs.reset(self.init_pseq, self.init_rotseq, extend=False)
+        self._bs = bs
+        self._bs.reset(self.init_pseq, self.init_rotseq, extend=False)
         self.total_len = bu.cal_length(goal_pseq)
-        self.init_l = bconfig.INIT_L
+        self.init_l = self._bs.init_l
         self.init_rot = np.eye(3)
         # self.result = None
         self.cons = []
@@ -38,7 +38,7 @@ class BendOptimizer(object):
         self.ba_b = (-math.pi / 2, math.pi / 2)
         self.ra_b = (-math.pi / 2, math.pi / 2)
         self.la_b = (-math.pi / 3, math.pi / 3)
-        self.l_b = (0, self.total_len + self.bs.bend_r * math.pi)
+        self.l_b = (0, self.total_len + self._bs.bend_r * math.pi)
 
         self.ba_relb = (-math.pi / 9, math.pi / 9)
         # self.la_relb = (-math.pi / 1e8, math.pi / 1e8)
@@ -55,7 +55,7 @@ class BendOptimizer(object):
         self._thread_plot = threading.Thread(target=self._plot, name="plot")
 
     def objective_icp(self, x):
-        self.bs.reset(self.init_pseq, self.init_rotseq)
+        self._bs.reset(self.init_pseq, self.init_rotseq)
         try:
             self.bend_x(x)
             goal_pseq, res_pseq = bu.align_with_init(bs, self.goal_pseq, self.init_rot)
@@ -70,15 +70,15 @@ class BendOptimizer(object):
         return err
 
     def objective(self, x):
-        self.bs.reset(self.init_pseq, self.init_rotseq, extend=False)
+        self._bs.reset(self.init_pseq, self.init_rotseq, extend=False)
         try:
             self.bend_x(x)
-            goal_pseq, goal_rotseq = bu.align_with_init(self.bs, self.goal_pseq, self.init_rot, self.goal_rotseq)
+            goal_pseq, goal_rotseq = bu.align_with_init(self._bs, self.goal_pseq, self.init_rot, self.goal_rotseq)
             # err, _ = bu.avg_polylines_dist_err(np.asarray(res_pseq), np.asarray(goal_pseq), toggledebug=False)
             if goal_rotseq is None:
-                err, _ = bu.mindist_err(self.bs.pseq[1:], goal_pseq, type=self.obj_type, toggledebug=False)
+                err, _ = bu.mindist_err(self._bs.pseq[1:], goal_pseq, type=self.obj_type, toggledebug=False)
             else:
-                err, _ = bu.mindist_err(self.bs.pseq[1:], goal_pseq, self.bs.rotseq[1:], goal_rotseq,
+                err, _ = bu.mindist_err(self._bs.pseq[1:], goal_pseq, self._bs.rotseq[1:], goal_rotseq,
                                         type=self.obj_type, toggledebug=False)
         except:
             err = 100
@@ -98,8 +98,8 @@ class BendOptimizer(object):
 
     def bend_x(self, x):
         x = self._zfill_x(x)
-        self.bs.gen_by_bendseq(x.reshape(self.bend_times, 4), cc=False)
-        return self.bs.pseq
+        self._bs.gen_by_bendseq(x.reshape(self.bend_times, 4), cc=False)
+        return self._bs.pseq
 
     def update_known(self):
         return NotImplemented
@@ -107,7 +107,7 @@ class BendOptimizer(object):
     def con_end(self, x):
         last_end = 0
         for i in range(int(len(x) / 2)):
-            tmp_end = x[2 * i + 1] + x[2 * i] * (self.bs.r_center + self.bs.thickness)
+            tmp_end = x[2 * i + 1] + x[2 * i] * (self._bs.r_center + self._bs.thickness)
             if tmp_end > last_end:
                 last_end = tmp_end
         # print('------constrain------')
@@ -124,7 +124,7 @@ class BendOptimizer(object):
         # print(pos_list)
         # print(sorted_poslist)
         # print(min_dist - self.bs.bend_r)
-        return min_dist - self.bs.bend_r
+        return min_dist - self._bs.bend_r
 
     def addconstraint_sort(self, i):
         self.cons.append({'type': 'ineq', 'fun': lambda x: x[4 * i + 5] - x[4 * i + 1]})
@@ -160,7 +160,7 @@ class BendOptimizer(object):
     def fit_init(self, goal_pseq, goal_rotseq, tor=None, cnt=None):
         if goal_rotseq is not None:
             fit_pseq, fit_rotseq = bu.decimate_rotpseq(goal_pseq, goal_rotseq, tor=tor, toggledebug=False)
-            self.init_bendset = bu.rotpseq2bendset(fit_pseq, fit_rotseq, toggledebug=False)
+            self.init_bendset = bu.rotpseq2bendset(fit_pseq, fit_rotseq, bend_r=self._bs.bend_r, toggledebug=False)
         else:
             if tor is not None:
                 fit_pseq, fit_rotseq = bu.decimate_pseq(goal_pseq, tor=tor, toggledebug=False)
@@ -205,7 +205,7 @@ class BendOptimizer(object):
 
         # self._thread_plot.start()
         sol = minimize(self.objective, init, method=method, bounds=self.bnds, constraints=self.cons,
-                       options={'maxiter': 100, 'ftol': 1e-04, 'iprint': 1, 'disp': True,
+                       options={'maxiter': 100, 'ftol': 5e-05, 'iprint': 1, 'disp': True,
                                 'eps': 1.4901161193847656e-08, 'finite_diff_rel_step': None})
 
         time_cost = time.time() - time_start
@@ -223,7 +223,7 @@ class BendOptimizer(object):
             sol_x = self._zfill_x(sol.x)
             init = self._zfill_x(init)
             # self._plot_param(sol_x, init)
-            self.bs.reset(self.init_pseq, self.init_rotseq, extend=False)
+            self._bs.reset(self.init_pseq, self.init_rotseq, extend=False)
             return sol_x.reshape(self.bend_times, 4), sol.fun, time_cost
         else:
             sol_x = self._zfill_x(sol.x)

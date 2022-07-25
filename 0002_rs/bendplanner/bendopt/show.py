@@ -75,6 +75,16 @@ def _load_result_dict(res_dict):
             opt_sum_err_list.append(None)
             opt_avg_err_list.append(None)
 
+    index_list = np.argsort(x)
+    x = np.asarray(x)[index_list]
+    init_max_err_list = np.asarray(init_max_err_list)[index_list]
+    opt_max_err_list = np.asarray(opt_max_err_list)[index_list]
+    init_avg_err_list = np.asarray(init_avg_err_list)[index_list]
+    opt_avg_err_list = np.asarray(opt_avg_err_list)[index_list]
+    init_sum_err_list = np.asarray(init_sum_err_list)[index_list]
+    opt_sum_err_list = np.asarray(opt_sum_err_list)[index_list]
+    time_cost_list = np.asarray(time_cost_list)[index_list]
+
     return x, init_max_err_list, opt_max_err_list, init_avg_err_list, opt_avg_err_list, \
            init_sum_err_list, opt_sum_err_list, time_cost_list
 
