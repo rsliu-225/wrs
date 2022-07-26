@@ -1,7 +1,6 @@
-import copy
+import itertools
 import os
 import pickle
-import random
 
 import cv2
 import numpy as np
@@ -12,10 +11,9 @@ import basis.o3dhelper as o3dh
 import basis.robot_math as rm
 import config
 import modeling.geometric_model as gm
-import modeling.collision_model as cm
+import motionplanner.nbc_solver as nbcs
 import utils.pcd_utils as pcdu
 import utils.vision_utils as vu
-import motionplanner.nbc_solver as nbcs
 
 
 def load_frame_seq(fo=None, root_path=os.path.join(config.ROOT, 'img/phoxi/'), path=None):
@@ -76,7 +74,7 @@ def load_frame(folder_name, f_name, root_path=os.path.join(config.ROOT, 'img/pho
     return depthimg, textureimg, pcd
 
 
-def load_opti_seq(fo=None, root_path=os.path.join(config.ROOT, 'img/phoxi/'), path=None):
+def load_opti_rigidbody_seq(fo=None, root_path=os.path.join(config.ROOT, 'img/phoxi/'), path=None):
     if path is None:
         path = os.path.join(root_path, fo)
     opti_list = []
@@ -87,7 +85,7 @@ def load_opti_seq(fo=None, root_path=os.path.join(config.ROOT, 'img/phoxi/'), pa
     return opti_list
 
 
-def load_opti(fo, f_name, root_path=os.path.join(config.ROOT, 'img/phoxi/'), path=None):
+def load_opti_rigidbody(fo, f_name, root_path=os.path.join(config.ROOT, 'img/phoxi/'), path=None):
     if path is None:
         path = os.path.join(root_path, fo)
     opti_data = pickle.load(open(os.path.join(path, f_name), 'rb'))
@@ -95,8 +93,18 @@ def load_opti(fo, f_name, root_path=os.path.join(config.ROOT, 'img/phoxi/'), pat
     return opti_data.rigidbody_set_dict
 
 
+def load_opti_markers_seq(fo=None, root_path=os.path.join(config.ROOT, 'img/phoxi/'), path=None):
+    if path is None:
+        path = os.path.join(root_path, fo)
+    opti_list = []
+    for f in sorted(os.listdir(path)):
+        if 'opti' not in f:
+            continue
+        opti_list.append(pickle.load(open(os.path.join(path, f), 'rb')))
+    return opti_list
+
+
 def get_center_frame(corners, id, img, pcd, colors=None, show_frame=False):
-    ps = []
     if id == 1:
         seq = [1, 0, 0, 3]
         relpos = np.asarray([0, -.025, -.05124])
@@ -121,41 +129,55 @@ def get_center_frame(corners, id, img, pcd, colors=None, show_frame=False):
         seq = [1, 2, 3, 2]
         relpos = np.asarray([0, 0, -.072])
         relrot = rm.rotmat_from_axangle((1, 0, 0), np.pi / 2)
-    for i, corner in enumerate(corners[0]):
-        p = np.asarray(vu.map_grayp2pcdp(corner, img, pcd))[0]
-        if all(np.equal(p, np.asarray([0, 0, 0]))):
-            break
-        ps.append(p)
-        # gm.gen_sphere(p, radius=.005, rgba=(1, 0, 0, i * .25)).attach_to(base)
-    if len(ps) == 4:
-        center = np.mean(np.asarray(ps), axis=0)
-        x = rm.unit_vector(ps[seq[0]] - ps[seq[1]])
-        y = rm.unit_vector(ps[seq[2]] - ps[seq[3]])
-        z = rm.unit_vector(np.cross(x, y))
-        rotmat = np.asarray([x, y, z]).T
-        marker_mat4 = rm.homomat_from_posrot(center, rotmat)
-        relmat4 = rm.homomat_from_posrot(relpos, relrot)
-        origin_mat4 = np.dot(marker_mat4, relmat4)
-        if show_frame:
-            gm.gen_frame(np.linalg.inv(relmat4)[:3, 3], np.linalg.inv(relmat4)[:3, :3], thickness=.005,
-                         length=.05, rgbmatrix=np.asarray([[1, 1, 0], [1, 0, 1], [0, 1, 1]])).attach_to(base)
-            if colors is not None:
-                gm.gen_sphere(np.linalg.inv(relmat4)[:3, 3], rgba=colors[id], radius=.007).attach_to(base)
-            # gm.gen_frame(origin_mat4[:3, 3], origin_mat4[:3, :3]).attach_to(base)
-            # gm.gen_frame(marker_mat4[:3, 3], marker_mat4[:3, :3]).attach_to(base)
-        return origin_mat4
-    else:
+
+    ps = _map_corners_in_pcd(img, pcd, corners)
+    if ps is None:
         return None
+    center = np.mean(np.asarray(ps), axis=0)
+    x = rm.unit_vector(ps[seq[0]] - ps[seq[1]])
+    y = rm.unit_vector(ps[seq[2]] - ps[seq[3]])
+    z = rm.unit_vector(np.cross(x, y))
+    rotmat = np.asarray([x, y, z]).T
+    marker_mat4 = rm.homomat_from_posrot(center, rotmat)
+    relmat4 = rm.homomat_from_posrot(relpos, relrot)
+    origin_mat4 = np.dot(marker_mat4, relmat4)
+    if show_frame:
+        gm.gen_frame(np.linalg.inv(relmat4)[:3, 3], np.linalg.inv(relmat4)[:3, :3], thickness=.005,
+                     length=.05, rgbmatrix=np.asarray([[1, 1, 0], [1, 0, 1], [0, 1, 1]])).attach_to(base)
+        if colors is not None:
+            gm.gen_sphere(np.linalg.inv(relmat4)[:3, 3], rgba=colors[id], radius=.007).attach_to(base)
+        # gm.gen_frame(origin_mat4[:3, 3], origin_mat4[:3, :3]).attach_to(base)
+        # gm.gen_frame(marker_mat4[:3, 3], marker_mat4[:3, :3]).attach_to(base)
+    return origin_mat4
 
 
-def trans_by_armaker(img, pcd, x_range=(.05, .215), y_range=(-.4, .4), z_range=(-.2, -.0155), tgt_id=None,
-                     show_frame=False):
+def _get_corners(img):
     parameters = aruco.DetectorParameters_create()
     aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_250)
     corners, ids, rejectedImgPoints = aruco.detectMarkers(img, aruco_dict, parameters=parameters)
     if ids is None:
-        return None, None, None, None
+        return corners, ids
     ids = [v[0] for v in ids]
+    return corners, ids
+
+
+def _map_corners_in_pcd(img, pcd, corners):
+    pts = []
+    for i, corner in enumerate(corners[0]):
+        p = np.asarray(vu.map_grayp2pcdp(corner, img, pcd))[0]
+        if all(np.equal(p, np.asarray([0, 0, 0]))):
+            break
+        pts.append(p)
+    if len(pts) < 4:
+        return None
+    return pts
+
+
+def trans_by_armaker(img, pcd, x_range=(.05, .215), y_range=(-.4, .4), z_range=(-.2, -.0155), tgt_id=None,
+                     show_frame=False):
+    corners, ids = _get_corners(img)
+    if ids is None:
+        return None, None, None, None
     print('AR marker ids in image:', ids)
     if tgt_id is not None:
         if tgt_id not in ids:
@@ -177,6 +199,21 @@ def trans_by_armaker(img, pcd, x_range=(.05, .215), y_range=(-.4, .4), z_range=(
         gm.gen_frame().attach_to(base)
     return ids[0], gripperframe, pcd_trans, \
            pcdu.crop_pcd(pcd_trans, x_range=x_range, y_range=y_range, z_range=z_range)
+
+
+def opti_in_armarker(corners_lft, corners_rgt):
+    center_lft = np.mean(corners_lft, axis=0)
+    z_lft = np.cross(corners_lft[0] - corners_lft[1], corners_lft[1] - corners_lft[2])
+    center_rgt = np.mean(corners_rgt, axis=0)
+    z_rgt = np.cross(corners_rgt[0] - corners_rgt[1], corners_rgt[1] - corners_rgt[2])
+    y = center_lft - center_rgt
+    z = (z_lft + z_rgt) / 2
+    if rm.angle_between_vectors(z, np.asarray((0, 0, 1))) > np.pi / 2:
+        z = -z
+    x = np.cross(y, z)
+    rot = np.asarray([rm.unit_vector(x), rm.unit_vector(y), rm.unit_vector(z)]).T
+    pos = (center_lft + center_rgt) / 2
+    return rm.homomat_from_posrot(pos, rot)
 
 
 def display_inlier_outlier(cloud, ind):
@@ -207,14 +244,12 @@ def reg_armarker(fo, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False,
             trans_by_armaker(grayimg_list[i], pcd, x_range=x_range, y_range=y_range, z_range=z_range,
                              show_frame=toggledebug)
         if pcd_cropped is not None:
-            pcd_cropped, _ = pcdu.get_nearest_cluster(pcd_cropped, seed=seed, eps=.02, min_samples=200)
+            # pcd_cropped, _ = pcdu.get_nearest_cluster(pcd_cropped, seed=seed, eps=.02, min_samples=200)
             # seed = np.mean(pcd_cropped, axis=0)
             print('Num. of points in cropped pcd:', len(pcd_cropped))
             if len(pcd_cropped) > 0:
                 pcd_cropped = pcd_cropped - np.asarray(center)
                 o3dpcd = o3dh.nparray2o3dpcd(pcd_cropped)
-                # cl, ind = o3dpcd.remove_radius_outlier(nb_points=16, radius=0.005)
-                # display_inlier_outlier(o3dpcd, ind)
                 o3d.io.write_point_cloud(os.path.join(config.ROOT, 'recons_data', fo, f'{fnlist[i]}' + '.pcd'),
                                          o3dpcd)
                 pcd_cropped_list.append(pcd_cropped)
@@ -241,12 +276,9 @@ def reg_armarker(fo, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False,
     return pcd_cropped_list
 
 
-def optidata2homomat4(seg):
+def opti_rigidbody2homomat4(seg):
     if not any([seg.x, seg.z, seg.y]):
         return None
-    # rot = rm.rotmat_from_axangle((1, 0, 0), seg.qx) \
-    #     .dot(rm.rotmat_from_axangle((0, 1, 0), seg.qy)) \
-    #     .dot(rm.rotmat_from_axangle((0, 0, 1), seg.qz))
     rot = rm.rotmat_from_axangle((0, 0, 1), seg.qz) \
         .dot(rm.rotmat_from_axangle((0, 1, 0), seg.qy)) \
         .dot(rm.rotmat_from_axangle((1, 0, 0), seg.qx))
@@ -255,32 +287,71 @@ def optidata2homomat4(seg):
     return homomat
 
 
+def opti_markers2homomat4(pts, premat4=None):
+    pts_pair = itertools.combinations(range(4), r=2)
+    pos = np.mean(pts, axis=0)
+    z = np.cross(pts[0] - pts[1], pts[1] - pts[2])
+    if rm.angle_between_vectors(z, np.asarray([0, 0, -1])) > np.pi / 2:
+        z = -z
+    y = None
+    for pair in pts_pair:
+        gm.gen_stick(pts[pair[0]], pts[pair[1]], thickness=.001).attach_to(base)
+        dist = np.linalg.norm(pts[pair[0]] - pts[pair[1]])
+        print(dist)
+        if abs(dist - .164) <= .008:
+            y = pts[pair[0]] - pts[pair[1]]
+            if premat4 is not None:
+                if rm.angle_between_vectors(y, premat4[:3, 1]) > np.pi / 2:
+                    y = -y
+    x = np.cross(y, z)
+    # if rm.angle_between_vectors(x, np.asarray([1, 0, 0])) > np.pi / 2:
+    #     x = -x
+    rot = np.asarray([rm.unit_vector(x), rm.unit_vector(y), rm.unit_vector(z)]).T
+    gm.gen_frame(pos, rot, thickness=.001).attach_to(base)
+    return rm.homomat_from_posrot(pos, rot)
+
+
 def reg_opti(fo, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False,
              x_range=(.05, .215), y_range=(-.4, .4), z_range=(-.2, -.0155), toggledebug=True):
     if not os.path.exists(os.path.join(config.ROOT, 'recons_data', fo)):
         os.mkdir(os.path.join(config.ROOT, 'recons_data', fo))
     fnlist, grayimg_list, depthimg_list, pcd_list = load_frame_seq_withf(fo=fo)
-    optidata_list = load_opti_seq(fo=fo)
+    optidata_list = load_opti_markers_seq(fo=fo)
 
     pcd_cropped_list = []
     inx_list = []
     trans = np.eye(4)
     # gm.gen_frame(center, np.eye(3)).attach_to(base)
+    homomat4_in_opti_pre = None
+
     for i in range(len(grayimg_list)):
         pcd = np.asarray(pcd_list[i])
-        homomat4 = optidata2homomat4(optidata_list[i][1])
-        if homomat4 is None:
+        corners, ids = _get_corners(grayimg_list[i])
+        if len(optidata_list[i]) < 4:
             continue
-        # pcdu.show_pcd(pcd, rgba=(1, 1, 1, .1))
-        gm.gen_frame(homomat4[:3, 3], homomat4[:3, :3]).attach_to(base)
+        if 1 not in ids or 2 not in ids:
+            continue
+        corners_lft = _map_corners_in_pcd(grayimg_list[i], pcd, corners[ids.index(1)])
+        corners_rgt = _map_corners_in_pcd(grayimg_list[i], pcd, corners[ids.index(2)])
+        if corners_lft is None or corners_rgt is None:
+            continue
+        homomat4_in_opti = opti_markers2homomat4(optidata_list[i], homomat4_in_opti_pre)
+        homomat4_in_phoxi = opti_in_armarker(corners_lft, corners_rgt)
+
+        pcdu.show_pcd(pcd, rgba=(1, 1, 1, .1))
+        gm.gen_frame(homomat4_in_opti[:3, 3], homomat4_in_opti[:3, :3]).attach_to(base)
+        gm.gen_frame(homomat4_in_phoxi[:3, 3], homomat4_in_phoxi[:3, :3]).attach_to(base)
+
         inx, gripperframe, pcd, pcd_cropped, = \
             trans_by_armaker(grayimg_list[i], pcd, x_range=x_range, y_range=y_range, z_range=z_range)
         if pcd_cropped is not None:
             # pcd_cropped, _ = pcdu.get_nearest_cluster(pcd_cropped, seed=seed, eps=.01, min_samples=200)
             pcd_cropped_org = pcdu.trans_pcd(pcd_cropped, gripperframe)
+            pcdu.show_pcd(pcd_cropped_org, rgba=(1, 0, 0, 1))
+
             print('Num. of points in cropped pcd:', len(pcd_cropped))
+            tmp_trans = np.eye(4)
             if len(pcd_cropped) > 0:
-                print(homomat4)
                 seed = np.mean(pcd_cropped, axis=0)
                 pcd_cropped = pcd_cropped - np.asarray(center)
                 o3dpcd = o3dh.nparray2o3dpcd(pcd_cropped)
@@ -289,21 +360,24 @@ def reg_opti(fo, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False,
                 o3d.io.write_point_cloud(os.path.join(config.ROOT, 'recons_data', fo, f'{fnlist[i]}' + '.pcd'),
                                          o3dpcd)
                 pcd_cropped_list.append(pcd_cropped)
-                pcdu.show_pcd(pcd_cropped_org, rgba=(1, 0, 0, 1))
-                pcdu.show_pcd(pcdu.trans_pcd(pcd_cropped_org, np.linalg.inv(homomat4)),
-                              rgba=(1, 1, 0, 1))
+                pcdu.show_pcd(pcdu.trans_pcd(pcd_cropped_org, np.linalg.inv(homomat4_in_phoxi)), rgba=(1, 0, 0, 1))
+                pcd_cropped_opti = pcdu.trans_pcd(pcd_cropped_org,
+                                                  homomat4_in_opti.dot(np.linalg.inv(homomat4_in_phoxi)))
+                pcdu.show_pcd(pcdu.trans_pcd(pcd_cropped_opti, homomat4_in_opti),
+                              rgba=(0, 1, 1, 1))
                 inx_list.append(inx)
+        homomat4_in_opti_pre = homomat4_in_opti
 
     colors = [(1, 0, 0, 1), (1, 1, 0, 1), (1, 0, 1, 1), (0, 1, 0, 1), (0, 1, 1, 1), (0, 0, 1, 1)]
-    for i in range(1, len(pcd_cropped_list)):
-        print(len(pcd_cropped_list[i - 1]))
-        if icp:
-            _, _, trans_tmp = o3dh.registration_ptpt(pcd_cropped_list[i], pcd_cropped_list[i - 1],
-                                                     downsampling_voxelsize=.005, toggledebug=True)
-            trans = trans_tmp.dot(trans)
-            pcdu.show_pcd(pcdu.trans_pcd(pcd_cropped_list[i], trans), rgba=colors[inx_list[i] - 1])
-        else:
-            pcdu.show_pcd(pcd_cropped_list[i - 1], rgba=colors[inx_list[i] - 1])
+    # for i in range(1, len(pcd_cropped_list)):
+    #     print(len(pcd_cropped_list[i - 1]))
+    #     if icp:
+    #         _, _, trans_tmp = o3dh.registration_ptpt(pcd_cropped_list[i], pcd_cropped_list[i - 1],
+    #                                                  downsampling_voxelsize=.005, toggledebug=True)
+    #         trans = trans_tmp.dot(trans)
+    #         pcdu.show_pcd(pcdu.trans_pcd(pcd_cropped_list[i], trans), rgba=colors[inx_list[i] - 1])
+    #     else:
+    #         pcdu.show_pcd(pcd_cropped_list[i - 1], rgba=colors[inx_list[i] - 1])
     if toggledebug:
         o3dpcd_list = []
         for i in range(len(pcd_cropped_list)):

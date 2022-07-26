@@ -17,10 +17,12 @@ import localenv.envloader as el
 import motionplanner.motion_planner as mp
 
 if __name__ == '__main__':
+    import utils.pcd_utils as pcdu
+
     base = wd.World(cam_pos=[2, 2, 2], lookat_pos=[0, 0, 0])
     # base = wd.World(cam_pos=[0, 0, 0], lookat_pos=[0, 0, 1])
     # fo = 'nbc/plate_a_cubic'
-    fo = 'opti/plate_a_quadratic'
+    fo = 'opti/plate_a_cubic'
 
     rbt = el.loadXarm(showrbt=False)
 
@@ -30,7 +32,7 @@ if __name__ == '__main__':
     seedjntagls = m_planner.get_armjnts()
     # m_planner.ah.show_armjnts(armjnts=seedjntagls, rgba=(1, 0, 0, .5))
     tcppos, tcprot = m_planner.get_tcp(armjnts=seedjntagls)
-    gm.gen_frame(tcppos + tcprot[:, 2] * (.03466 + .065), tcprot).attach_to(base)
+    # gm.gen_frame(tcppos + tcprot[:, 2] * (.03466 + .065), tcprot).attach_to(base)
     # relrot = np.asarray([[0, 0, 1], [0, -1, 0], [1, 0, 0]])
     relrot = np.asarray([[0, 0, -1], [0, -1, 0], [1, 0, 0]])
     gl_transrot = np.dot(tcprot, relrot)
@@ -62,6 +64,13 @@ if __name__ == '__main__':
 
     pcd_cropped_list = rcu.reg_opti(fo, seed, center, x_range=x_range, y_range=y_range, z_range=z_range,
                                     toggledebug=False, icp=False)
+    gm.gen_frame().attach_to(base)
+    # pcd_cropped_list = rcu.reg_armarker(fo, seed, center, x_range=x_range, y_range=y_range, z_range=z_range,
+    #                                     toggledebug=True, icp=False)
+
+    # rgba_list = [[1, 0, 0, 1], [0, 1, 0, 1]]
+    # for i, pcd in enumerate(pcd_cropped_list):
+    #     pcdu.show_pcd(pcd, rgba=rgba_list[i%2])
     base.run()
 
     # for fo in sorted(os.listdir(os.path.join(config.ROOT, 'recons_data'))):

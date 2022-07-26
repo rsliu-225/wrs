@@ -82,8 +82,6 @@ def get_img_rbt_opti(img_num, path='', jnt_range=(-np.pi, np.pi), capture_times=
             opti_data = nokov_server.get_marker_set_frame()
             if opti_data:
                 for v in opti_data.marker_set_dict.values():
-                    if len(v) != 4:
-                        continue
                     candidate.append(v)
         opti_data = np.mean(np.asarray(candidate), axis=0)
         print(opti_data)
