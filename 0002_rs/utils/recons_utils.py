@@ -226,7 +226,7 @@ def display_inlier_outlier(cloud, ind):
     o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
 
 
-def reg_armarker(fo, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False,
+def reg_armarker(fo, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False, to_zero=True,
                  x_range=(.05, .215), y_range=(-.4, .4), z_range=(-.2, -.0155), toggledebug=False):
     if not os.path.exists(os.path.join(config.ROOT, 'recons_data', fo)):
         os.mkdir(os.path.join(config.ROOT, 'recons_data', fo))
@@ -244,11 +244,14 @@ def reg_armarker(fo, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False,
             trans_by_armaker(grayimg_list[i], pcd, x_range=x_range, y_range=y_range, z_range=z_range,
                              show_frame=toggledebug)
         if pcd_cropped is not None:
-            # pcd_cropped, _ = pcdu.get_nearest_cluster(pcd_cropped, seed=seed, eps=.02, min_samples=200)
-            # seed = np.mean(pcd_cropped, axis=0)
+            pcdu.show_pcd(pcd)
+            pcd_cropped, _ = pcdu.get_nearest_cluster(pcd_cropped, seed=seed, eps=.02, min_samples=200)
+            seed = np.mean(pcd_cropped, axis=0)
+            gm.gen_sphere(seed, rgba=(1, 1, 0, 1)).attach_to(base)
             print('Num. of points in cropped pcd:', len(pcd_cropped))
             if len(pcd_cropped) > 0:
-                pcd_cropped = pcd_cropped - np.asarray(center)
+                if to_zero:
+                    pcd_cropped = pcd_cropped - np.asarray(center)
                 o3dpcd = o3dh.nparray2o3dpcd(pcd_cropped)
                 o3d.io.write_point_cloud(os.path.join(config.ROOT, 'recons_data', fo, f'{fnlist[i]}' + '.pcd'),
                                          o3dpcd)
@@ -263,9 +266,9 @@ def reg_armarker(fo, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False,
                                                      downsampling_voxelsize=.001, toggledebug=False)
             trans = trans_tmp.dot(trans)
             pcd_cropped_list[i] = pcdu.trans_pcd(pcd_cropped_list[i], trans)
-        #     pcdu.show_pcd(pcdu.trans_pcd(pcd_cropped_list[i], trans), rgba=colors[inx_list[i] - 1])
-        # else:
-        #     pcdu.show_pcd(pcd_cropped_list[i - 1], rgba=colors[inx_list[i] - 1])
+            pcdu.show_pcd(pcdu.trans_pcd(pcd_cropped_list[i], trans), rgba=colors[inx_list[i] - 1])
+        else:
+            pcdu.show_pcd(pcd_cropped_list[i - 1], rgba=colors[inx_list[i] - 1])
     # if toggledebug:
     #     o3dpcd_list = []
     #     for i in range(len(pcd_cropped_list)):
@@ -388,6 +391,14 @@ def reg_opti(fo, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False,
     return pcd_cropped_list
 
 
+def remove_outliers(pts, nb_points=50, radius=0.005, toggledebug=False):
+    o3dpcd = o3dh.nparray2o3dpcd(np.asarray(pts))
+    o3dpcd, ind = o3dpcd.remove_radius_outlier(nb_points=nb_points, radius=radius)
+    if toggledebug:
+        display_inlier_outlier(o3dpcd, ind)
+    return np.asarray(o3dpcd.points)
+
+
 def extract_roi_by_armarker(textureimg, pcd, seed,
                             x_range=(.06, .215), y_range=(-.15, .15), z_range=(-.2, -.0155), toggledebug=False):
     _, gripperframe, pcd_trans, pcd_roi = \
@@ -395,7 +406,9 @@ def extract_roi_by_armarker(textureimg, pcd, seed,
     if pcd_roi is None:
         print('No marker detected!')
         return None, None, None
-    pcd_roi, _ = pcdu.get_nearest_cluster(pcd_roi, seed=seed, eps=.02, min_samples=200)
+
+    # pcd_roi, _ = pcdu.get_nearest_cluster(pcd_roi, seed=seed, eps=.02, min_samples=200)
+    pcd_roi = remove_outliers(pcd_roi, nb_points=50, radius=0.005, toggledebug=False)
 
     print('Num. of points in extracted pcd:', len(pcd_roi))
     if len(pcd) < 0:
@@ -411,7 +424,7 @@ def cal_nbc(pcd, gripperframe, rbt, seedjntagls, gl_transmat4=np.eye(4),
 
     pts, nrmls, confs = pcdu.cal_conf(pcd, voxel_size=.005, radius=.005, cam_pos=cam_pos, theta=theta)
     pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv(pts, nrmls, confs, cam_pos=np.linalg.inv(gripperframe)[:3, 3],
-                                                 toggledebug=True)
+                                                 toggledebug=toggledebug)
     print('Num. of NBV:', len(pts_nbv))
 
     pcd = pcdu.trans_pcd(pcd, gl_transmat4)
@@ -445,6 +458,8 @@ def cal_nbc(pcd, gripperframe, rbt, seedjntagls, gl_transmat4=np.eye(4),
 def cal_nbc_pcn(pcd, pcd_pcn, gripperframe, rbt, seedjntagls, gl_transmat4=np.eye(4),
                 theta=np.pi / 3, max_a=np.pi / 18, max_dist=1, toggledebug=False, show_cam=True):
     cam_pos = np.linalg.inv(gripperframe)[:3, 3]
+    gm.gen_frame().attach_to(base)
+    pcd_pcn = pcdu.crop_pcd(pcd_pcn, x_range=(-1, 1), y_range=(-1, 1), z_range=(.0155, 1))
 
     pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd, pcd_pcn, theta=theta)
     print(confs_nbv)
@@ -466,6 +481,7 @@ def cal_nbc_pcn(pcd, pcd_pcn, gripperframe, rbt, seedjntagls, gl_transmat4=np.ey
             # gm.gen_arrow(p, p + n * .05, thickness=.002,
             #              rgba=(0, 0, 1, 1)).attach_to(base)
             gm.gen_stick(cam_pos, p, rgba=(1, 1, 0, 1)).attach_to(base)
+    base.run()
 
     nbc_solver = nbcs.NBCOptimizer(rbt, max_a=max_a, max_dist=max_dist)
     jnts, transmat4, _ = nbc_solver.solve(seedjntagls, pts_nbv, nrmls_nbv, cam_pos)

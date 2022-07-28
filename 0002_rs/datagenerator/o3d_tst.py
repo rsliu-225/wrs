@@ -9,6 +9,7 @@ def custom_draw_geometry_with_custom_fov(pcd, fov_step):
     vis.create_window()
     vis.add_geometry(pcd)
     ctr = vis.get_view_control()
+    vis.get_render_option().load_from_json("./TestData/renderoption.json")
     print("Field of view (before changing) %.2f" % ctr.get_field_of_view())
     ctr.change_field_of_view(step=fov_step)
     print("Field of view (after changing) %.2f" % ctr.get_field_of_view())
@@ -75,8 +76,22 @@ def custom_draw_geometry_with_camera_trajectory(pcd):
 
 if __name__ == "__main__":
     import config
+    import utils as utl
 
-    pcd = o3d.io.read_point_cloud(config.ROOT + "/datagenerator/tst/partial/0_000_partial.pcd")
-    # custom_draw_geometry_with_custom_fov(pcd, -90)
-    # custom_draw_geometry_with_rotation(pcd)
-    custom_draw_geometry_with_camera_trajectory(pcd)
+    width = .005
+    thickness = .0015
+    path = './tst'
+    cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
+
+    pseq = utl.cubic_inp(pseq=np.asarray([[0, 0, 0], [.018, .03, .02], [.06, .06, 0], [.12, 0, 0]]))
+    pseq = utl.uni_length(pseq, goal_len=.2)
+    rotseq = utl.get_rotseq_by_pseq(pseq)
+
+    objcm = utl.gen_swap(pseq, rotseq, cross_sec)
+    o3dmesh = utl.cm2o3dmesh(objcm)
+
+    pcd = o3d.io.read_point_cloud(config.ROOT + "/recons_data/opti/plate_a_cubic/000.pcd")
+
+    custom_draw_geometry_with_custom_fov(o3dmesh, -90)
+    # custom_draw_geometry_with_rotation(o3dmesh)
+    # custom_draw_geometry_with_camera_trajectory(pcd)
