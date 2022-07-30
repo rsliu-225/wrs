@@ -1,0 +1,1 @@
+python main.py -i partial/38_1_linear7_partial.pcd -o test.pcd -g 0.01
