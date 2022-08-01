@@ -1,5 +1,4 @@
 import copy
-import math
 import os
 import random
 
@@ -8,8 +7,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import open3d as o3d
 from scipy import interpolate
-from sklearn.neighbors import KDTree
 from sklearn.mixture import GaussianMixture
+from sklearn.neighbors import KDTree
 
 import basis.o3dhelper as o3dh
 import basis.robot_math as rm
@@ -166,6 +165,13 @@ def o3dmesh2cm(o3dmesh):
     objtrm = trm.Trimesh(vertices=o3dmesh.vertices, faces=o3dmesh.triangles)
     objcm = cm.CollisionModel(objtrm)
     return objcm
+
+
+def cm2o3dmesh(objcm):
+    o3dmesh = o3d.geometry.TriangleMesh(vertices=o3d.utility.Vector3dVector(objcm.objtrm.vertices),
+                                        triangles=o3d.utility.Vector3iVector(objcm.objtrm.faces))
+    o3dmesh.compute_vertex_normals()
+    return o3dmesh
 
 
 def nparray2o3dpcd(pcd_narray, nrmls_narry=None, estimate_normals=False):

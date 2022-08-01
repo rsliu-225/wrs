@@ -151,6 +151,8 @@ def inp_rotp_by_step(pseq, rotseq, step=.001):
                     inx = np.floor((j / inp_num) * len(rotmat_list)) - 1
                     if inx > 9:
                         inx = 9
+                    if inx == -1:
+                        inx = 0
                     insert_rot = rotmat_list[int(inx)]
                 inp_pseq.append(p1 + j * diff / inp_num)
                 inp_rotseq.append(insert_rot)

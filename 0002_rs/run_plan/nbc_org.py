@@ -1,26 +1,23 @@
-import copy
 import os
 import pickle
 
-import cv2
 import numpy as np
 import open3d as o3d
-from cv2 import aruco as aruco
 
-import basis.o3dhelper as o3dh
 import basis.robot_math as rm
 import config
-import modeling.geometric_model as gm
-import utils.recons_utils as rcu
-import visualization.panda.world as wd
 import localenv.envloader as el
+import modeling.geometric_model as gm
 import motionplanner.motion_planner as mp
 import utils.pcd_utils as pcdu
+import utils.recons_utils as rcu
+import visualization.panda.world as wd
 
 if __name__ == '__main__':
     base = wd.World(cam_pos=[2, 2, 2], lookat_pos=[0, 0, 0])
     # base = wd.World(cam_pos=[0, 0, 0], lookat_pos=[0, 0, 1])
-    fo = 'nbc/plate_a_cubic'
+    # fo = 'nbc/plate_a_cubic'
+    fo = 'nbc_pcn/plate_a_cubic'
     # fo = 'opti/plate_a_quadratic'
     # fo = 'seq/plate_a_quadratic'
 
@@ -32,13 +29,14 @@ if __name__ == '__main__':
 
     tcppos, tcprot = m_planner.get_tcp(armjnts=seedjntagls)
     gm.gen_frame(tcppos + tcprot[:, 2] * (.03466 + .065), tcprot).attach_to(base)
-    # relrot = np.asarray([[0, 0, 1], [0, -1, 0], [1, 0, 0]])
-    relrot = np.asarray([[0, 0, -1], [0, -1, 0], [1, 0, 0]])
-    gl_transrot = np.dot(tcprot, relrot)
+    gl_relrot = np.asarray([[0, 0, 1], [0, -1, 0], [1, 0, 0]]).T
+    # gl_relrot = np.asarray([[0, 0, -1], [0, -1, 0], [1, 0, 0]])
+    gl_transrot = np.dot(tcprot, gl_relrot)
     gl_transpos = tcppos + tcprot[:, 2] * (.03466 + .065)
     gl_transmat4 = rm.homomat_from_posrot(gl_transpos, gl_transrot)
 
     icp = False
+    use_pcn = True
 
     seed = (.116, 0, .1)
     center = (.116, 0, -.0155)
@@ -47,6 +45,9 @@ if __name__ == '__main__':
     y_range = (-.15, .15)
     z_range = (.0155, .2)
     # z_range = (-.2, -.0155)
+
+    theta = np.pi / 6
+    max_a = np.pi / 90
 
     textureimg, depthimg, pcd = rcu.load_frame(fo, f_name='000.pkl')
     pcd = np.asarray(pcd) / 1000
@@ -62,15 +63,20 @@ if __name__ == '__main__':
     pcdu.show_pcd(pcd_roi, rgba=(1, 0, 0, 1))
 
     cam_pos = np.linalg.inv(gripperframe)[:3, 3]
-    pts, nrmls, confs = pcdu.cal_conf(pcd_roi, voxel_size=.005, radius=.005, cam_pos=cam_pos, theta=np.pi/6,
-                                      toggledebug=True)
-    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv(pts, nrmls, confs, cam_pos=np.linalg.inv(gripperframe)[:3, 3],
-                                                 toggledebug=True)
-    base.run()
-
-    nbv_pts, nbv_nrmls, jnts = \
-        rcu.cal_nbc(pcd_roi, gripperframe, rbt, seedjntagls=seedjntagls, gl_transmat4=gl_transmat4, show_cam=False)
-
+    # pts, nrmls, confs = pcdu.cal_conf(pcd_roi, voxel_size=.005, radius=.005, cam_pos=cam_pos, theta=np.pi/6,
+    #                                   toggledebug=True)
+    # pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv(pts, nrmls, confs, cam_pos=np.linalg.inv(gripperframe)[:3, 3],
+    #                                              toggledebug=True)
+    if use_pcn:
+        pcd_pcn = o3d.io.read_point_cloud(os.path.join(config.ROOT, 'img/phoxi', fo, f'000_output_lc.pcd'))
+        pcd_pcn = np.asarray(pcd_pcn.points) + np.asarray(center)
+        nbv_pts, nbv_nrmls, jnts = \
+            rcu.cal_nbc_pcn(pcd_roi, pcd_pcn, gripperframe, rbt, seedjntagls=seedjntagls, gl_transmat4=gl_transmat4,
+                            theta=theta, max_a=max_a, show_cam=False, toggledebug=True)
+    else:
+        nbv_pts, nbv_nrmls, jnts = \
+            rcu.cal_nbc(pcd_roi, gripperframe, rbt, seedjntagls=seedjntagls, gl_transmat4=gl_transmat4,
+                        theta=theta, max_a=max_a, show_cam=False, toggledebug=True)
     m_planner.ah.show_armjnts(armjnts=seedjntagls, rgba=(1, 0, 0, .5))
     m_planner.ah.show_armjnts(armjnts=jnts, rgba=(0, 1, 0, .5))
     # path = m_planner.plan_start2end(start=seedjntagls, end=jnts)
