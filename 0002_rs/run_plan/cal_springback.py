@@ -80,8 +80,8 @@ def springback_from_img(fo, z_range, line_thresh=.002, line_size_thresh=300):
     for f in os.listdir(os.path.join(config.ROOT, 'img/phoxi', fo)):
         if f[-3:] != 'pkl':
             continue
-        if f[0] != '0':
-            continue
+        # if f[0] != '0':
+        #     continue
         print(f'------------{f}------------')
         if f.split(ext_str)[0] == 'init':
             key = 'init'
@@ -94,6 +94,7 @@ def springback_from_img(fo, z_range, line_thresh=.002, line_size_thresh=300):
                 key = 'goal'
             else:
                 key = 'refine'
+
         if angle not in sb_dict.keys():
             sb_dict[angle] = {}
         sb_dict[angle][key] = []
@@ -103,13 +104,14 @@ def springback_from_img(fo, z_range, line_thresh=.002, line_size_thresh=300):
         pcdu.show_pcd(pcd, rgba=(1, 1, 1, .1))
         img = vu.enhance_grayimg(textureimg)
         lines = pcdu.extract_lines_from_pcd(img, pcd, z_range=z_range, line_thresh=line_thresh,
-                                            line_size_thresh=line_size_thresh, toggledebug=True)
+                                            line_size_thresh=line_size_thresh, toggledebug=False)
         for slope, pts in lines:
             pcdu.show_pcd(pts, rgba=pcd_color[key])
             sb_dict[angle][key].append(slope)
+        res = _get_angle_from_vecs(sb_dict[angle][key][0], sb_dict[angle][key][1], 15)
+        print(res)
         # gm.gen_stick(spos=line.B, epos=line.A + line.B, rgba=pcd_color[clr]).attach_to(base)
         # kpts = get_kpts_gmm(pcd_crop, rgba=kpts_color[clr])
-    base.run()
 
     pickle.dump(sb_dict, open(f'./{fo.split("/")[1]}_springback.pkl', 'wb'))
     return sb_dict
@@ -210,8 +212,8 @@ def show_data_w_refine(input_dict):
     plt.plot(X, refined_err, c='b')
     plt.plot(X, [np.mean(refined_err)] * len(X), c='b', linestyle='dashed')
 
-    next = lasso_pre(X[:2], sb_err[:2], 45)
-    print(next)
+    # next = lasso_pre(X[:2], sb_err[:2], 45)
+    # print(next)
 
     # plt.plot(X, np.asarray(bend_err) + np.asarray(sb_err))
     plt.show()
@@ -234,13 +236,14 @@ if __name__ == '__main__':
     base = wd.World(cam_pos=[1.5, 1.5, 1.5], lookat_pos=[0, 0, 0])
     rbt = el.loadYumi(showrbt=True)
 
-    fo = 'springback/alu'
+    fo = 'springback/alu_refine_lr'
     z_range = (.12, .15)
-    line_thresh = 0.004
+    line_thresh = 0.003
     line_size_thresh = 500
-    # sb_dict = springback_from_img(fo, z_range, line_thresh, line_size_thresh)
+    sb_dict = springback_from_img(fo, z_range, line_thresh, line_size_thresh)
     sb_dict = pickle.load(open(f'./{fo.split("/")[1]}_springback.pkl', 'rb'))
     print(sb_dict['0'].keys())
+    print(sb_dict)
     if 'refine' in sb_dict['0'].keys():
         show_data_w_refine(sb_dict)
     else:
