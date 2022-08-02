@@ -100,4 +100,4 @@ if __name__ == '__main__':
     folder_name = 'plate_a_cubic'
     img_num = 30
     # get_img_rbt(img_num, path=f'phoxi/seq/{folder_name}/')
-    get_img_rbt_opti(img_num, path=f'phoxi/opti/{folder_name}/', jnt_range=(-np.pi, 0))
+    get_img_rbt_opti(img_num, path=f'phoxi/opti/{folder_name}/', jnt_range=(-np.pi, np.pi))
