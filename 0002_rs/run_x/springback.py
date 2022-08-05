@@ -38,7 +38,7 @@ def _action(fo, f_name, goal_angle, rgba=(0, 1, 0, 1)):
     # cv2.imshow("depthimg", depthimg)
     # cv2.waitKey(0)
     pcd = rm.homomat_transform_points(affine_mat, np.asarray(pcd) / 1000)
-    textureimg = vu.enhance_grayimg(textureimg)
+    # textureimg = vu.enhance_grayimg(textureimg)
     lines = pcdu.extract_lines_from_pcd(textureimg, pcd, z_range=z_range, line_thresh=line_thresh,
                                         line_size_thresh=line_size_thresh)
     angle = np.degrees(rm.angle_between_vectors(lines[0][0], lines[1][0]))
@@ -82,7 +82,7 @@ def uniform_bend_avg(s_angle, e_angle, interval, z_range, line_thresh=.002, line
     textureimg, depthimg, pcd = phxi.dumpalldata(f_name=os.path.join('img/phoxi/springback', fo, f"init.pkl"))
     cv2.imshow("depthimg", depthimg)
     cv2.waitKey(0)
-    textureimg = vu.enhance_grayimg(textureimg)
+    # textureimg = vu.enhance_grayimg(textureimg)
     pcd = rm.homomat_transform_points(affine_mat, np.asarray(pcd) / 1000)
     lines = pcdu.extract_lines_from_pcd(textureimg, pcd, z_range=z_range, line_thresh=line_thresh,
                                         line_size_thresh=line_size_thresh, toggledebug=True)
@@ -173,10 +173,10 @@ if __name__ == '__main__':
 
     fo = 'alu_refine_lr'
     z_range = (.12, .15)
-    line_thresh = 0.003
+    line_thresh = 0.0035
     line_size_thresh = 500
 
     # motor.rot_degree(clockwise=1, rot_deg=150)
-    uniform_bend_lr(s_angle=0, e_angle=150, interval=15, fo=fo,
+    uniform_bend_lr(s_angle=0, e_angle=165, interval=15, fo=fo,
                     z_range=z_range, line_thresh=line_thresh, line_size_thresh=line_size_thresh)
     base.run()

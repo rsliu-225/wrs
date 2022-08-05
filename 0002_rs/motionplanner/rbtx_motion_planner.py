@@ -36,7 +36,7 @@ class MotionPlannerRbtX(MotionPlanner):
             jnts = self.rbtx.get_jnt_values(component_name=self.armname)
         return jnts
 
-    def goto_init_x(self):
+    def goto_init_x(self, speed_n=-1):
         start = self.get_armjnts()
         try:
             goal = self.rbt.get_jnt_values(self.armname)
@@ -48,12 +48,7 @@ class MotionPlannerRbtX(MotionPlanner):
         path_gotoinit = planner.plan(component_name=self.armname, start_conf=start, goal_conf=goal,
                                      obstacle_list=self.obscmlist, ext_dist=.2, max_time=200)
         if path_gotoinit is not None:
-            self.rbtx.move_jntspace_path(path=path_gotoinit, component_name=self.armname)
-
-            # time.sleep(.5)
-            # while self.arm.arm.is_program_running():
-            #     pass
-            # time.sleep(.5)
+            self.rbtx.move_jntspace_path(path=path_gotoinit, component_name=self.armname, speed_n=speed_n)
 
     def goto_init_hold_x(self, grasp, objcm, objrelpos, objrelrot):
         start = self.get_armjnts()
@@ -66,11 +61,7 @@ class MotionPlannerRbtX(MotionPlanner):
 
         path_gotoinit = self.plan_start2end_hold_armj([start, goal], objcm, objrelpos, objrelrot)
         if path_gotoinit is not None:
-            self.rbtx.movejntssgl_cont(path_gotoinit, self.armname, wait=True)
-            time.sleep(.5)
-            while self.arm.is_program_running():
-                time.sleep(1)
-            time.sleep(1)
+            self.rbtx.move_jntspace_path(path_gotoinit, self.armname, wait=True)
             return True
         return False
 
@@ -162,11 +153,7 @@ class MotionPlannerRbtX(MotionPlanner):
                             obstacle_list=self.obscmlist, ext_dist=.02, max_time=300)
 
         if path is not None:
-            self.rbtx.move_jnts(self.armname, path)
-            time.sleep(.5)
-            while self.arm.is_program_running():
-                pass
-            time.sleep(.5)
+            self.rbtx.move_jntspace_path(self.armname, path)
             return True
         else:
             return False
@@ -178,7 +165,7 @@ class MotionPlannerRbtX(MotionPlanner):
         print("--------------goto_armjnts_hold_x(rrt)---------------")
         path = self.plan_start2end_hold(grasp, [objmat4_start, objmat4_goal], objcm, start=start, use_msc=False)
         if path is not None:
-            self.rbtx.move_jnts(self.armname, path)
+            self.rbtx.move_jntspace_path(self.armname, path)
             time.sleep(.5)
             while self.arm.is_program_running():
                 pass
@@ -190,7 +177,7 @@ class MotionPlannerRbtX(MotionPlanner):
         objmat4_start = self.get_world_objmat4(objrelpos, objrelrot, armjnts=self.get_armjnts())
         path = self.plan_start2end_hold(grasp, [objmat4_start, objmat4_goal], objcm, start=self.get_armjnts())
         if path is not None:
-            self.rbtx.move_jnts(self.armname, path)
+            self.rbtx.move_jntspace_path(self.armname, path)
             while self.arm.is_program_running():
                 pass
             time.sleep(.5)
