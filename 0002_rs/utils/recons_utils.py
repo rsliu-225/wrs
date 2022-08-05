@@ -330,6 +330,8 @@ def reg_opti(fo, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False,
     for i in range(len(grayimg_list)):
         pcd = np.asarray(pcd_list[i])
         corners, ids = _get_corners(grayimg_list[i])
+        if ids is None:
+            continue
         if len(optidata_list[i]) < 4:
             continue
         if 1 not in ids or 2 not in ids:
