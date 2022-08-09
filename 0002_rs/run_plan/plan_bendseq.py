@@ -111,6 +111,11 @@ def inf_bend_check(bs, bendset):
 
 
 if __name__ == '__main__':
+    import bendplanner.bend_utils as bu
+    import matplotlib.pyplot as plt
+    import localenv.envloader as el
+    import motionplanner.motion_planner as m_planner
+
     '''
     set up env and param
     '''
@@ -120,40 +125,34 @@ if __name__ == '__main__':
     '''
     init class
     '''
-    # mp_lft = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
+    mp_lft = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
 
     base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
     bs = b_sim.BendSim(show=True)
 
     # bendset = pickle.load(open('./penta_bendseq.pkl', 'rb'))
-    random_cnt = 7
 
-    # goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
-    #                         [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1],
-    #                         [.1, .1, .1], [.1, .1, .2]]) / 2
-    # init_pseq = [(0, 0, 0), (0, .1 + bu.cal_length(goal_pseq), 0)]
-    # init_rotseq = [np.eye(3), np.eye(3)]
-    # brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp_lft)
-    # fit_pseq = bu.iter_fit(goal_pseq, tor=.002, toggledebug=False)
-    # bendset = brp.pseq2bendset(fit_pseq, pos=.1, toggledebug=False)
+    goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
+                            [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1],
+                            [.1, .1, .1], [.1, .1, .2]]) / 2
+    init_pseq = [(0, 0, 0), (0, .1 + bu.cal_length(goal_pseq), 0)]
+    init_rotseq = [np.eye(3), np.eye(3)]
+    brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp_lft)
+    fit_pseq = bu.decimate_pseq(goal_pseq, tor=.002, toggledebug=False)
+    bendset = brp.pseq2bendset(fit_pseq, pos=.1, toggledebug=False)
 
-    # bs.show(rgba=(.7, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
-    # bs.show(rgba=(.7, .7, .7, .7), show_frame=True)
-    for i in range(8, 10):
-        print(i)
-        flag = False
-        while not flag:
-            print('The seq is not feasible!')
-            bendset = bs.gen_random_bendset(random_cnt)
-            bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
-            is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, prune=False, toggledebug=False)
-            # ax = plt.axes(projection='3d')
-            # bu.plot_pseq(ax, bs.pseq, c='k')
-            # bu.scatter_pseq(ax, bs.pseq, c='r')
-            # plt.show()
-            flag = inf_bend_check(bs, bendset)
-        flag, tc, attemp_cnt_list, total_tc = plan_ipt(bs, bendset, snum=10, f_name=f'{str(random_cnt)}_{str(i)}')
-        print(tc, attemp_cnt_list)
-        print(total_tc)
+    bs.show(rgba=(.7, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
+    bs.show(rgba=(.7, .7, .7, .7), show_frame=True)
 
-    # base.run()
+    bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
+    is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, prune=True, toggledebug=False)
+    ax = plt.axes(projection='3d')
+    bu.plot_pseq(ax, bs.pseq, c='k')
+    bu.scatter_pseq(ax, bs.pseq, c='r')
+    plt.show()
+    flag = inf_bend_check(bs, bendset)
+    flag, tc, attemp_cnt_list, total_tc = plan_ipt(bs, bendset, snum=10,
+                                                   f_name=f'')
+    print(tc, attemp_cnt_list)
+    print(total_tc)
+

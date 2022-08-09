@@ -74,6 +74,21 @@ def _load_result_dict(res_dict):
             opt_max_err_list.append(None)
             opt_sum_err_list.append(None)
             opt_avg_err_list.append(None)
+        if int(k) == 11:
+            plt.rcParams["font.family"] = "Times New Roman"
+            plt.rcParams["font.size"] = 18
+            ax = plt.axes(projection='3d')
+            center = np.mean(init_res_pseq, axis=0)
+            ax.set_xlim([center[0] - 50, center[0] + 50])
+            ax.set_ylim([center[1] - 50, center[1] + 50])
+            ax.set_zlim([center[2] - 50, center[2] + 50])
+            # ax.set_xlabel('X(mm)')
+            # ax.set_ylabel('Y(mm)')
+            # ax.set_zlabel('Z(mm)')
+            bu.plot_pseq(ax, np.asarray(init_res_pseq) * 1000, c='darkorange')
+            bu.plot_pseq(ax, np.asarray(opt_res_pseq) * 1000, c='g')
+            bu.plot_pseq(ax, np.asarray(goal_pseq) * 1000, c='black')
+            plt.show()
 
     index_list = np.argsort(x)
     x = np.asarray(x)[index_list]
@@ -99,27 +114,27 @@ def show_sgl_method(f_name):
 
     fig = plt.figure(figsize=(18, 5))
     plt.rcParams["font.family"] = "Times New Roman"
-    plt.rcParams["font.size"] = 12
+    plt.rcParams["font.size"] = 18
 
     ax1 = fig.add_subplot(1, 3, 1)
     ax1.grid()
-    ax1.plot(x, init_max_err_list, color='r')
+    ax1.plot(x, init_max_err_list, color='darkorange')
     ax1.plot(x, opt_max_err_list, color='g')
-    ax1.set_xlabel('Num. of key point')
-    ax1.set_ylabel('Max. point to point error(mm)')
+    # ax1.set_xlabel('Num. of key point')
+    # ax1.set_ylabel('Max. point to point error(mm)')
 
     ax2 = fig.add_subplot(1, 3, 2)
     ax2.grid()
-    ax2.plot(x, init_avg_err_list, color='r')
+    ax2.plot(x, init_avg_err_list, color='darkorange')
     ax2.plot(x, opt_avg_err_list, color='g')
-    ax2.set_xlabel('Num. of key point')
-    ax2.set_ylabel('Avg. point to point error(mm)')
+    # ax2.set_xlabel('Num. of key point')
+    # ax2.set_ylabel('Avg. point to point error(mm)')
 
     ax3 = fig.add_subplot(1, 3, 3)
     ax3.grid()
     ax3.plot(x, time_cost_list, color='black')
-    ax3.set_xlabel('Num. of key point')
-    ax3.set_ylabel('Time cost(s)')
+    # ax3.set_xlabel('Num. of key point')
+    # ax3.set_ylabel('Time cost(s)')
 
     plt.show()
 
@@ -136,45 +151,46 @@ def compare(f_name_1, f_name_2):
 
     fig = plt.figure(figsize=(18, 5))
     plt.rcParams["font.family"] = "Times New Roman"
-    plt.rcParams["font.size"] = 12
+    plt.rcParams["font.size"] = 18
 
     ax1 = fig.add_subplot(1, 3, 1)
     ax1.grid()
-    ax1.plot(x, init_max_err_list_1, color='r')
+    ax1.plot(x, init_max_err_list_1, color='darkorange')
     ax1.plot(x, opt_max_err_list_1, color='g')
     ax1.plot(x, opt_max_err_list_2, color='dodgerblue')
-    ax1.set_xlabel('Num. of key point')
-    ax1.set_ylabel('Max. point to point error(mm)')
+    # ax1.set_xlabel('Num. of key point')
+    # ax1.set_ylabel('Max. point to point error(mm)')
 
     ax2 = fig.add_subplot(1, 3, 2)
     ax2.grid()
-    ax2.plot(x, init_avg_err_list_1, color='r')
+    ax2.plot(x, init_avg_err_list_1, color='darkorange')
     ax2.plot(x, opt_avg_err_list_1, color='g')
     ax2.plot(x, opt_avg_err_list_2, color='dodgerblue')
-    ax2.set_xlabel('Num. of key point')
-    ax2.set_ylabel('Avg. point to point error(mm)')
+    # ax2.set_xlabel('Num. of key point')
+    # ax2.set_ylabel('Avg. point to point error(mm)')
 
     ax3 = fig.add_subplot(1, 3, 3)
     ax3.grid()
     ax3.plot(x, time_cost_list_1, color='g')
     ax3.plot(x, time_cost_list_2, color='dodgerblue')
-    ax3.set_xlabel('Num. of key point')
-    ax3.set_ylabel('Time cost(s)')
+    # ax3.set_xlabel('Num. of key point')
+    # ax3.set_ylabel('Time cost(s)')
 
     plt.show()
 
 
 if __name__ == '__main__':
     goal_f_name = 'randomc'
-    obj_type = 'max'
+    obj_type = 'avg'
     # method = 'cmaes'
     method = 'SLSQP'
 
     '''
     load files
     '''
-    # f_name = f'{goal_f_name}_{method}_{obj_type}.pkl'
-    f_name = f'{goal_f_name}_{method}_{obj_type}_10.pkl'
+    f_name = f'{goal_f_name}_{method}_{obj_type}.pkl'
+    # f_name = f'{goal_f_name}_{method}_{obj_type}_10.pkl'
     show_sgl_method(f_name)
 
+    compare(f'{goal_f_name}_{method}_max.pkl', f'{goal_f_name}_{method}_avg.pkl')
     compare(f'{goal_f_name}_{method}_max_10.pkl', f'{goal_f_name}_{method}_avg_10.pkl')

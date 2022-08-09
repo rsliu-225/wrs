@@ -12,16 +12,15 @@ if __name__ == '__main__':
     import pickle
     import localenv.envloader as el
 
-    # base, env = el.loadEnv_wrs(camp=[.6, -.4, 1.7], lookatpos=[.6, -.4, 1])
-    # base, env = el.loadEnv_wrs(camp=[0, 0, 1], lookatpos=[0, 0, 0])
-    # base, env = el.loadEnv_wrs()
+    camp = [.6, -.4, 1.7]
+    lookatpos = [.6, -.4, 1]
+    # base, env = el.loadEnv_wrs(camp=camp, lookatpos=lookatpos)
     # rbt = el.loadUr3e()
     # transmat4 = rm.homomat_from_posrot((.7, -.2, .78 + bconfig.BENDER_H), np.eye(3))
 
-    base, env = el.loadEnv_yumi()
+    base, env = el.loadEnv_yumi(camp=camp, lookatpos=lookatpos)
     rbt = el.loadYumi(showrbt=False)
     transmat4 = rm.homomat_from_posrot((.4, .3, bconfig.BENDER_H), rm.rotmat_from_axangle((0, 0, 1), np.pi))
-    # transmat4 = rm.homomat_from_posrot((.4, -.1, bconfig.BENDER_H))
 
     bs = b_sim.BendSim(show=True)
     mp = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
