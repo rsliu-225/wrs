@@ -92,8 +92,10 @@ def springback_from_img(fo, z_range, line_thresh=.002, line_size_thresh=300):
                 key = 'res'
             elif f.split(ext_str)[0].split('_')[1] == 'goal':
                 key = 'goal'
-            else:
+            elif f.split(ext_str)[0].split('_')[1] == 'refine':
                 key = 'refine'
+            else:
+                key = 'refine_goal'
 
         if angle not in sb_dict.keys():
             sb_dict[angle] = {}
@@ -117,21 +119,21 @@ def springback_from_img(fo, z_range, line_thresh=.002, line_size_thresh=300):
     return sb_dict
 
 
-def _get_angle_from_vecs(v1, v2, limit):
+def _get_angle_from_vecs(v1, v2, gt):
     angle = np.degrees(rm.angle_between_vectors(v1, v2))
-    if abs(angle - limit) > 20:
+    if abs(angle - gt) > abs((180 - angle) - gt):
         angle = abs(180 - angle)
     return angle
 
 
-def show_data(input_dict):
+def show_data(input_dict, gt_offset=0):
     X = []
     sb_err = []
     bend_err = []
     for k, v in input_dict.items():
         if int(k) == 0:
             continue
-        gt = int(k) + 15
+        gt = int(k) + 15 + gt_offset
         res = _get_angle_from_vecs(input_dict[k]['res'][0], input_dict[k]['res'][1], gt)
         goal = _get_angle_from_vecs(input_dict[k]['goal'][0], input_dict[k]['goal'][1], gt)
         print(f'------------{int(k) + 15}------------')
@@ -236,14 +238,13 @@ if __name__ == '__main__':
     base = wd.World(cam_pos=[1.5, 1.5, 1.5], lookat_pos=[0, 0, 0])
     rbt = el.loadYumi(showrbt=True)
 
-    fo = 'springback/alu_refine_lr'
-    z_range = (.12, .15)
-    line_thresh = 0.003
-    line_size_thresh = 500
+    fo = 'springback/alu_refine_lr_1'
+    z_range = (.15, .18)
+    line_thresh = 0.0035
+    line_size_thresh = 600
     sb_dict = springback_from_img(fo, z_range, line_thresh, line_size_thresh)
     sb_dict = pickle.load(open(f'./{fo.split("/")[1]}_springback.pkl', 'rb'))
-    print(sb_dict['0'].keys())
-    print(sb_dict)
+
     if 'refine' in sb_dict['0'].keys():
         show_data_w_refine(sb_dict)
     else:

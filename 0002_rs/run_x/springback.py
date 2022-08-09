@@ -25,6 +25,7 @@ def lasso_pre(X, y, x_pre):
     model.fit([[x] for x in X], y)
     print(model.coef_, model.intercept_)
     y_pre = model.predict([[x] for x in X])
+    plt.grid()
     plt.plot(X, y, c='g')
     plt.plot(X, y_pre, c='r')
     plt.show()
@@ -32,7 +33,7 @@ def lasso_pre(X, y, x_pre):
     return model.predict([[x_pre]])
 
 
-def _action(fo, f_name, goal_angle, rgba=(0, 1, 0, 1)):
+def _action(fo, f_name, goal_angle, ulim=None, rgba=(0, 1, 0, 1)):
     textureimg, depthimg, pcd = \
         phxi.dumpalldata(f_name=os.path.join('img/phoxi/springback', fo, f_name))
     # cv2.imshow("depthimg", depthimg)
@@ -44,10 +45,12 @@ def _action(fo, f_name, goal_angle, rgba=(0, 1, 0, 1)):
     angle = np.degrees(rm.angle_between_vectors(lines[0][0], lines[1][0]))
     pcdu.show_pcd(lines[0][1], rgba=rgba)
     pcdu.show_pcd(lines[1][1], rgba=rgba)
-
-    if abs(angle - goal_angle) > abs((180 - angle) - goal_angle):
-        angle = abs(180 - angle)
-
+    if ulim is None:
+        if abs(angle - goal_angle) > abs((180 - angle) - goal_angle):
+            angle = abs(180 - angle)
+    else:
+        if abs(angle - goal_angle) > abs((180 - angle) - goal_angle) and abs(180) - angle < ulim:
+            angle = abs(180 - angle)
     return angle
 
 
@@ -128,13 +131,13 @@ def uniform_bend_lr(s_angle, e_angle, interval, z_range, line_thresh=.002, line_
     lines = pcdu.extract_lines_from_pcd(textureimg, pcd, z_range=z_range, line_thresh=line_thresh,
                                         line_size_thresh=line_size_thresh, toggledebug=True)
     sb_list = []
-    for a in range(s_angle, e_angle + 1, interval):
+    for cnt, a in enumerate(range(s_angle, e_angle, interval)):
         print('=============================')
         print('bending angle:', a)
         print('Avg. spring back:', np.mean(np.asarray(sb_list)))
 
-        if a == 0:
-            bend_angle = interval
+        if cnt == 0:
+            bend_angle = interval + a
             reverse_angle = interval
         else:
             bend_angle = interval * 2
@@ -144,7 +147,7 @@ def uniform_bend_lr(s_angle, e_angle, interval, z_range, line_thresh=.002, line_
         goal = _action(goal_angle=a + interval, fo=fo, f_name=f"{str(a)}_goal.pkl", rgba=(0, 1, 0, 1))
         print('***************************************** goal:', goal)
         motor.rot_degree(clockwise=1, rot_deg=reverse_angle)
-        res = _action(goal_angle=a + interval, fo=fo, f_name=f"{str(a)}_res.pkl", rgba=(1, 1, 0, 1))
+        res = _action(goal_angle=a + interval, ulim=goal, fo=fo, f_name=f"{str(a)}_res.pkl", rgba=(1, 1, 0, 1))
         print('***************************************** release:', res)
         if abs(goal - res) > 10:
             sb_list.append(np.mean(np.asarray(sb_list)))
@@ -160,7 +163,8 @@ def uniform_bend_lr(s_angle, e_angle, interval, z_range, line_thresh=.002, line_
         refined_goal = _action(goal_angle=a + interval, fo=fo, f_name=f"{str(a)}_refine_goal.pkl", rgba=(0, 1, 1, 1))
         print('***************************************** refined goal:', refined_goal)
         motor.rot_degree(clockwise=1, rot_deg=reverse_angle + sb_pre)
-        refined = _action(goal_angle=a + interval, fo=fo, f_name=f"{str(a)}_refine.pkl", rgba=(0, 0, 1, 1))
+        refined = _action(goal_angle=a + interval, ulim=refined_goal, fo=fo, f_name=f"{str(a)}_refine.pkl",
+                          rgba=(0, 0, 1, 1))
         print('***************************************** refined:', refined)
 
 
@@ -171,12 +175,11 @@ if __name__ == '__main__':
     phxi = phoxi.Phoxi(host=config.PHOXI_HOST)
     base = wd.World(cam_pos=[1.5, 1.5, 1.5], lookat_pos=[0, 0, 0])
 
-    fo = 'alu_refine_lr'
-    z_range = (.12, .15)
-    line_thresh = 0.0035
-    line_size_thresh = 500
+    fo = 'steel_refine_lr_1'
+    z_range = (.15, .18)
+    line_thresh = 0.0025
+    line_size_thresh = 250
 
-    # motor.rot_degree(clockwise=1, rot_deg=150)
     uniform_bend_lr(s_angle=0, e_angle=165, interval=15, fo=fo,
                     z_range=z_range, line_thresh=line_thresh, line_size_thresh=line_size_thresh)
     base.run()
