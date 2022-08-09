@@ -74,8 +74,8 @@ def hough_lines(img):
 
 def springback_from_img(fo, z_range, line_thresh=.002, line_size_thresh=300):
     sb_dict = {}
-    pcd_color = {'init': (1, 0, 0, 1), 'goal': (0, 1, 0, 1), 'res': (1, 1, 0, 1), 'refine': (0, 0, 1, 1)}
-    kpts_color = {'init': (1, 0, 0, 1), 'goal': (0, 1, 0, 1), 'res': (1, 1, 0, 1), 'refine': (0, 0, 1, 1)}
+    pcd_color = {'init': (1, 0, 0, 1), 'goal': (0, 1, 0, 1), 'res': (1, 1, 0, 1), 'refine': (0, 0, 1, 1),
+                 'refine_goal': (0, 1, 1, 1)}
     ext_str = '.pkl'
     for f in os.listdir(os.path.join(config.ROOT, 'img/phoxi', fo)):
         if f[-3:] != 'pkl':
@@ -92,7 +92,7 @@ def springback_from_img(fo, z_range, line_thresh=.002, line_size_thresh=300):
                 key = 'res'
             elif f.split(ext_str)[0].split('_')[1] == 'goal':
                 key = 'goal'
-            elif f.split(ext_str)[0].split('_')[1] == 'refine':
+            elif f.split(ext_str)[0].split('_')[1] == 'refine' and f.split(ext_str)[0].split('_')[-1] == 'refine':
                 key = 'refine'
             else:
                 key = 'refine_goal'
@@ -115,7 +115,8 @@ def springback_from_img(fo, z_range, line_thresh=.002, line_size_thresh=300):
         # gm.gen_stick(spos=line.B, epos=line.A + line.B, rgba=pcd_color[clr]).attach_to(base)
         # kpts = get_kpts_gmm(pcd_crop, rgba=kpts_color[clr])
 
-    pickle.dump(sb_dict, open(f'./{fo.split("/")[1]}_springback.pkl', 'wb'))
+    pickle.dump(sb_dict,
+                open(os.path.join(config.ROOT, 'bendplanner/springback', f'{fo.split("/")[1]}_springback.pkl'), 'wb'))
     return sb_dict
 
 
@@ -183,10 +184,10 @@ def show_data_w_refine(input_dict):
         goal = _get_angle_from_vecs(input_dict[k]['goal'][0], input_dict[k]['goal'][1], gt)
         refine = _get_angle_from_vecs(input_dict[k]['refine'][0], input_dict[k]['refine'][1], gt)
         print(f'------------{int(k) + 15}------------')
-        sb = gt - res
+        sb = goal - res
         if sb < 0:
             res = 180 - res
-            sb = gt - res
+            sb = goal - res
         bend = gt - goal
 
         print('goal, result, refined', goal, res, refine)
@@ -194,7 +195,7 @@ def show_data_w_refine(input_dict):
 
         sb_err.append(sb)
         bend_err.append(bend)
-        refined_err.append(gt - refine)
+        refined_err.append(goal - refine)
         X.append(int(k))
 
     sort_inx = np.argsort(X)
@@ -238,12 +239,13 @@ if __name__ == '__main__':
     base = wd.World(cam_pos=[1.5, 1.5, 1.5], lookat_pos=[0, 0, 0])
     rbt = el.loadYumi(showrbt=True)
 
-    fo = 'springback/alu_refine_lr_1'
+    fo = 'springback/steel_refine_lr_1'
     z_range = (.15, .18)
-    line_thresh = 0.0035
-    line_size_thresh = 600
-    sb_dict = springback_from_img(fo, z_range, line_thresh, line_size_thresh)
-    sb_dict = pickle.load(open(f'./{fo.split("/")[1]}_springback.pkl', 'rb'))
+    line_thresh = 0.0024
+    line_size_thresh = 300
+    # sb_dict = springback_from_img(fo, z_range, line_thresh, line_size_thresh)
+    sb_dict = pickle.load(
+        open(os.path.join(config.ROOT, 'bendplanner/springback', f'{fo.split("/")[1]}_springback.pkl'), 'rb'))
 
     if 'refine' in sb_dict['0'].keys():
         show_data_w_refine(sb_dict)

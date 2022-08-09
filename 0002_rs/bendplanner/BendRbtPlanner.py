@@ -290,19 +290,19 @@ class BendRbtPlanner(object):
     def run(self, f_name='tmp', grasp_l=0.0, folder_name='stick'):
         seqs, _ = self._iptree.get_potential_valid()
         while len(seqs) != 0:
-            # bendseq = [self.bendset[i] for i in seqs]
-            # self._iptree.show()
-            # print(seqs)
-            # self.reset_bs(self.init_pseq, self.init_rotseq)
-            # is_success, bendresseq, _ = self.bs.gen_by_bendseq(bendseq, cc=True, prune=True, toggledebug=False)
-            # # self.show_bendresseq(bendresseq, self.transmat4)
-            # # base.run()
-            # if not all(is_success):
-            #     self._iptree.add_invalid_seq(seqs[:is_success.index(False) + 1])
-            #     seqs, _ = self._iptree.get_potential_valid()
-            #     continue
-            # pickle.dump([is_success, bendresseq],
-            #             open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_bendresseq.pkl', 'wb'))
+            bendseq = [self.bendset[i] for i in seqs]
+            self._iptree.show()
+            print(seqs)
+            self.reset_bs(self.init_pseq, self.init_rotseq)
+            is_success, bendresseq, _ = self._bs.gen_by_bendseq(bendseq, cc=True, prune=True, toggledebug=False)
+            # self.show_bendresseq(bendresseq, self.transmat4)
+            # base.run()
+            if not all(is_success):
+                self._iptree.add_invalid_seq(seqs[:is_success.index(False) + 1])
+                seqs, _ = self._iptree.get_potential_valid()
+                continue
+            pickle.dump([is_success, bendresseq],
+                        open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_bendresseq.pkl', 'wb'))
             _, bendresseq = pickle.load(
                 open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_bendresseq.pkl', 'rb'))
 

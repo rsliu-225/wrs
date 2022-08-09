@@ -42,12 +42,21 @@ if __name__ == '__main__':
     '''
     show result
     '''
+    goal_pseq, bendset = pickle.load(
+        open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_bendseq.pkl', 'rb'))
+    _, bendresseq = pickle.load(
+        open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_bendresseq.pkl', 'rb'))
     pathseq_list = pickle.load(
         open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_pathseq.pkl', 'rb'))
 
+    for bendres in bendresseq:
+        init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendres
+
     grasp, pathseq = pathseq_list[1]
-    for path in pathseq:
+    for i,path in enumerate(pathseq):
         print(path)
+        init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendresseq[i]
+        bend_a = np.degrees(end_a-init_a )
         if len(path) == 1:
             mp_x_lft.goto_armjnts_x(path[0])
         else:
