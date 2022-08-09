@@ -205,7 +205,7 @@ class BendOptimizer(object):
 
         # self._thread_plot.start()
         sol = minimize(self.objective, init, method=method, bounds=self.bnds, constraints=self.cons,
-                       options={'maxiter': 50, 'ftol': 1e-05, 'iprint': 1, 'disp': True,
+                       options={'maxiter': 100, 'ftol': 5e-05, 'iprint': 1, 'disp': True,
                                 'eps': 1.4901161193847656e-08, 'finite_diff_rel_step': None})
 
         time_cost = time.time() - time_start

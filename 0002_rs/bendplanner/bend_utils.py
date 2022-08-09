@@ -31,9 +31,9 @@ def plot_frameseq(ax, pseq, rotseq, skip=5):
             plot_frame(ax, pseq[i], rotseq[i])
 
 
-def plot_pseq(ax3d, pseq, c=None, linestyle=None):
+def plot_pseq(ax3d, pseq, c=None):
     pseq = np.asarray(pseq)
-    ax3d.plot3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], c=c, linestyle=linestyle)
+    ax3d.plot3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], c=c)
     ax3d.grid()
 
 

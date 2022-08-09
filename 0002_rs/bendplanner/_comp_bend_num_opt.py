@@ -69,6 +69,7 @@ def opt_process(i, bs, opt, tor=None, obj_type='avg', method='SLSQP', n_trials=2
 
 
 if __name__ == '__main__':
+
     base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
     gm.gen_frame(thickness=.0005, alpha=.1, length=.01).attach_to(base)
     bs = b_sim.BendSim(show=True, granularity=np.pi / 90, cm_type='stick')
@@ -116,11 +117,10 @@ if __name__ == '__main__':
                                   bend_times=1,
                                   obj_type=obj_type)
 
-    for i in range(10, 19):
-        # if i not in [15]:
-        #     continue
+    for i in range(25, 27):
         init_err, opt_err = opt_process(i, bs, opt, tor=tor, obj_type=obj_type, method=method,
                                         n_trials=n_trials, n_startup_trials=n_startup_trials, sigma0=sigma0)
 
     # run_parallel(opt_process, [[19, bs, opt, tor, obj_type, method, n_trials, n_startup_trials, sigma0]])
     # run_parallel(opt_process, [[20, bs, opt, tor, obj_type, method, n_trials, n_startup_trials, sigma0]])
+

@@ -50,11 +50,9 @@ def tst(num):
     fail_tc_list = []
     total_cnt_list = []
     success_cnt = 0
-    plot_success = True
-    plot_fail = True
     for f in os.listdir('./'):
         if f[-3:] == 'pkl' and f[0] == str(num):
-            print(f'----------------{f}----------------')
+            print(f)
             result, tc_list, attemp_cnt_list, total_tc, bendset = pickle.load(open(f, 'rb'))
             print(tc_list)
             print(attemp_cnt_list)
@@ -69,23 +67,21 @@ def tst(num):
                 _, _, _, _, _, pseq, _ = bendresseq[-1]
                 pseq = np.asarray(pseq)
                 pseq[0] = pseq[0] - (pseq[0] - pseq[1]) * .8
-                if plot_success:
-                    ax = plt.axes(projection='3d')
-                    bu.plot_pseq(ax, pseq, c='k')
-                    bu.scatter_pseq(ax, pseq[1:-2], c='g')
-                    bu.scatter_pseq(ax, pseq[:1], c='r')
-                    plt.show()
+                ax = plt.axes(projection='3d')
+                bu.plot_pseq(ax, pseq, c='k')
+                bu.scatter_pseq(ax, pseq[1:-2], c='g')
+                bu.scatter_pseq(ax, pseq[:1], c='r')
+                plt.show()
                 # bs.show_bendresseq(bendresseq, [True] * len(seqs))
                 # base.run()
             else:
                 fail_tc_list.append(total_tc)
-                bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
-                bs.gen_by_bendseq(bendset, cc=False)
-                if plot_fail:
-                    ax = plt.axes(projection='3d')
-                    bu.plot_pseq(ax, bs.pseq, c='k')
-                    bu.scatter_pseq(ax, bs.pseq[1:-2], c='r')
-                    plt.show()
+                # bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
+                # bs.gen_by_bendseq(bendset, cc=False)
+                # ax = plt.axes(projection='3d')
+                # bu.plot_pseq(ax, bs.pseq, c='k')
+                # bu.scatter_pseq(ax, bs.pseq[1:-2], c='r')
+                # plt.show()
             if type(attemp_cnt_list) == type([]):
                 total_cnt_list.append(attemp_cnt_list[-1])
             else:
@@ -118,12 +114,11 @@ if __name__ == '__main__':
         avg_top10_tc_list.append(avg_top10_tc)
         avg_attempt_list.append(avg_attemps)
 
-    plt.rcParams["font.family"] = "Times New Roman"
-    plt.rcParams["font.size"] = 18
     ax = plt.axes()
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
     # ax.plot([str(i) for i in range(3, 8)], avg_fail_tc_list)
     ax.plot([str(i) for i in range(3, 8)], avg_first_tc_list)
     ax.plot([str(i) for i in range(3, 8)], avg_top10_tc_list)
-    # ax.grid(linestyle='dotted')
-    ax.grid()
+    ax.grid(linestyle='dotted')
     plt.show()
