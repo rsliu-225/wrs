@@ -48,6 +48,13 @@ def get_knn(p, kdt, k=3):
     return np.asarray([pcd[p_inx] for p_inx in p_nearest_inx])
 
 
+def get_min_dist(p, kdt):
+    p_nearest_inx = get_knn_indices(p, kdt, k=1)
+    pcd = list(np.array(kdt.data))
+    gm.gen_sphere(np.asarray(pcd[p_nearest_inx[0]])).attach_to(base)
+    return np.linalg.norm(np.asarray(p) - np.asarray(pcd[p_nearest_inx[0]]))
+
+
 def get_nn_indices_by_dist(p, kdt, step=1.0):
     result_indices = []
     distances, indices = kdt.query([p], k=1000, return_distance=True)
@@ -842,7 +849,8 @@ def cal_nbv_pcn(pts, pts_pcn, theta=np.pi / 6, toggledebug=False):
     if toggledebug:
         for i in range(len(confs_nbv)):
             if confs_nbv[i] > .3:
-                gm.gen_sphere(pts_nbv[i], radius=.001, rgba=(confs_pcn_res[i], 0, 1 - confs_pcn_res[i], 1)).attach_to(base)
+                gm.gen_sphere(pts_nbv[i], radius=.001, rgba=(confs_pcn_res[i], 0, 1 - confs_pcn_res[i], 1)).attach_to(
+                    base)
                 gm.gen_arrow(pts_nbv[i], pts_nbv[i] + nrmls_nbv[i] * .03,
                              rgba=(confs_pcn_res[i], 0, 1 - confs_pcn_res[i], 1), thickness=.002).attach_to(base)
             # gm.gen_arrow(pts_nbv[i], pts_nbv[i] + nrmls_nbv[i] * .05,

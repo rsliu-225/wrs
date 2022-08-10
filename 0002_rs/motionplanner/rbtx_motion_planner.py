@@ -22,10 +22,10 @@ class MotionPlannerRbtX(MotionPlanner):
             self.hnd_name = 'hnd'
             self.arm = self.rbt.arm
 
-    def movepath(self, path):
+    def movepath(self, path, speed_n=100):
         print("--------------move path---------------")
         try:
-            self.rbtx.move_jnts(path, self.armname, wait=True)
+            self.rbtx.move_jntspace_path(path=path, component_name=self.armname, speed_n=speed_n)
         except:
             self.rbtx.arm_move_jspace_path(path)
 
@@ -61,7 +61,7 @@ class MotionPlannerRbtX(MotionPlanner):
 
         path_gotoinit = self.plan_start2end_hold_armj([start, goal], objcm, objrelpos, objrelrot)
         if path_gotoinit is not None:
-            self.rbtx.move_jntspace_path(path_gotoinit, self.armname, wait=True)
+            self.rbtx.move_jntspace_path(path=path_gotoinit, component_name=self.armname)
             return True
         return False
 

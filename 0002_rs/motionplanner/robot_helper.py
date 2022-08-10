@@ -40,7 +40,7 @@ class RobotHelper(object):
     def get_ee(self, armjnts=None, releemat4=np.eye(4)):
         if armjnts is not None:
             self.goto_armjnts(armjnts)
-        eepos, eerot = self.rbt.get_gl_tcp(armname=self.armname)
+        eepos, eerot = self.rbt.get_gl_tcp(manipulator_name=self.armname)
         eemat4 = np.dot(rm.homomat_from_posrot(eepos, eerot), releemat4)
         return eemat4[:3, 3], eemat4[:3, :3]
 

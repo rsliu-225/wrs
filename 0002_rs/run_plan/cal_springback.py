@@ -193,7 +193,7 @@ def show_data_w_refine(input_dict):
 
         sb_err.append(sb)
         bend_err.append(bend)
-        refined_err.append(goal - refine)
+        refined_err.append(goal - gt)
         X.append(gt)
 
     sort_inx = np.argsort(X)

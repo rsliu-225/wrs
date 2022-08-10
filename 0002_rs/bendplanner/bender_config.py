@@ -1,13 +1,13 @@
 import numpy as np
 
 R_SIDE = .015 / 2
-R_CENTER = .01 / 2
+R_CENTER = .015 / 2
 R_BASE = .015 / 2
 C2C_DIST = .0245
 PILLAR_H = .02
 BENDER_H = 0.12375
 
-THICKNESS = 0.0015
+THICKNESS = 0.006
 # THICKNESS = 0.006
 WIDTH = .01
 

@@ -33,9 +33,9 @@ def lasso_pre(X, y, x_pre):
     return model.predict([[x_pre]])
 
 
-def _action(fo, f_name, goal_angle, ulim=None, rgba=(0, 1, 0, 1)):
+def _action(fo, f_name, goal_angle, z_range, ulim=None, rgba=(0, 1, 0, 1)):
     textureimg, depthimg, pcd = \
-        phxi.dumpalldata(f_name=os.path.join('img/phoxi/springback', fo, f_name))
+        phxi.dumpalldata(f_name=os.path.join('img/phoxi/', 'springback', fo, f_name))
     # cv2.imshow("depthimg", depthimg)
     # cv2.waitKey(0)
     pcd = rm.homomat_transform_points(affine_mat, np.asarray(pcd) / 1000)
@@ -144,10 +144,11 @@ def uniform_bend_lr(s_angle, e_angle, interval, z_range, line_thresh=.002, line_
             reverse_angle = interval
 
         motor.rot_degree(clockwise=0, rot_deg=bend_angle)
-        goal = _action(goal_angle=a + interval, fo=fo, f_name=f"{str(a)}_goal.pkl", rgba=(0, 1, 0, 1))
+        goal = _action(goal_angle=a + interval, z_range=z_range, fo=fo, f_name=f"{str(a)}_goal.pkl", rgba=(0, 1, 0, 1))
         print('***************************************** goal:', goal)
         motor.rot_degree(clockwise=1, rot_deg=reverse_angle)
-        res = _action(goal_angle=a + interval, ulim=goal, fo=fo, f_name=f"{str(a)}_res.pkl", rgba=(1, 1, 0, 1))
+        res = _action(goal_angle=a + interval, z_range=z_range, ulim=goal, fo=fo, f_name=f"{str(a)}_res.pkl",
+                      rgba=(1, 1, 0, 1))
         print('***************************************** release:', res)
         if abs(goal - res) > 10:
             sb_list.append(np.mean(np.asarray(sb_list)))
@@ -160,10 +161,12 @@ def uniform_bend_lr(s_angle, e_angle, interval, z_range, line_thresh=.002, line_
             sb_pre = lasso_pre(range(s_angle, a, interval), sb_list[:-1], a)
 
         motor.rot_degree(clockwise=0, rot_deg=reverse_angle + sb_pre)
-        refined_goal = _action(goal_angle=a + interval, fo=fo, f_name=f"{str(a)}_refine_goal.pkl", rgba=(0, 1, 1, 1))
+        refined_goal = _action(goal_angle=a + interval, z_range=z_range, fo=fo, f_name=f"{str(a)}_refine_goal.pkl",
+                               rgba=(0, 1, 1, 1))
         print('***************************************** refined goal:', refined_goal)
         motor.rot_degree(clockwise=1, rot_deg=reverse_angle + sb_pre)
-        refined = _action(goal_angle=a + interval, ulim=refined_goal, fo=fo, f_name=f"{str(a)}_refine.pkl",
+        refined = _action(goal_angle=a + interval, z_range=z_range, ulim=refined_goal, fo=fo,
+                          f_name=f"{str(a)}_refine.pkl",
                           rgba=(0, 0, 1, 1))
         print('***************************************** refined:', refined)
 

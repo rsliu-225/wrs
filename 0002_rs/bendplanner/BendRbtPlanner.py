@@ -281,7 +281,7 @@ class BendRbtPlanner(object):
             if fail_cnt == 0:
                 all_result.append([grasp_tmp, pathseq_tmp])
                 self.show_motion_withrbt(bendresseq, pathseq_tmp)
-                base.run()
+                # base.run()
 
         if len(all_result) == 0:
             return [str(v) for v in pathseq].index('None'), all_result
@@ -319,8 +319,8 @@ class BendRbtPlanner(object):
                 open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_bendresseq.pkl', 'rb'))
             armjntsseq_list = pickle.load(
                 open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_armjntsseq.pkl', 'rb'))
-            fail_index, pathseq_list = self.check_motion(bendresseq, armjntsseq_list)
-            # fail_index, pathseq_list = self.check_pull_motion(bendseq, bendresseq, armjntsseq_list)
+            # fail_index, pathseq_list = self.check_motion(bendresseq, armjntsseq_list)
+            fail_index, pathseq_list = self.check_pull_motion(bendseq, bendresseq, armjntsseq_list)
             if fail_index != -1:
                 self._iptree.add_invalid_seq(seqs[:fail_index + 1])
                 seqs = self._iptree.get_potential_valid()
