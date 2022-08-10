@@ -87,7 +87,7 @@ def springback_from_img(fo, z_range, line_thresh=.002, line_size_thresh=300):
             key = 'init'
             angle = 0
         else:
-            angle = f.split(ext_str)[0].split('_')[0]
+            angle = int(f.split(ext_str)[0].split('_')[0]) + 15
             if f.split(ext_str)[0].split('_')[1] == 'res':
                 key = 'res'
             elif f.split(ext_str)[0].split('_')[1] == 'goal':
@@ -110,8 +110,6 @@ def springback_from_img(fo, z_range, line_thresh=.002, line_size_thresh=300):
         for slope, pts in lines:
             pcdu.show_pcd(pts, rgba=pcd_color[key])
             sb_dict[angle][key].append(slope)
-        res = _get_angle_from_vecs(sb_dict[angle][key][0], sb_dict[angle][key][1], 15)
-        print(res)
         # gm.gen_stick(spos=line.B, epos=line.A + line.B, rgba=pcd_color[clr]).attach_to(base)
         # kpts = get_kpts_gmm(pcd_crop, rgba=kpts_color[clr])
 
@@ -127,14 +125,14 @@ def _get_angle_from_vecs(v1, v2, gt):
     return angle
 
 
-def show_data(input_dict, gt_offset=0):
+def show_data(input_dict):
     X = []
     sb_err = []
     bend_err = []
     for k, v in input_dict.items():
         if int(k) == 0:
             continue
-        gt = int(k) + 15 + gt_offset
+        gt = int(k)
         res = _get_angle_from_vecs(input_dict[k]['res'][0], input_dict[k]['res'][1], gt)
         goal = _get_angle_from_vecs(input_dict[k]['goal'][0], input_dict[k]['goal'][1], gt)
         print(f'------------{int(k) + 15}------------')
@@ -179,7 +177,7 @@ def show_data_w_refine(input_dict):
     for k, v in input_dict.items():
         if int(k) == 0:
             continue
-        gt = int(k) + 15
+        gt = int(k)
         res = _get_angle_from_vecs(input_dict[k]['res'][0], input_dict[k]['res'][1], gt)
         goal = _get_angle_from_vecs(input_dict[k]['goal'][0], input_dict[k]['goal'][1], gt)
         refine = _get_angle_from_vecs(input_dict[k]['refine'][0], input_dict[k]['refine'][1], gt)
@@ -196,7 +194,7 @@ def show_data_w_refine(input_dict):
         sb_err.append(sb)
         bend_err.append(bend)
         refined_err.append(goal - refine)
-        X.append(int(k))
+        X.append(gt)
 
     sort_inx = np.argsort(X)
     X = [X[i] for i in sort_inx]
@@ -239,17 +237,15 @@ if __name__ == '__main__':
     base = wd.World(cam_pos=[1.5, 1.5, 1.5], lookat_pos=[0, 0, 0])
     rbt = el.loadYumi(showrbt=True)
 
-    fo = 'springback/steel_refine_lr_1'
+    fo = 'springback/alu_refine_lr_3'
     z_range = (.15, .18)
-    line_thresh = 0.0024
-    line_size_thresh = 300
-    # sb_dict = springback_from_img(fo, z_range, line_thresh, line_size_thresh)
+    line_thresh = 0.0035
+    line_size_thresh = 600
+    sb_dict = springback_from_img(fo, z_range, line_thresh, line_size_thresh)
     sb_dict = pickle.load(
         open(os.path.join(config.ROOT, 'bendplanner/springback', f'{fo.split("/")[1]}_springback.pkl'), 'rb'))
 
-    if 'refine' in sb_dict['0'].keys():
-        show_data_w_refine(sb_dict)
-    else:
-        show_data(sb_dict)
+    show_data_w_refine(sb_dict)
+    # show_data(sb_dict)
 
     base.run()
