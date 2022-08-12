@@ -27,7 +27,7 @@ def _action(fo, f_name, goal_angle, z_range, line_thresh, line_size_thresh, ulim
     lines = pcdu.extract_lines_from_pcd(textureimg, pcd, z_range=z_range, line_thresh=line_thresh,
                                         line_size_thresh=line_size_thresh, toggledebug=True)
 
-    center = np.asarray([.4, 0, bconfig.BENDER_H])
+    center = np.asarray([.45, 0, bconfig.BENDER_H + .03])
     dist_list = []
     for _, line_pts in lines:
         pcdu.show_pcd(line_pts, rgba=(1, 1, 1, .2))
@@ -65,9 +65,9 @@ if __name__ == '__main__':
     folder_name = 'stick'
     transmat4 = rm.homomat_from_posrot((.4, .3, bconfig.BENDER_H), rm.rotmat_from_axangle((0, 0, 1), np.pi))
 
-    z_range = (.12, .15)
+    z_range = (.15, .18)
     line_thresh = 0.003
-    line_size_thresh = 200
+    line_size_thresh = 600
 
     """
     init class
@@ -83,41 +83,52 @@ if __name__ == '__main__':
 
     # mp_x_rgt.goto_armjnts_x(armjnts=np.array([-0.0137881, -0.97703532, -1.50848807, 0.87929688, -1.99840199,
     #                                           0.13788101, 1.51669112]))
+    #
+    # mp_x_lft.move_up_x(direction=(0, 0, -1), length=.02)
+    textureimg, depthimg, pcd = \
+        phxi.dumpalldata(f_name=os.path.join('img/phoxi/', 'exp_bend', 'stick/penta', 'result.pkl'))
 
-    '''
-    show result
-    '''
-    goal_pseq, bendset = pickle.load(
-        open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_bendseq.pkl', 'rb'))
-    _, bendresseq = pickle.load(
-        open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_bendresseq.pkl', 'rb'))
-    pathseq_list = pickle.load(
-        open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_pathseq.pkl', 'rb'))
-
-    for bendres in bendresseq:
-        init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendres
-
-    grasp, pathseq = pathseq_list[0]
-    for i, path in enumerate(pathseq):
-        eepos, eerot = mp_x_lft.get_ee(armjnts=mp_x_lft.get_armjnts())
-        print(eepos)
-        init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendresseq[i]
-        bend_a = np.degrees(end_a - init_a) + 5
-        print(bend_a)
-        if len(path) == 1:
-            mp_x_lft.goto_armjnts_x(path[0])
-        else:
-            mp_x_lft.movepath(path)
-        motor.rot_degree(clockwise=0, rot_deg=bend_a)
-        goal = _action(os.path.join(folder_name, f_name), f"{str(i)}_goal.pkl",
-                       bend_a, z_range, line_thresh=line_thresh, line_size_thresh=line_size_thresh, ulim=None,
-                       rgba=(0, 1, 0, 1))
-        motor.rot_degree(clockwise=1, rot_deg=bend_a)
-        res = _action(os.path.join(folder_name, f_name), f"{str(i)}_res.pkl",
-                      bend_a, z_range, line_thresh=line_thresh, line_size_thresh=line_size_thresh, ulim=None,
-                      rgba=(0, 1, 0, 1))
-
-        time.sleep(3)
-    # _action(os.path.join(folder_name, f_name), f"tst_goal.pkl", 75, z_range,
-    #         line_thresh=line_thresh, line_size_thresh=line_size_thresh, ulim=None, rgba=(0, 1, 0, 1))
-    # base.run()
+    # '''
+    # show result
+    # '''
+    # goal_pseq, bendset = pickle.load(
+    #     open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_bendseq.pkl', 'rb'))
+    # _, bendresseq = pickle.load(
+    #     open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_bendresseq.pkl', 'rb'))
+    # pathseq_list = pickle.load(
+    #     open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_pathseq.pkl', 'rb'))
+    #
+    # for bendres in bendresseq:
+    #     init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendres
+    #
+    # grasp, pathseq = pathseq_list[6]
+    # for i, path in enumerate(pathseq[0:]):
+    #     eepos, eerot = mp_x_lft.get_ee(armjnts=mp_x_lft.get_armjnts())
+    #     print(eepos)
+    #     init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendresseq[i]
+    #     bend_a = np.degrees(end_a - init_a) + 7
+    #     print(bend_a)
+    #     if len(path) == 1:
+    #         mp_x_lft.goto_armjnts_x(pathseq[1][0])
+    #     else:
+    #         mp_x_lft.movepath(path)
+    #     time.sleep(3)
+    #
+    #     motor.rot_degree(clockwise=0, rot_deg=bend_a)
+    #     goal = _action(os.path.join(folder_name, f_name), f"{str(i)}_goal.pkl",
+    #                    bend_a, z_range, line_thresh=line_thresh, line_size_thresh=line_size_thresh, ulim=None,
+    #                    rgba=(0, 1, 0, 1))
+    #
+    #     if i == 0:
+    #         motor.rot_degree(clockwise=1, rot_deg=20)
+    #         time.sleep(1)
+    #         motor.rot_degree(clockwise=0, rot_deg=20)
+    #         time.sleep(1)
+    #         motor.rot_degree(clockwise=1, rot_deg=bend_a)
+    #         refine = _action(os.path.join(folder_name, f_name), f"{str(i)}_refine.pkl",
+    #                          bend_a, z_range, line_thresh=line_thresh, line_size_thresh=line_size_thresh, ulim=None,
+    #                          rgba=(0, 1, 0, 1))
+    #     else:
+    #         motor.rot_degree(clockwise=1, rot_deg=bend_a)
+    #
+    #     time.sleep(3)

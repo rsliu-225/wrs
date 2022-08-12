@@ -22,13 +22,13 @@ if __name__ == '__main__':
 
     base, env = el.loadEnv_yumi()
     rbt = el.loadYumi(showrbt=False)
-    transmat4 = rm.homomat_from_posrot((.4, 0, bconfig.BENDER_H), rm.rotmat_from_axangle((0, 0, 1), np.pi))
+    transmat4 = rm.homomat_from_posrot((.45, 0, bconfig.BENDER_H + .03), rm.rotmat_from_axangle((0, 0, 1), np.pi))
     # transmat4 = rm.homomat_from_posrot((.4, -.1, bconfig.BENDER_H))
 
     bs = b_sim.BendSim(show=True)
     mp = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
 
-    f_name = 'penta'
+    f_name = 'randomc'
     folder_name = 'stick'
 
     goal_pseq = pickle.load(open(os.path.join(config.ROOT, f'bendplanner/goal/pseq/{f_name}.pkl'), 'rb'))
@@ -42,7 +42,7 @@ if __name__ == '__main__':
     # goal_pseq = np.asarray([[0, 0, .1], [0, 0, 0], [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1]]) * .5
     # pickle.dump(goal_pseq, open(f'{config.ROOT}/bendplanner/goal/pseq/{f_name}.pkl', 'wb'))
 
-    plan = True
+    plan = False
 
     '''
     plan

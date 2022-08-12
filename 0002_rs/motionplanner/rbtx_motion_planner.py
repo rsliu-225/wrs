@@ -68,9 +68,7 @@ class MotionPlannerRbtX(MotionPlanner):
     def move_up_x(self, direction=np.array([0, 0, 1]), length=20):
         print(f"--------------move up {length}---------------")
         path_up = self.get_linear_path_from(self.get_armjnts(), length=length, direction=direction)
-        self.rbtx.movejntssgl_cont(path_up, self.armname, wait=True)
-        while self.arm.arm.is_program_running():
-            time.sleep(1)
+        self.rbtx.move_jntspace_path(path=path_up, component_name=self.armname)
         return path_up
 
     def get_obj_direction(self, objrelpos, objrelrot, org_direction=np.array([-1, 0, 0])):
