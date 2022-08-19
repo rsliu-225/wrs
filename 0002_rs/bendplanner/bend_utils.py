@@ -394,7 +394,6 @@ def get_init_rot(pseq):
 
 def decimate_pseq(pseq, tor=.001, toggledebug=False):
     pseq = np.asarray(pseq)
-    rotseq = []
     res_pids = [0, len(pseq) - 1]
     ptr = 0
     while ptr < len(res_pids) - 1:
@@ -608,7 +607,7 @@ def pseq2bendset(pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggledebug
     ax.set_box_aspect((1, 1, 1))
     tangent_pts = []
     bendseq = []
-    n_pre = None
+    n_seq = []
     rot_a = 0
     lift_a = 0
     pos = 0
@@ -622,15 +621,15 @@ def pseq2bendset(pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggledebug
         if round(bend_a, 8) == 0:
             continue
 
-        if n_pre is not None:
-            a = rm.angle_between_vectors(n_pre, n)
-            tmp_a = rm.angle_between_vectors(v1, np.cross(n_pre, n))
+        if len(n_seq) != 0:
+            a = rm.angle_between_vectors(n_seq[-1], n)
+            tmp_a = rm.angle_between_vectors(v1, np.cross(n_seq[-1], n))
             if tmp_a is not None and tmp_a > np.pi / 2:
                 rot_a += a
             else:
                 rot_a -= a
 
-        n_pre = n
+        n_seq.append(n)
         l = (bend_r * np.tan(abs(bend_a) / 2)) / np.cos(abs(lift_a))
         ratio_1 = l / np.linalg.norm(pseq[i] - pseq[i - 1])
         ratio_2 = l / np.linalg.norm(pseq[i] - pseq[i + 1])
@@ -640,6 +639,7 @@ def pseq2bendset(pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggledebug
         if i > 1 and is_collinearity(p_tan1, [pseq[i - 1], tangent_pts[-1]]):
             scatter_pseq(ax, [p_tan1], s=20, c='gray')
             bendseq[-1][0] += bend_a
+            # bendseq[-1][2] = rot_a
 
         else:
             if i == 1:

@@ -1,5 +1,6 @@
 import pickle
 import config
+import copy
 import networkx as nx
 import numpy as np
 from scipy.spatial.transform import Rotation
@@ -12,7 +13,6 @@ import motion.probabilistic.rrt_connect as rrtc
 import motionplanner.animation_helper as ani_helper
 import motionplanner.ik_solver as iks
 import motionplanner.robot_helper as rbt_helper
-import robot_sim.end_effectors.gripper.robotiqhe.robotiqhe as rtqhe
 
 
 class MotionPlanner(object):
@@ -23,17 +23,30 @@ class MotionPlanner(object):
         if self.armname == 'lft_arm':
             self.hnd_name = 'lft_hnd'
             self.arm = self.rbt.lft_arm
+            self.hnd = self.rbt.lft_hnd
+
         elif self.armname == 'rgt_arm':
             self.hnd_name = 'rgt_hnd'
             self.arm = self.rbt.rgt_arm
+            self.hnd = self.rbt.rgt_hnd
+
         else:
             self.hnd_name = 'hnd'
             self.arm = self.rbt.arm
+            self.hnd = self.rbt.hnd
+
+        gripper_name = str(type(self.hnd)).split("'")[1].split('.')[-1]
+        if gripper_name == 'YumiGripper':
+            import robot_sim.end_effectors.gripper.yumi_gripper.yumi_gripper as yumigripper
+            self.gripper = yumigripper.YumiGripper()
+        else:
+            import robot_sim.end_effectors.gripper.robotiqhe.robotiqhe as rtqhe
+            self.gripper = rtqhe.RobotiqHE()
 
         self.obscmlist = []
         # for obscm in self.obscmlist:
         #     obscm.showcn()
-        self.gripper = rtqhe.RobotiqHE()
+
         self.iksolver = iks.IkSolver(self.env, self.rbt, self.armname)
         # self.adp_s = adp.ADPlanner(self.rbt)
         self.inik_slvr = inik.IncrementalNIK(self.rbt)
@@ -76,40 +89,7 @@ class MotionPlanner(object):
             return None
         return armjnts
 
-    def get_numik_nlopt(self, tgtpos, tgtrot=None, seedjntagls="default", releemat4=np.eye(4), col_ps=None,
-                        roll_limit=1e-2, pos_limit=1e-2, movedir=None, toggledebug=False):
-        return self.iksolver.solve_numik_nlopt(tgtpos, tgtrot, seedjntagls=seedjntagls, releemat4=releemat4,
-                                               col_ps=col_ps, roll_limit=roll_limit, pos_limit=pos_limit,
-                                               movedir=movedir, toggledebug=toggledebug)
-
-    def load_grasp(self, model_name, grasp_id):
-        return pickle.load(open(config.PREGRASP_REL_PATH + model_name + "_pregrasps.pkl", "rb"))[grasp_id]
-
-    def load_all_grasp(self, model_name):
-        return pickle.load(open(config.PREGRASP_REL_PATH + model_name + "_pregrasps.pkl", "rb"))
-
-    def load_objmat4(self, model_name, objmat4_id):
-        return pickle.load(open(config.GRASPMAP_REL_PATH + model_name + "_objmat4_list.pkl", "rb"))[objmat4_id]
-
-    def load_all_objmat4(self, model_name, grasp_id):
-        result = []
-        graspmap = pickle.load(open(config.GRASPMAP_REL_PATH + model_name + "_graspmap.pkl", "rb"))
-        objmat4_dict = graspmap[grasp_id]
-        for k, v in objmat4_dict.items():
-            if v:
-                result.append(self.load_objmat4(model_name, k))
-        return result
-
-    def load_all_objmat4_failed(self, model_name, grasp_id):
-        result = []
-        graspmap = pickle.load(open(config.GRASPMAP_REL_PATH + model_name + "_graspmap.pkl", "rb"))
-        objmat4_dict = graspmap[grasp_id]
-        for k, v in objmat4_dict.items():
-            if not v:
-                result.append(self.load_objmat4(model_name, k))
-        return result
-
-    def get_armjnts_by_objmat4ngrasp(self, grasp, obslist, objmat4, obj=None, msc=None):
+    def get_numik_hold(self, grasp, obslist, objmat4, obj=None, msc=None):
         eepos, eerot = self.get_ee_by_objmat4(grasp, objmat4)
         # gm.gen_frame(eepos, eerot, length=.02, thickness=.001, alpha=.5).attach_to(base)
         if obj is not None:
@@ -143,6 +123,39 @@ class MotionPlanner(object):
                 print("Self Obj Collided")
                 # self.rbth.show_armjnts(armjnts=armjnts, rgba=(.7, .7, 0, .7))
                 return armjnts
+
+    def get_numik_nlopt(self, tgtpos, tgtrot=None, seedjntagls="default", releemat4=np.eye(4), col_ps=None,
+                        roll_limit=1e-2, pos_limit=1e-2, movedir=None, toggledebug=False):
+        return self.iksolver.solve_numik_nlopt(tgtpos, tgtrot, seedjntagls=seedjntagls, releemat4=releemat4,
+                                               col_ps=col_ps, roll_limit=roll_limit, pos_limit=pos_limit,
+                                               movedir=movedir, toggledebug=toggledebug)
+
+    def load_grasp(self, model_name, grasp_id):
+        return pickle.load(open(config.PREGRASP_REL_PATH + model_name + "_pregrasps.pkl", "rb"))[grasp_id]
+
+    def load_all_grasp(self, model_name):
+        return pickle.load(open(config.PREGRASP_REL_PATH + model_name + "_pregrasps.pkl", "rb"))
+
+    def load_objmat4(self, model_name, objmat4_id):
+        return pickle.load(open(config.GRASPMAP_REL_PATH + model_name + "_objmat4_list.pkl", "rb"))[objmat4_id]
+
+    def load_all_objmat4(self, model_name, grasp_id):
+        result = []
+        graspmap = pickle.load(open(config.GRASPMAP_REL_PATH + model_name + "_graspmap.pkl", "rb"))
+        objmat4_dict = graspmap[grasp_id]
+        for k, v in objmat4_dict.items():
+            if v:
+                result.append(self.load_objmat4(model_name, k))
+        return result
+
+    def load_all_objmat4_failed(self, model_name, grasp_id):
+        result = []
+        graspmap = pickle.load(open(config.GRASPMAP_REL_PATH + model_name + "_graspmap.pkl", "rb"))
+        objmat4_dict = graspmap[grasp_id]
+        for k, v in objmat4_dict.items():
+            if not v:
+                result.append(self.load_objmat4(model_name, k))
+        return result
 
     def get_available_graspid_by_objmat4(self, grasp_list, obj, objmat4):
         remaingrasp_id_list = []
@@ -364,6 +377,11 @@ class MotionPlanner(object):
             # self.rbt.release(hnd_name=self.hnd_name, objcm=obj_copy)
             return None
 
+        obj_copy = obj.copy()
+        obj_copy.set_homomat(objmat4_pair[0])
+        obj_copy.attach_to(base)
+        self.ah.show_armjnts(armjnts=start, rgba=[0, 0, 1, .5])
+        self.ah.show_armjnts(armjnts=goal, rgba=[1, 0, 0, .5])
         # planning
         if use_pickupprim:
             pickupprim = self.get_linear_path_from(start=start, length=pickupprim_len)
@@ -383,8 +401,7 @@ class MotionPlanner(object):
         else:
             placedownprim = [goal]
         self.rbt.fk(component_name=self.armname, jnt_values=start)
-        obj_copy = obj.copy()
-        obj_copy.set_homomat(objmat4_pair[0])
+
         # _, _ = self.rbt.hold(obj_copy, hnd_name=self.hnd_name, jawwidth=.01)
         # self.ah.show_armjnts(armjnts=pickupprim[-1], rgba=[1, 0, 1, .5])
         # self.ah.show_armjnts(armjnts=pickupprim[0], rgba=[1, 0, 0, .5])
@@ -408,33 +425,6 @@ class MotionPlanner(object):
 
         self.rbt.release(hnd_name=self.hnd_name, objcm=obj_copy)
         return None
-
-    # def objmat4_list_inp(self, objmat4_list, max_inp=30):
-    #     inp_mat4_list = []
-    #     for i, objmat4 in enumerate(objmat4_list):
-    #         if i > 0:
-    #             inp_mat4_list.append(objmat4_list[i - 1])
-    #             _, angle = rm.axangle_between_rotmat(objmat4_list[i - 1][:3, :3], objmat4[:3, :3])
-    #             if angle < 1.0:
-    #                 continue
-    #             cnt = int(angle) if int(angle) < max_inp else max_inp
-    #             times = [1 / cnt * n for n in range(1, cnt)]
-    #             # print(angle, cnt, times)
-    #
-    #             p1 = objmat4_list[i - 1][:3, 3]
-    #             p2 = objmat4[:3, 3]
-    #
-    #             rots = Rotation.from_matrix([objmat4_list[i - 1][:3, :3], objmat4[:3, :3]])
-    #             slerp = Slerp([0, 1], rots)
-    #
-    #             interp_r_list = slerp(times)
-    #             interp_p_list = [p1 + (p2 - p1) * t for t in times]
-    #             interp_rot_list = [interp_r.as_matrix() for interp_r in interp_r_list]
-    #
-    #             inp_mat4_list.extend([rm.homomat_from_posrot(p, rot) for p, rot in zip(interp_p_list, interp_rot_list)])
-    #     print("length of interpolation result:", len(inp_mat4_list))
-    #
-    #     return inp_mat4_list
 
     def objmat4_list_inp(self, objmat4_list, max_inp=30):
         inp_mat4_list = []
@@ -471,15 +461,50 @@ class MotionPlanner(object):
             inp_mat4_list_ms.append(self.objmat4_list_inp(objmat4_list, max_inp=max_inp))
         return inp_mat4_list_ms
 
+    def get_continuouspath_hold_ik(self, msc, grasp, objmat4_list, objcm, grasp_id=0, threshold=1, toggledebug=False):
+        print(f"--------------get continuous path(ik) {grasp_id}---------------")
+        success_cnt = 0
+        path = []
+        relpos, relrot = None, None
+        for i, objmat4 in enumerate(objmat4_list):
+            eepos, eerot = self.get_ee_by_objmat4(grasp, objmat4)
+            tgtpos = objmat4[:3, 3]
+            tgtrot = objmat4[:3, :3]
+            if relpos is None:
+                relpos, relrot = rm.rel_pose(eepos, eerot, tgtpos, tgtrot)
+            armjnts = self.get_numik_hold(grasp, [objcm], objmat4, msc=msc)
+
+            if armjnts is not None:
+                path.append(armjnts)
+                msc = copy.deepcopy(armjnts)
+                success_cnt += 1
+            else:
+                print('get ik failed!', i)
+                return None
+            if toggledebug:
+                gm.gen_frame(objmat4[:3, 3], objmat4[:3, :3], length=.01, thickness=.001).attach_to(base)
+                if i == 0 or i == len(objmat4_list) - 1:
+                    self.ah.show_armjnts()
+                if i % 3 == 0:
+                    self.ah.show_armjnts(rgba=(0, 1, 0, .4))
+                objcm_show = objcm.copy()
+                objcm_show.set_homomat(np.linalg.inv(objmat4_init).dot(objmat4))
+                objcm_show.attach_to(base)
+
+        print("Success point:", success_cnt, "of", len(objmat4_list))
+        if success_cnt >= len(objmat4_list) * threshold:
+            return path
+
+        return None
+
     def get_continuouspath_ik(self, msc, grasp, objmat4_list, grasp_id=0, threshold=1, toggledebug=False,
                               dump_f_name=None):
         """
         plan init armjnts to first drawpath armjnts, append all the others armjnts in the drawpath.
 
-        :param graspseq:
-        :param obj:
-        :param objrelpos:
-        :param objrelrot:
+        :param msc:
+        :param grasp:
+        :param objmat4_list:
         :param threshold: 0-1
         :return: armjnts list
         """
@@ -501,9 +526,9 @@ class MotionPlanner(object):
                 path.append(armjnts)
                 msc = copy.deepcopy(armjnts)
                 success_cnt += 1
-            # else:
-            #     print('get draw path failed!', i)
-            #     return None
+            else:
+                print('get ik failed!', i)
+                return None
 
         print("Success point:", success_cnt, "of", len(objmat4_list))
         if toggledebug:
@@ -511,7 +536,8 @@ class MotionPlanner(object):
                 cost = self.get_path_cost(path)
                 fig = plt.figure(1, figsize=(6.4, 4.8))
                 plt.ion()
-                self.rbth.plot_armjnts(path)
+                ax = fig.add_subplot(1, 1, 1)
+                self.rbth.plot_armjnts(ax, path)
                 plt.show()
                 if dump_f_name is not None:
                     f_name = f"./log/path/ik/{dump_f_name}_" \
@@ -528,7 +554,7 @@ class MotionPlanner(object):
     def get_draw_sconfig(self, objmat4, grasp):
         # sample_range = self.get_rpy_list((-180, 180, 10), (0, 0, 0), (0, 0, 0))
         sample_range = self.get_rpy_list((-10, 11, 1), (0, 0, 0), (0, 0, 0))
-        msc, start_id = self.__find_start_config(objmat4, grasp, sample_range)
+        msc, start_id = self._find_start_config(objmat4, grasp, sample_range)
         print(start_id, msc)
         # self.rbth.show_armjnts(armjnts=msc)
         return msc
@@ -580,7 +606,7 @@ class MotionPlanner(object):
                     axmat = self.rbt.manipulability_axmat(component_name=self.armname)
                     manipulability = self.rbt.manipulability(component_name=self.armname)
                     print("%e" % manipulability)
-                    self.rbth.draw_axis_uneven(objmat4[:3, 3], axmat, scale=.5)
+                    self.rbth.gen_frame_uneven(objmat4[:3, 3], axmat, scale=.5)
                     base.run()
             else:
                 return None
@@ -607,7 +633,7 @@ class MotionPlanner(object):
                     rpy_list.append((r, p, y))
         return rpy_list
 
-    def __find_start_config(self, objmat4, grasp, sample_range, toggledebug=False):
+    def _find_start_config(self, objmat4, grasp, sample_range, toggledebug=False):
         time_start = time.time()
         best_config = None
         best_score = 0
@@ -645,7 +671,7 @@ class MotionPlanner(object):
                         best_objmat4 = objmat4_new
         if toggledebug:
             self.ah.show_armjnts(armjnts=best_config, rgba=(0, 1, 0, .5))
-            self.rbth.draw_axis_uneven(best_objmat4[:3, 3], best_ellipsoid, scale=.2)
+            self.rbth.gen_frame_uneven(best_objmat4[:3, 3], best_ellipsoid, scale=.2)
             print(("%e" % best_score))
             base.run()
 
@@ -654,7 +680,7 @@ class MotionPlanner(object):
         return best_config, best_inx
 
     def get_continuouspath_gopt_smp(self, grasp, objmat4_list, sample_range, dump_f_name=None, msc=None):
-        msc, start_id = self.__find_start_config(objmat4_list[0], grasp, sample_range)
+        msc, start_id = self._find_start_config(objmat4_list[0], grasp, sample_range)
         print(msc, start_id)
         init = copy.deepcopy(msc)
         if msc is None:
@@ -949,9 +975,34 @@ class MotionPlanner(object):
             return True
         return False
 
+    def get_jnts_torque(self, ft, toggledebug=False):
+        ft = np.asarray(ft)
+        eepos, eerot = self.get_ee()
+        if toggledebug:
+            self.rbth.gen_frame_ft(eepos, eerot, ft=ft / 100)
+        j = self.rbt.jacobian(component_name='lft_arm')
+        return j.transpose().dot(ft)
+
+    def get_max_force(self, ft_dir, armjnts=None, jnt_torque_limit=np.asarray([14.6, 14.62, 6.25, 6.21, 1, .8, .43])):
+        if armjnts is not None:
+            self.rbt.fk(component_name=self.armname, jnt_values=armjnts)
+        ft_dir = np.asarray(rm.unit_vector(ft_dir))
+        scale = [0, 100]
+        while scale[1] - scale[0] > .01:
+            ft = ft_dir * (scale[1] + scale[0]) / 2
+            jnt_torque = self.get_jnts_torque(ft)
+            if all(abs(jnt_torque) < jnt_torque_limit):
+                scale[0] = (scale[1] + scale[0]) / 2
+            else:
+                scale[1] = (scale[1] + scale[0]) / 2
+        print(abs(self.get_jnts_torque(ft_dir * scale[1])) < jnt_torque_limit, (scale[1] + scale[0]) / 2)
+        # return ft_dir * (scale[1] + scale[0]) / 2
+        return (scale[1] + scale[0]) / 2
+
 
 if __name__ == '__main__':
     import numpy as np
+    import math
 
     import utils.phoxi as phoxi
     import utils.phoxi_locator as pl
@@ -964,10 +1015,7 @@ if __name__ == '__main__':
     # base, env = el.loadEnv_wrs()
     # rbt = el.loadUr3e()
     base, env = el.loadEnv_yumi()
-    rbt = el.loadYumi(showrbt=True)
-    # rbtx = el.loadUr3ex(rbt)
-    # rbtx.lft_arm_hnd.open_gripper()
-    # rbtx.rgt_arm_hnd.open_gripper()
+    rbt = el.loadYumi(showrbt=False)
 
     pen = el.loadObj(config.PEN_STL_F_NAME)
 
@@ -978,11 +1026,13 @@ if __name__ == '__main__':
     mp_lft = MotionPlanner(env, rbt, armname="lft_arm")
 
     phxilocator = pl.PhxiLocator(phoxi, amat_f_name=config.AMAT_F_NAME)
-    # mp_lft.ah.show_armjnts(toggleendcoord=True)
-
-    # mp_x_lft.goto_init_x()
-    # mp_x_rgt.goto_init_x()
-    import math
+    mp_lft.ah.show_armjnts(toggleendcoord=False)
+    jnt_torque_limit = np.asarray([14.6, 14.62, 6.25, 6.21, 1, .8, .43])
+    ft = [30, 10, 1, .5, 1, 0]
+    print(mp_lft.get_jnts_torque(ft))
+    ft_max = mp_lft.get_max_force(jnt_torque_limit, ft)
+    print(ft_max)
+    base.run()
 
     glist = mp_lft.load_all_grasp(config.PEN_STL_F_NAME.split('.stl')[0])
     objmat4_init = rm.homomat_from_posrot(np.asarray([.4, .2, .2]), rm.rotmat_from_axangle((0, 1, 0), -math.pi / 4))
@@ -997,27 +1047,20 @@ if __name__ == '__main__':
     # obs.attach_to(base)
     # mp_lft.add_obs(obs)
 
-    gripper = rtqhe.RobotiqHE()
     i = 0
     for i, grasp in enumerate(glist):
         print(f'-----------{i}-------------')
         path = mp_lft.plan_picknplace(grasp, [objmat4_init, objmat4_goal], pen, ext_dist=.02)
         if path is not None:
             mp_lft.rbt.fk(component_name=mp_lft.armname, jnt_values=path[0])
-            while i < 29:
-                i += 1
-                obj_hold = pen.copy()
-                obj_hold.set_homomat(objmat4_init)
-                objrelpos, objrelrot = mp_lft.rbt.hold(objcm=obj_hold, hnd_name=mp_lft.hnd_name, jaw_width=.02)
-                mp_lft.rbt.release(hnd_name=mp_lft.hnd_name, objcm=obj_hold)
+            obj_hold = pen.copy()
+            obj_hold.set_homomat(objmat4_init)
+            objrelpos, objrelrot = mp_lft.rbt.hold(objcm=obj_hold, hnd_name=mp_lft.hnd_name, jaw_width=.02)
+            # while i < 29:
+            #     i += 1
+            #     obj_hold = pen.copy()
+            #     obj_hold.set_homomat(objmat4_init)
+            #     objrelpos, objrelrot = mp_lft.rbt.hold(objcm=obj_hold, hnd_name=mp_lft.hnd_name, jaw_width=.02)
+            #     mp_lft.rbt.release(hnd_name=mp_lft.hnd_name, objcm=obj_hold)
             mp_lft.ah.show_ani(path)
             base.run()
-        # eepos_initial, eerot_initial = mp_lft.get_ee_by_objmat4(grasp, objmat4_init)
-        # start = mp_lft.get_numik(eepos_initial, eerot_initial)
-        # eepos_final, eerot_final = mp_lft.get_ee_by_objmat4(grasp, objmat4_goal)
-        # goal = mp_lft.get_numik(eepos_final, eerot_final, msc=start)
-        # if start is not None and goal is not None:
-        #     path = mp_lft.plan_start2end(end=goal, start=start)
-        #     if path is not None:
-        #         mp_lft.ah.show_ani(path)
-        #         base.run()

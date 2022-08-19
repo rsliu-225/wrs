@@ -59,7 +59,7 @@ if __name__ == '__main__':
 
     bend_num_range = (5, 10)
 
-    r = .01 / 2
+    r = .02 / 2
     bs.set_r_center(r)
     fit_max_err_list, bend_max_err_list, fit_avg_err_list, bend_avg_err_list = \
         get_fit_err(bs, goal_pseq, goal_rotseq, bend_num_range)

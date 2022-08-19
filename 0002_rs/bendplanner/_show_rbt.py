@@ -50,9 +50,9 @@ if __name__ == '__main__':
             _, _, objpos, objrot = bs.get_posrot_by_l(.3, pseq, rotseq)
             # gm.gen_frame(objpos, objrot).attach_to(base)
             armjnts_lft = \
-                mp_lft.get_armjnts_by_objmat4ngrasp(grasp, [], rm.homomat_from_posrot(objpos, objrot),
-                                                    obj=bs.objcm,
-                                                    msc=armjnts_lft_list[-1] if len(armjnts_lft_list) != 0 else None)
+                mp_lft.get_numik_hold(grasp, [], rm.homomat_from_posrot(objpos, objrot),
+                                      obj=bs.objcm,
+                                      msc=armjnts_lft_list[-1] if len(armjnts_lft_list) != 0 else None)
             print(armjnts_lft)
             if armjnts_lft is None:
                 armjnts_lft_list = []
@@ -67,8 +67,8 @@ if __name__ == '__main__':
         print(f'----------grasp_id: {i}  of {len(grasp_list_rgt)}----------')
         bs.reset(pseq, rotseq, extend=False)
         _, _, objpos, objrot = bs.get_posrot_by_l(.08, pseq, rotseq)
-        armjnts_rgt = mp_rgt.get_armjnts_by_objmat4ngrasp(grasp, [], rm.homomat_from_posrot(objpos, objrot),
-                                                          obj=bs.objcm)
+        armjnts_rgt = mp_rgt.get_numik_hold(grasp, [], rm.homomat_from_posrot(objpos, objrot),
+                                            obj=bs.objcm)
         print(armjnts_rgt)
         if armjnts_rgt is not None:
             break

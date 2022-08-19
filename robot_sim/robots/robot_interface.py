@@ -85,8 +85,8 @@ class RobotInterface(object):
                              component_name='arm',
                              type="translational"):
         return self.manipulator_dict[component_name].manipulability_axmat(tcp_jnt_id=tcp_jnt_id,
-                                                                          tcp_loc_pos=tcp_tloc_pos,
-                                                                          tcp_loc_rotmat=tcp_loc_rotma,
+                                                                          tcp_loc_pos=tcp_loc_pos,
+                                                                          tcp_loc_rotmat=tcp_loc_rotmat,
                                                                           type=type)
 
     def jacobian(self,

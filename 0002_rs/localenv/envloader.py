@@ -171,10 +171,8 @@ def loadEnv_wrs(camp=[4, 0, 1.7], lookatpos=[0, 0, 1]):
 
 
 def loadEnv_yumi(camp=[4, 0, 1.7], lookatpos=[0, 0, 1]):
-    # Table width:
-    # Table long:
     base = wd.World(cam_pos=camp, lookat_pos=lookatpos)
-    env = Env_yumi(boundingradius=.007)
+    env = Env_yumi()
     env.reparentTo(base)
 
     # phoxi

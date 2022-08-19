@@ -306,7 +306,7 @@ def get_avaliable_objpos_rotmotion(mp, objcm, grasp, objrot_init, objrelpos, obj
                 goalpos = actionpos
                 goalrot = np.dot(rm.rodrigues(axis, angle), objrot_init)
                 objmat4_goal = rm.homobuild(goalpos, goalrot)
-                armjnts = mp.get_armjnts_by_objmat4ngrasp(grasp, [objcm], objmat4_goal, msc=msc)
+                armjnts = mp.get_numik_hold(grasp, [objcm], objmat4_goal, msc=msc)
                 if armjnts is not None:
                     print(armjnts)
                     msc = armjnts
@@ -358,7 +358,7 @@ def get_avaliable_objpos_transmotion(mp, objcm, grasp, objrot, objrelpos, objrel
 
     for objpos in objpos_list:
         objmat4_goal = rm.homobuild(objpos, np.dot(objrot, rm.rodrigues((0, 0, 1), 90)))
-        armjnts = mp.get_armjnts_by_objmat4ngrasp(grasp, [objcm], objmat4_goal, msc=msc)
+        armjnts = mp.get_numik_hold(grasp, [objcm], objmat4_goal, msc=msc)
         if armjnts is not None:
             msc = armjnts
             available_armjnts_list.append(armjnts)

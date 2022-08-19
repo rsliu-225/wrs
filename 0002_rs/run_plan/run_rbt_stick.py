@@ -29,7 +29,9 @@ if __name__ == '__main__':
     mp = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
 
     f_name = 'randomc'
-    folder_name = 'stick'
+    # f_name = 'chair'
+    # f_name = 'penta'
+    fo = 'stick'
 
     goal_pseq = pickle.load(open(os.path.join(config.ROOT, f'bendplanner/goal/pseq/{f_name}.pkl'), 'rb'))
     # goal_pseq = bu.gen_polygen(5, .05)
@@ -48,12 +50,12 @@ if __name__ == '__main__':
     plan
     '''
     if plan:
-        fit_pseq, _ = bu.decimate_pseq(goal_pseq, tor=.002, toggledebug=False)
-        # fit_pseq, _ = bu.decimate_pseq_by_cnt(goal_pseq, cnt=11, toggledebug=False)
+        # fit_pseq, _ = bu.decimate_pseq(goal_pseq, tor=.01, toggledebug=False)
+        fit_pseq, _ = bu.decimate_pseq_by_cnt(goal_pseq, cnt=13, toggledebug=False)
         bendset = bu.pseq2bendset(fit_pseq, init_l=.1, toggledebug=True)[::-1]
         init_rot = bu.get_init_rot(fit_pseq)
         pickle.dump([goal_pseq, bendset],
-                    open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_bendseq.pkl', 'wb'))
+                    open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendseq.pkl', 'wb'))
 
         for b in bendset:
             print(b)
@@ -63,23 +65,23 @@ if __name__ == '__main__':
         brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp)
 
         grasp_list = mp.load_all_grasp('stick')
-        grasp_list = grasp_list[:200]
+        grasp_list = grasp_list
 
         brp.set_up(bendset, grasp_list, transmat4)
-        brp.run(f_name=f_name, folder_name=folder_name)
+        brp.run(f_name=f_name, folder_name=fo)
 
     '''
     show result
     '''
-    goal_pseq, bendset = pickle.load(
-        open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_bendseq.pkl', 'rb'))
-    _, bendresseq = pickle.load(
-        open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_bendresseq.pkl', 'rb'))
-    pathseq_list = pickle.load(
-        open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_pathseq.pkl', 'rb'))
-
+    goal_pseq, bendset = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendseq.pkl', 'rb'))
+    seqs, _, bendresseq = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendresseq.pkl', 'rb'))
+    armjntsseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_armjntsseq.pkl', 'rb'))
+    pathseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_pathseq.pkl', 'rb'))
+    print('Num. of solution', len(pathseq_list))
+    print('Num. of solution', len(armjntsseq_list))
     for bendres in bendresseq:
         init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendres
+    print(seqs)
 
     init_pseq = [(0, 0, 0), (0, max([b[-1] for b in bendset]), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
@@ -87,7 +89,31 @@ if __name__ == '__main__':
 
     brp.set_up(bendset, [], transmat4)
     brp.set_bs_stick_sec(180)
-    brp.show_motion_withrbt(bendresseq, pathseq_list[0][1])
-    for p in pathseq_list:
-        grasp, pathseq = p
+    # for pathseq in pathseq_list:
+    #     g, path = pathseq
+    #     mp.ah.show_armjnts(armjnts=path[1][0])
+    # for g_armjntsseq in armjntsseq_list:
+    #     g, armjntsseq = g_armjntsseq
+    #     for jnts in armjntsseq:
+    #         mp.ah.show_armjnts(armjnts=jnts)
+    #
+    # base.run()
+    import matplotlib.pyplot as plt
+
+    _, _, _, _, _, pseq, _ = bendresseq[-1]
+    pseq = np.asarray(pseq)
+    pseq[0] = pseq[0] - (pseq[0] - pseq[1]) * .8
+    ax = plt.axes(projection='3d')
+    center = np.mean(pseq, axis=0)
+    ax.set_xlim([center[0] - 0.05, center[0] + 0.05])
+    ax.set_ylim([center[1] - 0.05, center[1] + 0.05])
+    ax.set_zlim([center[2] - 0.05, center[2] + 0.05])
+
+    bu.plot_pseq(ax, pseq, c='k')
+    # bu.plot_pseq(ax, goal_pseq, c='g')
+    bu.scatter_pseq(ax, pseq[1:-2], c='r')
+    bu.scatter_pseq(ax, pseq[:1], c='g')
+    plt.show()
+
+    brp.check_force(bendresseq, pathseq_list)
     base.run()

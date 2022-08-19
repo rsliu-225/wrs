@@ -86,6 +86,7 @@ def springback_from_img(fo, z_range, line_thresh=.002, line_size_thresh=300):
         if f.split(ext_str)[0] == 'init':
             key = 'init'
             angle = 0
+            continue
         else:
             angle = int(f.split(ext_str)[0].split('_')[0]) + 15
             if f.split(ext_str)[0].split('_')[1] == 'res':
@@ -96,6 +97,7 @@ def springback_from_img(fo, z_range, line_thresh=.002, line_size_thresh=300):
                 key = 'refine'
             else:
                 key = 'refine_goal'
+                continue
 
         if angle not in sb_dict.keys():
             sb_dict[angle] = {}
@@ -103,18 +105,16 @@ def springback_from_img(fo, z_range, line_thresh=.002, line_size_thresh=300):
 
         textureimg, _, pcd = pickle.load(open(os.path.join(config.ROOT, 'img/phoxi', fo, f), 'rb'))
         pcd = rm.homomat_transform_points(affine_mat, np.asarray(pcd) / 1000)
-        pcdu.show_pcd(pcd, rgba=(1, 1, 1, .1))
+        # pcdu.show_pcd(pcd, rgba=(1, 1, 1, .1))
         img = vu.enhance_grayimg(textureimg)
         lines = pcdu.extract_lines_from_pcd(img, pcd, z_range=z_range, line_thresh=line_thresh,
                                             line_size_thresh=line_size_thresh, toggledebug=False)
         for slope, pts in lines:
             pcdu.show_pcd(pts, rgba=pcd_color[key])
             sb_dict[angle][key].append(slope)
-        # gm.gen_stick(spos=line.B, epos=line.A + line.B, rgba=pcd_color[clr]).attach_to(base)
-        # kpts = get_kpts_gmm(pcd_crop, rgba=kpts_color[clr])
 
-    pickle.dump(sb_dict,
-                open(os.path.join(config.ROOT, 'bendplanner/springback', f'{fo.split("/")[1]}_springback.pkl'), 'wb'))
+    # pickle.dump(sb_dict,
+    #             open(os.path.join(config.ROOT, 'bendplanner/springback', f'{fo.split("/")[1]}_springback.pkl'), 'wb'))
     return sb_dict
 
 
@@ -202,18 +202,20 @@ def show_data_w_refine(input_dict):
     bend_err = [bend_err[i] for i in sort_inx]
     refined_err = [refined_err[i] for i in sort_inx]
 
+    plt.rcParams["font.family"] = "Times New Roman"
+    plt.rcParams["font.size"] = 18
     plt.grid()
     plt.xticks(X)
     plt.plot(X, sb_err, c='gold')
+    # plt.plot(X, [np.mean(sb_err)] * len(X), c='gold', linestyle='dashed')
+    lasso_pre(X, sb_err, 0)
 
-    plt.plot(X, [np.mean(sb_err)] * len(X), c='gold', linestyle='dashed')
-    plt.plot(X, bend_err, c='g')
-    plt.plot(X, [np.mean(bend_err)] * len(X), c='g', linestyle='dashed')
+    # plt.plot(X, bend_err, c='g')
+    # plt.plot(X, [np.mean(bend_err)] * len(X), c='g', linestyle='dashed')
 
     plt.plot(X, refined_err, c='b')
     plt.plot(X, [np.mean(refined_err)] * len(X), c='b', linestyle='dashed')
 
-    # next = lasso_pre(X[:2], sb_err[:2], 45)
     # print(next)
 
     # plt.plot(X, np.asarray(bend_err) + np.asarray(sb_err))
@@ -225,7 +227,7 @@ def lasso_pre(X, y, x_pre):
     model.fit([[x] for x in X], y)
     print(model.coef_, model.intercept_)
     y_pre = model.predict([[x] for x in X])
-    plt.plot(X, y_pre, c='r')
+    plt.plot(X, y_pre, c='gold', linestyle='dashed')
     return model.predict([[x_pre]])
 
 
@@ -234,13 +236,13 @@ if __name__ == '__main__':
     import modeling.geometric_model as gm
     import basis.robot_math as rm
 
-    base = wd.World(cam_pos=[1.5, 1.5, 1.5], lookat_pos=[0, 0, 0])
+    base = wd.World(cam_pos=[.8, 0, 1.5], lookat_pos=[0, 0, 0])
     rbt = el.loadYumi(showrbt=True)
 
-    fo = 'springback/alu_refine_lr_3'
-    z_range = (.15, .18)
-    line_thresh = 0.0035
-    line_size_thresh = 600
+    fo = 'springback/steel_refine_lr_1'
+    z_range = (.15, .16)
+    line_thresh = 0.002
+    line_size_thresh = 200
     sb_dict = springback_from_img(fo, z_range, line_thresh, line_size_thresh)
     sb_dict = pickle.load(
         open(os.path.join(config.ROOT, 'bendplanner/springback', f'{fo.split("/")[1]}_springback.pkl'), 'rb'))

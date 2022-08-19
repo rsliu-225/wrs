@@ -35,6 +35,7 @@ def _load_result_dict(res_dict):
     init_sum_err_list = []
     opt_sum_err_list = []
     time_cost_list = []
+    bend_num_list = []
 
     x = []
     print(res_dict.keys())
@@ -43,7 +44,6 @@ def _load_result_dict(res_dict):
     #     opt_res_dict[k]['init_res_kpts'] = np.asarray(v['init_res_kpts'])/1000
     #     opt_res_dict[k]['opt_res_kpts'] = np.asarray(v['opt_res_kpts'])/1000
     # pickle.dump(opt_res_dict, open(f'{f_name}', 'wb'))
-
     for k, v in res_dict.items():
         x.append(int(k))
         goal_pseq = v['goal_pseq']
@@ -60,6 +60,7 @@ def _load_result_dict(res_dict):
         opt_res_kpts = v['opt_res_kpts']
         opt_time_cost = v['opt_time_cost']
 
+        bend_num_list.append(len(opt_bendset))
         time_cost_list.append(opt_time_cost)
         init_diff = np.linalg.norm(np.asarray(init_res_kpts) - np.asarray(goal_pseq), axis=1)
         init_max_err_list.append(init_diff.max() * 1e3)
@@ -84,9 +85,10 @@ def _load_result_dict(res_dict):
     init_sum_err_list = np.asarray(init_sum_err_list)[index_list]
     opt_sum_err_list = np.asarray(opt_sum_err_list)[index_list]
     time_cost_list = np.asarray(time_cost_list)[index_list]
+    bend_num_list = np.asarray(bend_num_list)[index_list]
 
     return x, init_max_err_list, opt_max_err_list, init_avg_err_list, opt_avg_err_list, \
-           init_sum_err_list, opt_sum_err_list, time_cost_list
+           init_sum_err_list, opt_sum_err_list, time_cost_list, bend_num_list
 
 
 def show_sgl_method(f_name):
@@ -95,7 +97,7 @@ def show_sgl_method(f_name):
     # goal_rotseq = None
 
     x, init_max_err_list, opt_max_err_list, init_avg_err_list, opt_avg_err_list, \
-    init_sum_err_list, opt_sum_err_list, time_cost_list = _load_result_dict(opt_res_dict)
+    init_sum_err_list, opt_sum_err_list, time_cost_list, bend_num_list = _load_result_dict(opt_res_dict)
 
     fig = plt.figure(figsize=(18, 5))
     plt.rcParams["font.family"] = "Times New Roman"
@@ -118,6 +120,7 @@ def show_sgl_method(f_name):
     ax3 = fig.add_subplot(1, 3, 3)
     ax3.grid()
     ax3.plot(x, time_cost_list, color='black')
+    print(bend_num_list)
     ax3.set_xlabel('Num. of key point')
     ax3.set_ylabel('Time cost(s)')
 
@@ -130,9 +133,9 @@ def compare(f_name_1, f_name_2):
     # goal_pseq = pickle.load(open(f'../goal/pseq/{f_name}.pkl', 'rb'))
     # goal_rotseq = None
     x, init_max_err_list_1, opt_max_err_list_1, init_avg_err_list_1, opt_avg_err_list_1, \
-    init_sum_err_list_1, opt_sum_err_list_1, time_cost_list_1 = _load_result_dict(opt_res_dict_1)
+    init_sum_err_list_1, opt_sum_err_list_1, time_cost_list_1, bend_num_list_1 = _load_result_dict(opt_res_dict_1)
     x, init_max_err_list_2, opt_max_err_list_2, init_avg_err_list_2, opt_avg_err_list_2, \
-    init_sum_err_list_2, opt_sum_err_list_2, time_cost_list_2 = _load_result_dict(opt_res_dict_2)
+    init_sum_err_list_2, opt_sum_err_list_2, time_cost_list_2, bend_num_list_2 = _load_result_dict(opt_res_dict_2)
 
     fig = plt.figure(figsize=(18, 5))
     plt.rcParams["font.family"] = "Times New Roman"
@@ -173,8 +176,8 @@ if __name__ == '__main__':
     '''
     load files
     '''
-    # f_name = f'{goal_f_name}_{method}_{obj_type}.pkl'
-    f_name = f'{goal_f_name}_{method}_{obj_type}_10.pkl'
+    f_name = f'{goal_f_name}_{method}_{obj_type}.pkl'
+    # f_name = f'{goal_f_name}_{method}_{obj_type}_10.pkl'
     show_sgl_method(f_name)
 
     compare(f'{goal_f_name}_{method}_max_10.pkl', f'{goal_f_name}_{method}_avg_10.pkl')

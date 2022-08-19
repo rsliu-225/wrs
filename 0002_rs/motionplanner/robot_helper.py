@@ -53,10 +53,41 @@ class RobotHelper(object):
         gm.gen_frame(pos=pos, rotmat=rot, length=length, thickness=thickness, rgbmatrix=rgbmatrix)
         gm.gen_sphere(pos, radius=10, rgba=(1, 1, 0, 1))
 
-    def draw_axis_uneven(self, pos, rot, scale=1, thickness=.005):
-        gm.gen_arrow(spos=pos, epos=pos + scale * rot[:3, 0], rgba=(1, 0, 0, 1), thickness=thickness)
-        gm.gen_arrow(spos=pos, epos=pos + scale * rot[:3, 1], rgba=(0, 1, 0, 1), thickness=thickness)
-        gm.gen_arrow(spos=pos, epos=pos + scale * rot[:3, 2], rgba=(0, 0, 1, 1), thickness=thickness)
+    def gen_frame_uneven(self, pos, rot, scale=1, thickness=.005):
+        gm.gen_arrow(spos=pos, epos=pos + scale * rot[:3, 0], rgba=(1, 0, 0, 1), thickness=thickness).attach_to(base)
+        gm.gen_arrow(spos=pos, epos=pos + scale * rot[:3, 1], rgba=(0, 1, 0, 1), thickness=thickness).attach_to(base)
+        gm.gen_arrow(spos=pos, epos=pos + scale * rot[:3, 2], rgba=(0, 0, 1, 1), thickness=thickness).attach_to(base)
+
+    def gen_frame_uneven_scale(self, pos, rot, scale=(1, 1, 1), thickness=.005):
+        if scale[0] != 0:
+            gm.gen_arrow(spos=pos, epos=pos + scale[0] * rot[:3, 0], rgba=(1, 0, 0, 1), thickness=thickness) \
+                .attach_to(base)
+        if scale[1] != 0:
+            gm.gen_arrow(spos=pos, epos=pos + scale[1] * rot[:3, 1], rgba=(0, 1, 0, 1), thickness=thickness) \
+                .attach_to(base)
+        if scale[2] != 0:
+            gm.gen_arrow(spos=pos, epos=pos + scale[2] * rot[:3, 2], rgba=(0, 0, 1, 1), thickness=thickness) \
+                .attach_to(base)
+
+    def gen_frame_ft(self, pos, rot, ft=(1, 1, 1, 1, 1, 1), thickness=.005):
+        if ft[0] != 0:
+            gm.gen_arrow(spos=pos, epos=pos + ft[0] * rot[:3, 0], rgba=(1, 0, 0, 1), thickness=thickness) \
+                .attach_to(base)
+        if ft[1] != 0:
+            gm.gen_arrow(spos=pos, epos=pos + ft[1] * rot[:3, 1], rgba=(0, 1, 0, 1), thickness=thickness) \
+                .attach_to(base)
+        if ft[2] != 0:
+            gm.gen_arrow(spos=pos, epos=pos + ft[2] * rot[:3, 2], rgba=(0, 0, 1, 1), thickness=thickness) \
+                .attach_to(base)
+        if ft[3] != 0:
+            gm.gen_circarrow(axis=rot[:3, 0], center=pos + .1 * rot[:3, 0], rgba=(1, 0, 0, 1), radius=.03,
+                             portion=.9 * ft[3] / max(ft[3:])).attach_to(base)
+        if ft[4] != 0:
+            gm.gen_circarrow(axis=rot[:3, 1], center=pos + .1 * rot[:3, 1], radius=.03, rgba=(0, 1, 0, 1),
+                             portion=.9 * ft[4] / max(ft[3:])).attach_to(base)
+        if ft[5] != 0:
+            gm.gen_circarrow(axis=rot[:3, 2], center=pos + .1 * rot[:3, 2], radius=.03, rgba=(0, 0, 1, 1),
+                             portion=.9 * ft[5] / max(ft[3:])).attach_to(base)
 
     def plot_armjnts(self, ax, path, scatter=False, title="armjnts", show=True):
         path = np.array(path)

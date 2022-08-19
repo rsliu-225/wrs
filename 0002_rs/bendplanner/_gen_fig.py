@@ -13,21 +13,26 @@ import motionplanner.motion_planner as m_planner
 import bendplanner.BendSim as b_sim
 import bendplanner.BendRbtPlanner as br_planner
 import matplotlib.pyplot as plt
+import robot_sim.end_effectors.gripper.yumi_gripper.yumi_gripper as yumigripper
 
 if __name__ == '__main__':
     import pickle
     import localenv.envloader as el
 
-    gripper = rtqhe.RobotiqHE()
+    # gripper = rtqhe.RobotiqHE()
+    gripper = yumigripper.YumiGripper()
     # base, env = el.loadEnv_wrs(camp=[.6, -.4, 1.7], lookatpos=[.6, -.4, 1])
     # base, env = el.loadEnv_wrs(camp=[0, 0, 1], lookatpos=[0, 0, 0])
-    base, env = el.loadEnv_wrs()
-    rbt = el.loadUr3e()
+    # base, env = el.loadEnv_wrs()
+    # rbt = el.loadUr3e()
 
+    base, env = el.loadEnv_yumi()
+    rbt = el.loadYumi(showrbt=False)
     bs = b_sim.BendSim(show=True)
-    mp = m_planner.MotionPlanner(env, rbt, armname="rgt_arm")
+    mp = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
 
-    transmat4 = rm.homomat_from_posrot((.9, -.35, .78 + bconfig.BENDER_H), rm.rotmat_from_axangle((0, 0, 1), np.pi))
+    # transmat4 = rm.homomat_from_posrot((.9, -.35, .78 + bconfig.BENDER_H), rm.rotmat_from_axangle((0, 0, 1), np.pi))
+    transmat4 = rm.homomat_from_posrot((.45, 0, bconfig.BENDER_H), rm.rotmat_from_axangle((0, 0, 1), np.pi))
 
     goal_pseq = bu.gen_polygen(5, .05)
     # goal_pseq = bu.gen_ramdom_curve(kp_num=4, length=.12, step=.0005, z_max=.005, toggledebug=False)
@@ -47,21 +52,19 @@ if __name__ == '__main__':
     grasp_list = mp.load_all_grasp('stick')
     grasp_list = grasp_list[:200]
 
-    # fit_pseq = bu.iter_fit(goal_pseq, tor=.002, toggledebug=False)
-    # bendset = brp.pseq2bendset(fit_pseq, pos=1, toggledebug=False)
-    # for b in bendset:
-    #     b[3] = b[3]+.1
-    # init_rot = brp.get_init_rot(fit_pseq)
-    # pickle.dump(bendset, open('planres/penta_bendseq.pkl', 'wb'))
-    bendset = pickle.load(open('planres/stick/penta_bendseq.pkl', 'rb'))
+    fit_pseq, _ = bu.decimate_pseq(goal_pseq, tor=.002, toggledebug=False)
+    bendset = bu.pseq2bendset(fit_pseq, init_l=.1, toggledebug=True)[::-1]
+    init_rot = bu.get_init_rot(fit_pseq)
 
-    bs = b_sim.BendSim(show=True)
-    mp = m_planner.MotionPlanner(env, rbt, armname="rgt_arm")
+    # bendset = pickle.load(open('planres/stick/penta_bendseq.pkl', 'rb'))
     armjntsseq_list = pickle.load(open('planres/stick/penta_armjntsseq.pkl', 'rb'))
     is_success, bendresseq = pickle.load(open('planres/stick/penta_bendresseq.pkl', 'rb'))
+
+    brp.set_up(bendset, grasp_list, transmat4)
+    brp.pre_grasp_reasoning()
     brp.show_bendresseq_withrbt(bendresseq, armjntsseq_list[0][1])
     brp.show_bendresseq(bendresseq)
-    # base.run()
+    base.run()
     for g_tmp, armjntsseq in armjntsseq_list:
         _, gl_jaw_center_pos, gl_jaw_center_rotmat, hnd_pos, hnd_rotmat = g_tmp
         hndmat4 = rm.homomat_from_posrot(hnd_pos, hnd_rotmat)
