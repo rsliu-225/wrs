@@ -248,28 +248,6 @@ class BendRbtPlanner(object):
             return [str(v) for v in pathseq].index('None'), all_result
         return -1, all_result
 
-    def check_combine_motion(self, bendseq, bendresseq, armjntsseq_list):
-        min_fail = np.inf
-        pathseq = None
-        all_result = []
-        for i, v in enumerate(armjntsseq_list):
-            print(f'----------grasp_id: {i} of {len(armjntsseq_list)}----------')
-            grasp_tmp, armjntsseq = v
-            pathseq_tmp = self.plan_pull(bendseq, bendresseq, grasp_tmp, armjntsseq)
-            fail_cnt = [str(v) for v in pathseq_tmp].count('None')
-            print(min_fail, fail_cnt)
-            if fail_cnt < min_fail:
-                min_fail = fail_cnt
-                pathseq = pathseq_tmp
-            if fail_cnt == 0:
-                all_result.append([grasp_tmp, pathseq_tmp])
-                self.show_motion_withrbt(bendresseq, pathseq_tmp)
-                # base.run()
-
-        if len(all_result) == 0:
-            return [str(v) for v in pathseq].index('None'), all_result
-        return -1, pathseq
-
     def run(self, f_name='tmp', grasp_l=0.0, folder_name='stick'):
         seqs, _ = self._iptree.get_potential_valid()
         while len(seqs) != 0:
@@ -337,9 +315,9 @@ class BendRbtPlanner(object):
         g, path_list = pathseq[min_f_list.index(max(min_f_list))]
         for path in path_list:
             self._mp.ah.show_armjnts(armjnts=path[0], rgba=(0, 1, 1, .5))
-        print(min_f_list.index(min(min_f_list)), min_f_list[min_f_list.index(min(min_f_list))])
-        print(min_f_list.index(max(min_f_list)), min_f_list[min_f_list.index(max(min_f_list))])
-        print(min_f_list)
+        # print(min_f_list.index(min(min_f_list)), min_f_list[min_f_list.index(min(min_f_list))])
+        # print(min_f_list.index(max(min_f_list)), min_f_list[min_f_list.index(max(min_f_list))])
+        return np.asarray(pathseq)[np.argsort(min_f_list)[::-1]], np.asarray(min_f_list)[np.argsort(min_f_list)[::-1]]
 
     def show_bendresseq(self, bendresseq):
         motioncounter = [0]

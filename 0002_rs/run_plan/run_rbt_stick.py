@@ -28,9 +28,9 @@ if __name__ == '__main__':
     bs = b_sim.BendSim(show=True)
     mp = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
 
-    f_name = 'randomc'
+    # f_name = 'randomc'
     # f_name = 'chair'
-    # f_name = 'penta'
+    f_name = 'penta'
     fo = 'stick'
 
     goal_pseq = pickle.load(open(os.path.join(config.ROOT, f'bendplanner/goal/pseq/{f_name}.pkl'), 'rb'))
@@ -96,7 +96,6 @@ if __name__ == '__main__':
     #     g, armjntsseq = g_armjntsseq
     #     for jnts in armjntsseq:
     #         mp.ah.show_armjnts(armjnts=jnts)
-    #
     # base.run()
     import matplotlib.pyplot as plt
 
@@ -109,11 +108,12 @@ if __name__ == '__main__':
     ax.set_ylim([center[1] - 0.05, center[1] + 0.05])
     ax.set_zlim([center[2] - 0.05, center[2] + 0.05])
 
-    bu.plot_pseq(ax, pseq, c='k')
-    # bu.plot_pseq(ax, goal_pseq, c='g')
-    bu.scatter_pseq(ax, pseq[1:-2], c='r')
-    bu.scatter_pseq(ax, pseq[:1], c='g')
-    plt.show()
+    # bu.plot_pseq(ax, pseq, c='k')
+    # bu.scatter_pseq(ax, pseq[1:-2], c='r')
+    # bu.scatter_pseq(ax, pseq[:1], c='g')
+    # plt.show()
 
-    brp.check_force(bendresseq, pathseq_list)
+    pathseq_list, min_f_list = brp.check_force(bendresseq, pathseq_list)
+    print(min_f_list)
+    brp.show_motion_withrbt(bendresseq, pathseq_list[0][1])
     base.run()
