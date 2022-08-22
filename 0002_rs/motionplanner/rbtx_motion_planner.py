@@ -143,7 +143,7 @@ class MotionPlannerRbtX(MotionPlanner):
         print("Success point:", success_cnt, "of", len(path))
         return path_new
 
-    def goto_armjnts_x(self, armjnts):
+    def goto_armjnts_x(self, armjnts, speed_n=100):
         start = self.get_armjnts()
         print("--------------goto_armjnts_x(rrt)---------------")
         planner = rrtc.RRTConnect(self.rbt)
@@ -151,7 +151,7 @@ class MotionPlannerRbtX(MotionPlanner):
                             obstacle_list=self.obscmlist, ext_dist=.02, max_time=300)
 
         if path is not None:
-            self.rbtx.move_jntspace_path(self.armname, path)
+            self.rbtx.move_jntspace_path(self.armname, path, speed_n=speed_n)
             return True
         else:
             return False

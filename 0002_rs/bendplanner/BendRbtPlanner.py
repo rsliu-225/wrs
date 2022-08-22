@@ -195,11 +195,7 @@ class BendRbtPlanner(object):
                 path = self._mp.plan_picknplace(grasp, [np.eye(4), objmat4_end], objcm,
                                                 use_msc=True, start=armjntsseq[i], goal=armjntsseq[i + 1],
                                                 use_pickupprim=True, use_placedownprim=True,
-                                                pickupprim_len=.05, placedownprim_len=.05)
-            # path = self.mp.plan_picknplace(grasp, [np.eye(4), objmat4_end], objcm,
-            #                                use_msc=True, start=armjntsseq[i], goal=armjntsseq[i + 1],
-            #                                use_pickupprim=True, use_placedownprim=True,
-            #                                pickupprim_len=.05, placedownprim_len=.05)
+                                                pickupprim_len=.06, placedownprim_len=.06)
             # gm.gen_frame(pseq_init[0], rotseq_init[0], length=.01, thickness=.001).attach_to(base)
             # gm.gen_frame(pseq_end[0], rotseq_end[0], length=.01, thickness=.001).attach_to(base)
             pathseq.append(path)
@@ -300,7 +296,8 @@ class BendRbtPlanner(object):
             g, path_list = pathseq[i]
             for j in range(len(bendresseq)):
                 init_a, end_a, plate_a, _, _, _, _ = bendresseq[j]
-                f_dir = rm.rotmat_from_axangle((0, 0, 1), init_a / 2).dot(rotseq_init[0][:, 1])
+                # f_dir = rm.rotmat_from_axangle((0, 0, 1), init_a / 2).dot(rotseq_init[0][:, 1])
+                f_dir = rotseq_init[0][:, 1]
                 armjnts = path_list[j][0]
                 eepos, eerot = self._mp.get_ee(armjnts)
                 gm.gen_arrow(eepos, eepos + f_dir * .1).attach_to(base)
@@ -309,12 +306,12 @@ class BendRbtPlanner(object):
                 if f < min_f:
                     min_f = f
             min_f_list.append(min_f)
-        g, path_list = pathseq[min_f_list.index(min(min_f_list))]
-        for path in path_list:
-            self._mp.ah.show_armjnts(armjnts=path[0], rgba=(1, 1, 0, .5))
-        g, path_list = pathseq[min_f_list.index(max(min_f_list))]
-        for path in path_list:
-            self._mp.ah.show_armjnts(armjnts=path[0], rgba=(0, 1, 1, .5))
+        # g, path_list = pathseq[min_f_list.index(min(min_f_list))]
+        # for path in path_list:
+        #     self._mp.ah.show_armjnts(armjnts=path[0], rgba=(1, 1, 0, .5))
+        # g, path_list = pathseq[min_f_list.index(max(min_f_list))]
+        # for path in path_list:
+        #     self._mp.ah.show_armjnts(armjnts=path[0], rgba=(0, 1, 1, .5))
         # print(min_f_list.index(min(min_f_list)), min_f_list[min_f_list.index(min(min_f_list))])
         # print(min_f_list.index(max(min_f_list)), min_f_list[min_f_list.index(max(min_f_list))])
         return np.asarray(pathseq)[np.argsort(min_f_list)[::-1]], np.asarray(min_f_list)[np.argsort(min_f_list)[::-1]]

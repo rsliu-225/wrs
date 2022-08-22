@@ -380,8 +380,8 @@ class MotionPlanner(object):
         obj_copy = obj.copy()
         obj_copy.set_homomat(objmat4_pair[0])
         obj_copy.attach_to(base)
-        self.ah.show_armjnts(armjnts=start, rgba=[0, 0, 1, .5])
-        self.ah.show_armjnts(armjnts=goal, rgba=[1, 0, 0, .5])
+        # self.ah.show_armjnts(armjnts=start, rgba=[0, 0, 1, .5])
+        # self.ah.show_armjnts(armjnts=goal, rgba=[1, 0, 0, .5])
         # planning
         if use_pickupprim:
             pickupprim = self.get_linear_path_from(start=start, length=pickupprim_len)
