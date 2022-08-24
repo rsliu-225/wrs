@@ -19,7 +19,7 @@ if __name__ == '__main__':
     bs = b_sim.BendSim(show=True, granularity=np.pi / 180, cm_type='plate')
 
     transmat4 = rm.homomat_from_posrot((.9, -.35, .78 + bconfig.BENDER_H), rm.rotmat_from_axangle((0, 0, 1), np.pi))
-    goal_pseq, goal_rotseq = pickle.load(open(config.ROOT + f'/data/bend/rotpseq/{f_name}.pkl', 'rb'))
+    goal_pseq, goal_rotseq = pickle.load(open(config.ROOT + f'/bendplanner/goal/rotpseq/{f_name}.pkl', 'rb'))
     init_pseq = [(0, 0, 0), (0, bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
 

@@ -5,16 +5,18 @@ import pickle
 import numpy as np
 
 import basis.robot_math as rm
+import basis.trimesh as trm
 import bendplanner.BendSim as b_sim
 import bendplanner.InvalidPermutationTree as ip_tree
 import bendplanner.PremutationTree as p_tree
 import bendplanner.bend_utils as bu
 import bendplanner.bender_config as bconfig
 import config
+import modeling.collision_model as cm
+import modeling.geometric_model as gm
 import motionplanner.motion_planner as m_planner
 import robot_sim.end_effectors.gripper.robotiqhe.robotiqhe as rtqhe
 import utils.panda3d_utils as p3u
-import modeling.geometric_model as gm
 
 
 class BendRbtPlanner(object):
@@ -99,8 +101,8 @@ class BendRbtPlanner(object):
             if fail_cnt == 0:
                 all_result.append([g_tmp, armjntsseq_tmp])
         if len(all_result) == 0:
-            self.show_bendresseq_withrbt(bendresseq, armjntsseq)
-            base.run()
+            # self.show_bendresseq_withrbt(bendresseq, armjntsseq)
+            # base.run()
             return [str(v) for v in armjntsseq].index('None'), all_result
 
         return -1, all_result
@@ -109,10 +111,36 @@ class BendRbtPlanner(object):
         print(f'----------pre-grasp reasoning----------')
         _, bendresseq, _ = self._bs.gen_by_bendseq(self.bendset, cc=True, toggledebug=False)
         objmat4_list = []
-        for bendres in bendresseq:
+        for bendres in [bendresseq[0]]:
             init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendres
             pseq_init, rotseq_init = self.transseq(pseq_init, rotseq_init, self.transmat4)
             objmat4_list.append(rm.homomat_from_posrot(pseq_init[0], rotseq_init[0]))
+
+            vertices, faces = self._bs.gen_stick(pseq_init[::-1], rotseq_init[::-1], self._bs.thickness / 2,
+                                                 section=180)
+            objcm_init = cm.CollisionModel(initor=trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces)))
+            objcm_init.set_rgba((1, 0, 0, .5))
+            objcm_init.attach_to(base)
+
+            pseq_end, rotseq_end = self.transseq(pseq_end, rotseq_end, self.transmat4)
+            vertices, faces = self._bs.gen_stick(pseq_end[::-1], rotseq_end[::-1], self._bs.thickness / 2,
+                                                 section=180)
+            objcm_end = cm.CollisionModel(initor=trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces)))
+            objcm_end.set_rgba((0, 1, 0, .5))
+            objcm_end.attach_to(base)
+
+            tmp_p = np.asarray([self._bs.c2c_dist * math.cos(init_a), self._bs.c2c_dist * math.sin(init_a), 0])
+            tmp_p = np.dot(self.transmat4[:3, :3], tmp_p)
+            self._bs.pillar_punch.set_homomat(np.dot(rm.homomat_from_posrot(tmp_p, np.eye(3)), self.transmat4))
+            self._bs.pillar_punch.set_rgba(rgba=[.7, 0, 0, .7])
+            self._bs.pillar_punch.attach_to(base)
+
+            tmp_p = np.asarray([self._bs.c2c_dist * math.cos(end_a), self._bs.c2c_dist * math.sin(end_a), 0])
+            tmp_p = np.dot(self.transmat4[:3, :3], tmp_p)
+            self._bs.pillar_punch_end.set_homomat(np.dot(rm.homomat_from_posrot(tmp_p, np.eye(3)), self.transmat4))
+            self._bs.pillar_punch_end.set_rgba(rgba=[0, .7, 0, .7])
+            self._bs.pillar_punch_end.attach_to(base)
+
         # print(len(objmat4_list))
 
         failed_id_list = []
@@ -123,6 +151,10 @@ class BendRbtPlanner(object):
                 if self.gripper.is_mesh_collided(self.obslist):
                     failed_id_list.append(i)
                     self.gripper.gen_meshmodel(rgba=(.7, 0, 0, .2)).attach_to(base)
+                    break
+                jnts = self._mp.get_numik(hndpos, hndrot)
+                if jnts is None:
+                    self.gripper.gen_meshmodel(rgba=(.7, .7, 0, .2)).attach_to(base)
                     break
                 self.gripper.gen_meshmodel(rgba=(0, .7, 0, .2)).attach_to(base)
 
@@ -300,6 +332,7 @@ class BendRbtPlanner(object):
                 f_dir = rotseq_init[0][:, 1]
                 armjnts = path_list[j][0]
                 eepos, eerot = self._mp.get_ee(armjnts)
+                f_dir = np.linalg.inv(eerot).dot(f_dir)
                 gm.gen_arrow(eepos, eepos + f_dir * .1).attach_to(base)
                 # self._mp.ah.show_armjnts(armjnts=armjnts, rgba=None)
                 f = self._mp.get_max_force(list(f_dir) + [0, 0, 0])

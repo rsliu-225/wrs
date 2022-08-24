@@ -26,7 +26,7 @@ if __name__ == '__main__':
     transmat4 = rm.homomat_from_posrot((.45, 0, bconfig.BENDER_H + .035), rm.rotmat_from_axangle((0, 0, 1), np.pi))
     # transmat4 = rm.homomat_from_posrot((.4, -.1, bconfig.BENDER_H))
 
-    bs = b_sim.BendSim(show=True)
+    bs = b_sim.BendSim(show=False)
     mp = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
 
     # f_name = 'randomc'

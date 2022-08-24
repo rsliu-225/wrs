@@ -2,6 +2,7 @@ import numpy as np
 
 import config
 import robot_sim.end_effectors.gripper.robotiqhe.robotiqhe as rtqhe
+import robot_sim.end_effectors.gripper.yumi_gripper.yumi_gripper as yumigripper
 import graspplanner.grasp_planner as gp
 import visualization.panda.world as wd
 import modeling.collision_model as cm
@@ -11,6 +12,7 @@ import modeling.geometric_model as gm
 if __name__ == '__main__':
     base = wd.World(cam_pos=[.5, .5, .3], lookat_pos=[0, 0, 0])
     gripper = rtqhe.RobotiqHE()
+    # gripper = yumigripper.YumiGripper()
     grasp_planner = gp.GraspPlanner(gripper)
 
     '''
@@ -101,6 +103,6 @@ if __name__ == '__main__':
     #
     # grasp_planner.write_pregrasps('stick', pregrasp_list)
     pregrasp_list = grasp_planner.load_pregrasp('stick')
-    grasp_planner.show_grasp(pregrasp_list[:200], obj, rgba=None, toggle_tcpcs=False, toggle_jntscs=False)
+    grasp_planner.show_grasp(pregrasp_list[:1], obj, rgba=None, toggle_tcpcs=False, toggle_jntscs=False)
     print(len(pregrasp_list))
     base.run()

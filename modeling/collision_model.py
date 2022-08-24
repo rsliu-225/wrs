@@ -369,7 +369,7 @@ def gen_sphere(pos=np.array([0, 0, 0]), radius=0.01, rgba=[1, 0, 0, 1]):
 
 def gen_stick(spos=np.array([.0, .0, .0]),
               epos=np.array([.0, .0, .1]),
-              thickness=.005, type="round",
+              thickness=.005, type="rect",
               rgba=[1, 0, 0, 1],
               sections=8):
     """
