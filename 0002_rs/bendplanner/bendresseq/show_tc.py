@@ -27,6 +27,7 @@ def load_res(num, fo='180'):
 
             else:
                 fail_tc_list.append(total_tc)
+                print(total_tc, f)
             if type(attemp_cnt_list) == type([]):
                 total_cnt_list.append(attemp_cnt_list[-1])
             else:
@@ -65,6 +66,7 @@ def tst(num, fo='180'):
                 bendresseq, seqs = result[-1]
                 print(seqs)
                 _, _, _, _, _, pseq, _ = bendresseq[-1]
+                print(pseq)
                 pseq = np.asarray(pseq)
                 pseq[0] = pseq[0] - (pseq[0] - pseq[1]) * .8
                 ax = plt.axes(projection='3d')
@@ -72,8 +74,8 @@ def tst(num, fo='180'):
                 bu.scatter_pseq(ax, pseq[1:-2], c='g')
                 bu.scatter_pseq(ax, pseq[:1], c='r')
                 plt.show()
-                # bs.show_bendresseq(bendresseq, [True] * len(seqs))
-                # base.run()
+                bs.show_bendresseq(bendresseq, [True] * len(seqs))
+                base.run()
             else:
                 fail_tc_list.append(total_tc)
                 bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
@@ -127,20 +129,22 @@ def plot_failed(ax, x_range, fo, clr):
 if __name__ == '__main__':
     base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
     bs = b_sim.BendSim(show=True)
-    # fo = '180'
-    # tst(5, fo=fo)
+    fo = '90'
+    tst(4, fo=fo)
     x_range = range(3, 9)
 
     plt.rcParams["font.family"] = "Times New Roman"
-    plt.rcParams["font.size"] = 16
+    plt.rcParams["font.size"] = 18
     ax = plt.axes()
     ax.grid()
     plot_success(ax, x_range, '90', clr='tab:blue')
-    plot_success(ax, x_range, '180', clr='tab:orange')
+    plot_success(ax, x_range, '135', clr='tab:orange')
+    plot_success(ax, x_range, '180', clr='tab:green')
     plt.show()
 
     ax = plt.axes()
     ax.grid()
     plot_failed(ax, x_range, '90', clr='tab:blue')
-    plot_failed(ax, x_range, '180', clr='tab:orange')
+    plot_failed(ax, x_range, '135', clr='tab:orange')
+    plot_failed(ax, x_range, '180', clr='tab:green')
     plt.show()

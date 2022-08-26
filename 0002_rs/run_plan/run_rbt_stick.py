@@ -21,7 +21,7 @@ if __name__ == '__main__':
     # rbt = el.loadUr3e()
     # transmat4 = rm.homomat_from_posrot((.7, -.2, .78 + bconfig.BENDER_H), np.eye(3))
 
-    base, env = el.loadEnv_yumi()
+    base, env = el.loadEnv_yumi(camp=[4, 1.2, 1.7], lookatpos=[0, 0, 0])
     rbt = el.loadYumi(showrbt=False)
     transmat4 = rm.homomat_from_posrot((.45, 0, bconfig.BENDER_H + .035), rm.rotmat_from_axangle((0, 0, 1), np.pi))
     # transmat4 = rm.homomat_from_posrot((.4, -.1, bconfig.BENDER_H))
@@ -98,26 +98,35 @@ if __name__ == '__main__':
     #     for jnts in armjntsseq:
     #         mp.ah.show_armjnts(armjnts=jnts)
     # base.run()
-    _, _, _, _, _, pseq, _ = bendresseq[-1]
-    pseq = np.asarray(pseq)
-    pseq[0] = pseq[0] - (pseq[0] - pseq[1]) * .8
-    ax = plt.axes(projection='3d')
-    center = np.mean(pseq, axis=0)
-    ax.set_xlim([center[0] - 0.05, center[0] + 0.05])
-    ax.set_ylim([center[1] - 0.05, center[1] + 0.05])
-    ax.set_zlim([center[2] - 0.05, center[2] + 0.05])
 
-    bu.plot_pseq(ax, pseq, c='k')
-    bu.scatter_pseq(ax, pseq[1:-2], c='r')
-    bu.scatter_pseq(ax, pseq[:1], c='g')
-    plt.show()
+    # _, _, _, _, _, pseq, _ = bendresseq[-1]
+    # pseq = np.asarray(pseq)
+    # pseq[0] = pseq[0] - (pseq[0] - pseq[1]) * .8
+    # ax = plt.axes(projection='3d')
+    # center = np.mean(pseq, axis=0)
+    # ax.set_xlim([center[0] - 0.05, center[0] + 0.05])
+    # ax.set_ylim([center[1] - 0.05, center[1] + 0.05])
+    # ax.set_zlim([center[2] - 0.05, center[2] + 0.05])
+    # bu.plot_pseq(ax, pseq, c='k')
+    # bu.scatter_pseq(ax, pseq[1:-2], c='r')
+    # bu.scatter_pseq(ax, pseq[:1], c='g')
+    # plt.show()
 
-    pathseq_list, min_f_list = brp.check_force(bendresseq, pathseq_list)
-    print(min_f_list)
-    mp.ah.show_armjnts(armjnts=pathseq_list[5][1][0][-1])
+    pathseq_list, min_f_list, f_list = brp.check_force(bendresseq, pathseq_list)
+    # mp.ah.show_armjnts(armjnts=pathseq_list[0][1][0][-1])
+    base.run()
+    # for i, f in enumerate(min_f_list):
+    #     scale = max(min_f_list) - min(min_f_list)
+    #     mp.ah.show_armjnts(armjnts=pathseq_list[i][1][0][-1],
+    #                        rgba=(0, (f - min(min_f_list)) / scale, 1 - (f - min(min_f_list)) / scale, .5))
 
-    for i, f in enumerate(min_f_list):
-        mp.ah.show_armjnts(armjnts=pathseq_list[i][1][0][-1],
-                           rgba=(0, (f / max(min_f_list)), 1 - f / max(min_f_list), .5))
+    show_step = 2
+    f_list_step = f_list[:, show_step]
+    brp.show_bend(bendresseq[show_step])
+    print(f_list_step)
+    for i, f in enumerate(f_list_step):
+        scale = max(f_list_step) - min(f_list_step)
+        mp.ah.show_armjnts(armjnts=pathseq_list[i][1][show_step][-1],
+                           rgba=(0, (f - min(f_list_step)) / scale, 1 - (f - min(f_list_step)) / scale, .5))
     # brp.show_motion_withrbt(bendresseq, pathseq_list[0][1])
     base.run()

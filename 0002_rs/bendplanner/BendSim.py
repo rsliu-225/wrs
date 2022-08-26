@@ -64,7 +64,7 @@ class BendSim(object):
         self.pillar_center = cm.gen_stick(spos=np.asarray([0, 0, -bconfig.PILLAR_H]),
                                           epos=np.asarray([0, 0, bconfig.PILLAR_H]),
                                           thickness=self.r_center * 2, sections=sections,
-                                          rgba=[.7, .7, .7, 1])
+                                          rgba=[.9, .9, .9, 1])
         self.pillar_center_inner = cm.gen_stick(spos=np.asarray([0, 0, -bconfig.PILLAR_H]),
                                                 epos=np.asarray([0, 0, bconfig.PILLAR_H]),
                                                 thickness=self.r_center * 2 - .001, sections=sections,
@@ -72,7 +72,7 @@ class BendSim(object):
         self.pillar_dieside = cm.gen_stick(spos=np.asarray([self.c2c_dist, 0, -bconfig.PILLAR_H]),
                                            epos=np.asarray([self.c2c_dist, 0, bconfig.PILLAR_H]),
                                            thickness=self.r_side * 2, sections=sections,
-                                           rgba=[.7, .7, .7, 1])
+                                           rgba=[.9, .9, .9, 1])
         self.pillar_dieside_inner = cm.gen_stick(spos=np.asarray([self.c2c_dist, 0, -bconfig.PILLAR_H]),
                                                  epos=np.asarray([self.c2c_dist, 0, bconfig.PILLAR_H]),
                                                  thickness=self.r_side * 2 - .001, sections=sections,
@@ -768,13 +768,13 @@ class BendSim(object):
         bendset = []
         for i in range(n):
             if i > 0:
-                bendset.append([random.uniform(.1, .9) * max_bend * random.choice([-1, 1]),
+                bendset.append([random.uniform(.1, .98) * max_bend * random.choice([-1, 1]),
                                 0,
                                 random.uniform(0, 1) * np.pi,
                                 bendset[-1][-1] + self.bend_r * abs(bendset[-1][0] / np.cos(bendset[-1][1]))
                                 + random.uniform(self.bend_r * 2, self.bend_r * max_bend)])
             else:
-                bendset.append([random.uniform(.1, .9) * max_bend * random.choice([-1, 1]),
+                bendset.append([random.uniform(.1, .98) * max_bend * random.choice([-1, 1]),
                                 0,
                                 random.uniform(0, 1) * np.pi,
                                 self.bend_r * np.pi + .1])

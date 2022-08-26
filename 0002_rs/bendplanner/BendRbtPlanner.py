@@ -112,34 +112,7 @@ class BendRbtPlanner(object):
         _, bendresseq, _ = self._bs.gen_by_bendseq(self.bendset, cc=True, toggledebug=False)
         objmat4_list = []
         for bendres in [bendresseq[0]]:
-            init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendres
-            pseq_init, rotseq_init = self.transseq(pseq_init, rotseq_init, self.transmat4)
-            objmat4_list.append(rm.homomat_from_posrot(pseq_init[0], rotseq_init[0]))
-
-            vertices, faces = self._bs.gen_stick(pseq_init[::-1], rotseq_init[::-1], self._bs.thickness / 2,
-                                                 section=180)
-            objcm_init = cm.CollisionModel(initor=trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces)))
-            objcm_init.set_rgba((1, 0, 0, .5))
-            objcm_init.attach_to(base)
-
-            pseq_end, rotseq_end = self.transseq(pseq_end, rotseq_end, self.transmat4)
-            vertices, faces = self._bs.gen_stick(pseq_end[::-1], rotseq_end[::-1], self._bs.thickness / 2,
-                                                 section=180)
-            objcm_end = cm.CollisionModel(initor=trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces)))
-            objcm_end.set_rgba((0, 1, 0, .5))
-            objcm_end.attach_to(base)
-
-            tmp_p = np.asarray([self._bs.c2c_dist * math.cos(init_a), self._bs.c2c_dist * math.sin(init_a), 0])
-            tmp_p = np.dot(self.transmat4[:3, :3], tmp_p)
-            self._bs.pillar_punch.set_homomat(np.dot(rm.homomat_from_posrot(tmp_p, np.eye(3)), self.transmat4))
-            self._bs.pillar_punch.set_rgba(rgba=[.7, 0, 0, .7])
-            self._bs.pillar_punch.attach_to(base)
-
-            tmp_p = np.asarray([self._bs.c2c_dist * math.cos(end_a), self._bs.c2c_dist * math.sin(end_a), 0])
-            tmp_p = np.dot(self.transmat4[:3, :3], tmp_p)
-            self._bs.pillar_punch_end.set_homomat(np.dot(rm.homomat_from_posrot(tmp_p, np.eye(3)), self.transmat4))
-            self._bs.pillar_punch_end.set_rgba(rgba=[0, .7, 0, .7])
-            self._bs.pillar_punch_end.attach_to(base)
+            self.show_bend(bendres)
 
         # print(len(objmat4_list))
 
@@ -319,35 +292,74 @@ class BendRbtPlanner(object):
             print(f'success {seqs}')
             break
 
-    def check_force(self, bendresseq, pathseq):
+    def show_bend(self, bendres_i):
+        init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendres_i
+        pseq_init, rotseq_init = self.transseq(pseq_init, rotseq_init, self.transmat4)
+
+        vertices, faces = self._bs.gen_stick(pseq_init[::-1], rotseq_init[::-1], self._bs.thickness / 2,
+                                             section=180)
+        objcm_init = cm.CollisionModel(
+            initor=trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces)))
+        objcm_init.set_rgba((.7, .7, .7, .5))
+        objcm_init.attach_to(base)
+
+        pseq_end, rotseq_end = self.transseq(pseq_end, rotseq_end, self.transmat4)
+        vertices, faces = self._bs.gen_stick(pseq_end[::-1], rotseq_end[::-1], self._bs.thickness / 2,
+                                             section=180)
+        objcm_end = cm.CollisionModel(
+            initor=trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces)))
+        objcm_end.set_rgba((0, 1, 0, .5))
+        objcm_end.attach_to(base)
+        tmp_p = np.asarray([self._bs.c2c_dist * math.cos(init_a), self._bs.c2c_dist * math.sin(init_a), 0])
+        tmp_p = np.dot(self.transmat4[:3, :3], tmp_p)
+        self._bs.pillar_punch.set_homomat(np.dot(rm.homomat_from_posrot(tmp_p, np.eye(3)), self.transmat4))
+        self._bs.pillar_punch.set_rgba(rgba=[.7, 0, 0, .7])
+        self._bs.pillar_punch.attach_to(base)
+
+        tmp_p = np.asarray([self._bs.c2c_dist * math.cos(end_a), self._bs.c2c_dist * math.sin(end_a), 0])
+        tmp_p = np.dot(self.transmat4[:3, :3], tmp_p)
+        self._bs.pillar_punch_end.set_homomat(
+            np.dot(rm.homomat_from_posrot(tmp_p, np.eye(3)), self.transmat4))
+        self._bs.pillar_punch_end.set_rgba(rgba=[0, .7, 0, .7])
+        self._bs.pillar_punch_end.attach_to(base)
+
+    def check_force(self, bendresseq, pathseq, show_step=None):
         min_f_list = []
+        f_list = []
         pseq_init, rotseq_init = self.transseq(bendresseq[0][3], bendresseq[0][4], self.transmat4)
         for i in range(len(pathseq)):
             min_f = np.inf
+            f_list_tmp = []
             print(f'----------{i}----------')
             g, path_list = pathseq[i]
             for j in range(len(bendresseq)):
-                init_a, end_a, plate_a, _, _, _, _ = bendresseq[j]
+                if j == show_step:
+                    self.show_bend(bendresseq[j])
                 # f_dir = rm.rotmat_from_axangle((0, 0, 1), init_a / 2).dot(rotseq_init[0][:, 1])
                 f_dir = rotseq_init[0][:, 1]
                 armjnts = path_list[j][0]
                 eepos, eerot = self._mp.get_ee(armjnts)
                 f_dir = np.linalg.inv(eerot).dot(f_dir)
-                gm.gen_arrow(eepos, eepos + f_dir * .1).attach_to(base)
+                # gm.gen_arrow(eepos, eepos + f_dir * .1).attach_to(base)
                 # self._mp.ah.show_armjnts(armjnts=armjnts, rgba=None)
                 f = self._mp.get_max_force(list(f_dir) + [0, 0, 0])
+                f_list_tmp.append(f)
                 if f < min_f:
                     min_f = f
             min_f_list.append(min_f)
-        # g, path_list = pathseq[min_f_list.index(min(min_f_list))]
-        # for path in path_list:
-        #     self._mp.ah.show_armjnts(armjnts=path[0], rgba=(1, 1, 0, .5))
-        # g, path_list = pathseq[min_f_list.index(max(min_f_list))]
-        # for path in path_list:
-        #     self._mp.ah.show_armjnts(armjnts=path[0], rgba=(0, 1, 1, .5))
-        # print(min_f_list.index(min(min_f_list)), min_f_list[min_f_list.index(min(min_f_list))])
-        # print(min_f_list.index(max(min_f_list)), min_f_list[min_f_list.index(max(min_f_list))])
-        return np.asarray(pathseq)[np.argsort(min_f_list)[::-1]], np.asarray(min_f_list)[np.argsort(min_f_list)[::-1]]
+            f_list.append(f_list_tmp)
+        g, path_list = pathseq[min_f_list.index(min(min_f_list))]
+        for path in path_list:
+            self._mp.ah.show_armjnts(armjnts=path[0], rgba=(0, 0, 1, .5))
+        g, path_list = pathseq[min_f_list.index(max(min_f_list))]
+        for path in path_list:
+            self._mp.ah.show_armjnts(armjnts=path[0], rgba=(0, 1, 0, .5))
+
+        print(min_f_list.index(min(min_f_list)), min_f_list[min_f_list.index(min(min_f_list))])
+        print(min_f_list.index(max(min_f_list)), min_f_list[min_f_list.index(max(min_f_list))])
+        return np.asarray(pathseq)[np.argsort(min_f_list)[::-1]], \
+               np.asarray(min_f_list)[np.argsort(min_f_list)[::-1]], \
+               np.asarray(f_list)[np.argsort(min_f_list)[::-1]]
 
     def show_bendresseq(self, bendresseq):
         motioncounter = [0]
@@ -369,6 +381,7 @@ class BendRbtPlanner(object):
                               appendTask=True)
 
     def _update(self, motioncounter, bendresseq, transmat4, task):
+        self.set_bs_stick_sec(180)
         if base.inputmgr.keymap['space']:
             p3u.clearobj_by_name(['obj'])
             self._bs.move_posrot(transmat4)
@@ -399,13 +412,13 @@ class BendRbtPlanner(object):
                 tmp_p = np.asarray([self._bs.c2c_dist * math.cos(init_a), self._bs.c2c_dist * math.sin(init_a), 0])
                 tmp_p = np.dot(transmat4[:3, :3], tmp_p)
                 self._bs.pillar_punch.set_homomat(np.dot(rm.homomat_from_posrot(tmp_p, np.eye(3)), transmat4))
-                self._bs.pillar_punch.set_rgba(rgba=[.7, 0, 0, .7])
+                self._bs.pillar_punch.set_rgba(rgba=[.7, 0, 0, 1])
                 self._bs.pillar_punch.attach_to(base)
 
                 tmp_p = np.asarray([self._bs.c2c_dist * math.cos(end_a), self._bs.c2c_dist * math.sin(end_a), 0])
                 tmp_p = np.dot(transmat4[:3, :3], tmp_p)
                 self._bs.pillar_punch_end.set_homomat(np.dot(rm.homomat_from_posrot(tmp_p, np.eye(3)), transmat4))
-                self._bs.pillar_punch_end.set_rgba(rgba=[0, .7, 0, .7])
+                self._bs.pillar_punch_end.set_rgba(rgba=[0, .7, 0, 1])
                 self._bs.pillar_punch_end.attach_to(base)
                 motioncounter[0] += 1
             else:

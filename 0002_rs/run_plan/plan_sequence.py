@@ -37,19 +37,20 @@ def plan_ipt(bs, bendset, snum=None, fo='180', f_name=''):
     iptree = ip_tree.IPTree(len(bendset))
     valid_tree = ip_tree.IPTree(len(bendset))
     seqs, catch = iptree.get_potential_valid()
-    print(seqs)
     result = []
     tc_list = []
     attemp_cnt_list = []
     cnt = 0
     success_cnt = 0
     while len(seqs) != 0:
+        print('Candidate seqs:', seqs)
         bendseq = [bendset[i] for i in seqs]
         cnt_inx, prot_seq = catch
         if cnt_inx != -1:
             print(f'resume from {cnt_inx + 1}')
             bs.reset(prot_seq[0], prot_seq[1])
             is_success, bendresseq, _ = bs.gen_by_bendseq(bendseq[cnt_inx + 1:], cc=True, prune=True, toggledebug=False)
+            bendresseq = [[1] * 7] * (cnt_inx + 1) + bendresseq
             is_success = [True] * (cnt_inx + 1) + is_success
         else:
             bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
@@ -65,7 +66,8 @@ def plan_ipt(bs, bendset, snum=None, fo='180', f_name=''):
             success_cnt += 1
             if snum is None or success_cnt < snum:
                 valid_tree.add_invalid_seq(seqs)
-                iptree.add_invalid_seq(seqs)
+                iptree.add_invalid_seq(seqs, cache_idx=len(is_success),
+                                       cache_data=[bendresseq[a][5:] for a in range(len(bendresseq))])
                 valid_tree.show()
                 seqs, catch = iptree.get_potential_valid()
                 continue
@@ -75,8 +77,9 @@ def plan_ipt(bs, bendset, snum=None, fo='180', f_name=''):
                 return result, tc_list, attemp_cnt_list, time.time() - ts
 
         iptree.add_invalid_seq(seqs[:is_success.index(False) + 1],
-                               cache_idx=is_success.index(False) - 1,
-                               cache_data=bendresseq[bendresseq.index([None]) - 1][5:])
+                               cache_idx=is_success.index(False),
+                               # cache_data=bendresseq[bendresseq.index([None]) - 1][5:],
+                               cache_data=[bendresseq[a][5:] for a in range(bendresseq.index([None]))])
         # iptree.show()
         seqs, catch = iptree.get_potential_valid()
         print(seqs)
@@ -126,7 +129,7 @@ if __name__ == '__main__':
     bs = b_sim.BendSim(show=False)
 
     # bendset = pickle.load(open('./penta_bendseq.pkl', 'rb'))
-    random_cnt = 6
+    random_cnt = 7
 
     # goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
     #                         [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1],
@@ -139,20 +142,20 @@ if __name__ == '__main__':
 
     # bs.show(rgba=(.7, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
     # bs.show(rgba=(.7, .7, .7, .7), show_frame=True)
-    for i in range(6, 10):
+    for i in range(2, 3):
         print(f'--------------{str(i)}--------------')
         flag = False
         while not flag:
             print('The seq is not feasible!')
             bendset = bs.gen_random_bendset(random_cnt, np.pi)
             bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
-            is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, prune=False, toggledebug=False)
+            # is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, prune=False, toggledebug=False)
             # ax = plt.axes(projection='3d')
             # bu.plot_pseq(ax, bs.pseq, c='k')
             # bu.scatter_pseq(ax, bs.pseq, c='r')
             # plt.show()
             flag = inf_bend_check(bs, bendset)
-        flag, tc, attemp_cnt_list, total_tc = \
+        res, tc, attemp_cnt_list, total_tc = \
             plan_ipt(bs, bendset, snum=10, fo='180', f_name=f'{str(random_cnt)}_{str(i)}')
         print(tc, attemp_cnt_list)
         print(total_tc)

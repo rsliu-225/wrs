@@ -28,11 +28,12 @@ class IPTree:
             parent_node_id = node_id[:-len(str_seq[idx]) - 1]
             parent_node_id = parent_node_id if parent_node_id else "root"
 
-            if cache_idx is not None and idx == cache_idx:
-                node_data = cache_data
+            if cache_idx is not None and idx < cache_idx:
+                node_data = cache_data[idx]
             else:
                 node_data = None
-
+            # if node_data[0] == 1:
+                
             if not self.tree.get_node(node_id):
                 self.tree.create_node(
                     seq[idx], node_id, parent_node_id, node_data,
@@ -122,14 +123,19 @@ class IPTree:
 
 
 if __name__ == '__main__':
-    tree = IPTree(15)
+    tree = IPTree(5)
     tree.add_invalid_seq([0])
-    tree.add_invalid_seq([1, 0, 2, 3], 2, {2: 2})
-    tree.add_invalid_seq([1, 3, 4], 1, {1: 1})
-    tree.add_invalid_seq([1, 2, 3])
-    tree.add_invalid_seq([1, 2, 4])
+    tree.add_invalid_seq([1, 0, 2, 3], 3, ['b', 'ba', 'bac'])
+    # tree.add_invalid_seq([3, 0, 1, 2], 3, ['d', 'da', 'dab'])
+    # tree.add_invalid_seq([1, 3, 4], 1, ['b'])
+    tree.add_invalid_seq([1, 0, 2, 3], 3, ['1', '1'])
+
     tree.tree.show()
 
     print(tree.get_potential_valid([3]))
+    print(tree.get_potential_valid([3, 1]))
     print(tree.get_potential_valid([1]))
-    print(tree.get_potential_valid([1, 3, 2]))
+    print(tree.get_potential_valid([1, 0]))
+    print(tree.get_potential_valid([1, 0, 3]))
+    print(tree.get_potential_valid([1, 2]))
+    print(tree.get_potential_valid([1, 0, 2]))

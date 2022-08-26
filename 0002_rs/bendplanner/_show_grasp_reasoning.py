@@ -20,9 +20,9 @@ if __name__ == '__main__':
     # rbt = el.loadUr3e()
     # transmat4 = rm.homomat_from_posrot((.7, -.2, .78 + bconfig.BENDER_H), np.eye(3))
 
-    base, env = el.loadEnv_yumi()
+    base, env = el.loadEnv_yumi(camp=[.4, 0, 1.7], lookatpos=[.4, 0, 0])
     rbt = el.loadYumi(showrbt=False)
-    transmat4 = rm.homomat_from_posrot((.45, 0, bconfig.BENDER_H + .03), rm.rotmat_from_axangle((0, 0, 1), np.pi))
+    transmat4 = rm.homomat_from_posrot((.45, .1, bconfig.BENDER_H + .03), rm.rotmat_from_axangle((0, 0, 1), np.pi))
     # transmat4 = rm.homomat_from_posrot((.4, -.1, bconfig.BENDER_H))
 
     bs = b_sim.BendSim(show=False)
@@ -61,11 +61,11 @@ if __name__ == '__main__':
     init_rotseq = [np.eye(3), np.eye(3)]
     brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp)
 
-    grasp_list = mp.load_all_grasp('stick')
-    grasp_list = grasp_list[:100]
+    grasp_list = mp.load_all_grasp('stick_yumi')
+    # grasp_list = grasp_list[:100]
 
     brp.set_up(bendset, grasp_list, transmat4)
-    # brp.run(f_name=f_name, folder_name=fo)
+    brp.run(f_name=f_name, folder_name=fo)
     brp.pre_grasp_reasoning()
 
     goal_pseq, bendset = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendseq.pkl', 'rb'))
@@ -73,5 +73,7 @@ if __name__ == '__main__':
     armjntsseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_armjntsseq.pkl', 'rb'))
     pathseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_pathseq.pkl', 'rb'))
 
+    brp.show_motion_withrbt(bendresseq, pathseq_list[0][1])
     pathseq_list, min_f_list = brp.check_force(bendresseq, pathseq_list)
     print(min_f_list)
+    base.run()

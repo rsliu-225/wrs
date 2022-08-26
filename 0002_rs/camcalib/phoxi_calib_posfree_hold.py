@@ -14,7 +14,7 @@ import motionplanner.motion_planner as m_planner
 import motionplanner.rbtx_motion_planner as m_plannerx
 import utils.pcd_utils as pcdu
 import utils.phoxi as phoxi
-import utiltools.robotmath as rm
+import basis.robot_math as rm
 
 
 def getcenter(img, pcd, tgtids=[0, 1]):
@@ -480,28 +480,28 @@ if __name__ == '__main__':
     set up env and param
     '''
     base, env = el.loadEnv_wrs()
-    rbt, rbtmg, rbtball = el.loadUr3e()
-    rbtx = el.loadUr3ex(rbt)
+    rbt = el.loadUr3e()
+    # rbtx = el.loadUr3ex(rbt)
 
     phxi_client = phoxi.Phoxi(host=config.PHOXI_HOST)
 
-    rbt.opengripper(armname="rgt")
-    rbt.opengripper(armname="lft")
+    rbt.jaw_to('rgt_hnd', .05)
+    rbt.jaw_to('lft_hnd', .05)
 
-    mp_lft = m_planner.MotionPlanner(env, rbt, rbtmg, rbtball, armname="lft")
-    mp_rgt = m_planner.MotionPlanner(env, rbt, rbtmg, rbtball, armname="rgt")
-    mp_x_lft = m_plannerx.MotionPlannerRbtX(env, rbt, rbtmg, rbtball, rbtx, armname="lft")
-    mp_x_rgt = m_plannerx.MotionPlannerRbtX(env, rbt, rbtmg, rbtball, rbtx, armname="rgt")
+    mp_lft = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
+    mp_rgt = m_planner.MotionPlanner(env, rbt,  armname="rgt_arm")
+    # mp_x_lft = m_plannerx.MotionPlannerRbtX(env, rbt, rbtx, armname="lft_arm")
+    # mp_x_rgt = m_plannerx.MotionPlannerRbtX(env, rbt, rbtx, armname="rgt_arm")
 
     '''
     set param
     '''
     objrot = np.array([(-1, 0, 0), (0, -1, 0), (0, 0, 1)]).T
-    objpos = np.array([800, 240, 1000])
+    objpos = np.array([.8, .24, 1])
     objcm = el.loadObj("calibboard.stl")
     grasp = pickle.load(open(config.ROOT + "/graspplanner/pregrasp/calibboard_pregrasps.pkl", "rb"))[0]
-    for x in range(500, 700, 20):
-        objrelpos, objrelrot = mp_lft.get_rel_posrot(grasp, objpos=(x, 200, 1150), objrot=objrot)
+    for x in np.linspace(.5, .7, 10):
+        objrelpos, objrelrot = mp_lft.get_rel_posrot(grasp, objpos=(x, .2, 1.15), objrot=objrot)
         if objrelrot is not None:
             break
     print(objrelpos, objrelrot)
@@ -509,22 +509,22 @@ if __name__ == '__main__':
     '''
     calibration motion
     '''
-    dump_id = '210527'
-    relpos = phoxi_computeboardcenterinhand(mp_x_lft, phxi_client, grasp, objcm, objpos, objrot, objrelpos,
-                                            objrelrot)
-    print("relpos:", relpos)
-    amat = phoxi_calib_auto(mp_x_lft, phxi_client, grasp, objcm, objrelpos, objrelrot, -relpos, dump_id=dump_id)
+    # dump_id = '210527'
+    # relpos = phoxi_computeboardcenterinhand(mp_x_lft, phxi_client, grasp, objcm, objpos, objrot, objrelpos,
+    #                                         objrelrot)
+    # print("relpos:", relpos)
+    # amat = phoxi_calib_auto(mp_x_lft, phxi_client, grasp, objcm, objrelpos, objrelrot, -relpos, dump_id=dump_id)
 
     '''
     planning
     '''
-    # get_avaliable_objpos_rotmotion(mp_lft, objcm, grasp, objrot, objrelpos, objrelrot)
-    # show_path(mp_lft, "calib_rot_path.pkl", objcm, objrelpos, objrelrot)
-    # base.run()
+    get_avaliable_objpos_rotmotion(mp_lft, objcm, grasp, objrot, objrelpos, objrelrot)
+    show_path(mp_lft, "calib_rot_path.pkl", objcm, objrelpos, objrelrot)
+    base.run()
 
-    # get_avaliable_objpos_transmotion(mp_lft, objcm, grasp, objrot, objrelpos, objrelrot)
-    # show_path(mp_lft, "calib_trans_path.pkl", objcm, objrelpos, objrelrot)
-    # base.run()
+    get_avaliable_objpos_transmotion(mp_lft, objcm, grasp, objrot, objrelpos, objrelrot)
+    show_path(mp_lft, "calib_trans_path.pkl", objcm, objrelpos, objrelrot)
+    base.run()
 
     '''
     show calibration result
