@@ -119,15 +119,6 @@ if __name__ == '__main__':
     brp.set_up(bendset, [], transmat4)
     brp.set_bs_stick_sec(180)
 
-    _, _, _, _, _, pseq, _ = bendresseq[-1]
-    pseq = np.asarray(pseq)
-    pseq[0] = pseq[0] - (pseq[0] - pseq[1]) * .8
-    ax = plt.axes(projection='3d')
-    center = np.mean(pseq, axis=0)
-    ax.set_xlim([center[0] - 0.05, center[0] + 0.05])
-    ax.set_ylim([center[1] - 0.05, center[1] + 0.05])
-    ax.set_zlim([center[2] - 0.05, center[2] + 0.05])
-
     # _, _, _, _, _, pseq, _ = bendresseq[-1]
     # pseq = np.asarray(pseq)
     # pseq[0] = pseq[0] - (pseq[0] - pseq[1]) * .8
@@ -142,17 +133,11 @@ if __name__ == '__main__':
     # plt.show()
 
     pathseq_list, min_f_list, f_list = brp.check_force(bendresseq, pathseq_list)
-    # mp.ah.show_armjnts(armjnts=pathseq_list[0][1][0][-1])
-    base.run()
-    # for i, f in enumerate(min_f_list):
-    #     scale = max(min_f_list) - min(min_f_list)
-    #     mp.ah.show_armjnts(armjnts=pathseq_list[i][1][0][-1],
-    #                        rgba=(0, (f - min(min_f_list)) / scale, 1 - (f - min(min_f_list)) / scale, .5))
 
-    for i, f in enumerate(min_f_list):
-        mp.ah.show_armjnts(armjnts=pathseq_list[i][1][0][-1],
-                           rgba=(0, (f / max(min_f_list)), 1 - f / max(min_f_list), .5))
-    brp.show_motion_withrbt(bendresseq, pathseq_list[0][1])
+    # for i, f in enumerate(min_f_list):
+    #     mp.ah.show_armjnts(armjnts=pathseq_list[i][1][0][-1],
+    #                        rgba=(0, (f / max(min_f_list)), 1 - f / max(min_f_list), .5))
+    # brp.show_motion_withrbt(bendresseq, pathseq_list[0][1])
     show_step = 2
     f_list_step = f_list[:, show_step]
     brp.show_bend(bendresseq[show_step])

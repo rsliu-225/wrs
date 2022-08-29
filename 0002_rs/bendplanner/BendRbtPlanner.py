@@ -348,12 +348,12 @@ class BendRbtPlanner(object):
                     min_f = f
             min_f_list.append(min_f)
             f_list.append(f_list_tmp)
-        g, path_list = pathseq[min_f_list.index(min(min_f_list))]
-        for path in path_list:
-            self._mp.ah.show_armjnts(armjnts=path[0], rgba=(0, 0, 1, .5))
-        g, path_list = pathseq[min_f_list.index(max(min_f_list))]
-        for path in path_list:
-            self._mp.ah.show_armjnts(armjnts=path[0], rgba=(0, 1, 0, .5))
+        # g, path_list = pathseq[min_f_list.index(min(min_f_list))]
+        # for path in path_list:
+        #     self._mp.ah.show_armjnts(armjnts=path[0], rgba=(0, 0, 1, .5))
+        # g, path_list = pathseq[min_f_list.index(max(min_f_list))]
+        # for path in path_list:
+        #     self._mp.ah.show_armjnts(armjnts=path[0], rgba=(0, 1, 0, .5))
 
         print(min_f_list.index(min(min_f_list)), min_f_list[min_f_list.index(min(min_f_list))])
         print(min_f_list.index(max(min_f_list)), min_f_list[min_f_list.index(max(min_f_list))])
