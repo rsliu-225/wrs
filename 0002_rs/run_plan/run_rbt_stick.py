@@ -1,7 +1,6 @@
 import os
 
 import numpy as np
-import cv2
 
 import basis.robot_math as rm
 import bendplanner.BendRbtPlanner as br_planner
@@ -20,16 +19,8 @@ affine_mat = np.asarray([[0.00282079054, -1.00400178, -0.000574846621, 0.3125535
                          [-0.202360828, 0.00546017392, -0.96800006, 0.94915224],
                          [0.0, 0.0, 0.0, 1.0]])
 
-if __name__ == '__main__':
-    import pickle
-    import localenv.envloader as el
-    import utils.pcd_utils as pcdu
 
-    # base, env = el.loadEnv_wrs(camp=[.6, -.4, 1.7], lookatpos=[.6, -.4, 1])
-    # base, env = el.loadEnv_wrs(camp=[0, 0, 1], lookatpos=[0, 0, 0])
-    base, env = el.loadEnv_yumi()
-    rbt = el.loadYumi(showrbt=True)
-    # rbt = el.loadUr3e()
+def get_transmat4_marker():
     phxi = phoxi.Phoxi(host=config.PHOXI_HOST)
 
     textureimg, depthimg, pcd = phxi.getalldata()
@@ -37,7 +28,6 @@ if __name__ == '__main__':
 
     textureimg = vu.enhance_grayimg(textureimg)
     centermat4 = vu.get_axis_aruco(textureimg, pcd)
-    print(centermat4)
 
     pcdu.show_pcd(pcd, rgba=(1, 1, 1, .5))
     gm.gen_sphere(centermat4[:3, 3], radius=.005).attach_to(base)
@@ -49,7 +39,21 @@ if __name__ == '__main__':
                         centermat4[:3, 1] * (-54 - 50 + residual[1]) / 1000 + \
                         centermat4[:3, 2] * (52.75 + residual[2]) / 1000
 
-    transmat4 = rm.homomat_from_posrot(center_pillar_pos, centermat4[:3, :3])
+    return rm.homomat_from_posrot(center_pillar_pos, centermat4[:3, :3])
+
+
+if __name__ == '__main__':
+    import pickle
+    import localenv.envloader as el
+    import utils.pcd_utils as pcdu
+
+    # base, env = el.loadEnv_wrs(camp=[.6, -.4, 1.7], lookatpos=[.6, -.4, 1])
+    # base, env = el.loadEnv_wrs(camp=[0, 0, 1], lookatpos=[0, 0, 0])
+    base, env = el.loadEnv_yumi()
+    rbt = el.loadYumi(showrbt=True)
+    # rbt = el.loadUr3e()
+    # transmat4 = rm.homomat_from_posrot((.45, 0, bconfig.BENDER_H + .035), rm.rotmat_from_axangle((0, 0, 1), np.pi))
+    transmat4 = get_transmat4_marker()
     gm.gen_frame(transmat4[:3, 3], transmat4[:3, :3]).attach_to(base)
 
     bs = b_sim.BendSim(show=False)
@@ -124,17 +128,38 @@ if __name__ == '__main__':
     ax.set_ylim([center[1] - 0.05, center[1] + 0.05])
     ax.set_zlim([center[2] - 0.05, center[2] + 0.05])
 
-    bu.plot_pseq(ax, pseq, c='k')
-    bu.scatter_pseq(ax, pseq[1:-2], c='r')
-    bu.scatter_pseq(ax, pseq[:1], c='g')
-    plt.show()
+    # _, _, _, _, _, pseq, _ = bendresseq[-1]
+    # pseq = np.asarray(pseq)
+    # pseq[0] = pseq[0] - (pseq[0] - pseq[1]) * .8
+    # ax = plt.axes(projection='3d')
+    # center = np.mean(pseq, axis=0)
+    # ax.set_xlim([center[0] - 0.05, center[0] + 0.05])
+    # ax.set_ylim([center[1] - 0.05, center[1] + 0.05])
+    # ax.set_zlim([center[2] - 0.05, center[2] + 0.05])
+    # bu.plot_pseq(ax, pseq, c='k')
+    # bu.scatter_pseq(ax, pseq[1:-2], c='r')
+    # bu.scatter_pseq(ax, pseq[:1], c='g')
+    # plt.show()
 
-    pathseq_list, min_f_list = brp.check_force(bendresseq, pathseq_list)
-    print(min_f_list)
-    mp.ah.show_armjnts(armjnts=pathseq_list[5][1][0][-1])
+    pathseq_list, min_f_list, f_list = brp.check_force(bendresseq, pathseq_list)
+    # mp.ah.show_armjnts(armjnts=pathseq_list[0][1][0][-1])
+    base.run()
+    # for i, f in enumerate(min_f_list):
+    #     scale = max(min_f_list) - min(min_f_list)
+    #     mp.ah.show_armjnts(armjnts=pathseq_list[i][1][0][-1],
+    #                        rgba=(0, (f - min(min_f_list)) / scale, 1 - (f - min(min_f_list)) / scale, .5))
 
     for i, f in enumerate(min_f_list):
         mp.ah.show_armjnts(armjnts=pathseq_list[i][1][0][-1],
                            rgba=(0, (f / max(min_f_list)), 1 - f / max(min_f_list), .5))
     brp.show_motion_withrbt(bendresseq, pathseq_list[0][1])
+    show_step = 2
+    f_list_step = f_list[:, show_step]
+    brp.show_bend(bendresseq[show_step])
+    print(f_list_step)
+    for i, f in enumerate(f_list_step):
+        scale = max(f_list_step) - min(f_list_step)
+        mp.ah.show_armjnts(armjnts=pathseq_list[i][1][show_step][-1],
+                           rgba=(0, (f - min(f_list_step)) / scale, 1 - (f - min(f_list_step)) / scale, .5))
+    # brp.show_motion_withrbt(bendresseq, pathseq_list[0][1])
     base.run()

@@ -2,6 +2,7 @@ import numpy as np
 
 import config
 import robot_sim.end_effectors.gripper.robotiqhe.robotiqhe as rtqhe
+import robot_sim.end_effectors.gripper.yumi_gripper.yumi_gripper as yumigripper
 import graspplanner.grasp_planner as gp
 import visualization.panda.world as wd
 import modeling.collision_model as cm
@@ -10,7 +11,8 @@ import modeling.geometric_model as gm
 
 if __name__ == '__main__':
     base = wd.World(cam_pos=[.5, .5, .3], lookat_pos=[0, 0, 0])
-    gripper = rtqhe.RobotiqHE()
+    # gripper = rtqhe.RobotiqHE()
+    gripper = yumigripper.YumiGripper()
     grasp_planner = gp.GraspPlanner(gripper)
 
     '''
@@ -79,28 +81,29 @@ if __name__ == '__main__':
     '''
     stick
     '''
+    import grasping.annotation.utils as gau
+
     gm.gen_frame(length=.2).attach_to(base)
-    obj = cm.gen_stick(epos=np.asarray([0, .15, 0]), thickness=.01, sections=180, rgba=(.7, .7, .7, .7))
+    obj = cm.gen_stick(epos=np.asarray([0, .001, 0]), thickness=.01, sections=180, rgba=(.7, .7, .7, .7))
     obj.attach_to(base)
-    # pregrasp_list = []
-    # finger_normal = (0, 0, 1)
-    # hand_normal = (0, 1, 0)
-    #
-    # for i in np.linspace(0, 180, 10):
-    #     print(i)
-    #     tmp_rotmat = rm.rotmat_from_axangle((1, 0, 0), np.radians(i))
-    #     hand_normal = np.dot(tmp_rotmat, hand_normal)
-    #     finger_normal = np.dot(tmp_rotmat, finger_normal)
-    #     pregrasp_list.extend(grasp_planner.define_grasp_with_rotation(grasp_coordinate=(0, 0, 0),
-    #                                                                   finger_normal=finger_normal,
-    #                                                                   hand_normal=hand_normal, jawwidth=.02,
-    #                                                                   obj=obj, rot_ax=(0, 1, 0),
-    #                                                                   rot_range=(-180, 180),
-    #                                                                   rot_interval=30,
-    #                                                                   toggledebug=True))
-    #
-    # grasp_planner.write_pregrasps('stick', pregrasp_list)
-    pregrasp_list = grasp_planner.load_pregrasp('stick')
-    grasp_planner.show_grasp(pregrasp_list[:200], obj, rgba=None, toggle_tcpcs=False, toggle_jntscs=False)
+    pregrasp_list = []
+
+    for i in range(0, 181, 15):
+        angle = np.radians(i)
+        pregrasp_list.extend(gau.define_grasp_with_rotation(gripper, obj, gl_jaw_center_pos=(0, 0, 0),
+                                                            gl_jaw_center_z=
+                                                            np.dot(rm.rotmat_from_axangle(np.array([1, 0, 0]), angle),
+                                                                   rm.unit_vector(np.array([0, 1, 0]))),
+                                                            gl_jaw_center_y=
+                                                            np.dot(rm.rotmat_from_axangle(np.array([1, 0, 0]), angle),
+                                                                   np.array([0, 0, 1])),
+                                                            jaw_width=.03,
+                                                            rotation_interval=np.radians(15),
+                                                            gl_rotation_ax=np.array([0, 1, 0]),
+                                                            toggle_debug=False))
+
+    grasp_planner.write_pregrasps('stick_yumi', pregrasp_list)
+    pregrasp_list = grasp_planner.load_pregrasp('stick_yumi')
+    grasp_planner.show_grasp(pregrasp_list[:1], obj, rgba=None, toggle_tcpcs=False, toggle_jntscs=False)
     print(len(pregrasp_list))
     base.run()
