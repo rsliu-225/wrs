@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+import cv2
 
 import basis.robot_math as rm
 import bendplanner.BendRbtPlanner as br_planner
@@ -10,23 +11,48 @@ import bendplanner.bender_config as bconfig
 import config
 import motionplanner.motion_planner as m_planner
 import matplotlib.pyplot as plt
+import utils.phoxi as phoxi
+import utils.vision_utils as vu
+import modeling.geometric_model as gm
+
+affine_mat = np.asarray([[0.00282079054, -1.00400178, -0.000574846621, 0.31255359],
+                         [-0.98272743, -0.00797055, 0.19795055, -0.15903892],
+                         [-0.202360828, 0.00546017392, -0.96800006, 0.94915224],
+                         [0.0, 0.0, 0.0, 1.0]])
 
 if __name__ == '__main__':
     import pickle
     import localenv.envloader as el
+    import utils.pcd_utils as pcdu
 
     # base, env = el.loadEnv_wrs(camp=[.6, -.4, 1.7], lookatpos=[.6, -.4, 1])
     # base, env = el.loadEnv_wrs(camp=[0, 0, 1], lookatpos=[0, 0, 0])
-    # base, env = el.loadEnv_wrs()
-    # rbt = el.loadUr3e()
-    # transmat4 = rm.homomat_from_posrot((.7, -.2, .78 + bconfig.BENDER_H), np.eye(3))
-
     base, env = el.loadEnv_yumi()
-    rbt = el.loadYumi(showrbt=False)
-    transmat4 = rm.homomat_from_posrot((.45, 0, bconfig.BENDER_H + .035), rm.rotmat_from_axangle((0, 0, 1), np.pi))
-    # transmat4 = rm.homomat_from_posrot((.4, -.1, bconfig.BENDER_H))
+    rbt = el.loadYumi(showrbt=True)
+    # rbt = el.loadUr3e()
+    phxi = phoxi.Phoxi(host=config.PHOXI_HOST)
 
-    bs = b_sim.BendSim(show=True)
+    textureimg, depthimg, pcd = phxi.getalldata()
+    pcd = rm.homomat_transform_points(affine_mat, np.asarray(pcd))
+
+    textureimg = vu.enhance_grayimg(textureimg)
+    centermat4 = vu.get_axis_aruco(textureimg, pcd)
+    print(centermat4)
+
+    pcdu.show_pcd(pcd, rgba=(1, 1, 1, .5))
+    gm.gen_sphere(centermat4[:3, 3], radius=.005).attach_to(base)
+    gm.gen_frame(centermat4[:3, 3], centermat4[:3, :3]).attach_to(base)
+    residual = (3, -3, 0)
+
+    center_pillar_pos = centermat4[:3, 3] + \
+                        centermat4[:3, 0] * (75 - 45.43 + residual[0]) / 1000 + \
+                        centermat4[:3, 1] * (-54 - 50 + residual[1]) / 1000 + \
+                        centermat4[:3, 2] * (52.75 + residual[2]) / 1000
+
+    transmat4 = rm.homomat_from_posrot(center_pillar_pos, centermat4[:3, :3])
+    gm.gen_frame(transmat4[:3, 3], transmat4[:3, :3]).attach_to(base)
+
+    bs = b_sim.BendSim(show=False)
     mp = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
 
     # f_name = 'randomc'
@@ -57,10 +83,8 @@ if __name__ == '__main__':
         init_rot = bu.get_init_rot(fit_pseq)
         pickle.dump([goal_pseq, bendset],
                     open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendseq.pkl', 'wb'))
-
         for b in bendset:
             print(b)
-
         init_pseq = [(0, 0, 0), (0, max([b[-1] for b in bendset]), 0)]
         init_rotseq = [np.eye(3), np.eye(3)]
         brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp)
@@ -90,14 +114,7 @@ if __name__ == '__main__':
 
     brp.set_up(bendset, [], transmat4)
     brp.set_bs_stick_sec(180)
-    # for pathseq in pathseq_list:
-    #     g, path = pathseq
-    #     mp.ah.show_armjnts(armjnts=path[1][0])
-    # for g_armjntsseq in armjntsseq_list:
-    #     g, armjntsseq = g_armjntsseq
-    #     for jnts in armjntsseq:
-    #         mp.ah.show_armjnts(armjnts=jnts)
-    # base.run()
+
     _, _, _, _, _, pseq, _ = bendresseq[-1]
     pseq = np.asarray(pseq)
     pseq[0] = pseq[0] - (pseq[0] - pseq[1]) * .8
@@ -119,5 +136,5 @@ if __name__ == '__main__':
     for i, f in enumerate(min_f_list):
         mp.ah.show_armjnts(armjnts=pathseq_list[i][1][0][-1],
                            rgba=(0, (f / max(min_f_list)), 1 - f / max(min_f_list), .5))
-    # brp.show_motion_withrbt(bendresseq, pathseq_list[0][1])
+    brp.show_motion_withrbt(bendresseq, pathseq_list[0][1])
     base.run()

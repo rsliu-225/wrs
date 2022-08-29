@@ -9,6 +9,7 @@ import config
 from sklearn.cluster import DBSCAN
 # from skimage.morphology import skeletonize
 import matplotlib.pyplot as plt
+import basis.robot_math as rm
 
 
 # import sknw
@@ -251,3 +252,72 @@ def enhance_grayimg(grayimg):
     if len(grayimg.shape) == 2 or grayimg.shape[2] == 1:
         grayimg = grayimg.reshape(grayimg.shape[:2])
     return cv2.equalizeHist(grayimg)
+
+
+def get_corners_aruco(img):
+    import cv2.aruco as aruco
+    parameters = aruco.DetectorParameters_create()
+    aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_250)
+    corners, ids, rejectedImgPoints = aruco.detectMarkers(img, aruco_dict, parameters=parameters)
+    if ids is None:
+        return corners, ids
+    ids = [v[0] for v in ids]
+    # cv2.imshow('', img)
+    # cv2.waitKey(0)
+    return corners, ids
+
+
+# def get_axis_aruco(img, pcd, id=1):
+#     corners, ids = get_corners_aruco(img)
+#     pts = []
+#     for i, corner in enumerate(corners[ids.index(id)][0]):
+#         p = np.asarray(map_grayp2pcdp(corner, img, pcd))[0]
+#         if all(np.equal(p, np.asarray([0, 0, 0]))):
+#             break
+#         pts.append(p)
+#     pts = np.asarray(pts)
+#     if len(pts) < 4:
+#         return None
+#     x = pts[0] - pts[1]
+#     y = pts[2] - pts[1]
+#     z = np.cross(x, y)
+#     rot = np.asarray([rm.unit_vector(x), rm.unit_vector(y), rm.unit_vector(z)])
+#     return rm.homomat_from_posrot(np.mean(pts, axis=0), rot)
+
+
+def get_axis_aruco(img, pcd):
+    import modeling.geometric_model as gm
+    corners, ids = get_corners_aruco(img)
+    pts_dict = {}
+
+    for i, corners in enumerate(corners):
+        id = ids[i]
+        print(id)
+        pts_tmp = []
+        for corner in corners[0]:
+            p = np.asarray(map_grayp2pcdp(corner, img, pcd))[0]
+            if all(np.equal(p, np.asarray([0, 0, 0]))):
+                break
+            pts_tmp.append(p)
+            gm.gen_sphere(p, radius=.001 * id).attach_to(base)
+        pts_dict[id] = np.asarray(pts_tmp)
+    print(pts_dict.keys())
+    pts = []
+    for v in pts_dict.values():
+        pts.extend(v)
+    pts = np.asarray(pts)
+    if len(pts) < 4 * 6:
+        return None
+    pcv, pcaxmat = rm.compute_pca(pts)
+    inx = sorted(range(len(pcv)), key=lambda k: pcv[k])
+    x_v = pcaxmat[:, inx[2]]
+    y_v = pcaxmat[:, inx[1]]
+    z_v = pcaxmat[:, inx[0]]
+    x = np.mean(pts_dict[3], axis=0) - np.mean(pts_dict[1], axis=0)
+    if rm.angle_between_vectors(x, x_v) > np.pi / 2:
+        x_v = -x_v
+    y = np.mean(pts_dict[2], axis=0) - np.mean(pts_dict[1], axis=0)
+    if rm.angle_between_vectors(y, y_v) > np.pi / 2:
+        y_v = -y_v
+    pcaxmat = np.asarray([x_v, y_v, z_v]).T
+    return rm.homomat_from_posrot(np.mean(pts, axis=0), pcaxmat)

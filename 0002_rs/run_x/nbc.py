@@ -35,7 +35,7 @@ if __name__ == '__main__':
         path = \
             m_planner.plan_start2end(start=m_planner_x.get_armjnts(),
                                      end=pickle.load(
-                                         open('D:/liu/wrs/0002_rs/img/phoxi/nbc/plate_a_cubic/000_armjnts.pkl', 'rb')))
+                                         open(f'{config.ROOT}/img/phoxi/nbc/plate_a_cubic/000_armjnts.pkl', 'rb')))
         m_planner_x.movepath(path)
         rbtx.arm_jaw_to(0)
 
@@ -66,7 +66,7 @@ if __name__ == '__main__':
 
     while i < 2:
         # seedjntagls = m_planner_x.get_armjnts()
-        seedjntagls = pickle.load(open('D:/liu/wrs/0002_rs/img/phoxi/nbc/plate_a_cubic/000_armjnts.pkl', 'rb'))
+        seedjntagls = pickle.load(open(f'{config.ROOT}/img/phoxi/nbc/plate_a_cubic/000_armjnts.pkl', 'rb'))
         pickle.dump(seedjntagls,
                     open(os.path.join(config.ROOT, 'img', dump_path, f'{str(i).zfill(3)}_armjnts.pkl'), 'wb'))
 
@@ -78,7 +78,7 @@ if __name__ == '__main__':
         gm.gen_frame(gl_transpos, tcprot).attach_to(base)
 
         textureimg, depthimg, pcd = phxi.loadalldata(f_name=os.path.join('img', dump_path, f'{str(i).zfill(3)}.pkl'))
-        pcd = np.asarray(pcd) / 1000
+        pcd = np.asarray(pcd)
         cv2.imshow('grayimg', textureimg)
         cv2.waitKey(0)
         pcd_roi, pcd_trans, gripperframe = \

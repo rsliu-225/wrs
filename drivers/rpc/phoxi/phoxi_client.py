@@ -69,7 +69,7 @@ class PhxClient(object):
         """
 
         pcd = self.stub.getpcd(pxmsg.Empty())
-        return np.frombuffer(pcd.points).reshape((-1, 3))
+        return np.frombuffer(pcd.points).reshape((-1, 3)) / 1000
 
     def getnormals(self):
         """
@@ -98,7 +98,7 @@ class PhxClient(object):
         maxdepth = np.max(darr_float32)
         mindepth = np.min(darr_float32[darr_float32 != 0])
         depthnparray_scaled[depthnparray_scaled != 0] = (darr_float32[darr_float32 != 0] - mindepth) / (
-                    maxdepth - mindepth) * 200 + 25
+                maxdepth - mindepth) * 200 + 25
         depthnparray_scaled = depthnparray_scaled.astype(dtype=np.uint8)
 
         return depthnparray_scaled
@@ -120,12 +120,11 @@ if __name__ == "__main__":
     while True:
         pxc.triggerframe()
         pcd = pxc.getpcd()
-        gm.gen_pointcloud(np.asarray(pcd)/1000).attach_to(base)
+        gm.gen_pointcloud(np.asarray(pcd) / 1000).attach_to(base)
         base.run()
 
         # cv2.imshow("test", cv2.equalizeHist(img))
         # cv2.waitKey(0)
-
 
     #
     # pcdcenter=[0,0,1500]

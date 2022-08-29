@@ -23,7 +23,7 @@ def _action(fo, f_name, goal_angle, z_range, line_thresh, line_size_thresh, ulim
     textureimg, depthimg, pcd = phxi.dumpalldata(f_name=os.path.join('img/phoxi/', 'exp_bend', fo, f_name))
     # cv2.imshow("depthimg", depthimg)
     # cv2.waitKey(0)
-    pcd = rm.homomat_transform_points(affine_mat, np.asarray(pcd) / 1000)
+    pcd = rm.homomat_transform_points(affine_mat, np.asarray(pcd))
     # textureimg = vu.enhance_grayimg(textureimg)
     # lines = pcdu.extract_lines_from_pcd(textureimg, pcd, z_range=z_range, line_thresh=line_thresh,
     #                                     line_size_thresh=line_size_thresh, toggledebug=True)
