@@ -154,7 +154,7 @@ class BendRbtPlanner(object):
             for i, grasp in enumerate(self.grasp_list):
                 self.gripper.jaw_to(grasp[0])
                 self.gripper.fix_to(grasp[3], grasp[4])
-                self.gripper.gen_meshmodel(rgba=(0, min_f_list[i], 1-min_f_list[i], .2)).attach_to(base)
+                self.gripper.gen_meshmodel(rgba=(0, min_f_list[i], 1 - min_f_list[i], .2)).attach_to(base)
         if show_common_grasp:
             for i, grasp in enumerate(self.grasp_list):
                 if i in remain_id:
@@ -217,23 +217,26 @@ class BendRbtPlanner(object):
 
             pseq_init, rotseq_init = self.transseq(pseq_init, rotseq_init, self.transmat4)
             pseq_end, rotseq_end = self.transseq(pseq_end, rotseq_end, self.transmat4)
+            # f_dir = rotseq_init[0][:, 1]
 
             objmat4_init = rm.homomat_from_posrot(pseq_init[0], rotseq_init[0])
             objmat4_end = rm.homomat_from_posrot(pseq_end[0], rotseq_end[0])
             self.reset_bs(pseq_init, rotseq_init, extend=False)
             objcm = copy.deepcopy(self._bs.objcm)
-            # if all([seqs[i + 1] > v for v in seqs[:i + 1]]):
-            #     objmat4_list = self._mp.objmat4_list_inp([objmat4_init, objmat4_end])
-            #     path = self._mp.get_continuouspath_hold_ik(None, grasp, objmat4_list, objcm)
-            # else:
-            #     path = self._mp.plan_picknplace(grasp, [np.eye(4), objmat4_end], objcm,
-            #                                     use_msc=True, start=armjntsseq[i], goal=armjntsseq[i + 1],
-            #                                     use_pickupprim=True, use_placedownprim=True,
-            #                                     pickupprim_len=.06, placedownprim_len=.06)
-            path = self._mp.plan_picknplace(grasp, [np.eye(4), objmat4_end], objcm,
-                                            use_msc=True, start=armjntsseq[i], goal=armjntsseq[i + 1],
-                                            use_pickupprim=True, use_placedownprim=True,
-                                            pickupprim_len=.06, placedownprim_len=.06)
+            if all([seqs[i + 1] > v for v in seqs[:i + 1]]):
+                objmat4_list = self._mp.objmat4_list_inp([objmat4_init, objmat4_end])
+                path = self._mp.get_continuouspath_hold_ik(None, grasp, objmat4_list, objcm)
+            else:
+                path = self._mp.plan_picknplace(grasp, [np.eye(4), objmat4_end], objcm,
+                                                use_msc=True, start=armjntsseq[i], goal=armjntsseq[i + 1],
+                                                use_pickupprim=True, use_placedownprim=True,
+                                                pickupprim_len=.06, placedownprim_len=.06,
+                                                pickupprim_dir=np.asarray([0, 0, 1]) +
+                                                               rotseq_init[0][:3, 1] * .5)
+            # path = self._mp.plan_picknplace(grasp, [np.eye(4), objmat4_end], objcm,
+            #                                 use_msc=True, start=armjntsseq[i], goal=armjntsseq[i + 1],
+            #                                 use_pickupprim=True, use_placedownprim=True,
+            #                                 pickupprim_len=.06, placedownprim_len=.06)
             # gm.gen_frame(pseq_init[0], rotseq_init[0], length=.01, thickness=.001).attach_to(base)
             # gm.gen_frame(pseq_end[0], rotseq_end[0], length=.01, thickness=.001).attach_to(base)
             pathseq.append(path)
@@ -282,7 +285,7 @@ class BendRbtPlanner(object):
             return [str(v) for v in pathseq].index('None'), all_result
         return -1, all_result
 
-    def run(self, f_name='tmp', grasp_l=0.0, folder_name='stick'):
+    def run(self, f_name='tmp', grasp_l=0.0, fo='stick'):
         seqs, _ = self._iptree.get_potential_valid()
         while len(seqs) != 0:
             bendseq = [self.bendset[i] for i in seqs]
@@ -297,31 +300,29 @@ class BendRbtPlanner(object):
                 seqs, _ = self._iptree.get_potential_valid()
                 continue
             pickle.dump([seqs, is_success, bendresseq],
-                        open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_bendresseq.pkl', 'wb'))
+                        open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendresseq.pkl', 'wb'))
             seqs, _, bendresseq = pickle.load(
-                open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_bendresseq.pkl', 'rb'))
+                open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendresseq.pkl', 'rb'))
 
             fail_index, armjntsseq_list = self.check_ik(bendresseq, grasp_l=grasp_l)
             if fail_index != -1:
                 self._iptree.add_invalid_seq(seqs[:fail_index + 1])
                 seqs, _ = self._iptree.get_potential_valid()
                 continue
-            pickle.dump(armjntsseq_list,
-                        open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_armjntsseq.pkl', 'wb'))
+            pickle.dump(armjntsseq_list, open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_armjntsseq.pkl', 'wb'))
             # self.show_bendresseq_withrbt(bendresseq, armjntsseq_list[0][1])
             # base.run()
             seqs, _, bendresseq = pickle.load(
-                open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_bendresseq.pkl', 'rb'))
+                open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendresseq.pkl', 'rb'))
             armjntsseq_list = pickle.load(
-                open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_armjntsseq.pkl', 'rb'))
+                open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_armjntsseq.pkl', 'rb'))
             fail_index, pathseq_list = self.check_motion(seqs, bendresseq, armjntsseq_list)
             # fail_index, pathseq_list = self.check_pull_motion(bendresseq, armjntsseq_list)
             if fail_index != -1:
                 self._iptree.add_invalid_seq(seqs[:fail_index + 1])
                 seqs = self._iptree.get_potential_valid()
                 continue
-            pickle.dump(pathseq_list,
-                        open(f'{config.ROOT}/bendplanner/planres/{folder_name}/{f_name}_pathseq.pkl', 'wb'))
+            pickle.dump(pathseq_list, open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_pathseq.pkl', 'wb'))
             print(f'success {seqs}')
             break
 

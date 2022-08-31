@@ -299,7 +299,7 @@ def get_axis_aruco(img, pcd):
             if all(np.equal(p, np.asarray([0, 0, 0]))):
                 break
             pts_tmp.append(p)
-            gm.gen_sphere(p, radius=.001 * id).attach_to(base)
+            gm.gen_sphere(p, radius=.002).attach_to(base)
         pts_dict[id] = np.asarray(pts_tmp)
     print(pts_dict.keys())
     pts = []
@@ -319,5 +319,7 @@ def get_axis_aruco(img, pcd):
     y = np.mean(pts_dict[2], axis=0) - np.mean(pts_dict[1], axis=0)
     if rm.angle_between_vectors(y, y_v) > np.pi / 2:
         y_v = -y_v
+    if rm.angle_between_vectors(np.asarray([0, 0, 1]), z_v) > np.pi / 2:
+        z_v = -z_v
     pcaxmat = np.asarray([x_v, y_v, z_v]).T
     return rm.homomat_from_posrot(np.mean(pts, axis=0), pcaxmat)

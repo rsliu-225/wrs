@@ -352,10 +352,12 @@ class MotionPlanner(object):
         return path
 
     def plan_picknplace(self, grasp, objmat4_pair, obj, use_msc=True, use_pickupprim=True, ext_dist=.1,
-                        use_placedownprim=True, start=None, goal=None, pickupprim_len=.1, placedownprim_len=.1):
-        eepos_initial, eerot_initial = self.get_ee_by_objmat4(grasp, objmat4_pair[0])
+                        use_placedownprim=True, start=None, goal=None, pickupprim_len=.1, placedownprim_len=.1,
+                        pickupprim_dir=np.asarray([0, 0, 1]), placedownprim_dir=np.asarray([0, 0, 1])):
+        eepos_init, eerot_init = self.get_ee_by_objmat4(grasp, objmat4_pair[0])
+        eepos_init = np.asarray(eepos_init)
         if start is None:
-            start = self.get_numik(eepos_initial, eerot_initial)
+            start = self.get_numik(eepos_init, eerot_init)
         if start is None:
             print("Cannot reach init position!")
             return None
@@ -384,18 +386,29 @@ class MotionPlanner(object):
         obj_copy.attach_to(base)
         # self.ah.show_armjnts(armjnts=start, rgba=[0, 0, 1, .5])
         # self.ah.show_armjnts(armjnts=goal, rgba=[1, 0, 0, .5])
+
         # planning
         if use_pickupprim:
-            pickupprim = self.get_linear_path_from(start=start, length=pickupprim_len)
+            pickupprim = self.get_linear_path_from(start=start, length=pickupprim_len, direction=pickupprim_dir)
+            # print(pickupprim_dir)
+            # pos, _ = self.get_ee(armjnts=start)
+            # print(pos, pos + pickupprim_dir)
+            # gm.gen_arrow(pos, pos + pickupprim_dir).attach_to(base)
+            # gm.gen_arrow(pos, pos + np.asarray([0, 0, .1])).attach_to(base)
+            # gm.gen_arrow(pos, pos + np.asarray([pickupprim_dir[0], pickupprim_dir[1], 0])).attach_to(base)
             if pickupprim == []:
                 print("Cannot reach init primitive position!")
                 # self.rbt.release(hnd_name=self.hnd_name, objcm=obj_copy)
                 return None
+            # self.ah.show_armjnts(armjnts=pickupprim[-1], rgba=[1, 0, 1, .5])
+            # self.ah.show_armjnts(armjnts=pickupprim[0], rgba=[1, 0, 0, .5])
+            # base.run()
         else:
             pickupprim = [start]
 
         if use_placedownprim:
-            placedownprim = self.get_linear_path_from(start=goal, length=placedownprim_len)[::-1]
+            placedownprim = \
+                self.get_linear_path_from(start=goal, length=placedownprim_len, direction=placedownprim_dir)[::-1]
             if placedownprim == []:
                 print("Cannot reach final primitive position!")
                 # self.rbt.release(hnd_name=self.hnd_name, objcm=obj_copy)
