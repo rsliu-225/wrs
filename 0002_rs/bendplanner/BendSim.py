@@ -603,7 +603,7 @@ class BendSim(object):
                 self.reset(pseq_init, rotseq_init, extend=False)
                 objcm_init = copy.deepcopy(self.objcm)
                 if flag:
-                    objcm_init.set_rgba((.7, .7, 0, .7))
+                    objcm_init.set_rgba((.7, 0, 0, .7))
                 else:
                     objcm_init.set_rgba((.7, 0, .7, .7))
                 objcm_init.attach_to(base)
@@ -613,13 +613,13 @@ class BendSim(object):
                 if flag:
                     objcm_end.set_rgba((0, .7, 0, .7))
                 else:
-                    objcm_end.set_rgba((.7, 0, 0, .7))
+                    objcm_end.set_rgba((0, .7, .7, .7))
                 objcm_end.attach_to(base)
 
                 if init_a is not None:
                     tmp_p = np.asarray([self.c2c_dist * math.cos(init_a), self.c2c_dist * math.sin(init_a), 0])
                     self.pillar_punch.set_homomat(rm.homomat_from_posrot(tmp_p, np.eye(3)))
-                    self.pillar_punch.set_rgba(rgba=[.7, .7, 0, .7])
+                    self.pillar_punch.set_rgba(rgba=[.7, 0, 0, .7])
                     self.pillar_punch.attach_to(base)
 
                 if end_a is not None:

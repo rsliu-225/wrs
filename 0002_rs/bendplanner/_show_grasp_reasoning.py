@@ -12,7 +12,9 @@ import motionplanner.motion_planner as m_planner
 
 if __name__ == '__main__':
     import pickle
+    import copy
     import localenv.envloader as el
+    import modeling.geometric_model as gm
 
     # base, env = el.loadEnv_wrs(camp=[.6, -.4, 1.7], lookatpos=[.6, -.4, 1])
     # base, env = el.loadEnv_wrs(camp=[0, 0, 1], lookatpos=[0, 0, 0])
@@ -20,9 +22,10 @@ if __name__ == '__main__':
     # rbt = el.loadUr3e()
     # transmat4 = rm.homomat_from_posrot((.7, -.2, .78 + bconfig.BENDER_H), np.eye(3))
 
-    base, env = el.loadEnv_yumi(camp=[.4, 0, 1.7], lookatpos=[.4, 0, 0])
+    # base, env = el.loadEnv_yumi(camp=[2.5, -2, 1.8], lookatpos=[.45, .1, .1])
+    base, env = el.loadEnv_yumi(camp=[.45, .1, 1.8], lookatpos=[.45, .1, 0])
     rbt = el.loadYumi(showrbt=False)
-    transmat4 = rm.homomat_from_posrot((.45, .1, bconfig.BENDER_H + .03), rm.rotmat_from_axangle((0, 0, 1), np.pi))
+    transmat4 = rm.homomat_from_posrot((.45, .1, bconfig.BENDER_H), rm.rotmat_from_axangle((0, 0, 1), np.pi))
     # transmat4 = rm.homomat_from_posrot((.4, -.1, bconfig.BENDER_H))
 
     bs = b_sim.BendSim(show=False)
@@ -49,10 +52,9 @@ if __name__ == '__main__':
     '''
     fit_pseq, _ = bu.decimate_pseq(goal_pseq, tor=.01, toggledebug=False)
     # fit_pseq, _ = bu.decimate_pseq_by_cnt(goal_pseq, cnt=13, toggledebug=False)
-    bendset = bu.pseq2bendset(fit_pseq, init_l=.1, toggledebug=True)
+    bendset = bu.pseq2bendset(fit_pseq, init_l=.1, toggledebug=False)
     init_rot = bu.get_init_rot(fit_pseq)
-    pickle.dump([goal_pseq, bendset],
-                open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendseq.pkl', 'wb'))
+    pickle.dump([goal_pseq, bendset], open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendseq.pkl', 'wb'))
 
     for b in bendset:
         print(b)
@@ -62,18 +64,33 @@ if __name__ == '__main__':
     brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp)
 
     grasp_list = mp.load_all_grasp('stick_yumi')
-    # grasp_list = grasp_list[:100]
+    # grasp_list = grasp_list[200:300]
 
     brp.set_up(bendset, grasp_list, transmat4)
-    brp.run(f_name=f_name, folder_name=fo)
-    brp.pre_grasp_reasoning()
+    # brp.pre_grasp_reasoning()
+    # brp.run(f_name=f_name, folder_name=fo)
 
     goal_pseq, bendset = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendseq.pkl', 'rb'))
     seqs, _, bendresseq = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendresseq.pkl', 'rb'))
     armjntsseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_armjntsseq.pkl', 'rb'))
     pathseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_pathseq.pkl', 'rb'))
+    # pathseq_list, min_f_list, f_list = brp.check_force(bendresseq, pathseq_list)
+    # brp.show_motion_withrbt(bendresseq, pathseq_list[0][1])
+    # for i, armjnts in enumerate(pathseq_list[0][1][1][1:-2]):
+    #     if i == 0:
+    #         continue
+    #     eepos_s, _ = mp.get_ee(pathseq_list[0][1][1][i])
+    #     eepos_e, _ = mp.get_ee(pathseq_list[0][1][1][i - 1])
+    #     # gm.gen_arrow(np.asarray(eepos_s), np.asarray(eepos_e), thickness=.002, rgba=(0, 1, 0, 1)).attach_to(base)
+    #     gm.gen_sphere(np.asarray(eepos_s), radius=.002, rgba=(0, 1, 0, 1)).attach_to(base)
+    #     # if i % 2 == 0:
+    #     #     mp.ah.show_armjnts(armjnts=armjnts, rgba=(0, 1, 0, .5))
 
-    brp.show_motion_withrbt(bendresseq, pathseq_list[0][1])
-    pathseq_list, min_f_list = brp.check_force(bendresseq, pathseq_list)
-    print(min_f_list)
+    # mp.ah.show_armjnts(armjnts=pathseq_list[0][1][1][0], rgba=(.7, .7, .7, .5))
+    # brp.show_bend(bendresseq[0])
+    # brp.show_bend(bendresseq[-1])
+    # mp.ah.show_armjnts(armjnts=pathseq_list[0][1][1][-1], rgba=(.7, .7, .7, .5))
+    brp.set_bs_stick_sec(180)
+    brp.show_bendresseq(bendresseq)
+
     base.run()

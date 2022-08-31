@@ -50,7 +50,12 @@ def plan_ipt(bs, bendset, snum=None, fo='180', f_name=''):
             print(f'resume from {cnt_inx + 1}')
             bs.reset(prot_seq[0], prot_seq[1])
             is_success, bendresseq, _ = bs.gen_by_bendseq(bendseq[cnt_inx + 1:], cc=True, prune=True, toggledebug=False)
-            bendresseq = [[1] * 7] * (cnt_inx + 1) + bendresseq
+            node_id = ''
+            catch_tmp = []
+            for inx in range(cnt_inx + 1):
+                node_id = node_id + '-' + str(seqs[inx])
+                catch_tmp.append(iptree.tree.get_node(node_id).data)
+            bendresseq = catch_tmp[::-1] + bendresseq
             is_success = [True] * (cnt_inx + 1) + is_success
         else:
             bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
@@ -60,7 +65,7 @@ def plan_ipt(bs, bendset, snum=None, fo='180', f_name=''):
         # bs.show_bendresseq(bendresseq, is_success)
         # base.run()
         if all(is_success):
-            result.append([bendresseq, seqs])
+            result.append(seqs)
             tc_list.append(time.time() - ts)
             attemp_cnt_list.append(cnt)
             success_cnt += 1
@@ -76,10 +81,11 @@ def plan_ipt(bs, bendset, snum=None, fo='180', f_name=''):
                             open(f'{config.ROOT}/bendplanner/bendresseq/{fo}/{f_name}.pkl', 'wb'))
                 return result, tc_list, attemp_cnt_list, time.time() - ts
 
+        cache_data = [bendresseq[a][5:] for a in range(bendresseq.index([None]))]
         iptree.add_invalid_seq(seqs[:is_success.index(False) + 1],
                                cache_idx=is_success.index(False),
                                # cache_data=bendresseq[bendresseq.index([None]) - 1][5:],
-                               cache_data=[bendresseq[a][5:] for a in range(bendresseq.index([None]))])
+                               cache_data=cache_data)
         # iptree.show()
         seqs, catch = iptree.get_potential_valid()
         print(seqs)
@@ -114,6 +120,8 @@ def inf_bend_check(bs, bendset):
 
 
 if __name__ == '__main__':
+    import os
+
     '''
     set up env and param
     '''
@@ -127,37 +135,30 @@ if __name__ == '__main__':
 
     base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
     bs = b_sim.BendSim(show=False)
-
-    # bendset = pickle.load(open('./penta_bendseq.pkl', 'rb'))
-    random_cnt = 7
-
+    f_name = 'penta'
+    goal_pseq = pickle.load(open(os.path.join(config.ROOT, 'bendplanner/goal/pseq', f'{f_name}.pkl'), 'rb'))
     # goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
     #                         [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1],
     #                         [.1, .1, .1], [.1, .1, .2]]) / 2
     # init_pseq = [(0, 0, 0), (0, .1 + bu.cal_length(goal_pseq), 0)]
     # init_rotseq = [np.eye(3), np.eye(3)]
     # brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp_lft)
-    # fit_pseq = bu.iter_fit(goal_pseq, tor=.002, toggledebug=False)
-    # bendset = brp.pseq2bendset(fit_pseq, pos=.1, toggledebug=False)
+    fit_pseq = bu.iter_fit(goal_pseq, tor=.002, toggledebug=False)
+    bendset = brp.pseq2bendset(fit_pseq, pos=.1, toggledebug=False)
 
     # bs.show(rgba=(.7, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
     # bs.show(rgba=(.7, .7, .7, .7), show_frame=True)
-    for i in range(2, 3):
-        print(f'--------------{str(i)}--------------')
-        flag = False
-        while not flag:
-            print('The seq is not feasible!')
-            bendset = bs.gen_random_bendset(random_cnt, np.pi)
-            bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
-            # is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, prune=False, toggledebug=False)
-            # ax = plt.axes(projection='3d')
-            # bu.plot_pseq(ax, bs.pseq, c='k')
-            # bu.scatter_pseq(ax, bs.pseq, c='r')
-            # plt.show()
-            flag = inf_bend_check(bs, bendset)
-        res, tc, attemp_cnt_list, total_tc = \
-            plan_ipt(bs, bendset, snum=10, fo='180', f_name=f'{str(random_cnt)}_{str(i)}')
-        print(tc, attemp_cnt_list)
-        print(total_tc)
+
+    bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
+    # is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, prune=False, toggledebug=False)
+    # ax = plt.axes(projection='3d')
+    # bu.plot_pseq(ax, bs.pseq, c='k')
+    # bu.scatter_pseq(ax, bs.pseq, c='r')
+    # plt.show()
+    flag = inf_bend_check(bs, bendset)
+    res, tc, attemp_cnt_list, total_tc = \
+        plan_ipt(bs, bendset, snum=10, fo='90', f_name=f'{str(f_name)}')
+    print(tc, attemp_cnt_list)
+    print(total_tc)
 
     # base.run()

@@ -107,33 +107,62 @@ class BendRbtPlanner(object):
 
         return -1, all_result
 
-    def pre_grasp_reasoning(self):
+    def pre_grasp_reasoning(self, show_common_grasp=False, show_sorting=True):
         print(f'----------pre-grasp reasoning----------')
         _, bendresseq, _ = self._bs.gen_by_bendseq(self.bendset, cc=True, toggledebug=False)
-        objmat4_list = []
-        for bendres in [bendresseq[0]]:
-            self.show_bend(bendres)
-
-        # print(len(objmat4_list))
-
+        # for bendres in [bendresseq[0]]:
         failed_id_list = []
-        for i, grasp in enumerate(self.grasp_list):
-            for objmat4 in objmat4_list:
+        f_dict = {}
+        for cnt, bendres in enumerate(bendresseq):
+            print(f'----------{str(cnt)}----------')
+            f_dict[cnt] = {}
+            self.show_bend(bendres)
+            init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendres
+            pseq_init, rotseq_init = self.transseq(pseq_init, rotseq_init, self.transmat4)
+            objmat4 = rm.homomat_from_posrot(pseq_init[0], rotseq_init[0])
+
+            failed_id_list_tmp = []
+            for i, grasp in enumerate(self.grasp_list):
                 hndpos, hndrot = self._mp.get_hnd_by_objmat4(grasp, objmat4)
                 self.gripper.fix_to(hndpos, hndrot)
                 if self.gripper.is_mesh_collided(self.obslist):
-                    failed_id_list.append(i)
+                    failed_id_list_tmp.append(i)
                     self.gripper.gen_meshmodel(rgba=(.7, 0, 0, .2)).attach_to(base)
-                    break
+                    continue
                 jnts = self._mp.get_numik(hndpos, hndrot)
                 if jnts is None:
+                    failed_id_list_tmp.append(i)
                     self.gripper.gen_meshmodel(rgba=(.7, .7, 0, .2)).attach_to(base)
-                    break
+                    continue
                 self.gripper.gen_meshmodel(rgba=(0, .7, 0, .2)).attach_to(base)
-
-        self.grasp_list = [g for i, g in enumerate(self.grasp_list) if i not in failed_id_list]
+                f_dir = rotseq_init[0][:, 1]
+                eepos, eerot = self._mp.get_ee(jnts)
+                f_dir = np.linalg.inv(eerot).dot(f_dir)
+                f = self._mp.get_max_force(list(f_dir) + [0, 0, 0])
+                f_dict[cnt][i] = f
+            failed_id_list.extend(failed_id_list_tmp)
+        remain_id = [i for i, g in enumerate(self.grasp_list) if i not in set(failed_id_list)]
+        self.grasp_list = [g for i, g in enumerate(self.grasp_list) if i not in set(failed_id_list)]
         print('Remain grasp:', len(self.grasp_list))
+        if show_sorting:
+            min_f_list = []
+            for i in remain_id:
+                min_f_list.append(min([v[i] for v in f_dict.values()]))
+            scale = max(min_f_list) - min(min_f_list)
+            min_f_list = (np.asarray(min_f_list) - min(min_f_list)) / scale
+            print(min_f_list)
+            for i, grasp in enumerate(self.grasp_list):
+                self.gripper.jaw_to(grasp[0])
+                self.gripper.fix_to(grasp[3], grasp[4])
+                self.gripper.gen_meshmodel(rgba=(0, min_f_list[i], 1-min_f_list[i], .2)).attach_to(base)
+        if show_common_grasp:
+            for i, grasp in enumerate(self.grasp_list):
+                if i in remain_id:
+                    self.gripper.jaw_to(grasp[0])
+                    self.gripper.fix_to(grasp[3], grasp[4])
+                    self.gripper.gen_meshmodel(rgba=(0, .7, 0, .2)).attach_to(base)
         base.run()
+        return self.grasp_list
 
     def plan_pnp(self, bendresseq, grasp, armjntsseq):
         print(f'----------plan pick & place----------')
@@ -193,14 +222,18 @@ class BendRbtPlanner(object):
             objmat4_end = rm.homomat_from_posrot(pseq_end[0], rotseq_end[0])
             self.reset_bs(pseq_init, rotseq_init, extend=False)
             objcm = copy.deepcopy(self._bs.objcm)
-            if all([seqs[i + 1] > v for v in seqs[:i + 1]]):
-                objmat4_list = self._mp.objmat4_list_inp([objmat4_init, objmat4_end])
-                path = self._mp.get_continuouspath_hold_ik(None, grasp, objmat4_list, objcm)
-            else:
-                path = self._mp.plan_picknplace(grasp, [np.eye(4), objmat4_end], objcm,
-                                                use_msc=True, start=armjntsseq[i], goal=armjntsseq[i + 1],
-                                                use_pickupprim=True, use_placedownprim=True,
-                                                pickupprim_len=.06, placedownprim_len=.06)
+            # if all([seqs[i + 1] > v for v in seqs[:i + 1]]):
+            #     objmat4_list = self._mp.objmat4_list_inp([objmat4_init, objmat4_end])
+            #     path = self._mp.get_continuouspath_hold_ik(None, grasp, objmat4_list, objcm)
+            # else:
+            #     path = self._mp.plan_picknplace(grasp, [np.eye(4), objmat4_end], objcm,
+            #                                     use_msc=True, start=armjntsseq[i], goal=armjntsseq[i + 1],
+            #                                     use_pickupprim=True, use_placedownprim=True,
+            #                                     pickupprim_len=.06, placedownprim_len=.06)
+            path = self._mp.plan_picknplace(grasp, [np.eye(4), objmat4_end], objcm,
+                                            use_msc=True, start=armjntsseq[i], goal=armjntsseq[i + 1],
+                                            use_pickupprim=True, use_placedownprim=True,
+                                            pickupprim_len=.06, placedownprim_len=.06)
             # gm.gen_frame(pseq_init[0], rotseq_init[0], length=.01, thickness=.001).attach_to(base)
             # gm.gen_frame(pseq_end[0], rotseq_end[0], length=.01, thickness=.001).attach_to(base)
             pathseq.append(path)
@@ -306,10 +339,10 @@ class BendRbtPlanner(object):
         pseq_end, rotseq_end = self.transseq(pseq_end, rotseq_end, self.transmat4)
         vertices, faces = self._bs.gen_stick(pseq_end[::-1], rotseq_end[::-1], self._bs.thickness / 2,
                                              section=180)
-        objcm_end = cm.CollisionModel(
-            initor=trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces)))
-        objcm_end.set_rgba((0, 1, 0, .5))
-        objcm_end.attach_to(base)
+        # objcm_end = cm.CollisionModel(
+        #     initor=trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces)))
+        # objcm_end.set_rgba((0, 1, 0, .5))
+        # objcm_end.attach_to(base)
         tmp_p = np.asarray([self._bs.c2c_dist * math.cos(init_a), self._bs.c2c_dist * math.sin(init_a), 0])
         tmp_p = np.dot(self.transmat4[:3, :3], tmp_p)
         self._bs.pillar_punch.set_homomat(np.dot(rm.homomat_from_posrot(tmp_p, np.eye(3)), self.transmat4))
@@ -337,9 +370,9 @@ class BendRbtPlanner(object):
                     self.show_bend(bendresseq[j])
                 # f_dir = rm.rotmat_from_axangle((0, 0, 1), init_a / 2).dot(rotseq_init[0][:, 1])
                 f_dir = rotseq_init[0][:, 1]
-                armjnts = path_list[j][0]
+                armjnts = path_list[j][-1]
                 eepos, eerot = self._mp.get_ee(armjnts)
-                f_dir = np.linalg.inv(eerot).dot(f_dir)
+                # f_dir = np.linalg.inv(eerot).dot(f_dir)
                 # gm.gen_arrow(eepos, eepos + f_dir * .1).attach_to(base)
                 # self._mp.ah.show_armjnts(armjnts=armjnts, rgba=None)
                 f = self._mp.get_max_force(list(f_dir) + [0, 0, 0])
@@ -401,12 +434,12 @@ class BendRbtPlanner(object):
 
                 self._bs.reset(pseq_init, rotseq_init, extend=False)
                 objcm_init = copy.deepcopy(self._bs.objcm)
-                objcm_init.set_rgba((.7, .7, 0, .7))
+                objcm_init.set_rgba((.7, .7, .7, 1))
                 objcm_init.attach_to(base)
 
                 self._bs.reset(pseq_end, rotseq_end, extend=False)
                 objcm_end = copy.deepcopy(self._bs.objcm)
-                objcm_end.set_rgba((0, .7, 0, .7))
+                objcm_end.set_rgba((0, .7, 0, 1))
                 objcm_end.attach_to(base)
 
                 tmp_p = np.asarray([self._bs.c2c_dist * math.cos(init_a), self._bs.c2c_dist * math.sin(init_a), 0])
@@ -503,7 +536,7 @@ class BendRbtPlanner(object):
 
                 self._bs.reset(pseq_init, rotseq_init, extend=False)
                 objcm_init = copy.deepcopy(self._bs.objcm)
-                objcm_init.set_rgba((.7, .7, 0, 1))
+                objcm_init.set_rgba((.7, .7, .7, 1))
                 objcm_init.attach_to(base)
 
                 self._bs.reset(pseq_end, rotseq_end, extend=False)

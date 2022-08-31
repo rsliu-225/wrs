@@ -93,14 +93,16 @@ class MotionPlanner(object):
         eepos, eerot = self.get_ee_by_objmat4(grasp, objmat4)
         # gm.gen_frame(eepos, eerot, length=.02, thickness=.001, alpha=.5).attach_to(base)
         if obj is not None:
-            _, gl_jaw_center_pos, gl_jaw_center_rotmat, hnd_pos, hnd_rotmat = grasp
+            jw, gl_jaw_center_pos, gl_jaw_center_rotmat, hnd_pos, hnd_rotmat = grasp
             hndmat4 = np.dot(objmat4, rm.homomat_from_posrot(hnd_pos, hnd_rotmat))
+            self.gripper.jaw_to(jw)
             self.gripper.fix_to(hndmat4[:3, 3], hndmat4[:3, :3])
             is_hnd_collided = self.gripper.is_mesh_collided([obj] + self.obscmlist)
             if is_hnd_collided:
+                print("Hand Obj Collided")
                 # hnd = self.gripper.gen_meshmodel(rgba=(1, 0, 0, .4))
                 # hnd.attach_to(base)
-                print("Hand Obj Collided")
+                # base.run()
                 return None
 
         armjnts = self.get_numik(eepos, eerot, msc=msc)

@@ -24,7 +24,7 @@ class IPTree:
             if seq[idx] > self.node_ids[-1]:
                 raise Exception(f"node {seq[idx]} exceeds the tree limit")
 
-            node_id = "-" + '-'.join(str_seq[:idx + 1])
+            node_id = '-' + '-'.join(str_seq[:idx + 1])
             parent_node_id = node_id[:-len(str_seq[idx]) - 1]
             parent_node_id = parent_node_id if parent_node_id else "root"
 
@@ -32,9 +32,7 @@ class IPTree:
                 node_data = cache_data[idx]
             else:
                 node_data = None
-            # if node_data[0] == 1:
-                
-            if not self.tree.get_node(node_id):
+            if not bool(self.tree.get_node(node_id)):
                 self.tree.create_node(
                     seq[idx], node_id, parent_node_id, node_data,
                 )
