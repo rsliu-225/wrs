@@ -51,7 +51,7 @@ def get_knn(p, kdt, k=3):
 def get_min_dist(p, kdt):
     p_nearest_inx = get_knn_indices(p, kdt, k=1)
     pcd = list(np.array(kdt.data))
-    gm.gen_sphere(np.asarray(pcd[p_nearest_inx[0]])).attach_to(base)
+    # gm.gen_sphere(np.asarray(pcd[p_nearest_inx[0]]), radius=.002).attach_to(base)
     return np.linalg.norm(np.asarray(p) - np.asarray(pcd[p_nearest_inx[0]]))
 
 
@@ -670,18 +670,22 @@ def extract_lines_from_pcd(img, pcd, z_range, line_thresh=0.002, line_size_thres
         cv2.imshow('', img)
         cv2.waitKey(0)
         pcd_pix = pcd.reshape(img.shape[0], img.shape[1], 3)
-        mask_1 = np.where(pcd_pix[:, :, 2] < z_range[1], 255, 0).reshape((img.shape[0], img.shape[1], 1)).astype(
-            np.uint8)
-        mask_2 = np.where(pcd_pix[:, :, 2] > z_range[0], 255, 0).reshape((img.shape[0], img.shape[1], 1)).astype(
-            np.uint8)
-        mask = cv2.bitwise_and(mask_1, mask_2)
-        img = cv2.bitwise_and(img, mask)
-        cv2.imshow('', mask)
-        cv2.waitKey(0)
-        cv2.imshow('', img)
-        cv2.waitKey(0)
+        if z_range is not None:
+            mask_1 = np.where(pcd_pix[:, :, 2] < z_range[1], 255, 0).reshape((img.shape[0], img.shape[1], 1)).astype(
+                np.uint8)
+            mask_2 = np.where(pcd_pix[:, :, 2] > z_range[0], 255, 0).reshape((img.shape[0], img.shape[1], 1)).astype(
+                np.uint8)
+            mask = cv2.bitwise_and(mask_1, mask_2)
+            img = cv2.bitwise_and(img, mask)
+            cv2.imshow('', mask)
+            cv2.waitKey(0)
+            cv2.imshow('', img)
+            cv2.waitKey(0)
 
-    pcd_crop = crop_pcd(pcd, x_range=(0, 1), y_range=(-1, 1), z_range=z_range)
+    if z_range is not None:
+        pcd_crop = crop_pcd(pcd, x_range=(0, 1), y_range=(-1, 1), z_range=z_range)
+    else:
+        pcd_crop = copy.deepcopy(pcd)
     show_pcd(pcd_crop, rgba=(1, 1, 1, .5))
 
     while 1:

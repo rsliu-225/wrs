@@ -36,8 +36,8 @@ if __name__ == '__main__':
     f_name = 'tri'
     fo = 'stick'
 
-    # goal_pseq = pickle.load(open(os.path.join(config.ROOT, f'bendplanner/goal/pseq/{f_name}.pkl'), 'rb'))
-    goal_pseq = bu.gen_polygen(3, .05)
+    goal_pseq = pickle.load(open(os.path.join(config.ROOT, f'bendplanner/goal/pseq/{f_name}.pkl'), 'rb'))
+    # goal_pseq = bu.gen_polygen(3, .05)
     # goal_pseq = bu.gen_ramdom_curve(kp_num=5, length=.12, step=.0005, z_max=.005, toggledebug=False)
     # goal_pseq = bu.gen_screw_thread(r=.02, lift_a=np.radians(5), rot_num=2)
     # goal_pseq = bu.gen_circle(.05)
@@ -45,7 +45,7 @@ if __name__ == '__main__':
     #                         [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1],
     #                         [.1, .1, .1], [.1, .1, .2]]) * .4
     # goal_pseq = np.asarray([[0, 0, .1], [0, 0, 0], [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1]]) * .5
-    pickle.dump(goal_pseq, open(f'{config.ROOT}/bendplanner/goal/pseq/{f_name}.pkl', 'wb'))
+    # pickle.dump(goal_pseq, open(f'{config.ROOT}/bendplanner/goal/pseq/{f_name}.pkl', 'wb'))
 
     '''
     plan

@@ -140,9 +140,9 @@ if __name__ == '__main__':
     # goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
     #                         [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1],
     #                         [.1, .1, .1], [.1, .1, .2]]) / 2
-    # init_pseq = [(0, 0, 0), (0, .1 + bu.cal_length(goal_pseq), 0)]
-    # init_rotseq = [np.eye(3), np.eye(3)]
-    # brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp_lft)
+    init_pseq = [(0, 0, 0), (0, .1 + bu.cal_length(goal_pseq), 0)]
+    init_rotseq = [np.eye(3), np.eye(3)]
+    brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp_lft)
     fit_pseq = bu.iter_fit(goal_pseq, tor=.002, toggledebug=False)
     bendset = brp.pseq2bendset(fit_pseq, pos=.1, toggledebug=False)
 
@@ -156,8 +156,7 @@ if __name__ == '__main__':
     # bu.scatter_pseq(ax, bs.pseq, c='r')
     # plt.show()
     flag = inf_bend_check(bs, bendset)
-    res, tc, attemp_cnt_list, total_tc = \
-        plan_ipt(bs, bendset, snum=10, fo='90', f_name=f'{str(f_name)}')
+    res, tc, attemp_cnt_list, total_tc = plan_ipt(bs, bendset, snum=10, fo='90', f_name=f'{str(f_name)}')
     print(tc, attemp_cnt_list)
     print(total_tc)
 

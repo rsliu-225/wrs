@@ -113,10 +113,10 @@ def plot_success(ax, x_range, fo, clr, marker='+'):
         avg_first_tc_list.append(np.average(first_tc))
         avg_top10_tc_list.append(np.average(top10_tc))
         avg_attempt_list.append(np.average(attemps))
-        # ax.scatter([num] * len(top10_tc), top10_tc, color=clr, marker=marker)
-        # ax.scatter([num] * len(first_tc), first_tc, color=clr, marker='o')
+        # ax.scatter([num] * len(top10_tc), top10_tc, color=clr, marker=marker, s=100)
+        ax.scatter([num] * len(first_tc), first_tc, color=clr, marker=marker, s=100)
     ax.plot(x_range, avg_first_tc_list, color=clr)
-    # ax.plot(x_range, avg_top10_tc_list, color=clr, linestyle='dashed')
+    # ax.plot(x_range, avg_top10_tc_list, color=clr)
 
 
 def plot_failed(ax, x_range, fo, clr):
@@ -143,10 +143,10 @@ if __name__ == '__main__':
     plt.rcParams["font.size"] = 18
     ax = plt.axes()
     ax.grid()
-    plot_success(ax, x_range, '45', clr='tab:blue', marker='1')
-    plot_success(ax, x_range, '90', clr='tab:orange', marker='2')
-    plot_success(ax, x_range, '135', clr='tab:green', marker='3')
-    plot_success(ax, x_range, '180', clr='tab:red', marker='4')
+    plot_success(ax, x_range, '45', clr='tab:green', marker='1', )
+    plot_success(ax, x_range, '90', clr='tab:blue', marker='2')
+    # plot_success(ax, x_range, '135', clr='tab:green', marker='3')
+    plot_success(ax, x_range, '180', clr='tab:orange', marker='4')
     plt.show()
 
     ax = plt.axes()
