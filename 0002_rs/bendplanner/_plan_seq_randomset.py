@@ -135,8 +135,8 @@ if __name__ == '__main__':
     bs = b_sim.BendSim(show=False)
 
     # bendset = pickle.load(open('./penta_bendseq.pkl', 'rb'))
-    random_cnt = 7
-    for i in range(13, 15):
+    random_cnt = 6
+    for i in range(0, 15):
         print(f'--------------{str(i)}--------------')
         flag = False
         while not flag:

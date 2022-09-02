@@ -54,6 +54,7 @@ def _load_result_dict(res_dict):
         init_res_kpts = v['init_res_kpts']
 
         opt_bendset = v['opt_bendset']
+        print(opt_bendset)
 
         opt_err = v['opt_err']
         opt_res_pseq = v['opt_res_pseq']
@@ -91,6 +92,12 @@ def _load_result_dict(res_dict):
            init_sum_err_list, opt_sum_err_list, time_cost_list, bend_num_list
 
 
+def grid_on(ax):
+    ax.minorticks_on()
+    ax.grid(b=True, which='major', linestyle='-')
+    ax.grid(b=True, which='minor', linestyle='--')
+
+
 def show_sgl_method(f_name):
     opt_res_dict = pickle.load(open(f_name, 'rb'))
     # goal_pseq = pickle.load(open(f'../goal/pseq/{f_name}.pkl', 'rb'))
@@ -101,28 +108,30 @@ def show_sgl_method(f_name):
 
     fig = plt.figure(figsize=(18, 5))
     plt.rcParams["font.family"] = "Times New Roman"
-    plt.rcParams["font.size"] = 12
+    plt.rcParams["font.size"] = 24
 
     ax1 = fig.add_subplot(1, 3, 1)
-    ax1.grid()
-    ax1.plot(x, init_max_err_list, color='r')
+    grid_on(ax1)
+    ax1.plot(x, init_max_err_list, color='darkorange')
     ax1.plot(x, opt_max_err_list, color='g')
-    ax1.set_xlabel('Num. of key point')
-    ax1.set_ylabel('Max. point to point error(mm)')
+    ax1.axvline(x=11, c='r', linestyle='dashed')
+    # ax1.set_xlabel('Num. of key point')
+    # ax1.set_ylabel('Max. point to point error(mm)')
 
     ax2 = fig.add_subplot(1, 3, 2)
-    ax2.grid()
-    ax2.plot(x, init_avg_err_list, color='r')
+    grid_on(ax2)
+    ax2.plot(x, init_avg_err_list, color='darkorange')
     ax2.plot(x, opt_avg_err_list, color='g')
-    ax2.set_xlabel('Num. of key point')
-    ax2.set_ylabel('Avg. point to point error(mm)')
+    ax2.axvline(x=11, c='r', linestyle='dashed')
+    # ax2.set_xlabel('Num. of key point')
+    # ax2.set_ylabel('Avg. point to point error(mm)')
 
     ax3 = fig.add_subplot(1, 3, 3)
-    ax3.grid()
+    grid_on(ax3)
     ax3.plot(x, time_cost_list, color='black')
     print(bend_num_list)
-    ax3.set_xlabel('Num. of key point')
-    ax3.set_ylabel('Time cost(s)')
+    # ax3.set_xlabel('Num. of key point')
+    # ax3.set_ylabel('Time cost(s)')
 
     plt.show()
 
@@ -169,7 +178,7 @@ def compare(f_name_1, f_name_2):
 
 if __name__ == '__main__':
     goal_f_name = 'randomc'
-    obj_type = 'max'
+    obj_type = 'avg'
     # method = 'cmaes'
     method = 'SLSQP'
 
@@ -177,7 +186,6 @@ if __name__ == '__main__':
     load files
     '''
     f_name = f'{goal_f_name}_{method}_{obj_type}.pkl'
-    # f_name = f'{goal_f_name}_{method}_{obj_type}_10.pkl'
     show_sgl_method(f_name)
 
-    compare(f'{goal_f_name}_{method}_max_10.pkl', f'{goal_f_name}_{method}_avg_10.pkl')
+    # compare(f'{goal_f_name}_{method}_max_10.pkl', f'{goal_f_name}_{method}_avg_10.pkl')

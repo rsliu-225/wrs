@@ -29,9 +29,14 @@ if __name__ == '__main__':
     bs = b_sim.BendSim(show=True)
     mp = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
 
-    result, _, _, _, bendset = pickle.load(open(f'{config.ROOT}/bendplanner/bendresseq/180/6_1.pkl', 'rb'))
-    bendresseq, seqs = result[-1]
+    result, _, _, _, bendset = pickle.load(open(f'{config.ROOT}/bendplanner/bendresseq/180/4_1.pkl', 'rb'))
+    bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
+    _,seqs = result[-1]
     print(seqs)
+    bendseq = [bendset[i] for i in seqs]
+    for b in bendseq:
+        print(b)
+    is_success, bendresseq, _ = bs.gen_by_bendseq(bendseq, cc=False, prune=True, toggledebug=False)
     init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendresseq[-1]
 
     ax = plt.axes(projection='3d')
@@ -43,7 +48,7 @@ if __name__ == '__main__':
     init_rotseq = [np.eye(3), np.eye(3)]
     brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp)
 
-    grasp_list = mp.load_all_grasp('stick')
+    grasp_list = mp.load_all_grasp('stick_yumi')
     grasp_list = grasp_list[100:]
 
     for x in np.linspace(.4, .6, 5):

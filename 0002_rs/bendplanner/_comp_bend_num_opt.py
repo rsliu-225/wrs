@@ -69,7 +69,6 @@ def opt_process(i, bs, opt, tor=None, obj_type='avg', method='SLSQP', n_trials=2
 
 
 if __name__ == '__main__':
-
     base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
     gm.gen_frame(thickness=.0005, alpha=.1, length=.01).attach_to(base)
     bs = b_sim.BendSim(show=True, granularity=np.pi / 90, cm_type='stick')
@@ -85,7 +84,7 @@ if __name__ == '__main__':
     fit init param
     '''
     tor = None
-    obj_type = 'max'
+    obj_type = 'avg'
     method = 'SLSQP'
     # method = 'cmaes'
 
@@ -93,7 +92,7 @@ if __name__ == '__main__':
     n_startup_trials = 10
     sigma0 = None
 
-    f_name = f'{goal_f_name}_{method}_{obj_type}_10.pkl'
+    f_name = f'{goal_f_name}_{method}_{obj_type}.pkl'
 
     '''
     opt
@@ -117,7 +116,7 @@ if __name__ == '__main__':
                                   bend_times=1,
                                   obj_type=obj_type)
 
-    for i in range(25, 27):
+    for i in range(20, 30):
         init_err, opt_err = opt_process(i, bs, opt, tor=tor, obj_type=obj_type, method=method,
                                         n_trials=n_trials, n_startup_trials=n_startup_trials, sigma0=sigma0)
 

@@ -34,8 +34,7 @@ def lasso_pre(X, y, x_pre):
 
 
 def _action(fo, f_name, goal_angle, z_range, ulim=None, rgba=(0, 1, 0, 1)):
-    textureimg, depthimg, pcd = \
-        phxi.dumpalldata(f_name=os.path.join('img/phoxi/', 'springback', fo, f_name))
+    textureimg, depthimg, pcd = phxi.dumpalldata(f_name=os.path.join('img/phoxi/', 'springback', fo, f_name))
     # cv2.imshow("depthimg", depthimg)
     # cv2.waitKey(0)
     pcd = rm.homomat_transform_points(affine_mat, np.asarray(pcd) / 1000)
