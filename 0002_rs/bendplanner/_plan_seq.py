@@ -121,17 +121,18 @@ def inf_bend_check(bs, bendset):
 
 if __name__ == '__main__':
     import os
+    import localenv.envloader as el
 
     '''
     set up env and param
     '''
-    # base, env = el.loadEnv_wrs()
-    # rbt = el.loadUr3e()
+    base, env = el.loadEnv_wrs()
+    rbt = el.loadUr3e()
 
     '''
     init class
     '''
-    # mp_lft = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
+    mp_lft = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
 
     base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
     bs = b_sim.BendSim(show=False)

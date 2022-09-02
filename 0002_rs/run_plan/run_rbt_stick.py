@@ -15,7 +15,6 @@ import utils.vision_utils as vu
 import modeling.geometric_model as gm
 import bendplanner.BendOpt as b_opt
 
-
 affine_mat = np.asarray([[0.00282079054, -1.00400178, -0.000574846621, 0.31255359],
                          [-0.98272743, -0.00797055, 0.19795055, -0.15903892],
                          [-0.202360828, 0.00546017392, -0.96800006, 0.94915224],
@@ -56,12 +55,10 @@ if __name__ == '__main__':
     # f_name = 'penta'
     fo = 'stick'
 
-    # base, env = el.loadEnv_wrs(camp=[.6, -.4, 1.7], lookatpos=[.6, -.4, 1])
-    # base, env = el.loadEnv_wrs(camp=[0, 0, 1], lookatpos=[0, 0, 0])
     base, env = el.loadEnv_yumi()
     rbt = el.loadYumi(showrbt=True)
     # rbt = el.loadUr3e()
-    # transmat4 = rm.homomat_from_posrot((.45, 0, bconfig.BENDER_H + .035), rm.rotmat_from_axangle((0, 0, 1), np.pi))
+    # transmat4 = rm.homomat_from_posrot((.45, .15, bconfig.BENDER_H + .035), rm.rotmat_from_axangle((0, 0, 1), np.pi))
     transmat4 = get_transmat4_marker()
     pickle.dump(transmat4, open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_transmat4.pkl', 'wb'))
     transmat4 = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_transmat4.pkl', 'rb'))
@@ -70,14 +67,10 @@ if __name__ == '__main__':
 
     bs = b_sim.BendSim(show=False)
     mp = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
-
     goal_pseq = pickle.load(open(os.path.join(config.ROOT, f'bendplanner/goal/pseq/{f_name}.pkl'), 'rb'))
     # goal_pseq = bu.gen_polygen(5, .05)
     # goal_pseq = bu.gen_ramdom_curve(kp_num=5, length=.12, step=.0005, z_max=.005, toggledebug=False)
     # goal_pseq = bu.gen_circle(.05)
-    # goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
-    #                         [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1],
-    #                         [.1, .1, .1], [.1, .1, .2]]) * .4
     # goal_pseq = np.asarray([[0, 0, .1], [0, 0, 0], [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1]])[::-1] * .5
     # goal_pseq = np.asarray([[0, 0, 0], [0, 0, .1], [.1, 0, .1], [.1, .1, .1], [0, .1, .1], [0, .1, 0]]) * .5
     # goal_pseq = np.asarray([[0, .1, .1], [0, 0, .1], [0, 0, 0], [.1, 0, 0], [.1, 0, .1], [.1, .1, .1]])[::1] * .5
@@ -91,22 +84,25 @@ if __name__ == '__main__':
     '''
     if plan:
         # fit_pseq, _ = bu.decimate_pseq(goal_pseq, tor=.01, toggledebug=False)
-        fit_pseq, _ = bu.decimate_pseq_by_cnt(goal_pseq, cnt=13, toggledebug=False)
-        bendset = bu.pseq2bendset(fit_pseq, init_l=.1, toggledebug=True)[::-1]
-
+        fit_pseq, _ = bu.decimate_pseq_by_cnt(goal_pseq, cnt=11, toggledebug=False)
+        bendset = bu.pseq2bendset(fit_pseq, init_l=.1, toggledebug=True)
+        l = 0
+        for i in range(1, len(goal_pseq)):
+            l += np.linalg.norm(goal_pseq[i] - goal_pseq[i - 1])
+        print('Num. of bend candidate', len(bendset))
         init_rot = bu.get_init_rot(fit_pseq)
-        pickle.dump([goal_pseq, bendset], open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendseq.pkl', 'wb'))
-        for b in bendset:
-            print(b)
         init_pseq = [(0, 0, 0), (0, max([b[-1] for b in bendset]), 0)]
         init_rotseq = [np.eye(3), np.eye(3)]
 
-        if opt:
-            opt = b_opt.BendOptimizer(bs, init_pseq, init_rotseq, goal_pseq, bend_times=1,  obj_type='avg')
-            bendset, _, _ = opt.solve(tor=None, cnt=13)
-            for b in bendset:
-                print(bendset)
+        # if opt:
+        #     opt = b_opt.BendOptimizer(bs, init_pseq, init_rotseq, goal_pseq, bend_times=1, obj_type='avg')
+        #     bendset, _, _ = opt.solve(tor=None, cnt=11)
+        #     for b in bendset:
+        #         print(b)
+        # bendset = bendset[::-1]
+        # pickle.dump([goal_pseq, bendset], open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendset.pkl', 'wb'))
 
+        goal_pseq, bendset = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendset.pkl', 'rb'))
         brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp)
 
         grasp_list = mp.load_all_grasp('stick')
@@ -118,7 +114,7 @@ if __name__ == '__main__':
     '''
     show result
     '''
-    goal_pseq, bendset = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendseq.pkl', 'rb'))
+    goal_pseq, bendset = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendset.pkl', 'rb'))
     seqs, _, bendresseq = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendresseq.pkl', 'rb'))
     armjntsseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_armjntsseq.pkl', 'rb'))
     pathseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_pathseq.pkl', 'rb'))

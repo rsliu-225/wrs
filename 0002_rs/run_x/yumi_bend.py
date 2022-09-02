@@ -62,7 +62,7 @@ if __name__ == '__main__':
     motor = motor.MotorNema23()
     phxi = phoxi.Phoxi(host=config.PHOXI_HOST)
 
-    f = 'chair'
+    f = 'randomc'
     fo = 'stick'
 
     z_range = (.15, .3)
@@ -78,9 +78,9 @@ if __name__ == '__main__':
     mp_x_rgt = m_plannerx.MotionPlannerRbtX(env, rbt, rbtx, armname="rgt_arm")
     mp_x_lft = m_plannerx.MotionPlannerRbtX(env, rbt, rbtx, armname="lft_arm")
 
-    # mp_x_lft.goto_init_x(speed_n=200)
-    # mp_x_rgt.goto_init_x(speed_n=200)
-    # base.run()
+    mp_x_lft.goto_init_x(speed_n=200)
+    mp_x_rgt.goto_init_x(speed_n=200)
+    base.run()
 
     # mp_x_lft.move_up_x(direction=np.asarray((0, 0, -1)), length=.03)
     # textureimg, depthimg, pcd = \
@@ -89,7 +89,7 @@ if __name__ == '__main__':
     '''
     run
     '''
-    goal_pseq, bendset = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f}_bendseq.pkl', 'rb'))
+    goal_pseq, bendset = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f}_bendset.pkl', 'rb'))
     seq, _, bendresseq = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f}_bendresseq.pkl', 'rb'))
     pathseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f}_pathseq.pkl', 'rb'))
     transmat4 = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f}_transmat4.pkl', 'rb'))
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     print(min_f_list)
 
     grasp, pathseq = pathseq_list[0]
-    for i, path in enumerate(pathseq):
+    for i, path in enumerate(pathseq[0:]):
         eepos, eerot = mp_x_lft.get_ee(armjnts=mp_x_lft.get_armjnts())
         print(eepos)
         init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendresseq[i]
@@ -156,5 +156,3 @@ if __name__ == '__main__':
                            ulim=None,
                            rgba=(0, 1, 0, 1))
         time.sleep(3)
-
-

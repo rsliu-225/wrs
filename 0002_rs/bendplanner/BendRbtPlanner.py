@@ -230,7 +230,7 @@ class BendRbtPlanner(object):
                 path = self._mp.plan_picknplace(grasp, [np.eye(4), objmat4_end], objcm,
                                                 use_msc=True, start=armjntsseq[i], goal=armjntsseq[i + 1],
                                                 use_pickupprim=True, use_placedownprim=True,
-                                                pickupprim_len=.06, placedownprim_len=.06,
+                                                pickupprim_len=.12, placedownprim_len=.12,
                                                 pickupprim_dir=np.asarray([0, 0, 1]) +
                                                                rotseq_init[0][:3, 1] * .5)
             # path = self._mp.plan_picknplace(grasp, [np.eye(4), objmat4_end], objcm,
@@ -605,8 +605,8 @@ if __name__ == '__main__':
     fit_pseq, _ = bu.decimate_pseq(goal_pseq, tor=.001, toggledebug=False)
     bendset = bu.pseq2bendset(fit_pseq, toggledebug=False)[::-1]
     init_rot = bu.get_init_rot(fit_pseq)
-    # pickle.dump(bendset, open(f'planres/{f_name}_bendseq.pkl', 'wb'))
-    # bendset = pickle.load(open(f'planres/{f_name}_bendseq.pkl', 'rb'))
+    # pickle.dump(bendset, open(f'planres/{f_name}_bendset.pkl', 'wb'))
+    # bendset = pickle.load(open(f'planres/{f_name}_bendset.pkl', 'rb'))
 
     bs.reset([(0, 0, 0), (0, max(np.asarray(bendset)[:, 3]), 0)], [np.eye(3), np.eye(3)])
     # bs.show(rgba=(.7, .7, .7, .7), show_frame=True)

@@ -292,7 +292,6 @@ def get_axis_aruco(img, pcd):
 
     for i, corners in enumerate(corners):
         id = ids[i]
-        print(id)
         pts_tmp = []
         for corner in corners[0]:
             p = np.asarray(map_grayp2pcdp(corner, img, pcd))[0]
@@ -301,13 +300,13 @@ def get_axis_aruco(img, pcd):
             pts_tmp.append(p)
             gm.gen_sphere(p, radius=.002).attach_to(base)
         pts_dict[id] = np.asarray(pts_tmp)
-    print(pts_dict.keys())
     pts = []
     for v in pts_dict.values():
         pts.extend(v)
     pts = np.asarray(pts)
     if len(pts) < 4 * 6:
         return None
+
     pcv, pcaxmat = rm.compute_pca(pts)
     inx = sorted(range(len(pcv)), key=lambda k: pcv[k])
     x_v = pcaxmat[:, inx[2]]
