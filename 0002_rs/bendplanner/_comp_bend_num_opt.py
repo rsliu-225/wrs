@@ -69,7 +69,6 @@ def opt_process(i, bs, opt, tor=None, obj_type='avg', method='SLSQP', n_trials=2
 
 
 if __name__ == '__main__':
-
     base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
     gm.gen_frame(thickness=.0005, alpha=.1, length=.01).attach_to(base)
     bs = b_sim.BendSim(show=True, granularity=np.pi / 90, cm_type='stick')

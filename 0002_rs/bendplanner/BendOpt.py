@@ -19,7 +19,7 @@ import visualization.panda.world as wd
 
 
 class BendOptimizer(object):
-    def __init__(self, bs, init_pseq, init_rotseq, goal_pseq, goal_rotseq, bend_times=1, obj_type='max'):
+    def __init__(self, bs, init_pseq, init_rotseq, goal_pseq, goal_rotseq=None, bend_times=1, obj_type='max'):
         self.bend_times = bend_times
         self.goal_pseq = goal_pseq
         self.goal_rotseq = goal_rotseq

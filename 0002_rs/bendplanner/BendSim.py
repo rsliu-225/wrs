@@ -401,7 +401,7 @@ class BendSim(object):
         self.pseq = self.pseq[::-1]
         self.rotseq = self.rotseq[::-1]
 
-    def gen_by_bendseq(self, bendseq, cc=True, prune=False, toggledebug=False):
+    def gen_by_bendseq(self, bendseq,h=0.0, cc=True, prune=False, toggledebug=False):
         is_success = [False] * len(bendseq)
         result = [[None]] * len(bendseq)
         fail_reason_list = []

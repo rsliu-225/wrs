@@ -39,7 +39,7 @@ if __name__ == '__main__':
     # {"affine_mat": [[0.00282079054, -1.00400178, -0.000574846621, 0.31255359],
     #                 [-0.98272743, -0.00797055, 0.19795055, -0.15903892],
     #                 [-0.202360828, 0.00546017392, -0.96800006, 0.94915224], [0.0, 0.0, 0.0, 1.0]]}
-    f_name = "tst"
+    f_name = "result"
     img_num = 1
-    get_img(f_name, img_num, path='phoxi/springback/')
+    get_img(f_name, img_num, path='phoxi/exp_bend/stick/chair/')
     # get_jnt(f_name, img_num, armname="rgt")

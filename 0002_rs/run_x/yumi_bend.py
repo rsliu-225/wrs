@@ -80,7 +80,8 @@ if __name__ == '__main__':
 
     # mp_x_lft.goto_init_x(speed_n=200)
     # mp_x_rgt.goto_init_x(speed_n=200)
-    #
+    # base.run()
+
     # mp_x_lft.move_up_x(direction=np.asarray((0, 0, -1)), length=.03)
     # textureimg, depthimg, pcd = \
     #     phxi.dumpalldata(f_name=os.path.join('img/phoxi/', 'exp_bend', 'stick/penta', 'result.pkl'))
@@ -105,14 +106,14 @@ if __name__ == '__main__':
     print(min_f_list)
 
     grasp, pathseq = pathseq_list[0]
-    for i, path in enumerate(pathseq[0:]):
+    for i, path in enumerate(pathseq):
         eepos, eerot = mp_x_lft.get_ee(armjnts=mp_x_lft.get_armjnts())
         print(eepos)
         init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendresseq[i]
         if i == 0:
             bend_a = np.degrees(end_a - init_a) + 3
         else:
-            bend_a = np.degrees(end_a - init_a) + 6.5
+            bend_a = np.degrees(end_a - init_a) + 7
         print(bend_a)
         if len(path) == 1:
             mp_x_lft.goto_armjnts_x(pathseq[0][0])
@@ -137,9 +138,9 @@ if __name__ == '__main__':
                            line_thresh=line_thresh, line_size_thresh=line_size_thresh,
                            ulim=None,
                            rgba=(0, 1, 0, 1))
-            motor.rot_degree(clockwise=0, rot_deg=23)
+            motor.rot_degree(clockwise=0, rot_deg=22)
             time.sleep(1)
-            motor.rot_degree(clockwise=1, rot_deg=bend_a + 3)
+            motor.rot_degree(clockwise=1, rot_deg=bend_a + 2)
             refine = _action(os.path.join(fo, f), f"{str(i)}_refine.pkl",
                              bend_a, z_range,
                              center=transmat4[:3, 3],
@@ -154,6 +155,6 @@ if __name__ == '__main__':
                            line_thresh=line_thresh, line_size_thresh=line_size_thresh,
                            ulim=None,
                            rgba=(0, 1, 0, 1))
-        time.sleep(5)
+        time.sleep(3)
 
 

@@ -285,7 +285,7 @@ class BendRbtPlanner(object):
             return [str(v) for v in pathseq].index('None'), all_result
         return -1, all_result
 
-    def run(self, f_name='tmp', grasp_l=0.0, fo='stick'):
+    def run(self, f_name='tmp', grasp_l=0.0, h=0.0, fo='stick'):
         seqs, _ = self._iptree.get_potential_valid()
         while len(seqs) != 0:
             bendseq = [self.bendset[i] for i in seqs]
