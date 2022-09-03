@@ -54,7 +54,6 @@ def _load_result_dict(res_dict):
         init_res_kpts = v['init_res_kpts']
 
         opt_bendset = v['opt_bendset']
-        print(opt_bendset)
 
         opt_err = v['opt_err']
         opt_res_pseq = v['opt_res_pseq']
@@ -94,8 +93,8 @@ def _load_result_dict(res_dict):
 
 def grid_on(ax):
     ax.minorticks_on()
-    ax.grid(b=True, which='major', linestyle='-')
-    ax.grid(b=True, which='minor', linestyle='--')
+    ax.grid(b=True, which='major')
+    ax.grid(b=True, which='minor', linestyle='--', alpha=.2)
 
 
 def show_sgl_method(f_name):
@@ -122,7 +121,7 @@ def show_sgl_method(f_name):
     grid_on(ax2)
     ax2.plot(x, init_avg_err_list, color='darkorange')
     ax2.plot(x, opt_avg_err_list, color='g')
-    ax2.axvline(x=11, c='r', linestyle='dashed')
+    ax2.axvline(x=12, c='r', linestyle='dashed')
     # ax2.set_xlabel('Num. of key point')
     # ax2.set_ylabel('Avg. point to point error(mm)')
 
@@ -185,7 +184,7 @@ if __name__ == '__main__':
     '''
     load files
     '''
-    f_name = f'{goal_f_name}_{method}_{obj_type}.pkl'
+    f_name = f'{goal_f_name}_{method}_{obj_type}_10.pkl'
     show_sgl_method(f_name)
 
     # compare(f'{goal_f_name}_{method}_max_10.pkl', f'{goal_f_name}_{method}_avg_10.pkl')

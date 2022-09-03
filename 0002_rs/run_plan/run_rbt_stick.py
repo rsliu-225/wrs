@@ -149,7 +149,7 @@ if __name__ == '__main__':
     # for i, f in enumerate(min_f_list):
     #     mp.ah.show_armjnts(armjnts=pathseq_list[i][1][0][-1],
     #                        rgba=(0, (f / max(min_f_list)), 1 - f / max(min_f_list), .5))
-    # brp.show_motion_withrbt(bendresseq, pathseq_list[0][1])
+    # brp.show_motion_witchrbt(bendresseq, pathseq_list[0][1])
 
     show_step = 2
     f_list_step = f_list[:, show_step]

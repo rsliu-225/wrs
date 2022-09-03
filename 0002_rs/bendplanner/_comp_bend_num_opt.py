@@ -92,7 +92,7 @@ if __name__ == '__main__':
     n_startup_trials = 10
     sigma0 = None
 
-    f_name = f'{goal_f_name}_{method}_{obj_type}.pkl'
+    f_name = f'{goal_f_name}_{method}_{obj_type}_10.pkl'
 
     '''
     opt
@@ -116,7 +116,7 @@ if __name__ == '__main__':
                                   bend_times=1,
                                   obj_type=obj_type)
 
-    for i in range(20, 30):
+    for i in range(16, 27):
         init_err, opt_err = opt_process(i, bs, opt, tor=tor, obj_type=obj_type, method=method,
                                         n_trials=n_trials, n_startup_trials=n_startup_trials, sigma0=sigma0)
 

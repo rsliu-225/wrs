@@ -132,6 +132,12 @@ def plot_failed(ax, x_range, fo, clr):
     ax.plot(x_range, avg_fail_tc_list, color=clr)
 
 
+def grid_on(ax):
+    ax.minorticks_on()
+    ax.grid(b=True, which='major')
+    ax.grid(b=True, which='minor', linestyle='--', alpha=.2)
+
+
 if __name__ == '__main__':
     base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
     bs = b_sim.BendSim(show=True)
@@ -140,20 +146,21 @@ if __name__ == '__main__':
     x_range = range(3, 9)
 
     plt.rcParams["font.family"] = "Times New Roman"
-    plt.rcParams["font.size"] = 18
+    plt.rcParams["font.size"] = 24
     ax = plt.axes()
-    ax.grid()
+    grid_on(ax)
     plot_success(ax, x_range, '45', clr='tab:green', marker='1', )
     plot_success(ax, x_range, '90', clr='tab:blue', marker='2')
     # plot_success(ax, x_range, '135', clr='tab:green', marker='3')
     plot_success(ax, x_range, '180', clr='tab:orange', marker='4')
     plt.show()
 
-    ax = plt.axes()
-    ax.grid()
-    plot_failed(ax, x_range, '45', clr='tab:blue')
-    plot_failed(ax, x_range, '90', clr='tab:orange')
-    plot_failed(ax, x_range, '135', clr='tab:green')
-    plot_failed(ax, x_range, '180', clr='tab:red')
-
-    plt.show()
+    # grid_on(ax)
+    # ax = plt.axes()
+    # ax.grid()
+    # plot_failed(ax, x_range, '45', clr='tab:blue')
+    # plot_failed(ax, x_range, '90', clr='tab:orange')
+    # plot_failed(ax, x_range, '135', clr='tab:green')
+    # plot_failed(ax, x_range, '180', clr='tab:red')
+    #
+    # plt.show()

@@ -406,6 +406,7 @@ class BendRbtPlanner(object):
 
     def show_bendresseq_withrbt(self, bendresseq, armjntsseq):
         motioncounter = [0]
+        self.set_bs_stick_sec(180)
         rbtmnp = [None, None]
         taskMgr.doMethodLater(.05, self._update_rbt, "update_rbt_bendresseq",
                               extraArgs=[rbtmnp, motioncounter, bendresseq, self.transmat4, armjntsseq],
@@ -413,6 +414,7 @@ class BendRbtPlanner(object):
 
     def show_motion_withrbt(self, bendresseq, pathseq):
         motioncounter = [0]
+        self.set_bs_stick_sec(180)
         obj_hold = None
         taskMgr.doMethodLater(.05, self._update_rbt_motion, "update_rbt_motion",
                               extraArgs=[motioncounter, bendresseq, self.transmat4, pathseq, obj_hold, self.rbt],
@@ -466,7 +468,7 @@ class BendRbtPlanner(object):
 
     def _update_rbt(self, rbtmnp, motioncounter, bendresseq, transmat4, armjntsseq, task):
         if base.inputmgr.keymap['space']:
-            p3u.clearobj_by_name(['obj'])
+            p3u.clearobj_by_name(['obj', 'auto'])
             self._bs.move_posrot(transmat4)
             if motioncounter[0] < len(bendresseq):
                 print('-------------')
@@ -474,7 +476,7 @@ class BendRbtPlanner(object):
                     rbtmnp[0].detach()
                 armjnts = armjntsseq[motioncounter[0]]
                 if armjnts is not None:
-                    self.rbt.fk(self._mp.armname, armjnts)
+                    self.rbt.fk(component_name=self._mp.armname, jnt_values=armjnts)
                     # objcm = cm.gen_sphere(pos=np.asarray([-.1, 0, 0]), radius=.001)
                     # self.rbt.hold(objcm, jawwidth=.01, hnd_name=self.mp.hnd_name)
                     rbtmnp[0] = self.rbt.gen_meshmodel()
@@ -492,12 +494,12 @@ class BendRbtPlanner(object):
                 # gm.gen_frame(pseq_init[0], rotseq_init[0]).attach_to(base)
                 self._bs.reset(pseq_init, rotseq_init, extend=False)
                 objcm_init = copy.deepcopy(self._bs.objcm)
-                objcm_init.set_rgba((.7, .7, 0, .7))
+                objcm_init.set_rgba((.7, .7, .7, 1))
                 objcm_init.attach_to(base)
 
                 self._bs.reset(pseq_end, rotseq_end, extend=False)
                 objcm_end = copy.deepcopy(self._bs.objcm)
-                objcm_end.set_rgba((0, .7, 0, .7))
+                objcm_end.set_rgba((0, .7, 0, 1))
                 objcm_end.attach_to(base)
 
                 tmp_p = np.asarray([self._bs.c2c_dist * math.cos(init_a), self._bs.c2c_dist * math.sin(init_a), 0])

@@ -401,7 +401,7 @@ class BendSim(object):
         self.pseq = self.pseq[::-1]
         self.rotseq = self.rotseq[::-1]
 
-    def gen_by_bendseq(self, bendseq,h=0.0, cc=True, prune=False, toggledebug=False):
+    def gen_by_bendseq(self, bendseq, h=0.0, cc=True, prune=False, toggledebug=False):
         is_success = [False] * len(bendseq)
         result = [[None]] * len(bendseq)
         fail_reason_list = []
@@ -784,9 +784,13 @@ class BendSim(object):
 if __name__ == '__main__':
     import visualization.panda.world as wd
 
-    base = wd.World(cam_pos=[.2, .2, 0], lookat_pos=[0, 0, 0])
-    bs = BendSim(show=True, cm_type='stick', granularity=np.pi / 30)
-
+    base = wd.World(cam_pos=[-.1, .4, .1], lookat_pos=[0, 0, 0])
+    bs = BendSim(show=False, cm_type='stick', granularity=np.pi / 30)
+    bs.set_r_center(.015 / 2)
+    bs.pillar_center = cm.gen_stick(spos=np.asarray([0, 0, -bconfig.PILLAR_H/3]),
+                                    epos=np.asarray([0, 0, bconfig.PILLAR_H/3]),
+                                    thickness=bs.r_center * 2, sections=90,
+                                    rgba=[.9, .9, .9, 1]).attach_to(base)
     bendset = [
         # [np.radians(225), np.radians(0), np.radians(0), .04],
         # [np.radians(-90), np.radians(0), np.radians(0), .08],
@@ -795,7 +799,7 @@ if __name__ == '__main__':
         # [np.radians(45), np.radians(0), np.radians(0), .04],
         # [np.radians(45), np.radians(0), np.radians(0), .04],
         # [np.radians(45), np.radians(30), np.radians(0), .04],
-        [np.radians(45), np.radians(0), np.radians(90), .04],
+        [np.radians(45), np.radians(0), np.radians(0), .04],
         # [np.radians(90), np.radians(0), np.radians(0), .04],
         # [np.radians(180), np.radians(0), np.radians(0), .04],
         # [np.radians(-90), np.radians(0), np.radians(0), .08],
