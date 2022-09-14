@@ -413,8 +413,7 @@ class BendSim(object):
             # bend_angle, lift_angle, rot_angle, bend_pos
             self.move_to_org(bend[3], dir=bend_dir, bend_angle=bend[0], lift_angle=bend[1], rot_angle=bend[2],
                              toggledebug=toggledebug)
-            self.show(rgba=(.7, .7, .7, .7), show_frame=True)
-
+            # self.show(rgba=(.7, .7, .7, .7), show_frame=True)
             pseq_init, rotseq_init = copy.deepcopy(self.pseq), copy.deepcopy(self.rotseq)
             if abs(bend[1]) > np.pi / 2:
                 pseq_init, rotseq_init = pseq_init[::-1], rotseq_init[::-1]

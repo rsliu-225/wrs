@@ -78,9 +78,8 @@ if __name__ == '__main__':
     mp_x_rgt = m_plannerx.MotionPlannerRbtX(env, rbt, rbtx, armname="rgt_arm")
     mp_x_lft = m_plannerx.MotionPlannerRbtX(env, rbt, rbtx, armname="lft_arm")
 
-    mp_x_lft.goto_init_x(speed_n=200)
-    mp_x_rgt.goto_init_x(speed_n=200)
-    base.run()
+    # mp_x_lft.goto_init_x(speed_n=200)
+    # mp_x_rgt.goto_init_x(speed_n=200)
 
     # mp_x_lft.move_up_x(direction=np.asarray((0, 0, -1)), length=.03)
     # textureimg, depthimg, pcd = \
@@ -102,7 +101,8 @@ if __name__ == '__main__':
     init_rotseq = [np.eye(3), np.eye(3)]
     brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp_lft)
     brp.set_up(bendset, [], transmat4)
-    pathseq_list, min_f_list, f_list = brp.check_force(bendresseq, pathseq_list)
+    min_f_list, f_list = brp.check_force(bendresseq, pathseq_list)
+    pathseq_list = np.asarray(pathseq_list)[np.argsort(min_f_list)[::-1]]
     print(min_f_list)
 
     grasp, pathseq = pathseq_list[0]
@@ -111,9 +111,9 @@ if __name__ == '__main__':
         print(eepos)
         init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendresseq[i]
         if i == 0:
-            bend_a = np.degrees(end_a - init_a) + 3
+            bend_a = np.degrees(end_a - init_a) + 8
         else:
-            bend_a = np.degrees(end_a - init_a) + 7
+            bend_a = np.degrees(end_a - bendresseq[0][0]) + 12
         print(bend_a)
         if len(path) == 1:
             mp_x_lft.goto_armjnts_x(pathseq[0][0])
@@ -121,38 +121,38 @@ if __name__ == '__main__':
             mp_x_lft.movepath(path, speed_n=50)
 
         time.sleep(3)
-        motor.rot_degree(clockwise=0, rot_deg=bend_a)
-        goal = _action(os.path.join(fo, f), f"{str(i)}_goal.pkl",
-                       bend_a, z_range,
-                       center=transmat4[:3, 3],
-                       line_thresh=line_thresh, line_size_thresh=line_size_thresh,
-                       ulim=None,
-                       rgba=(0, 1, 0, 1))
-
-        if i == 0:
-            motor.rot_degree(clockwise=1, rot_deg=20)
-            time.sleep(1)
-            goal = _action(os.path.join(fo, f), f"{str(i)}_release.pkl",
-                           bend_a, z_range,
-                           center=transmat4[:3, 3],
-                           line_thresh=line_thresh, line_size_thresh=line_size_thresh,
-                           ulim=None,
-                           rgba=(0, 1, 0, 1))
-            motor.rot_degree(clockwise=0, rot_deg=22)
-            time.sleep(1)
-            motor.rot_degree(clockwise=1, rot_deg=bend_a + 2)
-            refine = _action(os.path.join(fo, f), f"{str(i)}_refine.pkl",
-                             bend_a, z_range,
-                             center=transmat4[:3, 3],
-                             line_thresh=line_thresh, line_size_thresh=line_size_thresh,
-                             ulim=None,
-                             rgba=(0, 1, 0, 1))
-        else:
-            motor.rot_degree(clockwise=1, rot_deg=bend_a)
-            goal = _action(os.path.join(fo, f), f"{str(i)}_release.pkl",
-                           bend_a, z_range,
-                           center=transmat4[:3, 3],
-                           line_thresh=line_thresh, line_size_thresh=line_size_thresh,
-                           ulim=None,
-                           rgba=(0, 1, 0, 1))
-        time.sleep(3)
+        # motor.rot_degree(clockwise=0, rot_deg=bend_a)
+        # goal = _action(os.path.join(fo, f), f"{str(i)}_goal.pkl",
+        #                bend_a, z_range,
+        #                center=transmat4[:3, 3],
+        #                line_thresh=line_thresh, line_size_thresh=line_size_thresh,
+        #                ulim=None,
+        #                rgba=(0, 1, 0, 1))
+        #
+        # if i == 0:
+        #     motor.rot_degree(clockwise=1, rot_deg=20)
+        #     time.sleep(1)
+        #     goal = _action(os.path.join(fo, f), f"{str(i)}_release.pkl",
+        #                    bend_a, z_range,
+        #                    center=transmat4[:3, 3],
+        #                    line_thresh=line_thresh, line_size_thresh=line_size_thresh,
+        #                    ulim=None,
+        #                    rgba=(0, 1, 0, 1))
+        #     motor.rot_degree(clockwise=0, rot_deg=23)
+        #     time.sleep(1)
+        #     motor.rot_degree(clockwise=1, rot_deg=bend_a + 3)
+        #     refine = _action(os.path.join(fo, f), f"{str(i)}_refine.pkl",
+        #                      bend_a, z_range,
+        #                      center=transmat4[:3, 3],
+        #                      line_thresh=line_thresh, line_size_thresh=line_size_thresh,
+        #                      ulim=None,
+        #                      rgba=(0, 1, 0, 1))
+        # else:
+        #     motor.rot_degree(clockwise=1, rot_deg=bend_a)
+        #     goal = _action(os.path.join(fo, f), f"{str(i)}_release.pkl",
+        #                    bend_a, z_range,
+        #                    center=transmat4[:3, 3],
+        #                    line_thresh=line_thresh, line_size_thresh=line_size_thresh,
+        #                    ulim=None,
+        #                    rgba=(0, 1, 0, 1))
+        # time.sleep(3)
