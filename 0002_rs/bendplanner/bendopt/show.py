@@ -44,6 +44,7 @@ def _load_result_dict(res_dict):
     #     opt_res_dict[k]['init_res_kpts'] = np.asarray(v['init_res_kpts'])/1000
     #     opt_res_dict[k]['opt_res_kpts'] = np.asarray(v['opt_res_kpts'])/1000
     # pickle.dump(opt_res_dict, open(f'{f_name}', 'wb'))
+    param_num_list=[]
     for k, v in res_dict.items():
         x.append(int(k))
         goal_pseq = v['goal_pseq']
@@ -54,7 +55,7 @@ def _load_result_dict(res_dict):
         init_res_kpts = v['init_res_kpts']
 
         opt_bendset = v['opt_bendset']
-
+        param_num_list.append(len(opt_bendset))
         opt_err = v['opt_err']
         opt_res_pseq = v['opt_res_pseq']
         opt_res_kpts = v['opt_res_kpts']
@@ -113,7 +114,7 @@ def show_sgl_method(f_name):
     grid_on(ax1)
     ax1.plot(x, init_max_err_list, color='darkorange')
     ax1.plot(x, opt_max_err_list, color='g')
-    ax1.axvline(x=11, c='r', linestyle='dashed')
+    ax1.axvline(x=12, c='r', linestyle='dashed')
     # ax1.set_xlabel('Num. of key point')
     # ax1.set_ylabel('Max. point to point error(mm)')
 

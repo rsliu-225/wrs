@@ -35,7 +35,7 @@ def opt_process(i, bs, opt, tor=None, obj_type='avg', method='SLSQP', n_trials=2
     bs.reset(opt.init_pseq, opt.init_rotseq, extend=False)
     bs.gen_by_bendseq(opt.init_bendset, cc=False)
     goal_pseq_aligned, goal_rotseq_aligned = bu.align_with_init(bs, opt.goal_pseq, opt.init_rot, opt.goal_rotseq)
-    # bs.show(rgba=(1, 0, 0, 1))
+    # bs.show(rgba=(1, 0, 0, 1))c
     init_res_pseq = bs.pseq[1:]
     init_err, init_res_kpts = bu.mindist_err(init_res_pseq, goal_pseq_aligned, type=obj_type, toggledebug=False)
     print('org error:', init_err)
@@ -92,7 +92,7 @@ if __name__ == '__main__':
     n_startup_trials = 10
     sigma0 = None
 
-    f_name = f'{goal_f_name}_{method}_{obj_type}_10.pkl'
+    f_name = f'6_{goal_f_name}_{method}_{obj_type}_10.pkl'
 
     '''
     opt
@@ -116,7 +116,7 @@ if __name__ == '__main__':
                                   bend_times=1,
                                   obj_type=obj_type)
 
-    for i in range(16, 27):
+    for i in range(25, 30):
         init_err, opt_err = opt_process(i, bs, opt, tor=tor, obj_type=obj_type, method=method,
                                         n_trials=n_trials, n_startup_trials=n_startup_trials, sigma0=sigma0)
 

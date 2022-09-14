@@ -286,64 +286,115 @@ class BendRbtPlanner(object):
         return -1, all_result
 
     def run(self, f_name='tmp', grasp_l=0.0, h=0.0, fo='stick'):
-        seqs, _ = self._iptree.get_potential_valid()
-        while len(seqs) != 0:
-            bendseq = [self.bendset[i] for i in seqs]
+        seq, _ = self._iptree.get_potential_valid()
+        while len(seq) != 0:
+            print(seq)
+            bendseq = [self.bendset[i] for i in seq]
             self._iptree.show()
-            print(seqs)
             self.reset_bs(self.init_pseq, self.init_rotseq)
             is_success, bendresseq, _ = self._bs.gen_by_bendseq(bendseq, cc=True, prune=True, toggledebug=False)
             # self.show_bendresseq(bendresseq, self.transmat4)
             # base.run()
             if not all(is_success):
-                self._iptree.add_invalid_seq(seqs[:is_success.index(False) + 1])
-                seqs, _ = self._iptree.get_potential_valid()
+                self._iptree.add_invalid_seq(seq[:is_success.index(False) + 1])
+                seq, _ = self._iptree.get_potential_valid()
                 continue
-            pickle.dump([seqs, is_success, bendresseq],
+            pickle.dump([seq, is_success, bendresseq],
                         open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendresseq.pkl', 'wb'))
-            seqs, _, bendresseq = pickle.load(
+            seq, _, bendresseq = pickle.load(
                 open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendresseq.pkl', 'rb'))
 
             fail_index, armjntsseq_list = self.check_ik(bendresseq, grasp_l=grasp_l)
             if fail_index != -1:
-                self._iptree.add_invalid_seq(seqs[:fail_index + 1])
-                seqs, _ = self._iptree.get_potential_valid()
+                self._iptree.add_invalid_seq(seq[:fail_index + 1])
+                seq, _ = self._iptree.get_potential_valid()
                 continue
             pickle.dump(armjntsseq_list, open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_armjntsseq.pkl', 'wb'))
             # self.show_bendresseq_withrbt(bendresseq, armjntsseq_list[0][1])
             # base.run()
-            seqs, _, bendresseq = pickle.load(
+            seq, _, bendresseq = pickle.load(
                 open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendresseq.pkl', 'rb'))
-            armjntsseq_list = pickle.load(
-                open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_armjntsseq.pkl', 'rb'))
-            fail_index, pathseq_list = self.check_motion(seqs, bendresseq, armjntsseq_list)
+            armjntsseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_armjntsseq.pkl', 'rb'))
+            fail_index, pathseq_list = self.check_motion(seq, bendresseq, armjntsseq_list)
             # fail_index, pathseq_list = self.check_pull_motion(bendresseq, armjntsseq_list)
             if fail_index != -1:
-                self._iptree.add_invalid_seq(seqs[:fail_index + 1])
-                seqs = self._iptree.get_potential_valid()
+                self._iptree.add_invalid_seq(seq[:fail_index + 1])
+                seq = self._iptree.get_potential_valid()
                 continue
             pickle.dump(pathseq_list, open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_pathseq.pkl', 'wb'))
-            print(f'success {seqs}')
+            print(f'success {seq}')
             break
 
-    def show_bend(self, bendres_i, show_start=True, show_end=True):
+    def fine_tune(self, seq, f_name='tmp', grasp_l=0.0, h=0.0, fo='stick'):
+        self.set_bs_stick_sec(30)
+        bendseq = [self.bendset[i] for i in seq]
+        self.reset_bs(self.init_pseq, self.init_rotseq)
+        is_success, bendresseq, _ = self._bs.gen_by_bendseq(bendseq, cc=True, prune=True, toggledebug=False)
+        # self.show_bendresseq(bendresseq, self.transmat4)
+        # base.run()
+        if not all(is_success):
+            return None
+        pickle.dump([seq, is_success, bendresseq],
+                    open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendresseq.pkl', 'wb'))
+        seq, _, bendresseq = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendresseq.pkl', 'rb'))
+
+        fail_index, armjntsseq_list = self.check_ik(bendresseq, grasp_l=grasp_l)
+        if fail_index != -1:
+            return None
+        pickle.dump(armjntsseq_list, open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_armjntsseq.pkl', 'wb'))
+        # self.show_bendresseq_withrbt(bendresseq, armjntsseq_list[0][1])
+        # base.run()
+        armjntsseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_armjntsseq.pkl', 'rb'))
+        fail_index, pathseq_list = self.check_motion(seq, bendresseq, armjntsseq_list)
+        if fail_index != -1:
+            return None
+        pickle.dump(pathseq_list, open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_pathseq.pkl', 'wb'))
+        print(f'success {seq}')
+
+    def show_bend_crop(self, bendres_i, l_i):
+        init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendres_i
+        pseq_end, rotseq_end = self.transseq(pseq_end, rotseq_end, self.transmat4)
+        pseq_end = pseq_end
+        rotseq_end = rotseq_end
+        tmp_l = 0
+        pseq_res = []
+        rotseq_res = []
+        l_i = l_i - 2 * self._bs.bend_r * (end_a - init_a) + .0005
+
+        for i in range(len(pseq_end) - 1):
+            p1 = np.asarray(pseq_end[i])
+            p2 = np.asarray(pseq_end[i + 1])
+            tmp_l += abs(np.linalg.norm(p2 - p1))
+            if tmp_l < l_i + bconfig.INIT_L:
+                continue
+            else:
+                pseq_res = pseq_end[i - 1:]
+                rotseq_res = rotseq_end[i - 1:]
+                gm.gen_frame(pseq_end[i - 1], rotseq_end[i - 1]).attach_to(base)
+                break
+        vertices, faces = self._bs.gen_stick(pseq_res, rotseq_res, self._bs.thickness / 2, section=180)
+        objcm = cm.CollisionModel(initor=trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces)))
+
+        return objcm
+
+    def show_bend(self, bendres_i, show_start=True, show_end=True, start_rgba=(.7, .7, .7, .7), end_rgba=(0, 1, 0, 1)):
         init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendres_i
         pseq_init, rotseq_init = self.transseq(pseq_init, rotseq_init, self.transmat4)
 
         vertices, faces = self._bs.gen_stick(pseq_init[::-1], rotseq_init[::-1], self._bs.thickness / 2,
                                              section=180)
+        objcm_init = cm.CollisionModel(initor=trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces)))
+        objcm_init.set_rgba(start_rgba)
         if show_start:
-            objcm_init = cm.CollisionModel(initor=trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces)))
-            objcm_init.set_rgba((.7, .7, .7, .7))
             objcm_init.attach_to(base)
-            pseq_init = bu.linear_inp3d_by_step(pseq_init)
+
+        pseq_end, rotseq_end = self.transseq(pseq_end, rotseq_end, self.transmat4)
+        vertices, faces = self._bs.gen_stick(pseq_end[::-1], rotseq_end[::-1], self._bs.thickness / 2,
+                                             section=180)
+        objcm_end = cm.CollisionModel(initor=trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces)))
+        # objcm_end.set_rgba((.7, .7, .7, .7))
+        objcm_end.set_rgba(end_rgba)
         if show_end:
-            pseq_end, rotseq_end = self.transseq(pseq_end, rotseq_end, self.transmat4)
-            vertices, faces = self._bs.gen_stick(pseq_end[::-1], rotseq_end[::-1], self._bs.thickness / 2,
-                                                 section=180)
-            objcm_end = cm.CollisionModel(initor=trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces)))
-            objcm_end.set_rgba((.7, .7, .7, .7))
-            # objcm_end.set_rgba((0, 1, 0, .7))
             objcm_end.attach_to(base)
         tmp_p = np.asarray([self._bs.c2c_dist * math.cos(init_a), self._bs.c2c_dist * math.sin(init_a), 0])
         tmp_p = np.dot(self.transmat4[:3, :3], tmp_p)
@@ -358,7 +409,7 @@ class BendRbtPlanner(object):
         self._bs.pillar_punch_end.set_rgba(rgba=[0, .7, 0, .7])
         self._bs.pillar_punch_end.attach_to(base)
         # return bu.linear_inp3d_by_step(pseq_init), bu.linear_inp3d_by_step(pseq_end)
-        return pseq_init, pseq_end
+        return objcm_init, objcm_end
 
     def check_force(self, bendresseq, pathseq, show_step=None):
         min_f_list = []
@@ -394,9 +445,16 @@ class BendRbtPlanner(object):
 
         print(min_f_list.index(min(min_f_list)), min_f_list[min_f_list.index(min(min_f_list))])
         print(min_f_list.index(max(min_f_list)), min_f_list[min_f_list.index(max(min_f_list))])
-        return np.asarray(pathseq)[np.argsort(min_f_list)[::-1]], \
-               np.asarray(min_f_list)[np.argsort(min_f_list)[::-1]], \
+        return np.asarray(min_f_list)[np.argsort(min_f_list)[::-1]], \
                np.asarray(f_list)[np.argsort(min_f_list)[::-1]]
+
+    def show_bendres_withrbt(self, bendres, armjnts):
+        self._bs.move_posrot(self.transmat4)
+        self.rbt.fk(component_name=self._mp.armname, jnt_values=armjnts)
+        # objcm = cm.gen_sphere(pos=np.asarray([-.1, 0, 0]), radius=.001)
+        # self.rbt.hold(objcm, jawwidth=.01, hnd_name=self.mp.hnd_name)
+        self.rbt.gen_meshmodel(toggle_tcpcs=True).attach_to(base)
+        self.show_bend(bendres)
 
     def show_bendresseq(self, bendresseq):
         motioncounter = [0]
@@ -486,33 +544,35 @@ class BendRbtPlanner(object):
                     print('Failed')
                     motioncounter[0] += 1
                     return task.again
-                init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendresseq[motioncounter[0]]
-                print(np.degrees(init_a), np.degrees(end_a), np.degrees(plate_a))
-
-                pseq_init, rotseq_init = self.transseq(pseq_init, rotseq_init, transmat4)
-                pseq_end, rotseq_end = self.transseq(pseq_end, rotseq_end, transmat4)
-                # gm.gen_frame(pseq_init[0], rotseq_init[0]).attach_to(base)
-                self._bs.reset(pseq_init, rotseq_init, extend=False)
-                objcm_init = copy.deepcopy(self._bs.objcm)
-                objcm_init.set_rgba((.7, .7, .7, 1))
-                objcm_init.attach_to(base)
-
-                self._bs.reset(pseq_end, rotseq_end, extend=False)
-                objcm_end = copy.deepcopy(self._bs.objcm)
-                objcm_end.set_rgba((0, .7, 0, 1))
-                objcm_end.attach_to(base)
-
-                tmp_p = np.asarray([self._bs.c2c_dist * math.cos(init_a), self._bs.c2c_dist * math.sin(init_a), 0])
-                tmp_p = np.dot(transmat4[:3, :3], tmp_p)
-                self._bs.pillar_punch.set_homomat(np.dot(rm.homomat_from_posrot(tmp_p, np.eye(3)), transmat4))
-                self._bs.pillar_punch.set_rgba(rgba=[.7, 0, 0, .7])
-                self._bs.pillar_punch.attach_to(base)
-
-                tmp_p = np.asarray([self._bs.c2c_dist * math.cos(end_a), self._bs.c2c_dist * math.sin(end_a), 0])
-                tmp_p = np.dot(transmat4[:3, :3], tmp_p)
-                self._bs.pillar_punch_end.set_homomat(np.dot(rm.homomat_from_posrot(tmp_p, np.eye(3)), transmat4))
-                self._bs.pillar_punch_end.set_rgba(rgba=[0, .7, 0, .7])
-                self._bs.pillar_punch_end.attach_to(base)
+                self.show_bend(bendresseq[motioncounter[0]])
+                #
+                # init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendresseq[motioncounter[0]]
+                # print(np.degrees(init_a), np.degrees(end_a), np.degrees(plate_a))
+                #
+                # pseq_init, rotseq_init = self.transseq(pseq_init, rotseq_init, transmat4)
+                # pseq_end, rotseq_end = self.transseq(pseq_end, rotseq_end, transmat4)
+                # # gm.gen_frame(pseq_init[0], rotseq_init[0]).attach_to(base)
+                # self._bs.reset(pseq_init, rotseq_init, extend=False)
+                # objcm_init = copy.deepcopy(self._bs.objcm)
+                # objcm_init.set_rgba((.7, .7, .7, 1))
+                # objcm_init.attach_to(base)
+                #
+                # self._bs.reset(pseq_end, rotseq_end, extend=False)
+                # objcm_end = copy.deepcopy(self._bs.objcm)
+                # objcm_end.set_rgba((0, .7, 0, 1))
+                # objcm_end.attach_to(base)
+                #
+                # tmp_p = np.asarray([self._bs.c2c_dist * math.cos(init_a), self._bs.c2c_dist * math.sin(init_a), 0])
+                # tmp_p = np.dot(transmat4[:3, :3], tmp_p)
+                # self._bs.pillar_punch.set_homomat(np.dot(rm.homomat_from_posrot(tmp_p, np.eye(3)), transmat4))
+                # self._bs.pillar_punch.set_rgba(rgba=[.7, 0, 0, .7])
+                # self._bs.pillar_punch.attach_to(base)
+                #
+                # tmp_p = np.asarray([self._bs.c2c_dist * math.cos(end_a), self._bs.c2c_dist * math.sin(end_a), 0])
+                # tmp_p = np.dot(transmat4[:3, :3], tmp_p)
+                # self._bs.pillar_punch_end.set_homomat(np.dot(rm.homomat_from_posrot(tmp_p, np.eye(3)), transmat4))
+                # self._bs.pillar_punch_end.set_rgba(rgba=[0, .7, 0, .7])
+                # self._bs.pillar_punch_end.attach_to(base)
                 motioncounter[0] += 1
             else:
                 motioncounter[0] = 0

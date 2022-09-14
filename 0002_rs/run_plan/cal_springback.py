@@ -74,8 +74,8 @@ def hough_lines(img):
 
 def springback_from_img(fo, z_range, line_thresh=.002, line_size_thresh=300):
     sb_dict = {}
-    pcd_color = {'init': (1, 0, 0, 1), 'goal': (0, 1, 0, 1), 'res': (1, 1, 0, 1), 'refine': (0, 0, 1, 1),
-                 'refine_goal': (0, 1, 1, 1)}
+    pcd_color = {'init': (1, 0, 0, 1), 'goal': (0, 1, 0, 1), 'res': (250 / 255, 220 / 255, 55 / 255, 1),
+                 'refine': (0, 0, 1, 1), 'refine_goal': (0, 1, 1, 1)}
     ext_str = '.pkl'
     for f in os.listdir(os.path.join(config.ROOT, 'img/phoxi', fo)):
         if f[-3:] != 'pkl':
@@ -186,15 +186,14 @@ def show_data_w_refine(input_dict):
         if sb < 0:
             res = 180 - res
             sb = goal - res
-        bend = gt - goal
 
         print('goal, result, refined', goal, res, refine)
         print('spring back:', sb)
 
         sb_err.append(sb)
-        bend_err.append(bend)
-        refined_err.append(goal - gt)
-        X.append(gt)
+        bend_err.append(gt - goal)
+        refined_err.append(goal - refine)
+        X.append(goal)
 
     sort_inx = np.argsort(X)
     X = [X[i] for i in sort_inx]
@@ -202,11 +201,14 @@ def show_data_w_refine(input_dict):
     bend_err = [bend_err[i] for i in sort_inx]
     refined_err = [refined_err[i] for i in sort_inx]
 
+    fig = plt.figure()
     plt.rcParams["font.family"] = "Times New Roman"
-    plt.rcParams["font.size"] = 18
-    plt.grid()
-    plt.xticks(X)
-    plt.plot(X, sb_err, c='gold')
+    plt.rcParams["font.size"] = 24
+    ax = fig.add_subplot(1, 1, 1)
+    grid_on(ax)
+    ax.set_xticks([v for v in range(15, 166, 30)])
+    ax.set_yticks([v for v in range(-2, 10, 2)])
+    ax.plot(X, sb_err, c='gold')
     # plt.plot(X, [np.mean(sb_err)] * len(X), c='gold', linestyle='dashed')
     lasso_pre(X, sb_err, 0)
 
@@ -231,6 +233,12 @@ def lasso_pre(X, y, x_pre):
     return model.predict([[x_pre]])
 
 
+def grid_on(ax):
+    ax.minorticks_on()
+    ax.grid(b=True, which='major')
+    ax.grid(b=True, which='minor', linestyle='--', alpha=.2)
+
+
 if __name__ == '__main__':
     import visualization.panda.world as wd
     import modeling.geometric_model as gm
@@ -239,13 +247,14 @@ if __name__ == '__main__':
     base = wd.World(cam_pos=[.8, 0, 1.5], lookat_pos=[0, 0, 0])
     rbt = el.loadYumi(showrbt=True)
 
-    fo = 'springback/steel_refine_lr_1'
-    z_range = (.15, .16)
-    line_thresh = 0.002
-    line_size_thresh = 200
+    # fo = 'springback/steel_refine_lr_1'
+    fo = 'springback/alu_refine_lr_1'
+    z_range = (.15, .17)
+    line_thresh = 0.003
+    line_size_thresh = 300
     sb_dict = springback_from_img(fo, z_range, line_thresh, line_size_thresh)
-    sb_dict = pickle.load(
-        open(os.path.join(config.ROOT, 'bendplanner/springback', f'{fo.split("/")[1]}_springback.pkl'), 'rb'))
+    # sb_dict = pickle.load(
+    #     open(os.path.join(config.ROOT, 'bendplanner/springback', f'{fo.split("/")[1]}_springback.pkl'), 'rb'))
 
     show_data_w_refine(sb_dict)
     # show_data(sb_dict)

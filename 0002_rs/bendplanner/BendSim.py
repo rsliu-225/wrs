@@ -354,7 +354,7 @@ class BendSim(object):
         self.objcm = cm.CollisionModel(initor=objtrm, btwosided=True, name='obj', cdprimit_type='surface_balls')
         # print('time cost(update cm):', time.time() - ts)
 
-    def show(self, rgba=(1, 1, 1, 1), objmat4=None, show_frame=False, show_pseq=False):
+    def show(self, rgba=(1, 1, 1, 1), objmat4=None, show_frame=False, show_pseq=False, show_dashframe=False):
         self.update_cm()
         objcm, pseq, rotseq = copy.deepcopy(self.objcm), copy.deepcopy(self.pseq), copy.deepcopy(self.rotseq)
         if objmat4 is not None:
@@ -366,6 +366,9 @@ class BendSim(object):
         if show_frame:
             for i in range(len(pseq)):
                 gm.gen_frame(pseq[i], rotseq[i], length=.01, thickness=.0005, alpha=1).attach_to(base)
+        if show_dashframe:
+            for i in range(len(pseq)):
+                gm.gen_dashframe(pseq[i], rotseq[i], length=.01, thickness=.0005, alpha=1).attach_to(base)
             # gm.gen_frame(pseq[0], rotseq[0], length=.01, thickness=.0004, alpha=.5,
             #              rgbmatrix=np.asarray([[1, 1, 0, 1], [1, 0, 1, 1], [0, 1, 1, 1]])).attach_to(base)
         if show_pseq:
@@ -410,7 +413,8 @@ class BendSim(object):
             # bend_angle, lift_angle, rot_angle, bend_pos
             self.move_to_org(bend[3], dir=bend_dir, bend_angle=bend[0], lift_angle=bend[1], rot_angle=bend[2],
                              toggledebug=toggledebug)
-            # self.show()
+            self.show(rgba=(.7, .7, .7, .7), show_frame=True)
+
             pseq_init, rotseq_init = copy.deepcopy(self.pseq), copy.deepcopy(self.rotseq)
             if abs(bend[1]) > np.pi / 2:
                 pseq_init, rotseq_init = pseq_init[::-1], rotseq_init[::-1]
@@ -502,6 +506,8 @@ class BendSim(object):
             rot_angle = -rot_angle
             self.pseq = self._rot_new_orgin(self.pseq, np.asarray((-self.bend_r, 0, 0)), rot)
             self.rotseq = np.asarray([rot.dot(r) for r in self.rotseq])
+        # self.show(rgba=(.7, .7, .7, 0), show_dashframe=True)
+
         if rot_angle != 0:
             self._rot(rot_angle)
         if lift_angle != 0:
@@ -784,11 +790,12 @@ class BendSim(object):
 if __name__ == '__main__':
     import visualization.panda.world as wd
 
-    base = wd.World(cam_pos=[-.1, .4, .1], lookat_pos=[0, 0, 0])
+    base = wd.World(cam_pos=[.075, .1, .05], lookat_pos=[0, 0, 0])
     bs = BendSim(show=False, cm_type='stick', granularity=np.pi / 30)
     bs.set_r_center(.015 / 2)
-    bs.pillar_center = cm.gen_stick(spos=np.asarray([0, 0, -bconfig.PILLAR_H/3]),
-                                    epos=np.asarray([0, 0, bconfig.PILLAR_H/3]),
+    bs.set_stick_sec(180)
+    bs.pillar_center = cm.gen_stick(spos=np.asarray([0, 0, -bconfig.PILLAR_H / 2.5]),
+                                    epos=np.asarray([0, 0, bconfig.PILLAR_H / 2.5]),
                                     thickness=bs.r_center * 2, sections=90,
                                     rgba=[.9, .9, .9, 1]).attach_to(base)
     bendset = [
@@ -799,7 +806,7 @@ if __name__ == '__main__':
         # [np.radians(45), np.radians(0), np.radians(0), .04],
         # [np.radians(45), np.radians(0), np.radians(0), .04],
         # [np.radians(45), np.radians(30), np.radians(0), .04],
-        [np.radians(45), np.radians(0), np.radians(0), .04],
+        [np.radians(45), np.radians(0), np.radians(45), .02],
         # [np.radians(90), np.radians(0), np.radians(0), .04],
         # [np.radians(180), np.radians(0), np.radians(0), .04],
         # [np.radians(-90), np.radians(0), np.radians(0), .08],
@@ -810,7 +817,8 @@ if __name__ == '__main__':
     # bendset = bs.gen_random_bendset(5)
     # print(bendset)
     bs.reset([(0, 0, 0), (0, max(np.asarray(bendset)[:, 3]), 0)], [np.eye(3), np.eye(3)])
-    is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=True, toggledebug=False)
+
+    is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, toggledebug=False)
     # bs.show(rgba=(.7, .7, 0, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
     bs.show(rgba=(.7, .7, 0, .7), show_frame=True)
     # bu.visualize_voxel([bs.voxelize()], colors=['r'])

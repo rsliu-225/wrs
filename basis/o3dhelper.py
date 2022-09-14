@@ -113,7 +113,7 @@ def __draw_registration_result(source_o3d, target_o3d, transformation):
     o3d.visualization.draw_geometries([source_temp, target_temp])
 
 
-def registration_ptpt(src, tgt, downsampling_voxelsize=1, toggledebug=False):
+def registration_ptpt(src, tgt, downsampling_voxelsize=.001, toggledebug=False):
     """
     registrate two point clouds using global registration + local icp
     the correspondence checker for icp is point to point

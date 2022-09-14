@@ -24,12 +24,14 @@ def get_fit_err(bs, goal_pseq, goal_rotseq, bend_num_range):
     bend_max_err_list = []
     fit_avg_err_list = []
     bend_avg_err_list = []
+    m_list = []
 
     for i in range(bend_num_range[0], bend_num_range[1]):
         bs.reset(init_pseq, init_rotseq)
         fit_pseq, fit_rotseq = bu.decimate_pseq_by_cnt(goal_pseq, cnt=i, toggledebug=False)
         init_rot = bu.get_init_rot(fit_pseq)
         init_bendset = bu.pseq2bendset(fit_pseq, bend_r=bs.bend_r, toggledebug=False)
+        m_list.append(len(init_bendset))
 
         bs.gen_by_bendseq(init_bendset, cc=False)
         goal_pseq_trans, goal_rotseq = bu.align_with_init(bs, goal_pseq, init_rot, goal_rotseq)
@@ -44,7 +46,13 @@ def get_fit_err(bs, goal_pseq, goal_rotseq, bend_num_range):
         bend_avg_err, _ = bu.mindist_err(bs.pseq[1:], goal_pseq_trans, toggledebug=False, type='avg')
         fit_avg_err_list.append(fit_avg_err)
         bend_avg_err_list.append(bend_avg_err)
-    return fit_max_err_list, bend_max_err_list, fit_avg_err_list, bend_avg_err_list
+    return fit_max_err_list, bend_max_err_list, fit_avg_err_list, bend_avg_err_list, m_list
+
+
+def grid_on(ax):
+    ax.minorticks_on()
+    ax.grid(b=True, which='major')
+    ax.grid(b=True, which='minor', linestyle='--', alpha=.2)
 
 
 if __name__ == '__main__':
@@ -57,30 +65,34 @@ if __name__ == '__main__':
     init_pseq = [(0, 0, 0), (0, .05 + bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
 
-    bend_num_range = (5, 30)
+    bend_num_range = (5, 51)
 
     # r = .02 / 2
     # bs.set_r_center(r)
-    fit_max_err_list, bend_max_err_list, fit_avg_err_list, bend_avg_err_list = \
+    fit_max_err_list, bend_max_err_list, fit_avg_err_list, bend_avg_err_list, m_list = \
         get_fit_err(bs, goal_pseq, goal_rotseq, bend_num_range)
 
     x = range(bend_num_range[0], bend_num_range[1])
 
-    fig = plt.figure(figsize=(12, 5))
+    fig = plt.figure(figsize=(18, 5))
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams["font.size"] = 24
-    ax1 = fig.add_subplot(1, 2, 1)
-    ax1.grid()
+    ax1 = fig.add_subplot(1, 3, 1)
+    grid_on(ax1)
     ax1.plot(x, fit_max_err_list, color='darkorange', linestyle="dashed")
     ax1.plot(x, bend_max_err_list, color='darkorange')
     # ax1.set_xlabel('Num. of key point')
     # ax1.set_ylabel('Max. point to point error(mm)')
 
-    ax2 = fig.add_subplot(1, 2, 2)
-    ax2.grid()
+    ax2 = fig.add_subplot(1, 3, 2)
+    grid_on(ax2)
     ax2.plot(x, fit_avg_err_list, color='darkorange', linestyle="dashed")
     ax2.plot(x, bend_avg_err_list, color='darkorange')
     # ax2.set_xlabel('Num. of key point')
     # ax2.set_ylabel('Avg. point to point error(mm)')
+
+    ax3 = fig.add_subplot(1, 3, 3)
+    grid_on(ax3)
+    ax3.plot(x, m_list, color='black')
 
     plt.show()

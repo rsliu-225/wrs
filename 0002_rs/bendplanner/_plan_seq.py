@@ -3,7 +3,8 @@ import pickle
 import time
 
 import numpy as np
-
+import motionplanner.motion_planner as m_planner
+import bendplanner.bend_utils as bu
 import bendplanner.BendSim as b_sim
 import bendplanner.InvalidPermutationTree as ip_tree
 import bendplanner.PremutationTree as p_tree
