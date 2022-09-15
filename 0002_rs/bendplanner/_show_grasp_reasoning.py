@@ -33,10 +33,10 @@ if __name__ == '__main__':
 
     # f_name = 'randomc'
     # f_name = 'chair'
-    f_name = 'tri'
+    f = 'tri'
     fo = 'stick'
 
-    goal_pseq = pickle.load(open(os.path.join(config.ROOT, f'bendplanner/goal/pseq/{f_name}.pkl'), 'rb'))
+    goal_pseq = pickle.load(open(os.path.join(config.ROOT, f'bendplanner/goal/pseq/{f}.pkl'), 'rb'))
     # goal_pseq = bu.gen_polygen(3, .05)
     # goal_pseq = bu.gen_ramdom_curve(kp_num=5, length=.12, step=.0005, z_max=.005, toggledebug=False)
     # goal_pseq = bu.gen_screw_thread(r=.02, lift_a=np.radians(5), rot_num=2)
@@ -54,7 +54,7 @@ if __name__ == '__main__':
     # fit_pseq, _ = bu.decimate_pseq_by_cnt(goal_pseq, cnt=13, toggledebug=False)
     bendset = bu.pseq2bendset(fit_pseq, init_l=.1, toggledebug=False)
     init_rot = bu.get_init_rot(fit_pseq)
-    pickle.dump([goal_pseq, bendset], open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendseq.pkl', 'wb'))
+    pickle.dump([goal_pseq, bendset], open(f'{config.ROOT}/bendplanner/planres/{fo}/{f}_bendseq.pkl', 'wb'))
 
     init_pseq = [(0, 0, 0), (0, max([b[-1] for b in bendset]), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
@@ -67,10 +67,10 @@ if __name__ == '__main__':
     # brp.pre_grasp_reasoning()
     # brp.run(f_name=f_name, fo=fo)
 
-    goal_pseq, bendset = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendseq.pkl', 'rb'))
-    seqs, _, bendresseq = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendresseq.pkl', 'rb'))
-    armjntsseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_armjntsseq.pkl', 'rb'))
-    pathseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_pathseq.pkl', 'rb'))
+    goal_pseq, bendset = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/yumi/{f}_bendseq.pkl', 'rb'))
+    seqs, _, bendresseq = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/yumi/{f}_bendresseq.pkl', 'rb'))
+    armjntsseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/yumi/{f}_armjntsseq.pkl', 'rb'))
+    pathseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/yumi/{f}_pathseq.pkl', 'rb'))
     # pathseq_list, min_f_list, f_list = brp.check_force(bendresseq, pathseq_list)
     # brp.show_motion_withrbt(bendresseq, pathseq_list[0][1])
 

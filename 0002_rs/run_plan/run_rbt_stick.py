@@ -56,8 +56,8 @@ def cal_pseq_lenght(pseq):
 
 
 if __name__ == '__main__':
-    # f_name = 'randomc'
-    f_name = 'chair'
+    f_name = 'randomc'
+    # f_name = 'chair'
     # f_name = 'penta'
     fo = 'stick'
     rbt_name = 'yumi'
@@ -111,21 +111,21 @@ if __name__ == '__main__':
         # is_success, bendresseq, _ = brp._bs.gen_by_bendseq(bendset, cc=True, prune=True, toggledebug=False)
         # bs.show_bendresseq(bendresseq, is_success)
         # base.run()
-        if opt:
-            opt = b_opt.BendOptimizer(bs, init_pseq, init_rotseq, goal_pseq, bend_times=1, obj_type='avg')
-            bendset, _, _ = opt.solve(tor=None, cnt=11)
-
-        bendset = bendset[::-1]
-        pickle.dump([goal_pseq, bendset],
-                    open(f'{config.ROOT}/bendplanner/planres/{fo}/{rbt_name}/{f_name}_bendset.pkl', 'wb'))
+        # if opt:
+        #     opt = b_opt.BendOptimizer(bs, init_pseq, init_rotseq, goal_pseq, bend_times=1, obj_type='avg')
+        #     bendset, _, _ = opt.solve(tor=None, cnt=11)
+        # bendset = bendset[::-1]
+        # pickle.dump([goal_pseq, bendset],
+        #             open(f'{config.ROOT}/bendplanner/planres/{fo}/{rbt_name}/{f_name}_bendset.pkl', 'wb'))
         _, bendset = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{rbt_name}/{f_name}_bendset.pkl', 'rb'))
+
         # for i in range(len(bendset)):
         #     bendset[i][-1] = bendset[i][-1] -.05
         brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp)
 
         # grasp_list = grasp_list[140:190]
         brp.set_up(bendset, grasp_list, transmat4)
-        brp.run(f_name=f_name, fo=fo)
+        brp.run(f_name=f_name, fo=f'{fo}/{rbt_name}')
 
     '''
     show result
