@@ -57,8 +57,8 @@ if __name__ == '__main__':
     init_rot = bu.get_init_rot(fit_pseq)
 
     # bendset = pickle.load(open('planres/stick/penta_bendseq.pkl', 'rb'))
-    armjntsseq_list = pickle.load(open('planres/stick/penta_armjntsseq.pkl', 'rb'))
-    seq, is_success, bendresseq = pickle.load(open('planres/stick/penta_bendresseq.pkl', 'rb'))
+    armjntsseq_list = pickle.load(open('planres/stick/yumi/penta_armjntsseq.pkl', 'rb'))
+    seq, is_success, bendresseq = pickle.load(open('planres/stick/yumi/penta_bendresseq.pkl', 'rb'))
 
     brp.set_up(bendset, grasp_list, transmat4)
     brp.pre_grasp_reasoning()

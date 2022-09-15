@@ -1,6 +1,7 @@
 import copy
 import math
 import pickle
+import time
 
 import numpy as np
 
@@ -236,7 +237,9 @@ class BendRbtPlanner(object):
             # path = self._mp.plan_picknplace(grasp, [np.eye(4), objmat4_end], objcm,
             #                                 use_msc=True, start=armjntsseq[i], goal=armjntsseq[i + 1],
             #                                 use_pickupprim=True, use_placedownprim=True,
-            #                                 pickupprim_len=.06, placedownprim_len=.06)
+            #                                 pickupprim_len=.1, placedownprim_len=.1,
+            #                                 pickupprim_dir=np.asarray([0, 0, 1]) +
+            #                                                rotseq_init[0][:3, 1] * .5)
             # gm.gen_frame(pseq_init[0], rotseq_init[0], length=.01, thickness=.001).attach_to(base)
             # gm.gen_frame(pseq_end[0], rotseq_end[0], length=.01, thickness=.001).attach_to(base)
             pathseq.append(path)
@@ -246,6 +249,8 @@ class BendRbtPlanner(object):
         min_fail = np.inf
         pathseq = None
         all_result = []
+        start_time = time.time()
+        tc_list = []
         for i, v in enumerate(armjntsseq_list):
             print(f'----------grasp_id: {i} of {len(armjntsseq_list)}----------')
             grasp_tmp, armjntsseq = v
@@ -256,11 +261,13 @@ class BendRbtPlanner(object):
                 min_fail = fail_cnt
                 pathseq = pathseq_tmp
             if fail_cnt == 0:
+                tc_list.append(time.time() - start_time)
                 all_result.append([grasp_tmp, pathseq_tmp])
         # self.show_motion_withrbt(bendresseq, transmat4, pathseq)
         # base.run()
         if len(all_result) == 0:
             return [str(v) for v in pathseq].index('None'), all_result
+        print('Motion planning time cost:', tc_list)
         return -1, all_result
 
     def check_pull_motion(self, bendresseq, armjntsseq_list):
@@ -286,6 +293,7 @@ class BendRbtPlanner(object):
         return -1, all_result
 
     def run(self, f_name='tmp', grasp_l=0.0, h=0.0, fo='stick'):
+        start_time = time.time()
         seq, _ = self._iptree.get_potential_valid()
         while len(seq) != 0:
             print(seq)
@@ -299,6 +307,7 @@ class BendRbtPlanner(object):
                 self._iptree.add_invalid_seq(seq[:is_success.index(False) + 1])
                 seq, _ = self._iptree.get_potential_valid()
                 continue
+            time_seq = time.time() - start_time
             pickle.dump([seq, is_success, bendresseq],
                         open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendresseq.pkl', 'wb'))
             seq, _, bendresseq = pickle.load(
@@ -309,6 +318,9 @@ class BendRbtPlanner(object):
                 self._iptree.add_invalid_seq(seq[:fail_index + 1])
                 seq, _ = self._iptree.get_potential_valid()
                 continue
+            min_f_list, f_list = self.check_force(bendresseq, armjntsseq_list, show_step=None)
+            armjntsseq_list = np.asarray(armjntsseq_list)[np.argsort(min_f_list)[::-1]]
+            time_gr = time.time() - start_time
             pickle.dump(armjntsseq_list, open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_armjntsseq.pkl', 'wb'))
             # self.show_bendresseq_withrbt(bendresseq, armjntsseq_list[0][1])
             # base.run()
@@ -322,7 +334,11 @@ class BendRbtPlanner(object):
                 seq = self._iptree.get_potential_valid()
                 continue
             pickle.dump(pathseq_list, open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_pathseq.pkl', 'wb'))
-            print(f'success {seq}')
+
+            print(f'Grasp Reasoning time cost: {time_gr - time_seq}')
+            print(f'Sequence Planning time cost: {time_seq}')
+            print(f'Success {seq}')
+
             break
 
     def fine_tune(self, seq, f_name='tmp', grasp_l=0.0, h=0.0, fo='stick'):
@@ -411,21 +427,59 @@ class BendRbtPlanner(object):
         # return bu.linear_inp3d_by_step(pseq_init), bu.linear_inp3d_by_step(pseq_end)
         return objcm_init, objcm_end
 
-    def check_force(self, bendresseq, pathseq, show_step=None):
+    # def check_force(self, bendresseq, pathseq, show_step=None):
+    #     min_f_list = []
+    #     f_list = []
+    #     pseq_init, rotseq_init = self.transseq(bendresseq[0][3], bendresseq[0][4], self.transmat4)
+    #     start_time = time.time()
+    #     for i in range(len(pathseq)):
+    #         min_f = np.inf
+    #         f_list_tmp = []
+    #         print(f'----------{i}----------')
+    #         g, path_list = pathseq[i]
+    #         for j in range(len(bendresseq)):
+    #             if j == show_step:
+    #                 self.show_bend(bendresseq[j])
+    #             # f_dir = rm.rotmat_from_axangle((0, 0, 1), init_a / 2).dot(rotseq_init[0][:, 1])
+    #             f_dir = rotseq_init[0][:, 1]
+    #             armjnts = path_list[j][-1]
+    #             eepos, eerot = self._mp.get_ee(armjnts)
+    #             # f_dir = np.linalg.inv(eerot).dot(f_dir)
+    #             # gm.gen_arrow(eepos, eepos + f_dir * .1).attach_to(base)
+    #             # self._mp.ah.show_armjnts(armjnts=armjnts, rgba=None)
+    #             f = self._mp.get_max_force(list(f_dir) + [0, 0, 0])
+    #             f_list_tmp.append(f)
+    #             if f < min_f:
+    #                 min_f = f
+    #         min_f_list.append(min_f)
+    #         f_list.append(f_list_tmp)
+    #     # g, path_list = pathseq[min_f_list.index(min(min_f_list))]
+    #     # for path in path_list:
+    #     #     self._mp.ah.show_armjnts(armjnts=path[0], rgba=(0, 0, 1, .5))
+    #     # g, path_list = pathseq[min_f_list.index(max(min_f_list))]
+    #     # for path in path_list:
+    #     #     self._mp.ah.show_armjnts(armjnts=path[0], rgba=(0, 1, 0, .5))
+    #     # print(min_f_list.index(min(min_f_list)), min_f_list[min_f_list.index(min(min_f_list))])
+    #     print('Sorting time cost:', time.time() - start_time)
+    #     return np.asarray(min_f_list)[np.argsort(min_f_list)[::-1]], \
+    #            np.asarray(f_list)[np.argsort(min_f_list)[::-1]]
+
+    def check_force(self, bendresseq, armjntsseq_list, show_step=None):
         min_f_list = []
         f_list = []
         pseq_init, rotseq_init = self.transseq(bendresseq[0][3], bendresseq[0][4], self.transmat4)
-        for i in range(len(pathseq)):
+        start_time = time.time()
+        for i in range(len(armjntsseq_list)):
             min_f = np.inf
             f_list_tmp = []
             print(f'----------{i}----------')
-            g, path_list = pathseq[i]
+            g, armjnts_seq = armjntsseq_list[i]
             for j in range(len(bendresseq)):
                 if j == show_step:
                     self.show_bend(bendresseq[j])
                 # f_dir = rm.rotmat_from_axangle((0, 0, 1), init_a / 2).dot(rotseq_init[0][:, 1])
                 f_dir = rotseq_init[0][:, 1]
-                armjnts = path_list[j][-1]
+                armjnts = armjnts_seq[j]
                 eepos, eerot = self._mp.get_ee(armjnts)
                 # f_dir = np.linalg.inv(eerot).dot(f_dir)
                 # gm.gen_arrow(eepos, eepos + f_dir * .1).attach_to(base)
@@ -442,7 +496,8 @@ class BendRbtPlanner(object):
         # g, path_list = pathseq[min_f_list.index(max(min_f_list))]
         # for path in path_list:
         #     self._mp.ah.show_armjnts(armjnts=path[0], rgba=(0, 1, 0, .5))
-        print(min_f_list.index(min(min_f_list)), min_f_list[min_f_list.index(min(min_f_list))])
+        # print(min_f_list.index(min(min_f_list)), min_f_list[min_f_list.index(min(min_f_list))])
+        print('Sorting time cost:', time.time() - start_time)
         return np.asarray(min_f_list)[np.argsort(min_f_list)[::-1]], \
                np.asarray(f_list)[np.argsort(min_f_list)[::-1]]
 
@@ -487,35 +542,37 @@ class BendRbtPlanner(object):
                     print('Failed')
                     motioncounter[0] += 1
                     return task.again
-                init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendresseq[motioncounter[0]]
-                print(np.degrees(init_a), np.degrees(end_a), np.degrees(plate_a))
-
-                pseq_init, rotseq_init = self.transseq(pseq_init, rotseq_init, transmat4)
-                pseq_end, rotseq_end = self.transseq(pseq_end, rotseq_end, transmat4)
-                # for i in range(len(pseq_init)):
-                #     gm.gen_frame(pseq_init[i], rotseq_init[i], length=.01, thickness=.0004).attach_to(base)
-
-                self._bs.reset(pseq_init, rotseq_init, extend=False)
-                objcm_init = copy.deepcopy(self._bs.objcm)
-                objcm_init.set_rgba((.7, .7, .7, 1))
-                objcm_init.attach_to(base)
-
-                self._bs.reset(pseq_end, rotseq_end, extend=False)
-                objcm_end = copy.deepcopy(self._bs.objcm)
-                objcm_end.set_rgba((0, .7, 0, 1))
-                objcm_end.attach_to(base)
-
-                tmp_p = np.asarray([self._bs.c2c_dist * math.cos(init_a), self._bs.c2c_dist * math.sin(init_a), 0])
-                tmp_p = np.dot(transmat4[:3, :3], tmp_p)
-                self._bs.pillar_punch.set_homomat(np.dot(rm.homomat_from_posrot(tmp_p, np.eye(3)), transmat4))
-                self._bs.pillar_punch.set_rgba(rgba=[.7, 0, 0, 1])
-                self._bs.pillar_punch.attach_to(base)
-
-                tmp_p = np.asarray([self._bs.c2c_dist * math.cos(end_a), self._bs.c2c_dist * math.sin(end_a), 0])
-                tmp_p = np.dot(transmat4[:3, :3], tmp_p)
-                self._bs.pillar_punch_end.set_homomat(np.dot(rm.homomat_from_posrot(tmp_p, np.eye(3)), transmat4))
-                self._bs.pillar_punch_end.set_rgba(rgba=[0, .7, 0, 1])
-                self._bs.pillar_punch_end.attach_to(base)
+                self.show_bend(bendresseq[motioncounter[0]])
+                #
+                # init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendresseq[motioncounter[0]]
+                # print(np.degrees(init_a), np.degrees(end_a), np.degrees(plate_a))
+                #
+                # pseq_init, rotseq_init = self.transseq(pseq_init, rotseq_init, transmat4)
+                # pseq_end, rotseq_end = self.transseq(pseq_end, rotseq_end, transmat4)
+                # # for i in range(len(pseq_init)):
+                # #     gm.gen_frame(pseq_init[i], rotseq_init[i], length=.01, thickness=.0004).attach_to(base)
+                #
+                # self._bs.reset(pseq_init, rotseq_init, extend=False)
+                # objcm_init = copy.deepcopy(self._bs.objcm)
+                # objcm_init.set_rgba((.7, .7, .7, 1))
+                # objcm_init.attach_to(base)
+                #
+                # self._bs.reset(pseq_end, rotseq_end, extend=False)
+                # objcm_end = copy.deepcopy(self._bs.objcm)
+                # objcm_end.set_rgba((0, .7, 0, 1))
+                # objcm_end.attach_to(base)
+                #
+                # tmp_p = np.asarray([self._bs.c2c_dist * math.cos(init_a), self._bs.c2c_dist * math.sin(init_a), 0])
+                # tmp_p = np.dot(transmat4[:3, :3], tmp_p)
+                # self._bs.pillar_punch.set_homomat(np.dot(rm.homomat_from_posrot(tmp_p, np.eye(3)), transmat4))
+                # self._bs.pillar_punch.set_rgba(rgba=[.7, 0, 0, 1])
+                # self._bs.pillar_punch.attach_to(base)
+                # 
+                # tmp_p = np.asarray([self._bs.c2c_dist * math.cos(end_a), self._bs.c2c_dist * math.sin(end_a), 0])
+                # tmp_p = np.dot(transmat4[:3, :3], tmp_p)
+                # self._bs.pillar_punch_end.set_homomat(np.dot(rm.homomat_from_posrot(tmp_p, np.eye(3)), transmat4))
+                # self._bs.pillar_punch_end.set_rgba(rgba=[0, .7, 0, 1])
+                # self._bs.pillar_punch_end.attach_to(base)
                 motioncounter[0] += 1
             else:
                 motioncounter[0] = 0
@@ -593,6 +650,7 @@ class BendRbtPlanner(object):
                     print('Failed')
                     motioncounter[0] += 1
                     return task.again
+
                 init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendresseq[motioncounter[0]]
                 print(np.degrees(init_a), np.degrees(end_a), np.degrees(plate_a))
 
@@ -610,7 +668,7 @@ class BendRbtPlanner(object):
                 objcm_end.attach_to(base)
 
                 rbt.fk(self._mp.armname, path[-1])
-                _, _ = rbt.hold(objcm=objcm_init.copy(), hnd_name=self._mp.hnd_name)
+                # _, _ = rbt.hold(objcm=objcm_init.copy(), hnd_name=self._mp.hnd_name)
 
                 tmp_p = np.asarray([self._bs.c2c_dist * math.cos(init_a), self._bs.c2c_dist * math.sin(init_a), 0])
                 tmp_p = np.dot(transmat4[:3, :3], tmp_p)

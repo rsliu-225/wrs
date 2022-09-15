@@ -56,9 +56,6 @@ if __name__ == '__main__':
     init_rot = bu.get_init_rot(fit_pseq)
     pickle.dump([goal_pseq, bendset], open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendseq.pkl', 'wb'))
 
-    for b in bendset:
-        print(b)
-
     init_pseq = [(0, 0, 0), (0, max([b[-1] for b in bendset]), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
     brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp)
@@ -68,7 +65,7 @@ if __name__ == '__main__':
 
     brp.set_up(bendset, grasp_list, transmat4)
     # brp.pre_grasp_reasoning()
-    # brp.run(f_name=f_name, folder_name=fo)
+    # brp.run(f_name=f_name, fo=fo)
 
     goal_pseq, bendset = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendseq.pkl', 'rb'))
     seqs, _, bendresseq = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendresseq.pkl', 'rb'))
@@ -76,21 +73,22 @@ if __name__ == '__main__':
     pathseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_pathseq.pkl', 'rb'))
     # pathseq_list, min_f_list, f_list = brp.check_force(bendresseq, pathseq_list)
     # brp.show_motion_withrbt(bendresseq, pathseq_list[0][1])
-    # for i, armjnts in enumerate(pathseq_list[0][1][1][1:-2]):
-    #     if i == 0:
-    #         continue
-    #     eepos_s, _ = mp.get_ee(pathseq_list[0][1][1][i])
-    #     eepos_e, _ = mp.get_ee(pathseq_list[0][1][1][i - 1])
-    #     # gm.gen_arrow(np.asarray(eepos_s), np.asarray(eepos_e), thickness=.002, rgba=(0, 1, 0, 1)).attach_to(base)
-    #     gm.gen_sphere(np.asarray(eepos_s), radius=.002, rgba=(0, 1, 0, 1)).attach_to(base)
-    #     # if i % 2 == 0:
-    #     #     mp.ah.show_armjnts(armjnts=armjnts, rgba=(0, 1, 0, .5))
 
-    # mp.ah.show_armjnts(armjnts=pathseq_list[0][1][1][0], rgba=(.7, .7, .7, .5))
-    # brp.show_bend(bendresseq[0])
-    # brp.show_bend(bendresseq[-1])
-    # mp.ah.show_armjnts(armjnts=pathseq_list[0][1][1][-1], rgba=(.7, .7, .7, .5))
+    for i, armjnts in enumerate(pathseq_list[0][1][1][1:-2]):
+        if i == 0:
+            continue
+        eepos_s, _ = mp.get_ee(pathseq_list[0][1][1][i])
+        eepos_e, _ = mp.get_ee(pathseq_list[0][1][1][i - 1])
+        # gm.gen_arrow(np.asarray(eepos_s), np.asarray(eepos_e), thickness=.002, rgba=(0, 1, 0, 1)).attach_to(base)
+        gm.gen_sphere(np.asarray(eepos_s), radius=.002, rgba=(0, 1, 0, 1)).attach_to(base)
+        # if i % 2 == 0:
+        #     mp.ah.show_armjnts(armjnts=armjnts, rgba=(0, 1, 0, .5))
+
+    mp.ah.show_armjnts(armjnts=pathseq_list[0][1][1][0], rgba=(.7, .7, .7, .5))
+    brp.show_bend(bendresseq[0], show_start=True, show_end=True)
+    brp.show_bend(bendresseq[-1], show_start=True, show_end=True)
+    mp.ah.show_armjnts(armjnts=pathseq_list[0][1][1][-1], rgba=(.7, .7, .7, .5))
     brp.set_bs_stick_sec(180)
-    brp.show_bendresseq(bendresseq)
+    # brp.show_bendresseq(bendresseq)
 
     base.run()
