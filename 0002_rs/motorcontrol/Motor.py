@@ -31,7 +31,7 @@ class MotorNema23():
     def is_open(self):
         return self._comm.is_open()
 
-    def cal_counter(self, degree, reduce_ratio=80, ppr=400):
+    def cal_counter(self, degree, reduce_ratio=10, ppr=400):
         return int(degree * reduce_ratio / 360 * ppr)
 
     def hi(self):
@@ -129,7 +129,8 @@ if __name__ == '__main__':
 
     # motor.goto_pos(-10000)
     # time.sleep(2)
-    motor.rot_degree(clockwise=1, rot_deg=120)
+    motor.rot_degree(clockwise=1, rot_deg=125)
+    # motor.rot_degree(clockwise=1, rot_deg=360)
     # motor.rot_degree(clockwise=1, rot_deg=3)
     # motor.rot_degree(clockwise=1, rot_deg=1)
     # motor.goto_pos(-3000)

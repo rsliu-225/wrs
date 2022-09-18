@@ -29,7 +29,7 @@ int actionSeq[actionNum][maxNumDigit];
 #define enaPin 13
 #define senPin 12
 
-float wait = 500;
+float wait = 2000;
 
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);

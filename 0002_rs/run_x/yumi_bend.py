@@ -114,6 +114,8 @@ if __name__ == '__main__':
     # print(min_f_list)
 
     grasp, pathseq = pathseq_list[0]
+    # mp_x_lft.movepath(pathseq[-1], speed_n=50)
+
     for i, path in enumerate(pathseq[0:]):
         eepos, eerot = mp_x_lft.get_ee(armjnts=mp_x_lft.get_armjnts())
         print(eepos)
@@ -126,7 +128,7 @@ if __name__ == '__main__':
         if len(path) == 1:
             mp_x_lft.goto_armjnts_x(pathseq[0][0])
         else:
-            mp_x_lft.movepath(path, speed_n=20)
+            mp_x_lft.movepath(path, speed_n=50)
 
         time.sleep(3)
         motor.rot_degree(clockwise=0, rot_deg=bend_a)
@@ -165,5 +167,23 @@ if __name__ == '__main__':
                            rgba=(0, 1, 0, 1))
         time.sleep(3)
 
-    mp_x_lft.movepath(pathseq[-1][::-1], speed_n=50)
-
+    # init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendresseq[-1]
+    # bend_a = end_a - init_a + 15
+    #
+    # mp_x_lft.goto_armjnts_x(pathseq[-1][0])
+    # mp_x_lft.movepath(pathseq[-1], speed_n=50)
+    # motor.rot_degree(clockwise=0, rot_deg=bend_a)
+    # goal = _action(os.path.join(fo, f), f"7_goal.pkl",
+    #                bend_a, z_range,
+    #                center=transmat4[:3, 3],
+    #                line_thresh=line_thresh, line_size_thresh=line_size_thresh,
+    #                ulim=None,
+    #                rgba=(0, 1, 0, 1))
+    #
+    # motor.rot_degree(clockwise=1, rot_deg=bend_a)
+    # refine = _action(os.path.join(fo, f), f"7_refine.pkl",
+    #                  bend_a, z_range,
+    #                  center=transmat4[:3, 3],
+    #                  line_thresh=line_thresh, line_size_thresh=line_size_thresh,
+    #                  ulim=None,
+    #                  rgba=(0, 1, 0, 1))

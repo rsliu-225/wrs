@@ -23,8 +23,8 @@ def loadalldata(folder_name, show=True):
             alldata.append(data)
             grayimg = data[0]
             depthimg = data[1]
-            cv2.imwrite(os.path.join(folder_name, "grayimg/", f"{file[:-4]}.jpg"), grayimg)
-            cv2.imwrite(os.path.join(folder_name, "depthimg/", f"{file[:-4]}.jpg"), depthimg)
+            # cv2.imwrite(os.path.join(folder_name, "grayimg/", f"{file[:-4]}.jpg"), grayimg)
+            # cv2.imwrite(os.path.join(folder_name, "depthimg/", f"{file[:-4]}.jpg"), depthimg)
             if show:
                 cv2.imshow(str(file), depthimg)
                 cv2.waitKey(0)
@@ -43,5 +43,6 @@ def show_pcd(folder_name):
 if __name__ == '__main__':
     import visualization.panda.world as wd
 
-    loadalldata('./seq/plate/')
+    # loadalldata('./seq/plate/')
+    loadalldata('.\exp_bend\stick\\randomc/')
     # show_pcd('./')

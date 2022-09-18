@@ -41,5 +41,5 @@ if __name__ == '__main__':
     #                 [-0.202360828, 0.00546017392, -0.96800006, 0.94915224], [0.0, 0.0, 0.0, 1.0]]}
     f_name = "result"
     img_num = 1
-    get_img(f_name, img_num, path='phoxi/exp_bend/stick/chair/')
+    get_img(f_name, img_num, path='phoxi/exp_bend/stick/randomc/')
     # get_jnt(f_name, img_num, armname="rgt")

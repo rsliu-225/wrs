@@ -36,7 +36,7 @@ def get_transmat4_marker():
     pcdu.show_pcd(pcd, rgba=(1, 1, 1, .5))
     gm.gen_sphere(centermat4[:3, 3], radius=.005).attach_to(base)
     gm.gen_frame(centermat4[:3, 3], centermat4[:3, :3]).attach_to(base)
-    residual = (1.5, -3, 0)
+    residual = (0, -3, 0)
 
     center_pillar_pos = centermat4[:3, 3] + \
                         centermat4[:3, 0] * (75 - 45.43 + residual[0]) / 1000 + \
@@ -62,10 +62,10 @@ if __name__ == '__main__':
     fo = 'stick'
     rbt_name = 'yumi'
 
-    plan = False
+    plan = True
     opt = False
-    calibrate = False
-    refine = False
+    calibrate = True
+    refine = True
 
     if rbt_name == 'yumi':
         base, env = el.loadEnv_yumi()
@@ -78,7 +78,6 @@ if __name__ == '__main__':
         transmat4 = rm.homomat_from_posrot(transmat4[:3, 3] + np.asarray([0, 0, .008]), transmat4[:3, :3])
         grasp_f_name = 'stick_yumi'
         gm.gen_frame(transmat4[:3, 3], transmat4[:3, :3]).attach_to(base)
-        # base.run()
     else:
         base, env = el.loadEnv_wrs()
         rbt = el.loadUr3e()
@@ -124,9 +123,9 @@ if __name__ == '__main__':
         # for i in range(len(bendset)):
         #     bendset[i][-1] = bendset[i][-1] -.05
         brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp)
-
         # grasp_list = grasp_list[140:190]
         brp.set_up(bendset, grasp_list, transmat4)
+        # base.run()
         brp.run(f_name=f_name, fo=f'{fo}/{rbt_name}')
 
     '''
