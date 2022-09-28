@@ -517,6 +517,16 @@ class BendSim(object):
             gm.gen_frame(self.pseq[inx], self.rotseq[inx], length=.01, thickness=.0004).attach_to(base)
             self.show(rgba=(.7, .7, 0, .7), show_frame=True, show_pseq=True)
 
+    def get_updown_primitive(self):
+        rot = rm.rotmat_from_axangle((0, 0, 1), np.pi/18)
+        pseq = self._rot_new_orgin(self.pseq, np.asarray((-self.bend_r, 0, 0)), rot)
+        rotseq = np.asarray([rot.dot(r) for r in self.rotseq])
+
+        vertices, faces = self.gen_stick(pseq, rotseq, r=self.thickness/2, section=30)
+        tmp_cm = cm.CollisionModel(initor=trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces)),
+                                   btwosided=True, name='obj')
+        tmp_cm.attach_to(base)
+
     def _cal_length(self):
         length = 0
         for i in range(len(self.pseq)):
@@ -790,13 +800,12 @@ if __name__ == '__main__':
     import visualization.panda.world as wd
 
     base = wd.World(cam_pos=[.075, .1, .05], lookat_pos=[0, 0, 0])
-    bs = BendSim(show=False, cm_type='stick', granularity=np.pi / 30)
-    bs.set_r_center(.015 / 2)
+    bs = BendSim(show=True, cm_type='stick', granularity=np.pi / 30)
     bs.set_stick_sec(180)
-    bs.pillar_center = cm.gen_stick(spos=np.asarray([0, 0, -bconfig.PILLAR_H / 2.5]),
-                                    epos=np.asarray([0, 0, bconfig.PILLAR_H / 2.5]),
-                                    thickness=bs.r_center * 2, sections=90,
-                                    rgba=[.9, .9, .9, 1]).attach_to(base)
+    # bs.pillar_center = cm.gen_stick(spos=np.asarray([0, 0, -bconfig.PILLAR_H / 2.5]),
+    #                                 epos=np.asarray([0, 0, bconfig.PILLAR_H / 2.5]),
+    #                                 thickness=bs.r_center * 2, sections=90,
+    #                                 rgba=[.9, .9, .9, 1]).attach_to(base)
     bendset = [
         # [np.radians(225), np.radians(0), np.radians(0), .04],
         # [np.radians(-90), np.radians(0), np.radians(0), .08],
@@ -821,6 +830,8 @@ if __name__ == '__main__':
     # bs.show(rgba=(.7, .7, 0, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
     bs.show(rgba=(.7, .7, 0, .7), show_frame=True)
     # bu.visualize_voxel([bs.voxelize()], colors=['r'])
+
+    bs.get_updown_primitive()
 
     # bs.move_to_org(.04)
     # bs.show(rgba=(.7, .7, .7, .7), show_frame=True, show_pseq=False)

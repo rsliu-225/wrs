@@ -10,6 +10,20 @@ import pickle
 from multiprocessing import Process
 
 
+def runInParallel(fn, args):
+    proc = []
+    for arg in args:
+        p = Process(target=fn, args=arg)
+        p.start()
+        proc.append(p)
+    for p in proc:
+        p.join()
+
+
+def function(num_output, name, class_name):
+    gen_multiview_lc(comb_num=num_output, cat=name, class_name=class_name)
+
+
 # Print iterations progress
 def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█'):
     percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
@@ -18,7 +32,7 @@ def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=
     return f'\r{prefix} |{bar}| {percent}% {suffix}'
 
 
-def gen_seed(input, kind="cubic",random=True):
+def gen_seed(input, kind="cubic", random=True):
     # Width & Thickness of the stick
     width = .008  # + (np.random.uniform(0, 0.005) if random else 0)
     thickness = .0015
@@ -55,7 +69,8 @@ def init_gen(factor, class_name, seed, res=(550, 550), rot_center=(0, 0, 0), max
             np.random.shuffle(mats)
             for j, rot in enumerate(mats[:max_num]):
                 get_objpcd_partial_o3d(objcm, rot, (0, 0, 0), f_name='_'.join([str(i), str(j), class_name]),
-                                       resolusion=res, add_occ=True, add_noise=True, occ_vt_ratio=random.uniform(.5, 1), noise_vt_ration=random.uniform(.5, 1),)
+                                       resolusion=res, add_occ=True, add_noise=True, occ_vt_ratio=random.uniform(.5, 1),
+                                       noise_vt_ration=random.uniform(.5, 1), )
                 rot_dict[j] = rm.homomat_from_posrot(rot_center, rot)
 
             cache_data[i] = rot_dict
@@ -133,6 +148,7 @@ def init_gen(factor, class_name, seed, res=(550, 550), rot_center=(0, 0, 0), max
         pickle.dump(cache_data, open(f'partial/{class_name}.pkl', 'wb'))
         cal_stats("partial", class_name)
 
+
 def cal_stats(path, class_name):
     stats = [50000, 0, 0]
     cnt = 0
@@ -190,20 +206,6 @@ def show_some_pcd(path, num, class_name, dist=0.01):
     show_pcd_pts(pcd_np)
 
 
-def runInParallel(fn, args):
-    proc = []
-    for arg in args:
-        p = Process(target=fn, args=arg)
-        p.start()
-        proc.append(p)
-    for p in proc:
-        p.join()
-
-
-def function(num_output, name, class_name):
-    gen_multiview_lc(comb_num=num_output, cat=name, class_name=class_name)
-
-
 def test_pcd():
     comeplte_dir = os.path.join("cubic", "complete")
     for complete_file in os.listdir(comeplte_dir):
@@ -228,15 +230,19 @@ def get_args(name, num_class, num_output):
 def gen_args(cat):
     return [[cat, cat + str(i + 1)] for i in range(16)]
 
+
 def new_args(fact, cat, rng):
-    # seed_list = [[[0, 0, 0], [.03, 0, 0.005], [.07, 0, 0.01], [.15, 0.01, 0.01]], [[0, 0.001, 0.01], [.08, 0, 0.01], [0.14, 0, 0.0096], [.15, 0, 0.0096]], [[0, 0.001, 0.001], [.08, 0, 0.001], [0.14, 0, 0.001], [.15, 0.001, 0.001]]]
-    return [[fact, cat+str(i+1), i%4] for i in range(rng[0], rng[1])]
+    # seed_list = [[[0, 0, 0], [.03, 0, 0.005], [.07, 0, 0.01], [.15, 0.01, 0.01]],
+    #              [[0, 0.001, 0.01], [.08, 0, 0.01], [0.14, 0, 0.0096], [.15, 0, 0.0096]],
+    #              [[0, 0.001, 0.001], [.08, 0, 0.001], [0.14, 0, 0.001], [.15, 0.001, 0.001]]]
+    return [[fact, cat + str(i + 1), i % 4] for i in range(rng[0], rng[1])]
+
 
 if __name__ == '__main__':
-    args_list = new_args(60, "cubic", (0,8))
+    args_list = new_args(60, "cubic", (0, 8))
     print(args_list)
     runInParallel(init_gen, new_args(60, "cubic", (0, 8)))
-    runInParallel(init_gen, new_args(60, "cubic", (8,16)))
+    runInParallel(init_gen, new_args(60, "cubic", (8, 16)))
     # runInParallel(gen_multiview_for_complete_pcd, gen_args("quad"))
     # runInParallel(gen_multiview_for_complete_pcd, gen_args("linear"))
     # gen_multiview_for_complete_pcd("cubic", "cubic1")
@@ -267,13 +273,20 @@ b = [[0, 0.001, 0.01], [.08, 0, 0.01], [0.14, 0, 0.0096], [.15, 0, 0.0096]]  # T
 c = [[0, 0.001, 0.001], [.08, 0, 0.001], [0.14, 0, 0.001], [.15, 0.001, 0.001]]  # Flat
 
 # Quadratic (total = 2*3*42*20)
-aa = [[0, 0, 0], [.15, 0.005, 0.035], [.2, 0.01, 0]]  # 1 turning point with varying magnitude
-bb = [[0, 0, 0], [.05, 0.01, 0], [.1, 0.03, 0.015], [.15 + x, 0.06, 0.025 + x * 3]]  # 1 turning point with varying magnitude & twisting point (2 points are near) x=(0, 0.02)
-cc = [[0, 0, 0], [.05, 0.01, -0.02], [.1, 0.03, 0.01], [.15 + x, 0.07 + x, 0.055 + x]]  # 1 turning point with varying magnitude & twisting point (2 points are far) x=(0, 0.03)
+aa = [[0, 0, 0], [.15, 0.005, 0.035], [.2, 0.01, 0]]
+# 1 turning point with varying magnitude
+bb = [[0, 0, 0], [.05, 0.01, 0], [.1, 0.03, 0.015], [.15 + x, 0.06, 0.025 + x * 3]]
+# 1 turning point with varying magnitude & twisting point (2 points are near) x=(0, 0.02)
+cc = [[0, 0, 0], [.05, 0.01, -0.02], [.1, 0.03, 0.01], [.15 + x, 0.07 + x, 0.055 + x]]
+# 1 turning point with varying magnitude & twisting point (2 points are far) x=(0, 0.03)
 
 # Cubic (total = 4*4*42*20)
-aaa = [[0, 0.03 + x, 0], [.08, 0, 0], [0.14, 0, 0], [0.2, -0.03 - x, 0]]  # 2 turning points with varying magnitude & distance between each other x=(0, 0.05)
-bbb = [[0, 0, 0], [0.07, 0.05, 0.05 + x], [0.14, 0.15, -0.05 + x], [.2, 0.3, 0]]  # Above aaa + twisting in the middle x=(-0.02, 0.02)
-ccc = [[0, 0, 0.03 + x], [.08, 0.03 + x_2, 0], [0.14, 0, 0], [0.2, -0.03 + x_2, -0.03 - x]]  # x=(0, 0.02), x_2=(0, 0.015)
-ddd = [[0, 0, 0.03 - x_2], [.08, 0.04 + x, 0], [0.14, 0 - x, 0], [0.2 + x, -0.04, -0.03 - x_2]]  # x=(0, 0.015), x_2=(0, 0.02)
+aaa = [[0, 0.03 + x, 0], [.08, 0, 0], [0.14, 0, 0], [0.2, -0.03 - x, 0]]
+# 2 turning points with varying magnitude & distance between each other x=(0, 0.05)
+bbb = [[0, 0, 0], [0.07, 0.05, 0.05 + x], [0.14, 0.15, -0.05 + x], [.2, 0.3, 0]]
+# Above aaa + twisting in the middle x=(-0.02, 0.02)
+ccc = [[0, 0, 0.03 + x], [.08, 0.03 + x_2, 0], [0.14, 0, 0], [0.2, -0.03 + x_2, -0.03 - x]]
+# x=(0, 0.02), x_2=(0, 0.015)
+ddd = [[0, 0, 0.03 - x_2], [.08, 0.04 + x, 0], [0.14, 0 - x, 0], [0.2 + x, -0.04, -0.03 - x_2]]
+# x=(0, 0.015), x_2=(0, 0.02)
 # [[0, 0.03 + np.random.uniform(-0.01, 0.05), 0], [.08, 0, 0], [0.14, 0, 0], [0.2, -0.03 - np.random.uniform(-0.01, 0.05), 0]]

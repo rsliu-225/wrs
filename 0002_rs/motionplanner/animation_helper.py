@@ -144,9 +144,10 @@ class AnimationHelper(object):
             else:
                 self.__gensnp_by_armname(toggleendcoord=toggleendcoord)
 
-    def show_armjnts_with_obj(self, armjnts, obj, objrelpos, objrelrot, toggleendcoord=False, rgba=(1, 1, 1, .5)):
+    def show_armjnts_with_obj(self, armjnts, obj, objrelpos, objrelrot, toggleendcoord=False, togglejntcoord=False,
+                              rgba=(1, 1, 1, .5)):
         self.rbt.fk(self.armname, armjnts)
-        self.__genmnp_by_armname(rgba=rgba, toggleendcoord=toggleendcoord)
+        self.__genmnp_by_armname(rgba=rgba, toggleendcoord=toggleendcoord, togglejntcoord=togglejntcoord)
         objpos, objrot = self.arm.cvt_gl_to_loc_tcp(objrelpos, objrelrot)
         objmat4 = rm.homomat_from_posrot(objpos, objrot)
         gm.gen_sphere(pos=objmat4[:3, 3], rgba=(1, 1, 0, 1))
@@ -155,14 +156,15 @@ class AnimationHelper(object):
         obj.attach_to(base)
         obj.showlocalframe()
 
-    def show_armjnts(self, rgba=None, armjnts=None, toggleendcoord=False, jawwidth=50, genmnp=True):
+    def show_armjnts(self, rgba=None, armjnts=None, toggleendcoord=False, togglejntcoord=False, jawwidth=50,
+                     genmnp=True):
         if armjnts is not None:
             self.rbt.fk(self.armname, jnt_values=armjnts)
-
         if genmnp:
-            self.__genmnp_by_armname(rgba=rgba, toggleendcoord=toggleendcoord, jawwidth=jawwidth)
+            self.__genmnp_by_armname(rgba=rgba, toggleendcoord=toggleendcoord, togglejntcoord=togglejntcoord,
+                                     jawwidth=jawwidth)
         else:
-            self.__gensnp_by_armname(toggleendcoord=toggleendcoord)
+            self.__gensnp_by_armname(toggleendcoord=toggleendcoord, togglejntcoord=togglejntcoord)
 
     def show_hnd(self, rgba=None, armjnts=None, toggleendcoord=False, jawwidth=.05):
         eepos, eerot = self.rbth.get_tcp(armjnts=armjnts)
@@ -205,17 +207,17 @@ class AnimationHelper(object):
                                          obj_lft, objrelpos_lft, objrelrot_lft, obj_rgt, objrelpos_rgt, objrelrot_rgt],
                               appendTask=True)
 
-    def __genmnp_by_armname(self, rgba, toggleendcoord=False, jawwidth=50):
+    def __genmnp_by_armname(self, rgba, toggleendcoord=False, togglejntcoord=False, jawwidth=50):
         if self.armname == "lft_arm":
-            self.rbt.gen_meshmodel(toggle_tcpcs=toggleendcoord, rgba=rgba).attach_to(base)
+            self.rbt.gen_meshmodel(toggle_tcpcs=toggleendcoord, toggle_jntscs=togglejntcoord, rgba=rgba).attach_to(base)
         else:
-            self.rbt.gen_meshmodel(toggle_tcpcs=toggleendcoord, rgba=rgba).attach_to(base)
+            self.rbt.gen_meshmodel(toggle_tcpcs=toggleendcoord, toggle_jntscs=togglejntcoord, rgba=rgba).attach_to(base)
 
-    def __gensnp_by_armname(self, toggleendcoord=False):
+    def __gensnp_by_armname(self, toggleendcoord=False, togglejntcoord=False):
         if self.armname == "lft_arm":
-            self.rbt.gen_stickmodel(toggle_jntscs=False, toggle_tcpcs=toggleendcoord).attach_to(base)
+            self.rbt.gen_stickmodel(toggle_jntscs=togglejntcoord, toggle_tcpcs=toggleendcoord).attach_to(base)
         else:
-            self.rbt.gen_stickmodel(toggle_jntscs=False, toggle_tcpcs=toggleendcoord).attach_to(base)
+            self.rbt.gen_stickmodel(toggle_jntscs=togglejntcoord, toggle_tcpcs=toggleendcoord).attach_to(base)
 
     def __update(self, rbtmnp, motioncounter, rbt, path, armname, task):
         if motioncounter[0] < len(path):

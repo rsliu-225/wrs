@@ -56,16 +56,16 @@ def cal_pseq_lenght(pseq):
 
 
 if __name__ == '__main__':
-    f_name = 'randomc'
-    # f_name = 'chair'
+    # f_name = 'randomc'
+    f_name = 'chair'
     # f_name = 'penta'
     fo = 'stick'
-    rbt_name = 'yumi'
+    rbt_name = 'ur'
 
     plan = True
     opt = False
-    calibrate = True
-    refine = True
+    calibrate = False
+    refine = False
 
     if rbt_name == 'yumi':
         base, env = el.loadEnv_yumi()
@@ -75,13 +75,14 @@ if __name__ == '__main__':
             pickle.dump(transmat4,
                         open(f'{config.ROOT}/bendplanner/planres/{fo}/{rbt_name}/{f_name}_transmat4.pkl', 'wb'))
         transmat4 = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{rbt_name}/{f_name}_transmat4.pkl', 'rb'))
-        transmat4 = rm.homomat_from_posrot(transmat4[:3, 3] + np.asarray([0, 0, .008]), transmat4[:3, :3])
+        transmat4 = rm.homomat_from_posrot(transmat4[:3, 3] + np.asarray([0, 0, .008]),
+                                           transmat4[:3, :3])
         grasp_f_name = 'stick_yumi'
         gm.gen_frame(transmat4[:3, 3], transmat4[:3, :3]).attach_to(base)
     else:
         base, env = el.loadEnv_wrs()
         rbt = el.loadUr3e()
-        transmat4 = rm.homomat_from_posrot((.6, 0, bconfig.BENDER_H + .78),
+        transmat4 = rm.homomat_from_posrot((.8, .2, bconfig.BENDER_H + .78),
                                            rm.rotmat_from_axangle((0, 0, 1), np.pi))
         grasp_f_name = 'stick'
 

@@ -22,8 +22,8 @@ if __name__ == '__main__':
     # rbt = el.loadUr3e()
     # transmat4 = rm.homomat_from_posrot((.7, -.2, .78 + bconfig.BENDER_H), np.eye(3))
 
-    # base, env = el.loadEnv_yumi(camp=[2.5, -2, 1.8], lookatpos=[.45, .1, .1])
-    base, env = el.loadEnv_yumi(camp=[.45, .1, 1.8], lookatpos=[.45, .1, 0])
+    base, env = el.loadEnv_yumi(camp=[2.5, -2, 1.8], lookatpos=[.45, .1, .1])
+    # base, env = el.loadEnv_yumi(camp=[.45, .1, 1.8], lookatpos=[.45, .1, 0])
     rbt = el.loadYumi(showrbt=False)
     transmat4 = rm.homomat_from_posrot((.45, .1, bconfig.BENDER_H), rm.rotmat_from_axangle((0, 0, 1), np.pi))
     # transmat4 = rm.homomat_from_posrot((.4, -.1, bconfig.BENDER_H))
@@ -74,20 +74,22 @@ if __name__ == '__main__':
     # pathseq_list, min_f_list, f_list = brp.check_force(bendresseq, pathseq_list)
     # brp.show_motion_withrbt(bendresseq, pathseq_list[0][1])
 
-    for i, armjnts in enumerate(pathseq_list[0][1][1][1:-2]):
-        if i == 0:
-            continue
-        eepos_s, _ = mp.get_ee(pathseq_list[0][1][1][i])
-        eepos_e, _ = mp.get_ee(pathseq_list[0][1][1][i - 1])
-        # gm.gen_arrow(np.asarray(eepos_s), np.asarray(eepos_e), thickness=.002, rgba=(0, 1, 0, 1)).attach_to(base)
-        gm.gen_sphere(np.asarray(eepos_s), radius=.002, rgba=(0, 1, 0, 1)).attach_to(base)
-        # if i % 2 == 0:
-        #     mp.ah.show_armjnts(armjnts=armjnts, rgba=(0, 1, 0, .5))
+    # for i, armjnts in enumerate(pathseq_list[0][1][1][1:-2]):
+    #     if i == 0:
+    #         continue
+    #     eepos_s, _ = mp.get_ee(pathseq_list[0][1][1][i])
+    #     eepos_e, _ = mp.get_ee(pathseq_list[0][1][1][i - 1])
+    #     # gm.gen_arrow(np.asarray(eepos_s), np.asarray(eepos_e), thickness=.002, rgba=(0, 1, 0, 1)).attach_to(base)
+    #     # gm.gen_sphere(np.asarray(eepos_s), radius=.002, rgba=(0, 1, 0, 1)).attach_to(base)
+    #     if i % 2 == 0:
+    #         mp.ah.show_armjnts(armjnts=armjnts, rgba=(0, 1, 0, .5))
 
-    mp.ah.show_armjnts(armjnts=pathseq_list[0][1][1][0], rgba=(.7, .7, .7, .5))
-    brp.show_bend(bendresseq[0], show_start=True, show_end=True)
+    # brp.show_bend(bendresseq[0], show_start=True, show_end=True)
     brp.show_bend(bendresseq[-1], show_start=True, show_end=True)
-    mp.ah.show_armjnts(armjnts=pathseq_list[0][1][1][-1], rgba=(.7, .7, .7, .5))
+    # mp.ah.show_armjnts(armjnts=pathseq_list[0][1][1][0], rgba=(.7, .7, .7, .5))
+    # mp.ah.show_armjnts(armjnts=pathseq_list[0][1][1][-1], rgba=(.7, .7, .7, .5))
+    # mp.ah.show_armjnts(armjnts=pathseq_list[0][1][1][0])
+    mp.ah.show_armjnts(armjnts=pathseq_list[0][1][1][-1])
     brp.set_bs_stick_sec(180)
     # brp.show_bendresseq(bendresseq)
 
