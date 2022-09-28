@@ -184,6 +184,6 @@ if __name__ == '__main__':
     # brp.show_bend_crop(bendresseq[show_step], bendseq[show_step][-1])
     # base.run()
 
-    brp.show_motion_withrbt(bendresseq, pathseq_list[1][1])
+    brp.show_motion_withrbt(bendresseq, pathseq_list[3][1])
     # brp.show_bendresseq_withrbt(bendresseq, armjntsseq_list[0][1])
     base.run()
