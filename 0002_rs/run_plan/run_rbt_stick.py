@@ -57,12 +57,12 @@ def cal_pseq_lenght(pseq):
 
 if __name__ == '__main__':
     # f_name = 'randomc'
-    f_name = 'chair'
-    # f_name = 'penta'
+    # f_name = 'chair'
+    f_name = 'penta'
     fo = 'stick'
     rbt_name = 'ur'
 
-    plan = True
+    plan = False
     opt = False
     calibrate = False
     refine = False
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     else:
         base, env = el.loadEnv_wrs()
         rbt = el.loadUr3e()
-        transmat4 = rm.homomat_from_posrot((.8, .2, bconfig.BENDER_H + .78),
+        transmat4 = rm.homomat_from_posrot((.8, .2, bconfig.BENDER_H + .8),
                                            rm.rotmat_from_axangle((0, 0, 1), np.pi))
         grasp_f_name = 'stick'
 
@@ -184,6 +184,6 @@ if __name__ == '__main__':
     # brp.show_bend_crop(bendresseq[show_step], bendseq[show_step][-1])
     # base.run()
 
-    brp.show_motion_withrbt(bendresseq, pathseq_list[0][1])
+    brp.show_motion_withrbt(bendresseq, pathseq_list[1][1])
     # brp.show_bendresseq_withrbt(bendresseq, armjntsseq_list[0][1])
     base.run()
