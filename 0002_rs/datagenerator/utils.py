@@ -293,10 +293,9 @@ def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolus
                                           noise_mean=1e-4, noise_sigma=1e-4, ratio=noise_vt_ration)
         o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
 
-    o3dpcd = resample(o3dpcd, num=8192)
+    o3dpcd = resample(o3dpcd, smp_num=2048)
     o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
-
-    save_complete_pcd(f_name, o3dmesh, path=path)
+    save_complete_pcd(f_name, o3dmesh, path=path, method='possion', smp_num=2048)
 
     if savemesh:
         o3d.io.write_triangle_mesh(os.path.join(path, 'mesh', f_name + '.ply'), o3dmesh)
@@ -311,10 +310,13 @@ def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolus
     if toggledebug:
         o3dpcd_org = o3d.io.read_point_cloud(os.path.join(path, f_name + f'_tmp{ext_name}'))
         o3dpcd = o3d.io.read_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'))
+        o3dpcd_complete = o3d.io.read_point_cloud(os.path.join(path, 'complete', f'{f_name}{ext_name}'))
         o3dpcd_org.paint_uniform_color([0, 0.706, 1])
         o3dpcd.paint_uniform_color([0.706, 0, 1])
-        o3d.visualization.draw_geometries([o3dpcd, o3dpcd_org])
-        print(len(o3dpcd.points), len(o3dpcd_org.points))
+        o3dpcd_complete.paint_uniform_color([1, 0.706, 0])
+        o3d.visualization.draw_geometries([o3dpcd, o3dpcd_complete])
+        o3d.visualization.draw_geometries([o3dpcd_org, o3dpcd_complete])
+        print(len(o3dpcd.points), len(o3dpcd_complete.points))
     os.remove(os.path.join(path, f_name + f'_tmp{ext_name}'))
     return o3dpcd
 
@@ -504,19 +506,21 @@ def add_guassian_noise_by_vt(o3dpcd, vts, nrmls, noise_mean=1e-4, noise_sigma=1e
     return o3dh.nparray2o3dpcd(pcd)
 
 
-def resample(o3dpcd, num=8192):
+def resample(o3dpcd, smp_num=8192):
     pcd = list(np.asarray(o3dpcd.points))
-    if len(pcd) > num:
-        if int(len(pcd) / num) > 1:
-            o3dpcd = o3dpcd.uniform_down_sample(int(len(pcd) / num))
+    # print('Input length:', len(pcd))
+    while len(pcd) != smp_num:
+        pcd = list(np.asarray(o3dpcd.points))
+        if len(pcd) > smp_num:
+            if int(len(pcd) / smp_num) > 1:
+                o3dpcd = o3dpcd.uniform_down_sample(int(len(pcd) / smp_num))
+            o3dpcd = o3dpcd.random_down_sample(smp_num / len(np.asarray(o3dpcd.points)))
         else:
-            o3dpcd = o3dpcd.random_down_sample(num / len(pcd))
-    else:
-        remain = num % len(pcd)
-        for i in range(int(num / len(pcd))-1):
-            pcd = pcd + pcd
-        pcd = pcd + pcd[:remain]
-        o3dpcd = o3dh.nparray2o3dpcd(np.asarray(pcd))
+            remain = smp_num % len(pcd)
+            for i in range(int(smp_num / len(pcd)) - 1):
+                pcd = pcd + pcd
+            pcd = pcd + pcd[:remain]
+            o3dpcd = o3dh.nparray2o3dpcd(np.asarray(pcd))
 
     return o3dpcd
 
@@ -565,7 +569,7 @@ def get_uniq_id(name, fact):
     return int(parts[0]) * fact + int(parts[1])
 
 
-def save_complete_pcd(name, mesh, path="./", method='uniform'):
+def save_complete_pcd(name, mesh, path="./", method='uniform', smp_num=16384):
     path = os.path.join(path, 'complete/')
     if not os.path.exists(path):
         os.mkdir(path)
@@ -577,4 +581,4 @@ def save_complete_pcd(name, mesh, path="./", method='uniform'):
     #     except:
     #         continue
     # if not exist:
-    o3d.io.write_point_cloud(path + name + '.pcd', get_objpcd_full_sample_o3d(mesh, method=method))
+    o3d.io.write_point_cloud(path + name + '.pcd', get_objpcd_full_sample_o3d(mesh, method=method, smp_num=smp_num))

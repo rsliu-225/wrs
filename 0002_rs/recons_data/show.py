@@ -7,6 +7,7 @@ def show_sgl(folder_name='plate_a_cubic'):
     for f in sorted(os.listdir(folder_name)):
         if f[-3:] == 'pcd':
             o3dpcd = o3d.io.read_point_cloud(os.path.join(folder_name, f))
+            print(len(o3dpcd.points))
             o3d.visualization.draw_geometries([o3dpcd])
 
 
@@ -15,7 +16,6 @@ def show_sgl_p3d(folder_name='plate_a_cubic', fname=None):
     for f in sorted(os.listdir(folder_name)):
         if f == fname or fname is None:
             o3dpcd = o3d.io.read_point_cloud(os.path.join(folder_name, f))
-            print(o3dpcd.points)
             gm.gen_pointcloud(o3dpcd.points).attach_to(base)
 
 

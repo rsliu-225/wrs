@@ -18,10 +18,9 @@ import modeling.collision_model as cm
 import modeling.geometric_model as gm
 
 import datagenerator.utils as utl
+import visualization.panda.world as wd
 
 if __name__ == '__main__':
-    import visualization.panda.world as wd
-
     cam_pos = np.asarray([0, 0, .5])
     base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
     width = .005
@@ -65,7 +64,7 @@ if __name__ == '__main__':
     #                                  f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
     #                                  occ_vt_ratio=random.uniform(.5, 1), noise_vt_ration=random.uniform(.5, 1),
     #                                  add_noise=True, add_occ=True, toggledebug=True)
-    utl.get_objpcd_partial_o3d(objcm, np.eye(3), rot_center, path=path,
+    utl.get_objpcd_partial_o3d(objcm, np.eye(3), rot_center, path=path, resolusion=(550, 550),
                                f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
                                occ_vt_ratio=random.uniform(.5, 1), noise_vt_ration=random.uniform(.5, 1),
                                add_noise=True, add_occ=True, toggledebug=True)
