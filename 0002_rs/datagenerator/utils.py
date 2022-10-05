@@ -280,18 +280,22 @@ def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolus
 
     vis.add_geometry(o3dmesh)
     vis.poll_events()
-    vis.capture_depth_point_cloud(os.path.join(path, f_name + f'_partial_org{ext_name}'), do_render=False,
+    vis.capture_depth_point_cloud(os.path.join(path, f_name + f'_tmp{ext_name}'), do_render=False,
                                   convert_to_world_coordinate=True)
-    o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f_name + f'_partial_org{ext_name}'))
+    o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f_name + f'_tmp{ext_name}'))
     if add_occ:
         o3dpcd = add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=(.3, .6))
         o3dpcd = add_random_occ_by_vt(o3dpcd, np.asarray(o3dmesh.vertices),
                                       edg_radius=1e-3, edg_sigma=3e-4, ratio=occ_vt_ratio)
-        o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}_partial{ext_name}'), o3dpcd)
+        o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
     if add_noise:
         o3dpcd = add_guassian_noise_by_vt(o3dpcd, np.asarray(o3dmesh.vertices), np.asarray(o3dmesh.vertex_normals),
                                           noise_mean=1e-4, noise_sigma=1e-4, ratio=noise_vt_ration)
-        o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}_partial{ext_name}'), o3dpcd)
+        o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
+
+    o3dpcd = resample(o3dpcd, num=8192)
+    o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
+
     save_complete_pcd(f_name, o3dmesh, path=path)
 
     if savemesh:
@@ -305,12 +309,13 @@ def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolus
     vis.destroy_window()
 
     if toggledebug:
-        o3dpcd_org = o3d.io.read_point_cloud(os.path.join(path, f_name + f'_partial_org{ext_name}'))
+        o3dpcd_org = o3d.io.read_point_cloud(os.path.join(path, f_name + f'_tmp{ext_name}'))
         o3dpcd = o3d.io.read_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'))
         o3dpcd_org.paint_uniform_color([0, 0.706, 1])
         o3dpcd.paint_uniform_color([0.706, 0, 1])
         o3d.visualization.draw_geometries([o3dpcd, o3dpcd_org])
-    os.remove(os.path.join(path, f_name + f'_partial_org{ext_name}'))
+        print(len(o3dpcd.points), len(o3dpcd_org.points))
+    os.remove(os.path.join(path, f_name + f'_tmp{ext_name}'))
     return o3dpcd
 
 
@@ -401,7 +406,6 @@ def get_objpcd_full_sample_o3d(o3dmesh, smp_num=16384, toggledebug=False, method
         o3dpcd = o3dmesh.sample_points_poisson_disk(number_of_points=smp_num)
     if toggledebug:
         gm.gen_pointcloud(o3dpcd.points).attach_to(base)
-
     return o3dpcd
 
 
@@ -500,6 +504,23 @@ def add_guassian_noise_by_vt(o3dpcd, vts, nrmls, noise_mean=1e-4, noise_sigma=1e
     return o3dh.nparray2o3dpcd(pcd)
 
 
+def resample(o3dpcd, num=8192):
+    pcd = list(np.asarray(o3dpcd.points))
+    if len(pcd) > num:
+        if int(len(pcd) / num) > 1:
+            o3dpcd = o3dpcd.uniform_down_sample(int(len(pcd) / num))
+        else:
+            o3dpcd = o3dpcd.random_down_sample(num / len(pcd))
+    else:
+        remain = num % len(pcd)
+        for i in range(int(num / len(pcd))-1):
+            pcd = pcd + pcd
+        pcd = pcd + pcd[:remain]
+        o3dpcd = o3dh.nparray2o3dpcd(np.asarray(pcd))
+
+    return o3dpcd
+
+
 '''
 view control
 '''
@@ -544,7 +565,7 @@ def get_uniq_id(name, fact):
     return int(parts[0]) * fact + int(parts[1])
 
 
-def save_complete_pcd(name, mesh, path="./"):
+def save_complete_pcd(name, mesh, path="./", method='uniform'):
     path = os.path.join(path, 'complete/')
     if not os.path.exists(path):
         os.mkdir(path)
@@ -556,4 +577,4 @@ def save_complete_pcd(name, mesh, path="./"):
     #     except:
     #         continue
     # if not exist:
-    o3d.io.write_point_cloud(path + name + '_complete.pcd', get_objpcd_full_sample_o3d(mesh))
+    o3d.io.write_point_cloud(path + name + '.pcd', get_objpcd_full_sample_o3d(mesh, method=method))
