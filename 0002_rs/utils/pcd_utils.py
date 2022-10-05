@@ -9,6 +9,7 @@ import numpy as np
 import open3d as o3d
 from matplotlib import pyplot as plt
 from skimage.morphology import skeletonize
+from sklearn.mixture import GaussianMixture
 from sklearn import linear_model
 from sklearn.cluster import DBSCAN
 from sklearn.neighbors import KDTree
@@ -780,6 +781,15 @@ def extract_main_vec(pts, nrmls, confs, threshold=np.radians(30)):
 
     nbv_inx_list = list(nbv_inx_dict.keys())
     return np.asarray(pts)[nbv_inx_list], np.asarray(nrmls)[nbv_inx_list], np.asarray(confs)[nbv_inx_list]
+
+
+def get_kpts_gmm(objpcd, n_components=20, show=True, rgba=(1, 0, 0, 1)):
+    X = np.array(objpcd)
+    gmix = GaussianMixture(n_components=n_components, random_state=0).fit(X)
+    if show:
+        for p in gmix.means_:
+            gm.gen_sphere(p, radius=.001, rgba=rgba).attach_to(base)
+    return np.asarray(gmix.means_)
 
 
 def cal_nbv(pts, nrmls, confs, cam_pos=np.asarray([0, 0, 0]), toggledebug=False):

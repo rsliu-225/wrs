@@ -23,6 +23,11 @@ affine_mat = np.asarray([[0.00282079054, -1.00400178, -0.000574846621, 0.3125535
                          [-0.202360828, 0.00546017392, -0.96800006, 0.94915224],
                          [0.0, 0.0, 0.0, 1.0]])
 
+# amat = np.asarray([[6.01298773e-02, -9.78207659e-01, 1.98731412e-01, 5.16091421e+02]
+#                    [-9.79046435e-01, -1.89910797e-02, 2.02749641e-01, -1.70789291e+02]
+#                    [-1.94557128e-01, -2.06758591e-01, -9.58852652e-01, 1.75997120e+03]
+#                    [0, 0, 0, 1]])
+
 
 def get_transmat4_marker():
     phxi = phoxi.Phoxi(host=config.PHOXI_HOST)
@@ -56,16 +61,16 @@ def cal_pseq_lenght(pseq):
 
 
 if __name__ == '__main__':
-    f_name = 'randomc'
+    # f_name = 'randomc'
     # f_name = 'chair'
-    # f_name = 'penta'
+    f_name = 'penta'
     fo = 'stick'
-    rbt_name = 'yumi'
+    rbt_name = 'ur'
 
-    plan = True
+    plan = False
     opt = False
-    calibrate = True
-    refine = True
+    calibrate = False
+    refine = False
 
     if rbt_name == 'yumi':
         base, env = el.loadEnv_yumi()
@@ -75,13 +80,14 @@ if __name__ == '__main__':
             pickle.dump(transmat4,
                         open(f'{config.ROOT}/bendplanner/planres/{fo}/{rbt_name}/{f_name}_transmat4.pkl', 'wb'))
         transmat4 = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{rbt_name}/{f_name}_transmat4.pkl', 'rb'))
-        transmat4 = rm.homomat_from_posrot(transmat4[:3, 3] + np.asarray([0, 0, .008]), transmat4[:3, :3])
+        transmat4 = rm.homomat_from_posrot(transmat4[:3, 3] + np.asarray([0, 0, .008]),
+                                           transmat4[:3, :3])
         grasp_f_name = 'stick_yumi'
         gm.gen_frame(transmat4[:3, 3], transmat4[:3, :3]).attach_to(base)
     else:
         base, env = el.loadEnv_wrs()
         rbt = el.loadUr3e()
-        transmat4 = rm.homomat_from_posrot((.6, 0, bconfig.BENDER_H + .78),
+        transmat4 = rm.homomat_from_posrot((.8, .2, bconfig.BENDER_H + .8),
                                            rm.rotmat_from_axangle((0, 0, 1), np.pi))
         grasp_f_name = 'stick'
 
@@ -183,6 +189,6 @@ if __name__ == '__main__':
     # brp.show_bend_crop(bendresseq[show_step], bendseq[show_step][-1])
     # base.run()
 
-    brp.show_motion_withrbt(bendresseq, pathseq_list[0][1])
+    brp.show_motion_withrbt(bendresseq, pathseq_list[3][1])
     # brp.show_bendresseq_withrbt(bendresseq, armjntsseq_list[0][1])
     base.run()

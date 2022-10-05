@@ -135,11 +135,11 @@ def registration_ptpt(src, tgt, downsampling_voxelsize=.001, toggledebug=False):
     def __preprocess_point_cloud(pcd, voxel_size):
         pcd_down = pcd.voxel_down_sample(voxel_size)
         down_radius_normal = voxel_size * 15
-        pcd_down.estimate_normals(o3d.geometry.KDTreeSearchParamHybrid(radius=down_radius_normal, max_nn=30))
+        pcd_down.estimate_normals(o3d.geometry.KDTreeSearchParamHybrid(radius=down_radius_normal, max_nn=5))
         radius_feature = voxel_size * 15
         pcd_fpfh = o3d.pipelines.registration.compute_fpfh_feature(
             pcd_down,
-            o3d.geometry.KDTreeSearchParamHybrid(radius=radius_feature, max_nn=100))
+            o3d.geometry.KDTreeSearchParamHybrid(radius=radius_feature, max_nn=5))
         return pcd_down, pcd_fpfh
 
     # if toggledebug:
@@ -235,7 +235,7 @@ def registration_ptpln(src, tgt, downsampling_voxelsize=2, toggledebug=False):
     return [result_icp.inlier_rmse, result_icp.transformation]
 
 
-def registration_icp_ptpt(src, tgt, inithomomat=np.eye(4), maxcorrdist=2, toggledebug=False):
+def registration_icp_ptpt(src, tgt, inithomomat=np.eye(4), maxcorrdist=.01, toggledebug=False):
     """
 
     :param src:
@@ -294,7 +294,7 @@ def removeoutlier_o3d(src_o3d, downsampling_voxelsize=None, nb_points=5, radius=
     return cl
 
 
-def _registration_icp_ptpt_o3d(src, tgt, inithomomat=np.eye(4), maxcorrdist=2, toggledebug=False):
+def _registration_icp_ptpt_o3d(src, tgt, inithomomat=np.eye(4), maxcorrdist=.01, toggledebug=False):
     """
 
     :param src:
@@ -307,9 +307,9 @@ def _registration_icp_ptpt_o3d(src, tgt, inithomomat=np.eye(4), maxcorrdist=2, t
     date: 20191229
     """
 
-    criteria = o3d.pipelines.registration.ICPConvergenceCriteria(relative_fitness=1e-6,
+    criteria = o3d.pipelines.registration.ICPConvergenceCriteria(relative_fitness=1e-9,
                                                                  # converge if fitnesss smaller than this
-                                                                 relative_rmse=1e-6,
+                                                                 relative_rmse=1e-9,
                                                                  # converge if rmse smaller than this
                                                                  max_iteration=2000)
     result_icp = o3d.pipelines.registration.registration_icp(src, tgt, maxcorrdist, inithomomat, criteria=criteria)

@@ -62,31 +62,30 @@ def tst(bs, num, fo='180'):
                 success_cnt_list.append(len(result))
                 success_tc_list.append(total_tc)
                 success_first_tc_list.append(tc_list[0])
-                print(result)
                 try:
                     bendresseq, seqs = result[1]
                 except:
                     seqs = result[1]
                 print(seqs)
                 bendseq = [bendset[i] for i in seqs]
-                is_success, bendresseq, _ = bs.gen_by_bendseq(bendseq, cc=True, prune=True, toggledebug=False)
+                is_success, bendresseq, _ = bs.gen_by_bendseq(bendseq, cc=False, prune=True, toggledebug=False)
                 _, _, _, _, _, pseq, _ = bendresseq[-1]
                 pseq = np.asarray(pseq)
                 pseq[0] = pseq[0] - (pseq[0] - pseq[1]) * .5
                 ax = plt.axes(projection='3d')
                 bu.plot_pseq(ax, pseq, c='k')
-                bu.scatter_pseq(ax, pseq[1:-2], c='g')
-                bu.scatter_pseq(ax, pseq[:1], c='r')
+                bu.scatter_pseq(ax, pseq[1:-2], c='r')
+                bu.scatter_pseq(ax, pseq[:1], c='g')
                 plt.show()
-                bs.show_bendresseq(bendresseq, [True] * len(seqs))
-                base.run()
+                # bs.show_bendresseq(bendresseq, [True] * len(seqs))
+                # base.run()
             else:
                 fail_tc_list.append(total_tc)
                 bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
                 bs.gen_by_bendseq(bendset, cc=False)
                 ax = plt.axes(projection='3d')
                 bu.plot_pseq(ax, bs.pseq, c='k')
-                bu.scatter_pseq(ax, bs.pseq[1:-2], c='r')
+                bu.scatter_pseq(ax, bs.pseq[1:-2], c='grey')
                 plt.show()
             if type(attemp_cnt_list) == type([]):
                 total_cnt_list.append(attemp_cnt_list[-1])
@@ -141,8 +140,8 @@ def grid_on(ax):
 if __name__ == '__main__':
     base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
     bs = b_sim.BendSim(show=True)
-    fo = '90'
-    # tst(bs, 5, fo=fo)
+    fo = '180'
+    tst(bs, 5, fo=fo)
     x_range = range(3, 9)
 
     plt.rcParams["font.family"] = "Times New Roman"

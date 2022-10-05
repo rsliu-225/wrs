@@ -8,12 +8,12 @@ import numpy as np
 import config
 import modeling.collision_model as cm
 import item as item
-# import motionplanner.motion_planner as m_planner
+import motionplanner.motion_planner as m_planner
 import pcd_utils as pcdu
 import phoxi as phoxi
 import prj_utils as pu
 import vision_utils as vu
-import envloader as el
+import localenv.envloader as el
 
 
 # import db_service.db_service as dbs
@@ -181,7 +181,7 @@ if __name__ == '__main__':
     set up env and param
     '''
     base, env = el.loadEnv_wrs()
-    rbt, rbtmg, rbtball = el.loadUr3e()
+    rbt = el.loadUr3e()
     rbtx = el.loadUr3ex
     rbt.opengripper(armname="rgt")
     rbt.opengripper(armname="lft")
@@ -191,12 +191,12 @@ if __name__ == '__main__':
     '''
     init planner
     '''
-    motion_planner_rgt = m_planner.MotionPlanner(env, rbt, rbtmg, rbtball, armname="rgt")
-    motion_planner_lft = m_planner.MotionPlanner(env, rbt, rbtmg, rbtball, armname="lft")
+    motion_planner_rgt = m_planner.MotionPlanner(env, rbt, armname="rgt")
+    motion_planner_lft = m_planner.MotionPlanner(env, rbt, armname="lft")
 
     folder_path = config.MOTIONSCRIPT_REL_PATH + "real_egg_circle/withmodel/"
 
-    obj = cm.CollisionModel(objinit=os.path.join(config.ROOT + '/obstacles/pentip.stl'))
+    obj = cm.CollisionModel(initor=os.path.join(config.ROOT + '/obstacles/pentip.stl'))
 
     objmat4_list = pickle.load(
         open(config.PREGRASP_REL_PATH + pen_stl_f_name + "_objmat4_list.pkl", "rb"))

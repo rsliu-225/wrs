@@ -578,7 +578,7 @@ class BendRbtPlanner(object):
                 objcm_end.attach_to(base)
 
                 rbt.fk(self._mp.armname, path[-1])
-                _, _ = rbt.hold(objcm=objcm_init.copy(), hnd_name=self._mp.hnd_name)
+                # _, _ = rbt.hold(objcm=objcm_init.copy(), hnd_name=self._mp.hnd_name)
 
                 tmp_p = np.asarray([self._bs.c2c_dist * math.cos(init_a), self._bs.c2c_dist * math.sin(init_a), 0])
                 tmp_p = np.dot(transmat4[:3, :3], tmp_p)

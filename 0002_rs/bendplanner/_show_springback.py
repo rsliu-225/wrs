@@ -113,7 +113,7 @@ if __name__ == '__main__':
     brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp)
     brp.set_up(bendset, [], transmat4)
 
-    i = 4
+    i = 0
 
     obj_init, obj_end = brp.show_bend(bendresseq[i], show_end=True, show_start=False)
     obj_res = brp.show_bend_crop(bendresseq[i], bendset[i][-1])
@@ -127,9 +127,9 @@ if __name__ == '__main__':
     # for p in pseq_end:
     #     gm.gen_sphere(p, radius=0.002, rgba=(1, 1, 0, 1)).attach_to(base)
 
-    pcd_release = show_wire(f'{fo}/{f_name}', f'{str(i)}_release.pkl', center=transmat4[:3, 3], z_range=(.15, .18),
+    pcd_release = show_wire(f'{fo}/{f_name}', f'{str(i)}_release.pkl', center=transmat4[:3, 3], z_range=(.1, .2),
                             rgba=(1, 1, 0, 1))
-    pcd_goal = show_wire(f'{fo}/{f_name}', f'{str(i)}_goal.pkl', center=transmat4[:3, 3], z_range=(.15, .18),
+    pcd_goal = show_wire(f'{fo}/{f_name}', f'{str(i)}_goal.pkl', center=transmat4[:3, 3], z_range=(.1, .2),
                          rgba=(0, 1, 0, 1))
 
     pcd_release_filtered = filter_pcd(pcd_res, pcd_release)
