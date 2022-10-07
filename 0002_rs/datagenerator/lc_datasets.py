@@ -3,7 +3,7 @@ import os.path
 import numpy
 
 from gen_dataset import *
-from utils import *
+import utils as utl
 from multiview import *
 import open3d as o3d
 import pickle
@@ -36,9 +36,10 @@ def gen_seed(input, kind="cubic", random=True):
     # Width & Thickness of the stick
     width = .008  # + (np.random.uniform(0, 0.005) if random else 0)
     thickness = .0015
+    length = .2
     cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
-    pseq = uni_length(cubic_inp(step=.001, kind=kind, pseq=np.asarray(input)), goal_len=0.2)
-    return gen_swap(pseq, get_rotseq_by_pseq(pseq), cross_sec)
+    pseq = utl.uni_length(utl.cubic_inp(step=.001, kind=kind, pseq=np.asarray(input)), goal_len=length)
+    return utl.gen_swap(pseq, utl.get_rotseq_by_pseq(pseq), cross_sec)
 
 
 def test_seed(seed):
@@ -46,7 +47,7 @@ def test_seed(seed):
     for i, mats in enumerate(icomats):
         for j, rot in enumerate(mats):
             objcm = gen_seed(seed, random=False)
-            get_objpcd_partial_o3d(objcm, rot, (0, 0, 0), path='test', f_name='_'.join(["test"]),
+            utl.get_objpcd_partial_o3d(objcm, rot, (0, 0, 0), path='test', f_name='_'.join(["test"]),
                                    resolusion=(550, 550), add_noise=False, add_occ=True)
             break
         break
@@ -68,7 +69,7 @@ def init_gen(factor, class_name, seed, res=(550, 550), rot_center=(0, 0, 0), max
             rot_dict = dict()
             np.random.shuffle(mats)
             for j, rot in enumerate(mats[:max_num]):
-                get_objpcd_partial_o3d(objcm, rot, (0, 0, 0), f_name='_'.join([str(i), str(j), class_name]),
+                utl.get_objpcd_partial_o3d(objcm, rot, (0, 0, 0), f_name='_'.join([str(i), str(j), class_name]),
                                        resolusion=res, add_occ=True, add_noise=True, occ_vt_ratio=random.uniform(.5, 1),
                                        noise_vt_ration=random.uniform(.5, 1), )
                 rot_dict[j] = rm.homomat_from_posrot(rot_center, rot)
@@ -90,7 +91,7 @@ def init_gen(factor, class_name, seed, res=(550, 550), rot_center=(0, 0, 0), max
             rot_dict = dict()
             np.random.shuffle(mats)
             for j, rot in enumerate(mats[:max_num]):
-                get_objpcd_partial_o3d(objcm, rot, (0, 0, 0), f_name='_'.join([str(i), str(j), class_name]),
+                utl.get_objpcd_partial_o3d(objcm, rot, (0, 0, 0), f_name='_'.join([str(i), str(j), class_name]),
                                        resolusion=res, add_occ=True, add_noise=True, occ_vt_ratio=random.uniform(.5, 1),
                                        noise_vt_ration=random.uniform(.5, 1), )
                 rot_dict[j] = rm.homomat_from_posrot(rot_center, rot)
@@ -112,7 +113,7 @@ def init_gen(factor, class_name, seed, res=(550, 550), rot_center=(0, 0, 0), max
             rot_dict = dict()
             np.random.shuffle(mats)
             for j, rot in enumerate(mats[:max_num]):
-                get_objpcd_partial_o3d(objcm, rot, (0, 0, 0), f_name='_'.join([str(i), str(j), class_name]),
+                utl.get_objpcd_partial_o3d(objcm, rot, (0, 0, 0), f_name='_'.join([str(i), str(j), class_name]),
                                        resolusion=res, add_occ=True, add_noise=True, occ_vt_ratio=random.uniform(.5, 1),
                                        noise_vt_ration=random.uniform(.5, 1), )
                 rot_dict[j] = rm.homomat_from_posrot(rot_center, rot)
@@ -134,7 +135,7 @@ def init_gen(factor, class_name, seed, res=(550, 550), rot_center=(0, 0, 0), max
             rot_dict = dict()
             np.random.shuffle(mats)
             for j, rot in enumerate(mats[:max_num]):
-                get_objpcd_partial_o3d(objcm, rot, (0, 0, 0), f_name='_'.join([str(i), str(j), class_name]),
+                utl.get_objpcd_partial_o3d(objcm, rot, (0, 0, 0), f_name='_'.join([str(i), str(j), class_name]),
                                        resolusion=res, add_occ=True, add_noise=True, occ_vt_ratio=random.uniform(.5, 1),
                                        noise_vt_ration=random.uniform(.5, 1), )
                 rot_dict[j] = rm.homomat_from_posrot(rot_center, rot)
@@ -158,7 +159,7 @@ def cal_stats(path, class_name):
             continue
         if int(file.split("_")[1]) + 1 > num_scan:
             num_scan = int(file.split("_")[1]) + 1
-        no_pts = len(read_pcd(os.path.join(path, file)))
+        no_pts = len(utl.read_pcd(os.path.join(path, file)))
         cnt += 1
         if no_pts < stats[0]:
             stats[0] = no_pts
@@ -178,12 +179,12 @@ def show_pcd(file_path):
     return len(pcd.points)
 
 
-def show_all_pcd(folder_path):
+def show_all_pcd(folder_path, class_name):
     for file in os.listdir(folder_path):
         if not "pcd" in file:
             continue
         show_pcd(os.path.join(folder_path, file))
-    cal_stats(folder_path)
+    cal_stats(folder_path, class_name)
 
 
 def show_some_pcd(path, num, class_name, dist=0.01):
@@ -193,17 +194,17 @@ def show_some_pcd(path, num, class_name, dist=0.01):
     pcd_np = None
     cnt = 1
     for file in os.listdir(path):
-        if "pcd" in file and class_name in file and get_uniq_id(file, num_scan) in ids:
+        if "pcd" in file and class_name in file and utl.get_uniq_id(file, num_scan) in ids:
             print(file)
             file_path = os.path.join(path, file)
             if cnt == 1:
-                pcd_np = read_pcd(file_path)
+                pcd_np = utl.read_pcd(file_path)
                 cnt += 1
                 continue
-            cur_pcd = read_pcd(file_path) + dist * cnt
+            cur_pcd = utl.read_pcd(file_path) + dist * cnt
             pcd_np = np.append(pcd_np, cur_pcd, axis=0)
             cnt += 1
-    show_pcd_pts(pcd_np)
+    utl.show_pcd_pts(pcd_np)
 
 
 def test_pcd():
@@ -213,11 +214,11 @@ def test_pcd():
         name_com = complete_file.split("_")
         if class_name == name_com[2]:
             print(os.path.join("cubic", "partial", complete_file.replace("complete", "partial")))
-            partial_pcd = utils.read_pcd(os.path.join("cubic", "partial", complete_file.replace("complete", "partial")))
-            comp_pcd = utils.read_pcd(os.path.join(comeplte_dir, complete_file))
+            partial_pcd = utl.read_pcd(os.path.join("cubic", "partial", complete_file.replace("complete", "partial")))
+            comp_pcd = utl.read_pcd(os.path.join(comeplte_dir, complete_file))
             output = np.append(partial_pcd, comp_pcd, axis=0)
 
-            utils.show_pcd_pts(output)
+            utl.show_pcd_pts(output)
 
 
 def get_args(name, num_class, num_output):
@@ -239,10 +240,14 @@ def new_args(fact, cat, rng):
 
 
 if __name__ == '__main__':
-    args_list = new_args(60, "cubic", (0, 8))
-    print(args_list)
+    # args_list = new_args(60, "cubic", (0, 8))
+    # print(args_list)
+    # args_list = new_args(60, "cubic", (8, 16))
+    # print(args_list)
+
     runInParallel(init_gen, new_args(60, "cubic", (0, 8)))
     runInParallel(init_gen, new_args(60, "cubic", (8, 16)))
+
     # runInParallel(gen_multiview_for_complete_pcd, gen_args("quad"))
     # runInParallel(gen_multiview_for_complete_pcd, gen_args("linear"))
     # gen_multiview_for_complete_pcd("cubic", "cubic1")
@@ -268,9 +273,12 @@ if __name__ == '__main__':
 """Record"""
 x, x_2 = 0, 0
 # Linear(total = 2*3*42*20)
-a = [[0, 0, 0], [.03, 0, 0.005], [.07, 0, 0.01], [.15, 0.01, 0.01]]  # Twisting point near the ends
-b = [[0, 0.001, 0.01], [.08, 0, 0.01], [0.14, 0, 0.0096], [.15, 0, 0.0096]]  # Twisting point near the middle
-c = [[0, 0.001, 0.001], [.08, 0, 0.001], [0.14, 0, 0.001], [.15, 0.001, 0.001]]  # Flat
+a = [[0, 0, 0], [.03, 0, 0.005], [.07, 0, 0.01], [.15, 0.01, 0.01]]
+# Twisting point near the ends
+b = [[0, 0.001, 0.01], [.08, 0, 0.01], [0.14, 0, 0.0096], [.15, 0, 0.0096]]
+# Twisting point near the middle
+c = [[0, 0.001, 0.001], [.08, 0, 0.001], [0.14, 0, 0.001], [.15, 0.001, 0.001]]
+# Flat
 
 # Quadratic (total = 2*3*42*20)
 aa = [[0, 0, 0], [.15, 0.005, 0.035], [.2, 0.01, 0]]
