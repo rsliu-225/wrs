@@ -109,9 +109,11 @@ if __name__ == '__main__':
     new_vs = rbf(vs)
     deformed_objtrm = trm.Trimesh(vertices=np.asarray(new_vs), faces=objcm.objtrm.faces)
     deformed_objcm = cm.CollisionModel(initor=deformed_objtrm, btwosided=True, name='plate_deform')
-    # deformed_objcm.set_rgba((.7, .7, 0, 1))
-    # deformed_objcm.attach_to(base)
-    # base.run()
+    deformed_objcm.set_rgba((.7, .7, 0, 1))
+    deformed_objcm.attach_to(base)
+    gm.gen_pointcloud(new_vs).attach_to(base)
+
+    base.run()
 
     '''
     gen data

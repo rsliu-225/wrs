@@ -53,7 +53,7 @@ if __name__ == '__main__':
         if not os.path.exists(os.path.join(path, multiview_folder_name, obj_id)):
             os.mkdir(os.path.join(path, multiview_folder_name, obj_id))
         cnt = 0
-        pseq = utl.cubic_inp(pseq=np.asarray(pseq))
+        pseq = utl.poly_inp(pseq=np.asarray(pseq))
         pseq = utl.uni_length(pseq, goal_len=.15)
         rotseq = utl.get_rotseq_by_pseq(pseq)
 

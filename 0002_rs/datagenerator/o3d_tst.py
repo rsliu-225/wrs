@@ -90,7 +90,7 @@ if __name__ == "__main__":
     cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
     resolusion = (1280, 720)
 
-    pseq = utl.cubic_inp(pseq=np.asarray([[0, 0, 0], [.018, .03, .02], [.06, .06, 0], [.12, 0, 0]]))
+    pseq = utl.poly_inp(pseq=np.asarray([[0, 0, 0], [.018, .03, .02], [.06, .06, 0], [.12, 0, 0]]))
     pseq = utl.uni_length(pseq, goal_len=.2)
     rotseq = utl.get_rotseq_by_pseq(pseq)
 

@@ -2,7 +2,7 @@ import os.path
 
 import numpy
 
-from gen_dataset import *
+from _tst_gen_dataset import *
 import utils as utl
 from multiview import *
 import open3d as o3d
@@ -38,7 +38,7 @@ def gen_seed(input, kind="cubic", random=True):
     thickness = .0015
     length = .2
     cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
-    pseq = utl.uni_length(utl.cubic_inp(step=.001, kind=kind, pseq=np.asarray(input)), goal_len=length)
+    pseq = utl.uni_length(utl.poly_inp(step=.001, kind=kind, pseq=np.asarray(input)), goal_len=length)
     return utl.gen_swap(pseq, utl.get_rotseq_by_pseq(pseq), cross_sec)
 
 

@@ -52,7 +52,7 @@ def gen_random_homomat4(trans_diff=(.01, .01, .01), rot_diff=np.radians((10, 10,
     return rm.homomat_from_posrot(random_pos, random_rot)
 
 
-def cubic_inp(pseq, step=.001, toggledebug=False, kind="cubic"):
+def poly_inp(pseq, step=.001, toggledebug=False, kind="cubic"):
     length = np.sum(np.linalg.norm(np.diff(np.asarray(pseq), axis=0), axis=1))
     inp = interpolate.interp1d(pseq[:, 0], pseq[:, 1], kind=kind)
     inp_z = interpolate.interp1d(pseq[:, 0], pseq[:, 2], kind=kind)
@@ -66,6 +66,25 @@ def cubic_inp(pseq, step=.001, toggledebug=False, kind="cubic"):
         plt.show()
 
     return np.asarray(list(zip(x, y, z)))
+
+
+def spl_inp(pseq, n=200, toggledebug=False):
+    from mpl_toolkits.mplot3d import Axes3D
+
+    pseq = pseq.transpose()
+    tck = interpolate.splprep(pseq, k=len(pseq))[0]
+    # increase the resolution by increasing the spacing, 500 in this example
+    new = interpolate.splev(np.linspace(0, 1, n), tck, der=0)
+    pts = np.asarray(new).transpose()
+
+    if toggledebug:
+        fig = plt.figure()
+        ax = Axes3D(fig)
+        plt.plot(pseq[0], pseq[1], pseq[2], label='key points', lw=2, c='Dodgerblue')
+        plt.plot(new[0], new[1], new[2], label='fit', lw=2, c='red')
+        plt.legend()
+        plt.show()
+    return pts
 
 
 def uni_length(pseq, goal_len):
@@ -97,13 +116,16 @@ def get_rotseq_by_pseq(pseq):
         if n_pre is not None:
             if rm.angle_between_vectors(n, n_pre) > np.pi / 2:
                 n = -n
+            # if rm.angle_between_vectors(n, n_pre) > np.pi / 3:
+            #     np.delete(pseq, i + 1, 0)
+            #     break
         n_pre = n
         x = np.cross(v1, n)
-
         rot = np.asarray([rm.unit_vector(x), rm.unit_vector(v1), rm.unit_vector(n)]).T
         rotseq.append(rot)
+        # gm.gen_frame(pseq[i], rot, length=.02, thickness=.002).attach_to(base)
     rotseq = [rotseq[0]] + rotseq + [rotseq[-1]]
-    return rotseq
+    return pseq, rotseq
 
 
 def show_pseq(pseq, rgba=(1, 0, 0, 1), radius=0.0005, show_stick=False):
@@ -167,10 +189,11 @@ def o3dmesh2cm(o3dmesh):
     return objcm
 
 
-def cm2o3dmesh(objcm):
+def cm2o3dmesh(objcm, wnormal=False):
     o3dmesh = o3d.geometry.TriangleMesh(vertices=o3d.utility.Vector3dVector(objcm.objtrm.vertices),
                                         triangles=o3d.utility.Vector3iVector(objcm.objtrm.faces))
-    o3dmesh.compute_vertex_normals()
+    if wnormal:
+        o3dmesh.compute_vertex_normals()
     return o3dmesh
 
 
@@ -273,9 +296,7 @@ def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolus
 
     vis = o3d.visualization.Visualizer()
     vis.create_window('win', width=resolusion[0], height=resolusion[1], left=0, top=0)
-    o3dmesh = o3d.geometry.TriangleMesh(vertices=o3d.utility.Vector3dVector(objcm.objtrm.vertices),
-                                        triangles=o3d.utility.Vector3iVector(objcm.objtrm.faces))
-    o3dmesh.compute_vertex_normals()
+    o3dmesh = cm2o3dmesh(objcm, wnormal=True)
     o3dmesh.rotate(rot, center=rot_center)
 
     vis.add_geometry(o3dmesh)
@@ -295,7 +316,7 @@ def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolus
 
     o3dpcd = resample(o3dpcd, smp_num=2048)
     o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
-    save_complete_pcd(f_name, o3dmesh, path=path, method='possion', smp_num=2048)
+    # save_complete_pcd(f_name, o3dmesh, path=path, method='possion', smp_num=2048)
 
     if savemesh:
         o3d.io.write_triangle_mesh(os.path.join(path, 'mesh', f_name + '.ply'), o3dmesh)
