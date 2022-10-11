@@ -129,7 +129,7 @@ if __name__ == '__main__':
         for j, rot in enumerate(mats):
             utl.get_objpcd_partial_o3d(deformed_objcm, rot, rot_center, path=folder_name,
                                        f_name=f'{obj_id}_{str(cnt).zfill(3)}',
-                                       occ_vt_ratio=random.uniform(.05, .1), noise_vt_ration=random.uniform(.5, 1),
+                                       occ_vt_ratio=random.uniform(.05, .1), noise_vt_ratio=random.uniform(.5, 1),
                                        add_noise=True, add_occ=True, toggledebug=True)
             homomat4_dict[str(obj_id)][str(cnt).zfill(3)] = rm.homomat_from_posrot(rot_center, rot)
             cnt += 1

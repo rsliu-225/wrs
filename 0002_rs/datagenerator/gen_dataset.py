@@ -10,6 +10,8 @@ import open3d as o3d
 import pickle
 from multiprocessing import Process
 
+PATH = 'E:/liu/dataset_2048_flat/'
+
 
 def runInParallel(fn, args):
     proc = []
@@ -54,8 +56,22 @@ def gen_seed(kpts, width=.008, length=.2, thickness=.0015, n=10, toggledebug=Fal
     return utl.gen_swap(pseq, rotseq, cross_sec)
 
 
+def gen_seed_smooth(kpts, width=.008, length=.2, thickness=.0015, n=10, toggledebug=False, random=False):
+    width = width + (np.random.uniform(0, 0.005) if random else 0)
+    cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
+    if len(kpts) == 3:
+        pseq = utl.uni_length(utl.poly_inp(step=.001, kind='quadratic', pseq=np.asarray(kpts)), goal_len=length)
+    # elif len(kpts) == 4:
+    #     pseq = utl.uni_length(utl.poly_inp(step=.001, kind='cubic', pseq=np.asarray(kpts)), goal_len=length)
+    else:
+        pseq = utl.uni_length(utl.spl_inp(pseq=np.asarray(kpts), n=n, toggledebug=toggledebug), goal_len=length)
+    pseq = np.asarray(pseq) - pseq[0]
+    pseq, rotseq = utl.get_rotseq_by_pseq_smooth(pseq)
+    return utl.gen_swap(pseq, rotseq, cross_sec)
+
+
 # Name Composition: ObjectID_RotationID_ClassName_Type
-def init_gen(class_name, num_kpts, max, res=(550, 550), rot_center=(0, 0, 0), max_num=10, length=.2, path='./'):
+def init_gen(class_name, num_kpts, max, res=(550, 550), rot_center=(0, 0, 0), max_num=10, length=.2, path=PATH):
     path = os.path.join(path, class_name[:4])
     cache_data = dict()
     icomats = rm.gen_icorotmats(rotation_interval=math.radians(360 / 60))
@@ -63,26 +79,24 @@ def init_gen(class_name, num_kpts, max, res=(550, 550), rot_center=(0, 0, 0), ma
     for i, mats in enumerate(icomats):
         print(printProgressBar(i, len(icomats), prefix='Progress:', suffix='Complete', length=100), "\r")
         kpts = random_kts(num_kpts, max=max)
-        objcm = gen_seed(kpts, n=100, length=length, random=False)
+        objcm = gen_seed_smooth(kpts, n=100, length=length, random=False)
+        objcm_flat = gen_seed_smooth(kpts, n=100, thickness=0)
         rot_dict = dict()
         np.random.shuffle(mats)
         for j, rot in enumerate(mats[:max_num]):
             f_name = '_'.join([str(i), str(j), class_name])
-            utl.get_objpcd_partial_o3d(objcm, rot, (0, 0, 0), f_name=f_name, path=path,
-                                       resolusion=res, add_occ=True, add_noise=True, occ_vt_ratio=random.uniform(.5, 1),
-                                       noise_vt_ration=random.uniform(.5, 1))
-            utl.save_complete_pcd(f_name, utl.cm2o3dmesh(gen_seed(kpts, n=100, thickness=0)),
-                                  path=path, method='possion', smp_num=2048)
+            utl.get_objpcd_partial_o3d(objcm, objcm_flat, rot, (0, 0, 0), f_name=f_name, path=path,
+                                       resolusion=res, add_occ=True, add_noise=True, add_rnd_occ=True,
+                                       occ_vt_ratio=random.uniform(.5, 1), noise_vt_ratio=random.uniform(.5, 1))
             rot_dict[j] = rm.homomat_from_posrot(rot_center, rot)
-
         cache_data[i] = rot_dict
 
         if i == len(icomats) - 1:
             print(printProgressBar(i + 1, len(icomats), prefix='Progress:', suffix='Complete', length=100), "\r")
             print(f"A total of {i + 1} different objects created")
 
-    pickle.dump(cache_data, open(f'partial/{class_name}.pkl', 'wb'))
-    cal_stats("partial", class_name)
+    pickle.dump(cache_data, open(os.path.join(path, f'partial/{class_name}.pkl'), 'wb'))
+    cal_stats(os.path.join(path, 'partial'), class_name)
 
 
 def cal_stats(path, class_name):
@@ -142,18 +156,17 @@ def show_some_pcd(path, num, class_name, dist=0.01):
     utl.show_pcd_pts(pcd_np)
 
 
-def test_pcd(class_name):
-    comeplte_dir = os.path.join(class_name, "complete")
-    for complete_file in os.listdir(comeplte_dir):
-        class_name = class_name + "1"
-        name_com = complete_file.split("_")
-        if class_name == name_com[2]:
-            print(os.path.join(class_name, "partial", complete_file.replace("complete", "partial")))
-            partial_pcd = utl.read_pcd(
-                os.path.join(class_name, "partial", complete_file.replace("complete", "partial")))
-            comp_pcd = utl.read_pcd(os.path.join(comeplte_dir, complete_file))
-            output = np.append(partial_pcd, comp_pcd, axis=0)
-            utl.show_pcd_pts(output)
+def test_pcd(class_name, id='1'):
+    comeplte_dir = os.path.join(PATH, class_name, "complete")
+    for f in os.listdir(comeplte_dir):
+        name_com = (f.split('.')[0]).split("_")
+        if class_name + id == name_com[2]:
+            o3dpcd_i = utl.read_o3dpcd(os.path.join(comeplte_dir.replace("complete", "partial"), f))
+            o3dpcd_gt = utl.read_o3dpcd(os.path.join(comeplte_dir, f))
+            o3dpcd_gt.paint_uniform_color([0, 1, 0])
+            o3dpcd_i.paint_uniform_color([0, 0, 1])
+            o3d.visualization.draw_geometries([o3dpcd_i, o3dpcd_gt])
+            o3d.visualization.draw_geometries([o3dpcd_i])
 
 
 def gen_args(cat, rng):
@@ -164,10 +177,14 @@ def gen_args(cat, rng):
 
 
 if __name__ == '__main__':
-    args_list = gen_args("quad", (0, 8))
-    print(args_list)
-    args_list = gen_args("bspl", (0, 8))
-    print(args_list)
+    # # args_list = gen_args("quad", (0, 8))
+    # # print(args_list)
+    # # args_list = gen_args("bspl", (0, 8))
+    # # print(args_list)
+    # runInParallel(init_gen, gen_args("bspl", (0, 8)))
+    # runInParallel(init_gen, gen_args("bspl", (24, 32)))
+    # runInParallel(init_gen, gen_args("bspl", (32, 40)))
+    runInParallel(init_gen, gen_args("bspl", (104, 112)))
+    # runInParallel(init_gen, gen_args("quad", (16, 24)))
 
-    runInParallel(init_gen, gen_args("quad", (0, 8)))
-    runInParallel(init_gen, gen_args("bspl", (0, 8)))
+    test_pcd('bspl', '100')

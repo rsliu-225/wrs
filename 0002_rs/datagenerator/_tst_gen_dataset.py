@@ -30,7 +30,7 @@ if __name__ == '__main__':
 
     pseq = utl.poly_inp(pseq=np.asarray([[0, 0, 0], [.018, .03, .02], [.06, .06, 0], [.12, 0, 0]]))
     pseq = utl.uni_length(pseq, goal_len=.2)
-    rotseq = utl.get_rotseq_by_pseq(pseq)
+    pseq, rotseq = utl.get_rotseq_by_pseq(pseq)
 
     objcm = utl.gen_swap(pseq, rotseq, cross_sec)
     # objcm.set_rgba((1, 1, 0, 1))
@@ -64,9 +64,9 @@ if __name__ == '__main__':
     #                                  f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
     #                                  occ_vt_ratio=random.uniform(.5, 1), noise_vt_ration=random.uniform(.5, 1),
     #                                  add_noise=True, add_occ=True, toggledebug=True)
-    utl.get_objpcd_partial_o3d(objcm, np.eye(3), rot_center, path=path, resolusion=(550, 550),
+    utl.get_objpcd_partial_o3d(objcm, objcm, np.eye(3), rot_center, path=path, resolusion=(550, 550),
                                f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
-                               occ_vt_ratio=random.uniform(.5, 1), noise_vt_ration=random.uniform(.5, 1),
+                               occ_vt_ratio=random.uniform(.5, 1), noise_vt_ratio=random.uniform(.5, 1),
                                add_noise=True, add_occ=True, toggledebug=True)
 
     # '''

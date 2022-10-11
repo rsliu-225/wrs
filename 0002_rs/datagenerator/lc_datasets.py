@@ -47,8 +47,8 @@ def test_seed(seed):
     for i, mats in enumerate(icomats):
         for j, rot in enumerate(mats):
             objcm = gen_seed(seed, random=False)
-            utl.get_objpcd_partial_o3d(objcm, rot, (0, 0, 0), path='test', f_name='_'.join(["test"]),
-                                   resolusion=(550, 550), add_noise=False, add_occ=True)
+            utl.get_objpcd_partial_o3d(objcm, objcm, rot, (0, 0, 0), path='test', f_name='_'.join(["test"]),
+                                       resolusion=(550, 550), add_noise=False, add_occ=True)
             break
         break
     show_pcd(os.path.join("complete", '_'.join(["test", "complete.pcd"])))
@@ -70,8 +70,9 @@ def init_gen(factor, class_name, seed, res=(550, 550), rot_center=(0, 0, 0), max
             np.random.shuffle(mats)
             for j, rot in enumerate(mats[:max_num]):
                 utl.get_objpcd_partial_o3d(objcm, rot, (0, 0, 0), f_name='_'.join([str(i), str(j), class_name]),
-                                       resolusion=res, add_occ=True, add_noise=True, occ_vt_ratio=random.uniform(.5, 1),
-                                       noise_vt_ration=random.uniform(.5, 1), )
+                                           resolusion=res, add_occ=True, add_noise=True,
+                                           occ_vt_ratio=random.uniform(.5, 1),
+                                           noise_vt_ratio=random.uniform(.5, 1), )
                 rot_dict[j] = rm.homomat_from_posrot(rot_center, rot)
 
             cache_data[i] = rot_dict
@@ -92,8 +93,9 @@ def init_gen(factor, class_name, seed, res=(550, 550), rot_center=(0, 0, 0), max
             np.random.shuffle(mats)
             for j, rot in enumerate(mats[:max_num]):
                 utl.get_objpcd_partial_o3d(objcm, rot, (0, 0, 0), f_name='_'.join([str(i), str(j), class_name]),
-                                       resolusion=res, add_occ=True, add_noise=True, occ_vt_ratio=random.uniform(.5, 1),
-                                       noise_vt_ration=random.uniform(.5, 1), )
+                                           resolusion=res, add_occ=True, add_noise=True,
+                                           occ_vt_ratio=random.uniform(.5, 1),
+                                           noise_vt_ratio=random.uniform(.5, 1), )
                 rot_dict[j] = rm.homomat_from_posrot(rot_center, rot)
 
             cache_data[i] = rot_dict
@@ -114,8 +116,9 @@ def init_gen(factor, class_name, seed, res=(550, 550), rot_center=(0, 0, 0), max
             np.random.shuffle(mats)
             for j, rot in enumerate(mats[:max_num]):
                 utl.get_objpcd_partial_o3d(objcm, rot, (0, 0, 0), f_name='_'.join([str(i), str(j), class_name]),
-                                       resolusion=res, add_occ=True, add_noise=True, occ_vt_ratio=random.uniform(.5, 1),
-                                       noise_vt_ration=random.uniform(.5, 1), )
+                                           resolusion=res, add_occ=True, add_noise=True,
+                                           occ_vt_ratio=random.uniform(.5, 1),
+                                           noise_vt_ratio=random.uniform(.5, 1), )
                 rot_dict[j] = rm.homomat_from_posrot(rot_center, rot)
 
             cache_data[i] = rot_dict
@@ -136,8 +139,9 @@ def init_gen(factor, class_name, seed, res=(550, 550), rot_center=(0, 0, 0), max
             np.random.shuffle(mats)
             for j, rot in enumerate(mats[:max_num]):
                 utl.get_objpcd_partial_o3d(objcm, rot, (0, 0, 0), f_name='_'.join([str(i), str(j), class_name]),
-                                       resolusion=res, add_occ=True, add_noise=True, occ_vt_ratio=random.uniform(.5, 1),
-                                       noise_vt_ration=random.uniform(.5, 1), )
+                                           resolusion=res, add_occ=True, add_noise=True,
+                                           occ_vt_ratio=random.uniform(.5, 1),
+                                           noise_vt_ratio=random.uniform(.5, 1), )
                 rot_dict[j] = rm.homomat_from_posrot(rot_center, rot)
 
             cache_data[i] = rot_dict

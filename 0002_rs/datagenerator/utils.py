@@ -113,6 +113,7 @@ def get_rotseq_by_pseq(pseq):
         v1 = pseq[i - 1] - pseq[i]
         v2 = pseq[i] - pseq[i + 1]
         n = np.cross(rm.unit_vector(v1), rm.unit_vector(v2))
+
         if n_pre is not None:
             if rm.angle_between_vectors(n, n_pre) > np.pi / 2:
                 n = -n
@@ -122,6 +123,33 @@ def get_rotseq_by_pseq(pseq):
         n_pre = n
         x = np.cross(v1, n)
         rot = np.asarray([rm.unit_vector(x), rm.unit_vector(v1), rm.unit_vector(n)]).T
+        rotseq.append(rot)
+        # gm.gen_frame(pseq[i], rot, length=.02, thickness=.002).attach_to(base)
+    rotseq = [rotseq[0]] + rotseq + [rotseq[-1]]
+    return pseq, rotseq
+
+
+def get_rotseq_by_pseq_smooth(pseq):
+    rotseq = []
+    n_pre = None
+    kdt = KDTree(pseq, leaf_size=100, metric='euclidean')
+    for i in range(1, len(pseq) - 1):
+        v = pseq[i - 1] - pseq[i]
+
+        indices = kdt.query([pseq[i]], k=20, return_distance=False)
+        knn = pseq[indices][0]
+        pcv, pcaxmat = rm.compute_pca(knn)
+        n = pcaxmat[:, np.argmin(pcv)]
+
+        if n_pre is not None:
+            if rm.angle_between_vectors(n, n_pre) > np.pi / 2:
+                n = -n
+            # if rm.angle_between_vectors(n, n_pre) > np.pi / 3:
+            #     np.delete(pseq, i + 1, 0)
+            #     break
+        n_pre = n
+        x = np.cross(v, n)
+        rot = np.asarray([rm.unit_vector(x), rm.unit_vector(v), rm.unit_vector(n)]).T
         rotseq.append(rot)
         # gm.gen_frame(pseq[i], rot, length=.02, thickness=.002).attach_to(base)
     rotseq = [rotseq[0]] + rotseq + [rotseq[-1]]
@@ -277,9 +305,10 @@ def get_objpcd_partial_sample(objcm, objmat4=np.eye(4), smp_num=100000, cam_pos=
     return objpcd_partial
 
 
-def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolusion=(1280, 720), ext_name='.pcd',
-                           occ_vt_ratio=1, noise_vt_ration=1, add_noise=False, add_occ=False, toggledebug=False,
-                           savemesh=False, savedepthimg=False, savergbimg=False):
+def get_objpcd_partial_o3d(objcm, objcm_gt, rot, rot_center, path='./', f_name='', resolusion=(1280, 720),
+                           ext_name='.pcd', occ_vt_ratio=1, noise_vt_ratio=1,
+                           add_noise=False, add_occ=False, add_rnd_occ=True,
+                           toggledebug=False, savemesh=False, savedepthimg=False, savergbimg=False):
     if not os.path.exists(path):
         os.mkdir(path)
     if not os.path.exists(os.path.join(path, 'partial/')):
@@ -297,26 +326,32 @@ def get_objpcd_partial_o3d(objcm, rot, rot_center, path='./', f_name='', resolus
     vis = o3d.visualization.Visualizer()
     vis.create_window('win', width=resolusion[0], height=resolusion[1], left=0, top=0)
     o3dmesh = cm2o3dmesh(objcm, wnormal=True)
+    o3dmesh_gt = cm2o3dmesh(objcm_gt, wnormal=False)
     o3dmesh.rotate(rot, center=rot_center)
+    o3dmesh_gt.rotate(rot, center=rot_center)
 
     vis.add_geometry(o3dmesh)
     vis.poll_events()
     vis.capture_depth_point_cloud(os.path.join(path, f_name + f'_tmp{ext_name}'), do_render=False,
                                   convert_to_world_coordinate=True)
     o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f_name + f'_tmp{ext_name}'))
+    if add_rnd_occ:
+        o3dpcd = add_random_occ(o3dpcd, occ_ratio_rng=(.05, .1))
+        o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
     if add_occ:
         o3dpcd = add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=(.3, .6))
+        # o3dpcd = add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=(.6, .9))
         o3dpcd = add_random_occ_by_vt(o3dpcd, np.asarray(o3dmesh.vertices),
-                                      edg_radius=1e-3, edg_sigma=3e-4, ratio=occ_vt_ratio)
+                                      edg_radius=1e-3, edg_sigma=5e-4, ratio=occ_vt_ratio)
         o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
     if add_noise:
         o3dpcd = add_guassian_noise_by_vt(o3dpcd, np.asarray(o3dmesh.vertices), np.asarray(o3dmesh.vertex_normals),
-                                          noise_mean=1e-4, noise_sigma=1e-4, ratio=noise_vt_ration)
+                                          noise_mean=1e-3, noise_sigma=1e-4, ratio=noise_vt_ratio)
         o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
 
     o3dpcd = resample(o3dpcd, smp_num=2048)
     o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
-    # save_complete_pcd(f_name, o3dmesh, path=path, method='possion', smp_num=2048)
+    save_complete_pcd(f_name, o3dmesh_gt, path=path, method='possion', smp_num=2048)
 
     if savemesh:
         o3d.io.write_triangle_mesh(os.path.join(path, 'mesh', f_name + '.ply'), o3dmesh)
@@ -576,6 +611,11 @@ def show_pcd(file_path):
 def read_pcd(filename):
     pcd = o3d.io.read_point_cloud(filename)
     return np.array(pcd.points)
+
+
+def read_o3dpcd(filename):
+    pcd = o3d.io.read_point_cloud(filename)
+    return pcd
 
 
 # Input is Numpy Array

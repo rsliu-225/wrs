@@ -8,7 +8,6 @@ import time
 import numpy as np
 import open3d as o3d
 from matplotlib import pyplot as plt
-from skimage.morphology import skeletonize
 from sklearn.mixture import GaussianMixture
 from sklearn import linear_model
 from sklearn.cluster import DBSCAN
@@ -23,8 +22,6 @@ import modeling.collision_model as cm
 import modeling.geometric_model as gm
 import utils.math_utils as mu
 from basis import trimesh
-from localenv import envloader as el
-import pyransac3d as pyrsc
 import cv2
 
 
@@ -629,6 +626,7 @@ def surface_interp(p, v, kdt_d3, inp=0.0005, max_nn=100):
 
 def skeleton(pcd):
     import sknw
+    from skimage.morphology import skeletonize
 
     pcd = o3dh.nparray2o3dpcd(np.asarray(pcd))
     voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(input=pcd, voxel_size=.001)
@@ -665,6 +663,7 @@ def skeleton(pcd):
 
 
 def extract_lines_from_pcd(img, pcd, z_range, line_thresh=0.002, line_size_thresh=300, toggledebug=False):
+    import pyransac3d as pyrsc
     lines = []
 
     if toggledebug:
@@ -937,6 +936,8 @@ def show_pcdseq_withrgb(pcdseq, rgbasseq, time_sleep=.1):
 
 
 def show_pcd_withrbt(pcd, rgba=(1, 1, 1, 1), rbtx=None, toggleendcoord=False):
+    from localenv import envloader as el
+
     rbt = el.loadUr3e()
     env = el.Env_wrs(boundingradius=7.0)
     env.reparentTo(base)
@@ -960,6 +961,8 @@ def show_cam(transmat4):
 
 
 if __name__ == '__main__':
+    from localenv import envloader as el
+
     '''
     set up env and param
     '''

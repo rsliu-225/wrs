@@ -1,5 +1,5 @@
 import os
-
+import h5py
 import numpy as np
 import open3d as o3d
 
@@ -11,6 +11,7 @@ import motionplanner.motion_planner as mp
 import utils.pcd_utils as pcdu
 import utils.recons_utils as rcu
 import visualization.panda.world as wd
+import basis.o3dhelper as o3dh
 
 
 def show_pcn_res(fo, pcn_path="D:\liu\data\output(real)-20220705T140620Z-001\output(real)"):
@@ -36,7 +37,6 @@ if __name__ == '__main__':
     rbt = el.loadXarm(showrbt=False)
 
     m_planner = mp.MotionPlanner(env=None, rbt=rbt, armname="arm")
-
     seedjntagls = m_planner.get_armjnts()
 
     fo = 'plate_a_cubic'

@@ -79,8 +79,7 @@ def gen_multiview_lc(comb_num=1, cat='', class_name=None, trans_diff=(.004, .004
         for rot_id in rot_dict:
             init_homomat = rot_dict[rot_id]
             for k in range(2):
-                is_noise = "_n" if k == 1 else ""
-                o3dpcd = o3d.io.read_point_cloud(f"{cat}/partial/{objid}_{rot_id}_{class_name}_partial{is_noise}.pcd")
+                o3dpcd = o3d.io.read_point_cloud(f"{cat}/partial/{objid}_{rot_id}_{class_name}.pcd")
                 pcd_mv = o3dpcd.points
 
                 combs = random.choices(list(itertools.combinations([i for i in rot_dict if i != rot_id], view_num)),
@@ -91,16 +90,15 @@ def gen_multiview_lc(comb_num=1, cat='', class_name=None, trans_diff=(.004, .004
                         homomat4 = rot_dict[comb_rot_id]
                         random_homomat4 = gen_random_homomat4(trans_diff, rot_diff)
 
-                        use_noise = "" if np.random.randint(0, 2) else "_n"
                         o3dpcd = o3d.io.read_point_cloud(
-                            f"{cat}/partial/{objid}_{comb_rot_id}_{class_name}_partial{use_noise}.pcd")
+                            f"{cat}/partial/{objid}_{comb_rot_id}_{class_name}.pcd")
                         pcd = np.asarray(o3dpcd.points)
                         pcd = utl.trans_pcd(pcd, np.dot(init_homomat, np.linalg.inv(homomat4)))
                         pcd = utl.trans_pcd(pcd, random_homomat4)
                         pcd = utl.add_random_occ_narry(pcd, occ_ratio_rng=(.5, .6))
                         pcd_mv.extend(pcd)
                     o3d.io.write_point_cloud(
-                        os.path.join(cat, 'multiview', f'{objid}_{rot_id}_{class_name}{is_noise}_{i}_multiview.pcd'),
+                        os.path.join(cat, 'multiview', f'{objid}_{rot_id}_{class_name}_{i}_multiview.pcd'),
                         utl.nparray2o3dpcd(pcd_mv))
                     cnt += 1
     print(f"A total of {cnt} pcd generated")

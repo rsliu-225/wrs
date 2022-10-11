@@ -4,8 +4,8 @@ import open3d as o3d
 import numpy as np
 
 ROOT = os.path.abspath('./')
-ORG_DATA_PATH = 'E:/liu/dataset_2048/'
-GOAL_DATA_PATH = 'D:/liu/MVP_Benchmark/completion/data/'
+ORG_DATA_PATH = 'E:/liu/dataset_2048_flat/'
+GOAL_DATA_PATH = 'D:/liu/MVP_Benchmark/completion/data_2048_flat/'
 
 
 def nparray2o3dpcd(nx3nparray_pnts, nx3nparray_nrmls=None, estimate_normals=False):
@@ -24,12 +24,12 @@ def gen_h5(f_name):
     labels = []
     for fo in os.listdir(ORG_DATA_PATH):
         print(fo)
-        if fo == 'cubic':
+        if fo == 'bspl':
             label = 2
         elif fo == 'quad':
             label = 1
-        elif fo == 'linear':
-            label = 0
+        # elif fo == 'linear':
+        #     label = 0
         else:
             break
 
@@ -39,7 +39,7 @@ def gen_h5(f_name):
         elif f_name == 'val':
             id_range = range(int(np.floor(.8 * max(id_list))), int(np.floor(.9 * max(id_list))))
         elif f_name == 'test':
-            id_range = range(int(np.floor(.9 * max(id_list))), max(id_list)+1)
+            id_range = range(int(np.floor(.9 * max(id_list))), max(id_list) + 1)
         else:
             id_range = (0, max(id_list) + 1)
         print(id_range)
@@ -69,6 +69,7 @@ def gen_h5(f_name):
         dset = f.create_dataset("labels", data=np.asarray(labels, dtype='<f4'))
         print(f.keys())
 
+
 def show_dataset(f_name):
     f = h5py.File(f'{GOAL_DATA_PATH}/{f_name}.h5', 'r')
     print(f.name, f.keys())
@@ -81,11 +82,11 @@ def show_dataset(f_name):
             except:
                 break
 
+
 if __name__ == '__main__':
     gen_h5('train')
     gen_h5('test')
     gen_h5('val')
-    show_dataset('train')
-    show_dataset('test')
-    show_dataset('val')
-
+    # show_dataset('train')
+    # show_dataset('test')
+    # show_dataset('val')
