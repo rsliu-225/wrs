@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def spl_inp(kpts,k=3):
+def spl_inp(kpts, k=3):
     kpts = kpts.transpose()
     # now we get all the knots and info about the interpolated spline
     tck, u = interpolate.splprep(kpts, k=k)
@@ -21,6 +21,7 @@ def spl_inp(kpts,k=3):
     ax.plot(new[0], new[1], new[2], label='fit', lw=2, c='red')
     ax.legend()
     plt.show()
+
 
 if __name__ == '__main__':
     kpts = np.asarray([[0, 0, 0], [.04, -.02, -0.01], [.08, .5, -0.02], [.1, .1, -0.02], [.2, .2, 0]])

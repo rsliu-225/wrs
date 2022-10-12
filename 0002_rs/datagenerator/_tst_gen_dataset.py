@@ -66,8 +66,10 @@ if __name__ == '__main__':
     #                                  add_noise=True, add_occ=True, toggledebug=True)
     utl.get_objpcd_partial_o3d(objcm, objcm, np.eye(3), rot_center, path=path, resolusion=(550, 550),
                                f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
-                               occ_vt_ratio=random.uniform(.5, 1), noise_vt_ratio=random.uniform(.5, 1),
-                               add_noise=True, add_occ=True, toggledebug=True)
+                               occ_vt_ratio=random.uniform(.5, 1),
+                               noise_vt_ratio=random.uniform(.5, 1),
+                               add_noise=True, add_occ=True, toggledebug=True,
+                               savemesh=True, savedepthimg=True, savergbimg=True)
 
     # '''
     # show data

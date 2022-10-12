@@ -136,7 +136,7 @@ def get_rotseq_by_pseq_smooth(pseq):
     for i in range(1, len(pseq) - 1):
         v = pseq[i - 1] - pseq[i]
 
-        indices = kdt.query([pseq[i]], k=20, return_distance=False)
+        indices = kdt.query([pseq[i]], k=50, return_distance=False)
         knn = pseq[indices][0]
         pcv, pcaxmat = rm.compute_pca(knn)
         n = pcaxmat[:, np.argmin(pcv)]
@@ -356,10 +356,10 @@ def get_objpcd_partial_o3d(objcm, objcm_gt, rot, rot_center, path='./', f_name='
     if savemesh:
         o3d.io.write_triangle_mesh(os.path.join(path, 'mesh', f_name + '.ply'), o3dmesh)
     if savergbimg:
-        vis.capture_screen_image(os.path.join(path, f_name + '.jpg'), do_render=False)
+        vis.capture_screen_image(os.path.join(path, 'rgbimg', f_name + '.jpg'), do_render=False)
     if savedepthimg:
         depthimg = np.asarray(vis.capture_depth_float_buffer()) * 1000
-        cv2.imwrite(os.path.join(path, f_name + '.jpg'), depthimg)
+        cv2.imwrite(os.path.join(path, 'depthimg', f_name + '.jpg'), depthimg)
 
     vis.destroy_window()
 
