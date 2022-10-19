@@ -8,10 +8,12 @@ from pygem import RBF
 
 import basis.robot_math as rm
 import basis.trimesh as trm
-import datagenerator.utils as utl
+import datagenerator.data_utils as du
 import modeling.collision_model as cm
 import modeling.geometric_model as gm
 import visualization.panda.world as wd
+import bendplanner.bend_utils as bu
+import utils.recons_utils as ru
 
 
 def gen_plate_ctr_pts(pts, goal_pseq, edge=0.0):
@@ -39,7 +41,7 @@ def gen_plate_ctr_pts(pts, goal_pseq, edge=0.0):
 
 
 def gen_deformed_ctr_pts(ctr_pts, goal_pseq, rot_diff=None):
-    goal_rotseq = utl.get_rotseq_by_pseq_1d(goal_pseq)
+    goal_rotseq = du.get_rotseq_by_pseq_1d(goal_pseq)
     org_len = np.linalg.norm(ctr_pts[:, 0].max() - ctr_pts[:, 0].min())
     goal_diff = np.linalg.norm(np.diff(goal_pseq, axis=0), axis=1)
     goal_pseq = org_len * goal_pseq / goal_diff.sum()
@@ -55,14 +57,14 @@ def gen_deformed_ctr_pts(ctr_pts, goal_pseq, rot_diff=None):
                      rgbmatrix=np.asarray([[1, 1, 0], [1, 0, 1], [0, 1, 1]])).attach_to(base)
         transmat4 = np.dot(rm.homomat_from_posrot(goal_pseq[i], goal_rotseq[i]),
                            np.linalg.inv(rm.homomat_from_posrot(org_kpts[i], np.eye(3))))
-        deformed_ctr_pts.extend(utl.trans_pcd(ctr_pts[i * 4:(i + 1) * 4], transmat4))
+        deformed_ctr_pts.extend(du.trans_pcd(ctr_pts[i * 4:(i + 1) * 4], transmat4))
 
     if rot_diff is not None:
         deformed_ctr_pts_rot = []
         for i in range(len(rot_diff)):
-            deformed_ctr_pts_rot.extend(utl.rot_new_orgin(deformed_ctr_pts[i * 4:(i + 1) * 4],
-                                                          goal_pseq[i],
-                                                          rm.rotmat_from_axangle(goal_rotseq[i][:, 0], rot_diff[i])))
+            deformed_ctr_pts_rot.extend(du.rot_new_orgin(deformed_ctr_pts[i * 4:(i + 1) * 4],
+                                                         goal_pseq[i],
+                                                         rm.rotmat_from_axangle(goal_rotseq[i][:, 0], rot_diff[i])))
         deformed_ctr_pts = np.copy(deformed_ctr_pts_rot)
 
     for p in ctr_pts:
@@ -73,12 +75,17 @@ def gen_deformed_ctr_pts(ctr_pts, goal_pseq, rot_diff=None):
 
 
 if __name__ == '__main__':
+
     base = wd.World(cam_pos=[.1, .2, .4], lookat_pos=[0, 0, 0])
     # base = wd.World(cam_pos=[.1, .4, 0], lookat_pos=[.1, 0, 0])
 
+    width = .008
+    thickness = .0015
+    cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
+
     objcm = cm.CollisionModel('../obstacles/plate.stl')
     folder_name = 'tst_plate'
-    objcm.attach_to(base)
+    # objcm.attach_to(base)
     # objcm.set_rgba((.7, .7, .7, .7))
     # gm.gen_frame(length=.02, thickness=.001).attach_to(base)
 
@@ -97,7 +104,7 @@ if __name__ == '__main__':
     # goal_pseq = np.asarray([[0, 0, 0],
     #                         [.08 + random.uniform(-.02, .02), 0, random.uniform(.004, .01)],
     #                         [.16, 0, 0]])
-    goal_pseq = utl.uni_length(goal_pseq, goal_len=.16)
+    goal_pseq = du.uni_length(goal_pseq, goal_len=.16)
     original_ctr_pts = gen_plate_ctr_pts(vs, goal_pseq)
 
     # rot_diff = np.radians([0, 5, 10, -10, 0])
@@ -109,9 +116,18 @@ if __name__ == '__main__':
     new_vs = rbf(vs)
     deformed_objtrm = trm.Trimesh(vertices=np.asarray(new_vs), faces=objcm.objtrm.faces)
     deformed_objcm = cm.CollisionModel(initor=deformed_objtrm, btwosided=True, name='plate_deform')
-    deformed_objcm.set_rgba((.7, .7, 0, 1))
-    deformed_objcm.attach_to(base)
+    # deformed_objcm.set_rgba((.7, .7, 0, 1))
+    # deformed_objcm.attach_to(base)
     gm.gen_pointcloud(new_vs).attach_to(base)
+
+    kpts, kpts_rotseq = ru.get_kpts_gmm(new_vs, rgba=(1, 1, 0, 1), n_components=20)
+
+    # kpts = bu.linear_inp3d_by_step(kpts)
+    # kpts, kpts_rotseq = bu.inp_rotp_by_step(kpts, kpts_rotseq)
+
+    for i, rot in enumerate(kpts_rotseq):
+        gm.gen_frame(kpts[i], kpts_rotseq[i], thickness=.001, length=.03).attach_to(base)
+    objcm = bu.gen_swap(kpts, kpts_rotseq, cross_sec)
 
     base.run()
 
@@ -127,10 +143,10 @@ if __name__ == '__main__':
     homomat4_dict[str(obj_id)] = {}
     for i, mats in enumerate(icomats):
         for j, rot in enumerate(mats):
-            utl.get_objpcd_partial_o3d(deformed_objcm, rot, rot_center, path=folder_name,
-                                       f_name=f'{obj_id}_{str(cnt).zfill(3)}',
-                                       occ_vt_ratio=random.uniform(.05, .1), noise_vt_ratio=random.uniform(.5, 1),
-                                       add_noise=True, add_occ=True, toggledebug=True)
+            du.get_objpcd_partial_o3d(deformed_objcm, rot, rot_center, path=folder_name,
+                                      f_name=f'{obj_id}_{str(cnt).zfill(3)}',
+                                      occ_vt_ratio=random.uniform(.05, .1), noise_vt_ratio=random.uniform(.5, 1),
+                                      add_noise=True, add_occ=True, toggledebug=True)
             homomat4_dict[str(obj_id)][str(cnt).zfill(3)] = rm.homomat_from_posrot(rot_center, rot)
             cnt += 1
             pickle.dump(homomat4_dict, open(f'{folder_name}/homomat4_dict.pkl', 'wb'))

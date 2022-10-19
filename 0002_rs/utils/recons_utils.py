@@ -14,6 +14,7 @@ import modeling.geometric_model as gm
 import motionplanner.nbc_solver as nbcs
 import utils.pcd_utils as pcdu
 import utils.vision_utils as vu
+from sklearn.mixture import GaussianMixture
 
 
 def load_frame_seq(fo=None, root_path=os.path.join(config.ROOT, 'img/phoxi/'), path=None):
@@ -237,24 +238,25 @@ def reg_armarker(fo, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False, t
     if toggledebug:
         gm.gen_frame(center, np.eye(3)).attach_to(base)
     for i in range(len(grayimg_list)):
-        cv2.imshow('', grayimg_list[i])
-        cv2.waitKey(0)
+        # cv2.imshow('', grayimg_list[i])
+        # cv2.waitKey(0)
         pcd = np.asarray(pcd_list[i])
         inx, gripperframe, pcd, pcd_cropped, = \
             trans_by_armaker(grayimg_list[i], pcd, x_range=x_range, y_range=y_range, z_range=z_range,
                              show_frame=toggledebug)
         if pcd_cropped is not None:
-            pcdu.show_pcd(pcd)
-            pcd_cropped, _ = pcdu.get_nearest_cluster(pcd_cropped, seed=seed, eps=.02, min_samples=200)
-            seed = np.mean(pcd_cropped, axis=0)
+            # pcdu.show_pcd(pcd)
+            # pcd_cropped, _ = pcdu.get_nearest_cluster(pcd_cropped, seed=seed, eps=.02, min_samples=200)
+            # seed = np.mean(pcd_cropped, axis=0)
+            # pcd_cropped = remove_outliers(pcd_cropped, nb_points=16, toggledebug=True)
             gm.gen_sphere(seed, rgba=(1, 1, 0, 1)).attach_to(base)
             print('Num. of points in cropped pcd:', len(pcd_cropped))
             if len(pcd_cropped) > 0:
                 if to_zero:
                     pcd_cropped = pcd_cropped - np.asarray(center)
                 o3dpcd = o3dh.nparray2o3dpcd(pcd_cropped)
-                o3d.io.write_point_cloud(os.path.join(config.ROOT, 'recons_data', fo, f'{fnlist[i]}' + '.pcd'),
-                                         o3dpcd)
+                o3d.io.write_point_cloud(os.path.join(config.ROOT, 'recons_data', fo, f'{fnlist[i]}' + '.pcd'), o3dpcd)
+                # o3d.visualization.draw_geometries([o3dpcd])
                 pcd_cropped_list.append(pcd_cropped)
                 inx_list.append(inx)
 
@@ -262,8 +264,8 @@ def reg_armarker(fo, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False, t
     for i in range(1, len(pcd_cropped_list)):
         print(len(pcd_cropped_list[i - 1]))
         if icp:
-            _, _, trans_tmp = o3dh.registration_ptpt(pcd_cropped_list[i], pcd_cropped_list[i - 1],
-                                                     downsampling_voxelsize=.001, toggledebug=False)
+            _, _, trans_tmp = \
+                o3dh.registration_ptpt(pcd_list[i], pcd_list[i - 1], downsampling_voxelsize=.001, toggledebug=False)
             trans = trans_tmp.dot(trans)
             pcd_cropped_list[i] = pcdu.trans_pcd(pcd_cropped_list[i], trans)
             pcdu.show_pcd(pcdu.trans_pcd(pcd_cropped_list[i], trans), rgba=colors[inx_list[i] - 1])
@@ -497,3 +499,46 @@ def cal_nbc_pcn(pcd, pcd_pcn, gripperframe, rbt, seedjntagls, gl_transmat4=np.ey
     # gm.gen_stick(cam_pos, p_new, rgba=(0, 1, 1, 1)).attach_to(base)
 
     return pts_nbv, nrmls_nbv, jnts
+
+
+def sort_kpts(kpts, seed):
+    sort_ids = []
+    while len(sort_ids) < len(kpts):
+        dist_list = np.linalg.norm(kpts - seed, axis=1)
+        sort_ids_tmp = np.argsort(dist_list)
+        for i in sort_ids_tmp:
+            if i not in sort_ids:
+                sort_ids.append(i)
+                break
+        seed = kpts[sort_ids[-1]]
+    return kpts[sort_ids]
+
+
+def get_kpts_gmm(objpcd, n_components=20, show=True, rgba=(1, 0, 0, 1)):
+    X = np.array(objpcd)
+    gmix = GaussianMixture(n_components=n_components, random_state=0).fit(X)
+    kpts = sort_kpts(gmix.means_, seed=np.asarray([0, 0, 0]))
+
+    if show:
+        for i, p in enumerate(kpts[1:]):
+            gm.gen_sphere(p, radius=.001, rgba=rgba).attach_to(base)
+
+    kdt, _ = pcdu.get_kdt(objpcd)
+    kpts_rotseq = []
+    for i, p in enumerate(kpts[:-1]):
+        knn = pcdu.get_knn(kpts[i], kdt, k=50)
+        pcv, pcaxmat = rm.compute_pca(knn)
+        inx = sorted(range(len(pcv)), key=lambda k: pcv[k])
+        y_v = kpts[i + 1] - kpts[i]
+        x_v = pcaxmat[:, inx[0]]
+        if len(kpts_rotseq) != 0:
+            if rm.angle_between_vectors(kpts_rotseq[-1][:, 0], x_v) > np.pi / 2:
+                x_v = -x_v
+            if rm.angle_between_vectors(kpts_rotseq[-1][:, 1], y_v) > np.pi / 2:
+                y_v = -y_v
+        z_v = np.cross(x_v, y_v)
+
+        rot = np.asarray([rm.unit_vector(x_v), rm.unit_vector(y_v), rm.unit_vector(z_v)]).T
+        kpts_rotseq.append(rot)
+
+    return kpts[:-1], np.asarray(kpts_rotseq)

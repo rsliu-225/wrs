@@ -1,7 +1,7 @@
 import os
 import open3d as o3d
 import numpy as np
-import datagenerator.utils as utl
+import datagenerator.data_utils as utl
 import visualization.panda.world as wd
 import basis.robot_math as rm
 

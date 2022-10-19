@@ -2,7 +2,7 @@ import copy
 import random
 
 from _shape_dict import *
-import utils as utl
+import data_utils as utl
 import numpy as np
 from scipy.interpolate import Rbf
 

@@ -6,12 +6,12 @@ import random
 import numpy as np
 import open3d as o3d
 
-import datagenerator.utils as utl
+import datagenerator.data_utils as utl
 import basis.robot_math as rm
 import modeling.geometric_model as gm
 import visualization.panda.world as wd
 
-import utils
+import data_utils
 
 def gen_random_homomat4(trans_diff=(.01, .01, .01), rot_diff=np.radians((10, 10, 10))):
     random_pos = np.asarray([random.uniform(-trans_diff[0], trans_diff[0]),
@@ -119,7 +119,7 @@ def gen_multiview_for_complete_pcd(cat='', class_name=None):
                 if rot_id == 0:
                     continue
                 print(name_com)
-                pcd = utils.read_pcd(file_path)
+                pcd = data_utils.read_pcd(file_path)
                 pcd = utl.trans_pcd(pcd, np.linalg.inv(np.dot(homomat4_dict[int(obj_id)][0], np.linalg.inv(rot_mat))))
 
                 new_file_name = complete_pcd.split("_")

@@ -17,7 +17,7 @@ import basis.trimesh as trm
 import modeling.collision_model as cm
 import modeling.geometric_model as gm
 
-import datagenerator.utils as utl
+import datagenerator.data_utils as utl
 import visualization.panda.world as wd
 
 if __name__ == '__main__':

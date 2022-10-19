@@ -3,7 +3,7 @@ import os.path
 import numpy
 
 from _tst_gen_dataset import *
-import utils as utl
+import data_utils as utl
 from multiview import *
 import open3d as o3d
 import pickle
