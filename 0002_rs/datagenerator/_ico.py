@@ -20,8 +20,8 @@ for v_id, v in enumerate(tm.vertices):
     o_v_vector = v - np.array([0, 0, 0])
     rgba = [1, 0, 0, 1]
     # print(rm.angle_between_vectors(o_v_vector, np.array([0, 0, 1])))
-    if rm.angle_between_vectors(o_v_vector, np.array([0, 0, 1])) < theta:
-        rgba = [0, 1, 0, 1]
+    # if rm.angle_between_vectors(o_v_vector, np.array([0, 0, 1])) < theta:
+    #     rgba = [0, 1, 0, 1]
     # random_color = rm.random_rgba()
     # gm.gen_arrow(spos=center, epos=center + center_normal * 0.3, rgba=rgba, thickness=.03).attach_to(base)
     gm.gen_sphere(v, radius=.03, rgba=rgba).attach_to(origin)

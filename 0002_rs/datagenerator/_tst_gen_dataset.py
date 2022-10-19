@@ -64,21 +64,22 @@ if __name__ == '__main__':
     #                                  f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
     #                                  occ_vt_ratio=random.uniform(.5, 1), noise_vt_ration=random.uniform(.5, 1),
     #                                  add_noise=True, add_occ=True, toggledebug=True)
-    utl.get_objpcd_partial_o3d(objcm, objcm, np.eye(3), rot_center, path=path, resolusion=(550, 550),
-                               f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
-                               occ_vt_ratio=random.uniform(.5, 1),
-                               noise_vt_ratio=random.uniform(.5, 1),
-                               add_noise=True, add_occ=True, toggledebug=True,
-                               savemesh=True, savedepthimg=True, savergbimg=True)
+    # utl.get_objpcd_partial_o3d(objcm, objcm, np.eye(3), rot_center, path=path, resolusion=(550, 550),
+    #                            f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
+    #                            occ_vt_ratio=random.uniform(.5, 1),
+    #                            noise_vt_ratio=random.uniform(.5, 1),
+    #                            add_noise=True, add_occ=True, toggledebug=True,
+    #                            savemesh=True, savedepthimg=True, savergbimg=True)
 
-    # '''
-    # show data
-    # '''
-    # for f in sorted(os.listdir(folder_name)):
-    #     if f[-3:] == 'pcd':
-    #         o3dpcd = o3d.io.read_point_cloud(f"{folder_name}/{f}")
-    #         gm.gen_pointcloud(o3dpcd.points).attach_to(base)
-    # base.run()
+    '''
+    show data
+    '''
+    path = './tst/'
+    for f in sorted(os.listdir(path)):
+        if f[-3:] == 'pcd':
+            o3dpcd = o3d.io.read_point_cloud(f"{path}/{f}")
+            gm.gen_pointcloud(o3dpcd.points).attach_to(base)
+    base.run()
     #
     # '''
     # show key point

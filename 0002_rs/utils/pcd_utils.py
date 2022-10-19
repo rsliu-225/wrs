@@ -831,9 +831,9 @@ def cal_nbv_pcn(pts, pts_pcn, theta=np.pi / 6, toggledebug=False):
 
     _, _, trans = o3dh.registration_icp_ptpt(pts_pcn, pts, maxcorrdist=.02, toggledebug=False)
     pts_pcn = trans_pcd(pts_pcn, trans)
-    show_pcd(pts_pcn, rgba=(1, 1, 0, .5))
-    show_pcd(pts, rgba=(1, 0, 0, .5))
-
+    show_pcd(pts_pcn, rgba=(1, 0, 0, 1))
+    # show_pcd(pts, rgba=(0, 0, 1, 1))
+    base.run()
     pts, nrmls, confs = \
         cal_conf(np.asarray(pts), voxel_size=.005, radius=.005, theta=None, toggledebug=False)
     pts_pcn, nrmls_pcn, confs_pcn = \
@@ -843,8 +843,8 @@ def cal_nbv_pcn(pts, pts_pcn, theta=np.pi / 6, toggledebug=False):
     dist_list = []
     for i, p in enumerate(pts_pcn):
         knn_inx = get_knn_indices(p, kdt, k=1)[0]
-        gm.gen_stick(spos=pts[knn_inx], epos=p, rgba=(confs[knn_inx], 0, 1 - confs[knn_inx], .5),
-                     thickness=.0005).attach_to(base)
+        # gm.gen_stick(spos=pts[knn_inx], epos=p, rgba=(confs[knn_inx], 0, 1 - confs[knn_inx], .5),
+        #              thickness=.0005).attach_to(base)
         dist_list.append(np.linalg.norm(p - pts[knn_inx]) / (.1 - np.linalg.norm(p - pts[knn_inx])))
         confs_pcn_res.append(confs[knn_inx])
     dist_list = _normalize(dist_list)
