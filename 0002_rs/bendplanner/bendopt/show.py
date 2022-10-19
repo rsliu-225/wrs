@@ -185,7 +185,7 @@ if __name__ == '__main__':
     '''
     load files
     '''
-    f_name = f'{goal_f_name}_{method}_{obj_type}_10.pkl'
+    f_name = f'{goal_f_name}_{method}_{obj_type}_15.pkl'
     show_sgl_method(f_name)
 
     # compare(f'{goal_f_name}_{method}_max_10.pkl', f'{goal_f_name}_{method}_avg_10.pkl')

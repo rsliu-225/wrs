@@ -55,6 +55,20 @@ def grid_on(ax):
     ax.grid(b=True, which='minor', linestyle='--', alpha=.2)
 
 
+def find_best_n(err_list, threshold=1.):
+    min_err = np.inf
+    inx = 0
+    for i, v in enumerate(err_list):
+        if v < min_err:
+            min_err = v
+            inx = i
+        else:
+            break
+        if v < threshold:
+            break
+    return inx, min_err
+
+
 if __name__ == '__main__':
     base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
     gm.gen_frame(thickness=.0005, alpha=.1, length=.01).attach_to(base)
@@ -65,7 +79,7 @@ if __name__ == '__main__':
     init_pseq = [(0, 0, 0), (0, .05 + bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
 
-    bend_num_range = (5, 51)
+    bend_num_range = (5, 50)
 
     # r = .02 / 2
     # bs.set_r_center(r)
@@ -81,6 +95,8 @@ if __name__ == '__main__':
     grid_on(ax1)
     ax1.plot(x, fit_max_err_list, color='darkorange', linestyle="dashed")
     ax1.plot(x, bend_max_err_list, color='darkorange')
+    best_n, min_err = find_best_n(bend_max_err_list, threshold=1)
+    print(x[best_n], min_err)
     # ax1.set_xlabel('Num. of key point')
     # ax1.set_ylabel('Max. point to point error(mm)')
 
@@ -88,11 +104,18 @@ if __name__ == '__main__':
     grid_on(ax2)
     ax2.plot(x, fit_avg_err_list, color='darkorange', linestyle="dashed")
     ax2.plot(x, bend_avg_err_list, color='darkorange')
+    best_n, min_err = find_best_n(bend_avg_err_list, threshold=.5)
+    print(x[best_n], min_err)
+
     # ax2.set_xlabel('Num. of key point')
     # ax2.set_ylabel('Avg. point to point error(mm)')
 
     ax3 = fig.add_subplot(1, 3, 3)
     grid_on(ax3)
     ax3.plot(x, m_list, color='black')
+
+    ax1.axvline(x=x[best_n], color='r', linestyle="dashed")
+    ax2.axvline(x=x[best_n], color='r', linestyle="dashed")
+    ax3.axvline(x=x[best_n], color='r', linestyle="dashed")
 
     plt.show()

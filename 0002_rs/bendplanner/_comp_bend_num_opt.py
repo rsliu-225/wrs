@@ -24,7 +24,8 @@ def run_parallel(fn, args):
         p.join()
 
 
-def opt_process(i, bs, opt, tor=None, obj_type='avg', method='SLSQP', n_trials=2000, n_startup_trials=10, sigma0=None):
+def opt_process(i, bs, opt, f_name='', tor=None, obj_type='avg', method='SLSQP', n_trials=2000, n_startup_trials=10,
+                sigma0=None):
     if method == 'cmaes':
         res_bendseq, cost, time_cost = opt.solve(tor=tor, cnt=i,
                                                  n_trials=n_trials, sigma0=sigma0,
@@ -92,7 +93,7 @@ if __name__ == '__main__':
     n_startup_trials = 10
     sigma0 = None
 
-    f_name = f'6_{goal_f_name}_{method}_{obj_type}_10.pkl'
+    f_name = f'{goal_f_name}_{method}_{obj_type}_15.pkl'
 
     '''
     opt
@@ -116,10 +117,9 @@ if __name__ == '__main__':
                                   bend_times=1,
                                   obj_type=obj_type)
 
-    for i in range(25, 30):
-        init_err, opt_err = opt_process(i, bs, opt, tor=tor, obj_type=obj_type, method=method,
+    for i in range(19, 30):
+        init_err, opt_err = opt_process(i, bs, opt, tor=tor, obj_type=obj_type, method=method, f_name=f_name,
                                         n_trials=n_trials, n_startup_trials=n_startup_trials, sigma0=sigma0)
 
     # run_parallel(opt_process, [[19, bs, opt, tor, obj_type, method, n_trials, n_startup_trials, sigma0]])
     # run_parallel(opt_process, [[20, bs, opt, tor, obj_type, method, n_trials, n_startup_trials, sigma0]])
-
