@@ -998,10 +998,13 @@ class MotionPlanner(object):
         j = self.rbt.jacobian(component_name='lft_arm')
         return j.transpose().dot(ft)
 
-    # def get_max_force(self, ft_dir, armjnts=None, jnt_torque_limit=np.asarray([14.6, 14.62, 6.25, 6.21, 1, .8, .43])):
-    def get_max_force(self, ft_dir, armjnts=None, jnt_torque_limit=np.asarray([56, 56, 28, 12, 12, 12])):
+    def get_max_force(self, ft_dir, armjnts=None, jnt_torque_limit=np.asarray([14.6, 14.62, 6.25, 6.21, 1, .8, .43])):
         if armjnts is not None:
             self.rbt.fk(component_name=self.armname, jnt_values=armjnts)
+        if len(self.get_armjnts()) == 6:
+            jnt_torque_limit = np.asarray([56, 56, 28, 12, 12, 12])
+        else:
+            jnt_torque_limit = np.asarray([14.6, 14.62, 6.25, 6.21, 1, .8, .43])
         ft_dir = np.asarray(rm.unit_vector(ft_dir))
         scale = [0, 1000]
         while scale[1] - scale[0] > .01:

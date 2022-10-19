@@ -25,6 +25,7 @@ if __name__ == '__main__':
     base, env = el.loadEnv_yumi(camp=[2.5, -2, 1.8], lookatpos=[.45, .1, .1])
     # base, env = el.loadEnv_yumi(camp=[.45, .1, 1.8], lookatpos=[.45, .1, 0])
     rbt = el.loadYumi(showrbt=False)
+
     transmat4 = rm.homomat_from_posrot((.45, .1, bconfig.BENDER_H), rm.rotmat_from_axangle((0, 0, 1), np.pi))
     # transmat4 = rm.homomat_from_posrot((.4, -.1, bconfig.BENDER_H))
 
@@ -71,9 +72,10 @@ if __name__ == '__main__':
     seqs, _, bendresseq = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/yumi/{f}_bendresseq.pkl', 'rb'))
     armjntsseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/yumi/{f}_armjntsseq.pkl', 'rb'))
     pathseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/yumi/{f}_pathseq.pkl', 'rb'))
-    # pathseq_list, min_f_list, f_list = brp.check_force(bendresseq, pathseq_list)
+    min_f_list, f_list = brp.check_force(bendresseq, armjntsseq_list, show_step=0)
+    armjntsseq_list = np.asarray(armjntsseq_list)[np.argsort(min_f_list)[::-1]]
     # brp.show_motion_withrbt(bendresseq, pathseq_list[0][1])
-
+    base.run()
     # for i, armjnts in enumerate(pathseq_list[0][1][1][1:-2]):
     #     if i == 0:
     #         continue
