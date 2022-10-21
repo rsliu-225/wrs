@@ -112,7 +112,7 @@ def init_gen_deform(class_name, num_kpts, res=(550, 550), rot_center=(0, 0, 0), 
     path = os.path.join(path, class_name[:4])
     cache_data = dict()
     icomats = rm.gen_icorotmats(rotation_interval=math.radians(360 / 60))
-    if class_name[:4] == 'temp':
+    if class_name[:4] == 'tmpl':
         objcm = cm.CollisionModel(f'../obstacles/template.stl')
     else:
         objcm = cm.CollisionModel(f'../obstacles/plate.stl')
@@ -129,22 +129,23 @@ def init_gen_deform(class_name, num_kpts, res=(550, 550), rot_center=(0, 0, 0), 
     else:
         goal_pseq = np.asarray([[0, 0, 0],
                                 [.04 + random.uniform(-.02, .01), 0, random.uniform(-.005, .005)],
-                                [.08 + random.uniform(-.01, .01), 0, random.uniform(-.01, .012)],
+                                [.08 + random.uniform(-.01, .01), 0, random.uniform(-.015, .015)],
                                 [.12 + random.uniform(-.01, .02), 0, random.uniform(-.005, .005)],
                                 [.16, 0, 0]])
     rot_axial, rot_radial = random_rot_radians(num_kpts)
 
     for i, mats in enumerate(icomats):
         print(printProgressBar(i, len(icomats), prefix='Progress:', suffix='Complete', length=100), "\r")
-        deformed_objcm, objcm_gt = utl.deform_cm(objcm, goal_pseq, rot_axial, rot_radial)
+        deformed_objcm, objcm_gt = \
+            utl.deform_cm(objcm, goal_pseq, rot_axial, rot_radial, rbf_radius=random.uniform(.05, .2))
 
         rot_dict = dict()
         np.random.shuffle(mats)
         for j, rot in enumerate(mats[:max_num]):
             f_name = '_'.join([str(i), str(j), class_name])
-            utl.get_objpcd_partial_o3d(objcm, objcm_gt, rot, (0, 0, 0), f_name=f_name, path=path,
+            utl.get_objpcd_partial_o3d(deformed_objcm, objcm_gt, rot, (0, 0, 0), f_name=f_name, path=path,
                                        resolusion=res, add_occ=True, add_noise=True, add_rnd_occ=True,
-                                       occ_vt_ratio=random.uniform(.5, 1), noise_vt_ratio=random.uniform(.5, 1))
+                                       occ_vt_ratio=random.uniform(.05, .1), noise_vt_ratio=random.uniform(.2, .5))
             rot_dict[j] = rm.homomat_from_posrot(rot_center, rot)
         cache_data[i] = rot_dict
 
@@ -214,12 +215,13 @@ def show_some_pcd(path, num, class_name, dist=0.01):
 
 
 def test_pcd(class_name, id='1'):
-    comeplte_dir = os.path.join(PATH, class_name, "complete")
-    for f in os.listdir(comeplte_dir):
+    gt_dir = os.path.join(PATH, class_name, "complete")
+    for f in os.listdir(gt_dir):
         name_com = (f.split('.')[0]).split("_")
+        print(f, name_com)
         if class_name + id == name_com[2]:
-            o3dpcd_i = utl.read_o3dpcd(os.path.join(comeplte_dir.replace("complete", "partial"), f))
-            o3dpcd_gt = utl.read_o3dpcd(os.path.join(comeplte_dir, f))
+            o3dpcd_i = utl.read_o3dpcd(os.path.join(gt_dir.replace("complete", "partial"), f))
+            o3dpcd_gt = utl.read_o3dpcd(os.path.join(gt_dir, f))
             o3dpcd_gt.paint_uniform_color([0, 1, 0])
             o3dpcd_i.paint_uniform_color([0, 0, 1])
             o3d.visualization.draw_geometries([o3dpcd_i, o3dpcd_gt])
@@ -234,7 +236,9 @@ def gen_args(cat, rng):
 
 
 def gen_args_deform(cat, rng):
-    return [[cat + str(i + 1), random.choice([3, 4, 5])] for i in range(rng[0], rng[1])]
+    args = [[cat + str(i + 1), random.choice([3, 4, 5])] for i in range(rng[0], rng[1])]
+    print(args)
+    return args
 
 
 if __name__ == '__main__':
@@ -242,7 +246,12 @@ if __name__ == '__main__':
     # runInParallel(init_gen, gen_args("bspl", (24, 32)))
     # runInParallel(init_gen, gen_args("bspl", (32, 40)))
     # runInParallel(init_gen, gen_args("bspl", (104, 112)))
-    # runInParallel(init_gen, gen_args("quad", (16, 24)))
+    # runInParallel(init_gen, gen_args("quad", (24, 25)))
 
-    runInParallel(init_gen_deform, gen_args_deform("template", (0, 8)))
-    # test_pcd('bspl', '100')
+    # runInParallel(init_gen_deform, gen_args_deform("tmpl", (0, 8)))
+    # runInParallel(init_gen_deform, gen_args_deform("tmpl", (8, 16)))
+    # runInParallel(init_gen_deform, gen_args_deform("tmpl", (16, 24)))
+    # runInParallel(init_gen_deform, gen_args_deform("tmpl", (24, 32)))
+    runInParallel(init_gen_deform, gen_args_deform("plat", (0, 8)))
+
+    # test_pcd('plat', '1')

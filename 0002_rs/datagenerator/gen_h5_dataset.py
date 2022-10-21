@@ -33,7 +33,8 @@ def gen_h5(f_name):
         else:
             break
 
-        id_list = [int(f.split('_')[0]) for f in os.listdir(os.path.join(ORG_DATA_PATH, fo, 'complete'))]
+        # id_list = [int(f.split('_')[0]) for f in os.listdir(os.path.join(ORG_DATA_PATH, fo, 'complete'))]
+        id_list = [int(f.split(fo)[1].split('.pcd')[0]) for f in os.listdir(os.path.join(ORG_DATA_PATH, fo, 'complete'))]
         if f_name == 'train':
             id_range = range(0, int(np.floor(.8 * max(id_list))))
         elif f_name == 'val':
@@ -46,7 +47,7 @@ def gen_h5(f_name):
         print([i for i in id_range])
 
         for f in os.listdir(os.path.join(ORG_DATA_PATH, fo, 'complete')):
-            if f[-3:] == 'pcd' and int(f.split('_')[0]) in id_range:
+            if f[-3:] == 'pcd' and int(f.split(fo)[1].split('.pcd')[0]) in id_range:
                 o3dpcd = o3d.io.read_point_cloud(os.path.join(ORG_DATA_PATH, fo, 'complete', f))
                 complete_pcds.append(np.asarray(o3dpcd.points, dtype='<f4'))
                 # o3d.visualization.draw_geometries([o3dpcd])
@@ -54,7 +55,7 @@ def gen_h5(f_name):
                 # print(len(complete_pcds[-1]))
 
         for f in os.listdir(os.path.join(ORG_DATA_PATH, fo, 'partial')):
-            if f[-3:] == 'pcd' and int(f.split('_')[0]) in id_range:
+            if f[-3:] == 'pcd' and int(f.split(fo)[1].split('.pcd')[0]) in id_range:
                 o3dpcd = o3d.io.read_point_cloud(os.path.join(ORG_DATA_PATH, fo, 'partial', f))
                 incomplete_pcds.append(np.asarray(o3dpcd.points, dtype='<f4'))
                 # print(len(incomplete_pcds[-1]))
@@ -73,20 +74,18 @@ def gen_h5(f_name):
 def show_dataset(f_name):
     f = h5py.File(f'{GOAL_DATA_PATH}/{f_name}.h5', 'r')
     print(f.name, f.keys())
-    for k in f.keys():
-        print(k)
-        for pcd in f[k][:2]:
-            try:
-                o3dpcd = nparray2o3dpcd(np.asarray(pcd))
-                o3d.visualization.draw_geometries([o3dpcd])
-            except:
-                break
+    for i in range(len(f['complete_pcds'])):
+        o3dpcd_gt = nparray2o3dpcd(np.asarray(f['complete_pcds'][i]))
+        o3dpcd_i = nparray2o3dpcd(np.asarray(f['incomplete_pcds'][i]))
+        o3dpcd_gt.paint_uniform_color([0, 1, 0])
+        o3dpcd_i.paint_uniform_color([0, 0, 1])
+        o3d.visualization.draw_geometries([o3dpcd_i, o3dpcd_gt])
 
 
 if __name__ == '__main__':
     gen_h5('train')
-    gen_h5('test')
-    gen_h5('val')
+    # gen_h5('test')
+    # gen_h5('val')
     # show_dataset('train')
     # show_dataset('test')
     # show_dataset('val')

@@ -61,7 +61,6 @@ if __name__ == '__main__':
 
         deformed_objcm, objcm_gt = du.deform_cm(objcm, goal_pseq, rot_axial, rot_radial)
 
-    base.run()
 
     '''
     gen data
@@ -77,8 +76,9 @@ if __name__ == '__main__':
         for j, rot in enumerate(mats):
             du.get_objpcd_partial_o3d(deformed_objcm, objcm, rot, rot_center, path=fo,
                                       f_name=f'{obj_id}_{str(cnt).zfill(3)}',
-                                      occ_vt_ratio=random.uniform(.05, .1), noise_vt_ratio=random.uniform(.5, 1),
-                                      add_noise=True, add_occ=True, toggledebug=True)
+                                      occ_vt_ratio=random.uniform(.05, .1), noise_vt_ratio=random.uniform(.2, 5),
+                                      add_occ=True, add_noise=True, add_rnd_occ=True, toggledebug=True)
+
             homomat4_dict[str(obj_id)][str(cnt).zfill(3)] = rm.homomat_from_posrot(rot_center, rot)
             cnt += 1
             pickle.dump(homomat4_dict, open(f'{fo}/homomat4_dict.pkl', 'wb'))
