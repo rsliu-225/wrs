@@ -181,7 +181,6 @@ def sort_kpts(kpts, seed):
 def get_kpts_gmm(objpcd, n_components=20, show=True, rgba=(1, 0, 0, 1)):
     import utils.pcd_utils as pcdu
     X = np.array(objpcd)
-    print(len(objpcd))
     gmix = GaussianMixture(n_components=n_components, random_state=0).fit(X)
     kpts = sort_kpts(gmix.means_, seed=np.asarray([0, 0, 0]))
 

@@ -75,7 +75,7 @@ def get_kdt(p_list, dimension=3):
     p_list = np.asarray(p_list)
     p_narray = np.array(p_list[:, :dimension])
     kdt = KDTree(p_narray, leaf_size=100, metric='euclidean')
-    print('time cost(kdt):', time.time() - time_start)
+    # print('time cost(kdt):', time.time() - time_start)
     return kdt, p_narray
 
 
