@@ -42,6 +42,15 @@ def random_kts(n=3, max=.02):
     return kpts
 
 
+def random_rot_radians(n=3):
+    rot_axial = []
+    rot_radial = []
+    for i in range(n):
+        rot_axial.append(random.randint(10, 30) * random.choice([1, -1]))
+        rot_radial.append(random.randint(0, 1) * random.choice([1, -1]))
+    return np.radians(rot_axial), np.radians(rot_radial)
+
+
 def gen_seed(kpts, width=.008, length=.2, thickness=.0015, n=10, toggledebug=False, random=False):
     width = width + (np.random.uniform(0, 0.005) if random else 0)
     cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
@@ -71,14 +80,14 @@ def gen_seed_smooth(kpts, width=.008, length=.2, thickness=.0015, n=10, togglede
 
 
 # Name Composition: ObjectID_RotationID_ClassName_Type
-def init_gen(class_name, num_kpts, max, res=(550, 550), rot_center=(0, 0, 0), max_num=10, length=.2, path=PATH):
+def init_gen(class_name, num_kpts, max_kts, res=(550, 550), rot_center=(0, 0, 0), max_num=10, length=.2, path=PATH):
     path = os.path.join(path, class_name[:4])
     cache_data = dict()
     icomats = rm.gen_icorotmats(rotation_interval=math.radians(360 / 60))
 
     for i, mats in enumerate(icomats):
         print(printProgressBar(i, len(icomats), prefix='Progress:', suffix='Complete', length=100), "\r")
-        kpts = random_kts(num_kpts, max=max)
+        kpts = random_kts(num_kpts, max=max_kts)
         objcm = gen_seed_smooth(kpts, n=100, length=length, random=False)
         objcm_flat = gen_seed_smooth(kpts, n=100, thickness=0)
         rot_dict = dict()
@@ -86,6 +95,54 @@ def init_gen(class_name, num_kpts, max, res=(550, 550), rot_center=(0, 0, 0), ma
         for j, rot in enumerate(mats[:max_num]):
             f_name = '_'.join([str(i), str(j), class_name])
             utl.get_objpcd_partial_o3d(objcm, objcm_flat, rot, (0, 0, 0), f_name=f_name, path=path,
+                                       resolusion=res, add_occ=True, add_noise=True, add_rnd_occ=True,
+                                       occ_vt_ratio=random.uniform(.5, 1), noise_vt_ratio=random.uniform(.5, 1))
+            rot_dict[j] = rm.homomat_from_posrot(rot_center, rot)
+        cache_data[i] = rot_dict
+
+        if i == len(icomats) - 1:
+            print(printProgressBar(i + 1, len(icomats), prefix='Progress:', suffix='Complete', length=100), "\r")
+            print(f"A total of {i + 1} different objects created")
+
+    pickle.dump(cache_data, open(os.path.join(path, f'partial/{class_name}.pkl'), 'wb'))
+    cal_stats(os.path.join(path, 'partial'), class_name)
+
+
+def init_gen_deform(class_name, num_kpts, res=(550, 550), rot_center=(0, 0, 0), max_num=5, path=PATH):
+    path = os.path.join(path, class_name[:4])
+    cache_data = dict()
+    icomats = rm.gen_icorotmats(rotation_interval=math.radians(360 / 60))
+    if class_name[:4] == 'temp':
+        objcm = cm.CollisionModel(f'../obstacles/template.stl')
+    else:
+        objcm = cm.CollisionModel(f'../obstacles/plate.stl')
+
+    if num_kpts == 3:
+        goal_pseq = np.asarray([[0, 0, 0],
+                                [.08 + random.uniform(-.02, .02), 0, random.uniform(.015, .02)],
+                                [.16, 0, 0]])
+    elif num_kpts == 4:
+        goal_pseq = np.asarray([[0, 0, 0],
+                                [.04 + random.uniform(-.02, .04), 0, random.uniform(-.015, .015)],
+                                [.12 + random.uniform(-.04, .02), 0, random.uniform(-.015, .015)],
+                                [.16, 0, 0]])
+    else:
+        goal_pseq = np.asarray([[0, 0, 0],
+                                [.04 + random.uniform(-.02, .01), 0, random.uniform(-.005, .005)],
+                                [.08 + random.uniform(-.01, .01), 0, random.uniform(-.01, .012)],
+                                [.12 + random.uniform(-.01, .02), 0, random.uniform(-.005, .005)],
+                                [.16, 0, 0]])
+    rot_axial, rot_radial = random_rot_radians(num_kpts)
+
+    for i, mats in enumerate(icomats):
+        print(printProgressBar(i, len(icomats), prefix='Progress:', suffix='Complete', length=100), "\r")
+        deformed_objcm, objcm_gt = utl.deform_cm(objcm, goal_pseq, rot_axial, rot_radial)
+
+        rot_dict = dict()
+        np.random.shuffle(mats)
+        for j, rot in enumerate(mats[:max_num]):
+            f_name = '_'.join([str(i), str(j), class_name])
+            utl.get_objpcd_partial_o3d(objcm, objcm_gt, rot, (0, 0, 0), f_name=f_name, path=path,
                                        resolusion=res, add_occ=True, add_noise=True, add_rnd_occ=True,
                                        occ_vt_ratio=random.uniform(.5, 1), noise_vt_ratio=random.uniform(.5, 1))
             rot_dict[j] = rm.homomat_from_posrot(rot_center, rot)
@@ -176,15 +233,16 @@ def gen_args(cat, rng):
         return [[cat + str(i + 1), 4, random.choice([.01, .02, .03, .04])] for i in range(rng[0], rng[1])]
 
 
+def gen_args_deform(cat, rng):
+    return [[cat + str(i + 1), random.choice([3, 4, 5])] for i in range(rng[0], rng[1])]
+
+
 if __name__ == '__main__':
-    # # args_list = gen_args("quad", (0, 8))
-    # # print(args_list)
-    # # args_list = gen_args("bspl", (0, 8))
-    # # print(args_list)
     # runInParallel(init_gen, gen_args("bspl", (0, 8)))
     # runInParallel(init_gen, gen_args("bspl", (24, 32)))
     # runInParallel(init_gen, gen_args("bspl", (32, 40)))
-    runInParallel(init_gen, gen_args("bspl", (104, 112)))
+    # runInParallel(init_gen, gen_args("bspl", (104, 112)))
     # runInParallel(init_gen, gen_args("quad", (16, 24)))
 
-    test_pcd('bspl', '100')
+    runInParallel(init_gen_deform, gen_args_deform("template", (0, 8)))
+    # test_pcd('bspl', '100')

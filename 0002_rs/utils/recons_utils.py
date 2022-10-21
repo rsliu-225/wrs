@@ -516,6 +516,7 @@ def sort_kpts(kpts, seed):
 
 def get_kpts_gmm(objpcd, n_components=20, show=True, rgba=(1, 0, 0, 1)):
     X = np.array(objpcd)
+    print(len(objpcd))
     gmix = GaussianMixture(n_components=n_components, random_state=0).fit(X)
     kpts = sort_kpts(gmix.means_, seed=np.asarray([0, 0, 0]))
 
@@ -526,11 +527,10 @@ def get_kpts_gmm(objpcd, n_components=20, show=True, rgba=(1, 0, 0, 1)):
     kdt, _ = pcdu.get_kdt(objpcd)
     kpts_rotseq = []
     for i, p in enumerate(kpts[:-1]):
-        knn = pcdu.get_knn(kpts[i], kdt, k=50)
+        knn = pcdu.get_knn(kpts[i], kdt, k=int(len(objpcd)/n_components))
         pcv, pcaxmat = rm.compute_pca(knn)
-        inx = sorted(range(len(pcv)), key=lambda k: pcv[k])
         y_v = kpts[i + 1] - kpts[i]
-        x_v = pcaxmat[:, inx[0]]
+        x_v = pcaxmat[:, np.argmin(pcv)]
         if len(kpts_rotseq) != 0:
             if rm.angle_between_vectors(kpts_rotseq[-1][:, 0], x_v) > np.pi / 2:
                 x_v = -x_v
@@ -540,5 +540,6 @@ def get_kpts_gmm(objpcd, n_components=20, show=True, rgba=(1, 0, 0, 1)):
 
         rot = np.asarray([rm.unit_vector(x_v), rm.unit_vector(y_v), rm.unit_vector(z_v)]).T
         kpts_rotseq.append(rot)
+    kpts_rotseq.append(kpts_rotseq[-1])
 
-    return kpts[:-1], np.asarray(kpts_rotseq)
+    return kpts, np.asarray(kpts_rotseq)

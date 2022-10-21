@@ -30,7 +30,7 @@ def trans_pcd(pcd, transmat):
 
 
 def trans_pos(pts, pos):
-    return rm.homomat_transform_points(rm.homomat_from_posrot(np.asarray(pos), np.eye(3)), pts)
+    return rm.homomat_transform_points(rm.homomat_from_posrot(-np.asarray(pos), np.eye(3)), pts)
 
 
 def rot_new_orgin(pts, new_orgin, rot):
@@ -165,12 +165,49 @@ def show_pseq(pseq, rgba=(1, 0, 0, 1), radius=0.0005, show_stick=False):
                 .attach_to(base)
 
 
+def sort_kpts(kpts, seed):
+    sort_ids = []
+    while len(sort_ids) < len(kpts):
+        dist_list = np.linalg.norm(kpts - seed, axis=1)
+        sort_ids_tmp = np.argsort(dist_list)
+        for i in sort_ids_tmp:
+            if i not in sort_ids:
+                sort_ids.append(i)
+                break
+        seed = kpts[sort_ids[-1]]
+    return kpts[sort_ids]
+
+
 def get_kpts_gmm(objpcd, n_components=20, show=True, rgba=(1, 0, 0, 1)):
+    import utils.pcd_utils as pcdu
     X = np.array(objpcd)
+    print(len(objpcd))
     gmix = GaussianMixture(n_components=n_components, random_state=0).fit(X)
+    kpts = sort_kpts(gmix.means_, seed=np.asarray([0, 0, 0]))
+
     if show:
-        for p in gmix.means_:
+        for i, p in enumerate(kpts[1:]):
             gm.gen_sphere(p, radius=.001, rgba=rgba).attach_to(base)
+
+    kdt, _ = pcdu.get_kdt(objpcd)
+    kpts_rotseq = []
+    for i, p in enumerate(kpts[:-1]):
+        knn = pcdu.get_knn(kpts[i], kdt, k=int(len(objpcd) / n_components))
+        pcv, pcaxmat = rm.compute_pca(knn)
+        y_v = kpts[i + 1] - kpts[i]
+        x_v = pcaxmat[:, np.argmin(pcv)]
+        if len(kpts_rotseq) != 0:
+            if rm.angle_between_vectors(kpts_rotseq[-1][:, 0], x_v) > np.pi / 2:
+                x_v = -x_v
+            if rm.angle_between_vectors(kpts_rotseq[-1][:, 1], y_v) > np.pi / 2:
+                y_v = -y_v
+        z_v = np.cross(x_v, y_v)
+
+        rot = np.asarray([rm.unit_vector(x_v), rm.unit_vector(y_v), rm.unit_vector(z_v)]).T
+        kpts_rotseq.append(rot)
+    kpts_rotseq.append(kpts_rotseq[-1])
+
+    return kpts, np.asarray(kpts_rotseq)
 
 
 '''
@@ -204,6 +241,117 @@ def gen_swap(pseq, rotseq, cross_sec, toggledebug=False):
     objtrm = trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces))
 
     return cm.CollisionModel(initor=objtrm, btwosided=True, name='obj')
+
+
+'''
+deform
+'''
+
+
+def gen_plate_ctr_pts(pts, goal_pseq, edge=0.0):
+    org_len = np.linalg.norm(pts[:, 0].max() - pts[:, 0].min())
+    goal_diff = np.linalg.norm(np.diff(goal_pseq, axis=0), axis=1)
+    goal_diff_uni = org_len * goal_diff / goal_diff.sum()
+    # x_range = np.linspace(pts[:, 0].min(), pts[:, 0].max(), num)
+    x = float(pts[:, 0].min())
+    y_min = float(pts[:, 1].min()) - edge
+    y_max = float(pts[:, 1].max()) + edge
+    z_min = float(pts[:, 2].min()) - edge
+    z_max = float(pts[:, 2].max()) + edge
+    ctr_pts = [[x, y_min, z_min],
+               [x, y_max, z_min],
+               [x, y_max, z_max],
+               [x, y_min, z_max]]
+    for i in range(len(goal_diff_uni)):
+        x += goal_diff_uni[i]
+        ctr_pts.extend([[x, y_min, z_min],
+                        [x, y_max, z_min],
+                        [x, y_max, z_max],
+                        [x, y_min, z_max]])
+
+    return np.asarray(ctr_pts)
+
+
+def gen_deformed_ctr_pts(ctr_pts, goal_pseq, rot_axial=None, rot_radial=None, show_ctrl_pts=False):
+    goal_rotseq = get_rotseq_by_pseq_1d(goal_pseq)
+    org_len = np.linalg.norm(ctr_pts[:, 0].max() - ctr_pts[:, 0].min())
+    goal_diff = np.linalg.norm(np.diff(goal_pseq, axis=0), axis=1)
+    goal_pseq = org_len * goal_pseq / goal_diff.sum()
+
+    org_kpts = ctr_pts.reshape((int(len(ctr_pts) / 4), 4, 3)).mean(axis=1)
+    deformed_ctr_pts = []
+    if len(ctr_pts) != len(goal_pseq) * 4:
+        print('Wrong goal_diff size!', ctr_pts.shape, goal_pseq.shape)
+        return None
+    for i in range(len(goal_pseq)):
+        if show_ctrl_pts:
+            gm.gen_frame(goal_pseq[i], goal_rotseq[i], length=.01, thickness=.001).attach_to(base)
+            gm.gen_frame(org_kpts[i], np.eye(3), length=.01, thickness=.001,
+                         rgbmatrix=np.asarray([[1, 1, 0], [1, 0, 1], [0, 1, 1]])).attach_to(base)
+        transmat4 = np.dot(rm.homomat_from_posrot(goal_pseq[i], goal_rotseq[i]),
+                           np.linalg.inv(rm.homomat_from_posrot(org_kpts[i], np.eye(3))))
+        deformed_ctr_pts.extend(trans_pcd(ctr_pts[i * 4:(i + 1) * 4], transmat4))
+        if show_ctrl_pts:
+            for p in deformed_ctr_pts:
+                gm.gen_sphere(p, radius=.001, rgba=(1, 0, 0, 1)).attach_to(base)
+
+    if rot_axial is not None:
+        deformed_ctr_pts_rot = []
+        for i in range(len(rot_axial)):
+            deformed_ctr_pts_rot.extend(rot_new_orgin(deformed_ctr_pts[i * 4:(i + 1) * 4],
+                                                      goal_pseq[i],
+                                                      rm.rotmat_from_axangle(goal_rotseq[i][:, 0], rot_axial[i])))
+        deformed_ctr_pts = np.copy(deformed_ctr_pts_rot)
+        if show_ctrl_pts:
+            for p in deformed_ctr_pts:
+                gm.gen_sphere(p, radius=.001, rgba=(1, 0, 1, 1)).attach_to(base)
+
+    if rot_radial is not None:
+        deformed_ctr_pts_rot = []
+        for i in range(len(rot_radial)):
+            deformed_ctr_pts_rot.extend(rot_new_orgin(deformed_ctr_pts[i * 4:(i + 1) * 4],
+                                                      goal_pseq[i],
+                                                      rm.rotmat_from_axangle(goal_rotseq[i][:, 1], rot_radial[i])))
+        deformed_ctr_pts = np.copy(deformed_ctr_pts_rot)
+        if show_ctrl_pts:
+            for p in deformed_ctr_pts:
+                gm.gen_sphere(p, radius=.001, rgba=(0, 0, 1, 1)).attach_to(base)
+
+    if show_ctrl_pts:
+        for p in ctr_pts:
+            gm.gen_sphere(p, radius=.001, rgba=(1, 1, 0, 1)).attach_to(base)
+        # for p in deformed_ctr_pts:
+        #     gm.gen_sphere(p, radius=.001, rgba=(1, 0, 0, 1)).attach_to(base)
+    return np.asarray(deformed_ctr_pts)
+
+
+def deform_cm(objcm, goal_kpts, rot_axial, rot_radial, width=.008, thickness=0, rbf_radius=.05, show=False):
+    from pygem import RBF
+
+    cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
+
+    vs = objcm.objtrm.vertices
+    org_ctr_pts = gen_plate_ctr_pts(vs, goal_kpts)
+    deformed_ctr_pts = gen_deformed_ctr_pts(org_ctr_pts, goal_kpts,
+                                            rot_axial=rot_axial, rot_radial=rot_radial, show_ctrl_pts=show)
+    rbf = RBF(original_control_points=org_ctr_pts, deformed_control_points=deformed_ctr_pts, radius=rbf_radius)
+    new_vs = rbf(vs)
+    objcm_deformed = cm.CollisionModel(initor=trm.Trimesh(vertices=np.asarray(new_vs), faces=objcm.objtrm.faces),
+                                       btwosided=True, name='plate_deform')
+    new_pts, _ = objcm_deformed.sample_surface(radius=.0005)
+
+    kpts, kpts_rotseq = get_kpts_gmm(new_pts, rgba=(1, 1, 0, 1), n_components=16, show=False)
+    objcm_gt = gen_swap(kpts, kpts_rotseq, cross_sec, toggledebug=False)
+
+    if show:
+        for i, rot in enumerate(kpts_rotseq):
+            gm.gen_frame(kpts[i], kpts_rotseq[i], thickness=.001, length=.02).attach_to(base)
+        gm.gen_pointcloud(new_pts).attach_to(base)
+        objcm_deformed.set_rgba((.7, .7, 0, 1))
+        objcm_deformed.attach_to(base)
+        objcm_gt.set_rgba((1, 1, 0, 1))
+        objcm_gt.attach_to(base)
+    return objcm_deformed, objcm_gt
 
 
 '''
@@ -366,14 +514,14 @@ def get_objpcd_partial_o3d(objcm, objcm_gt, rot, rot_center, path='./', f_name='
     if toggledebug:
         o3dpcd_org = o3d.io.read_point_cloud(os.path.join(path, f_name + f'_tmp{ext_name}'))
         o3dpcd = o3d.io.read_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'))
-        o3dpcd_complete = o3d.io.read_point_cloud(os.path.join(path, 'complete', f'{f_name}{ext_name}'))
+        o3dpcd_gt = o3d.io.read_point_cloud(os.path.join(path, 'complete', f'{f_name}{ext_name}'))
         o3dpcd_org.paint_uniform_color([0, 0.7, 1])
         o3dpcd.paint_uniform_color([0, 0, 1])
-        o3dpcd_complete.paint_uniform_color([0, 1, 0])
-        o3d.visualization.draw_geometries([o3dpcd_complete])
+        o3dpcd_gt.paint_uniform_color([0, 1, 0])
+        o3d.visualization.draw_geometries([o3dpcd_gt])
         o3d.visualization.draw_geometries([o3dpcd_org])
         o3d.visualization.draw_geometries([o3dpcd])
-        print(len(o3dpcd.points), len(o3dpcd_complete.points))
+        print(len(o3dpcd.points), len(o3dpcd_gt.points))
     os.remove(os.path.join(path, f_name + f'_tmp{ext_name}'))
     return o3dpcd
 
