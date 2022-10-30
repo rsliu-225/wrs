@@ -343,10 +343,10 @@ def deform_cm(objcm, goal_kpts, rot_axial, rot_radial, width=.008, thickness=0, 
     objcm_gt = gen_swap(kpts, kpts_rotseq, cross_sec, toggledebug=False)
 
     if show:
-        for i, rot in enumerate(kpts_rotseq):
-            gm.gen_frame(kpts[i], kpts_rotseq[i], thickness=.001, length=.02).attach_to(base)
+        # for i, rot in enumerate(kpts_rotseq):
+        #     gm.gen_frame(kpts[i], kpts_rotseq[i], thickness=.001, length=.02).attach_to(base)
         gm.gen_pointcloud(new_pts).attach_to(base)
-        objcm_deformed.set_rgba((.7, .7, 0, 1))
+        objcm_deformed.set_rgba((.7, .7, .7, 1))
         objcm_deformed.attach_to(base)
         objcm_gt.set_rgba((1, 1, 0, 1))
         objcm_gt.attach_to(base)

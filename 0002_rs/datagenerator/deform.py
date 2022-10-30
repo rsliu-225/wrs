@@ -14,6 +14,8 @@ import visualization.panda.world as wd
 import bendplanner.bend_utils as bu
 import utils.recons_utils as ru
 
+from stl import mesh
+
 
 def random_rot_radians(n=3):
     rot_axial = []
@@ -22,6 +24,16 @@ def random_rot_radians(n=3):
         rot_axial.append(random.randint(10, 30) * random.choice([1, -1]))
         rot_radial.append(random.randint(0, 1) * random.choice([1, -1]))
     return np.radians(rot_axial), np.radians(rot_radial)
+
+
+def save_stl(objcm, path):
+    vertices = np.asarray(objcm.objtrm.vertices) * 1000
+    faces = np.asarray(objcm.objtrm.faces)
+    objmesh = mesh.Mesh(np.zeros(faces.shape[0], dtype=mesh.Mesh.dtype))
+    for i, f in enumerate(faces):
+        for j in range(3):
+            objmesh.vectors[i][j] = vertices[f[j], :]
+    objmesh.save(path)
 
 
 if __name__ == '__main__':
@@ -60,7 +72,7 @@ if __name__ == '__main__':
         rot_axial, rot_radial = random_rot_radians(len(goal_pseq))
 
         deformed_objcm, objcm_gt = du.deform_cm(objcm, goal_pseq, rot_axial, rot_radial)
-
+        save_stl(deformed_objcm, './deform/plate1.stl')
 
     '''
     gen data
@@ -74,7 +86,7 @@ if __name__ == '__main__':
     homomat4_dict[str(obj_id)] = {}
     for i, mats in enumerate(icomats):
         for j, rot in enumerate(mats):
-            du.get_objpcd_partial_o3d(deformed_objcm, objcm, rot, rot_center, path=fo,
+            du.get_objpcd_partial_o3d(deformed_objcm, objcm_gt, rot, rot_center, path=fo,
                                       f_name=f'{obj_id}_{str(cnt).zfill(3)}',
                                       occ_vt_ratio=random.uniform(.05, .1), noise_vt_ratio=random.uniform(.2, 5),
                                       add_occ=True, add_noise=True, add_rnd_occ=True, toggledebug=True)
