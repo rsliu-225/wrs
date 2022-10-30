@@ -102,7 +102,7 @@ class BendSim(object):
             self.pillar_center.attach_to(base)
             for obj in self.__staticobslist:
                 obj.attach_to(base)
-            # self.bender.show_cdprimit()
+            self.bender.show_cdprimit()
 
     def reset(self, pseq, rotseq, extend=True):
         self.pseq = list(copy.deepcopy(pseq))
@@ -365,10 +365,10 @@ class BendSim(object):
             objcm.set_homomat(objmat4)
         if show_frame:
             for i in range(len(pseq)):
-                gm.gen_frame(pseq[i], rotseq[i], length=.01, thickness=.0005, alpha=1).attach_to(base)
+                gm.gen_frame(pseq[i], rotseq[i], length=.006, thickness=.0004, alpha=1).attach_to(base)
         if show_dashframe:
             for i in range(len(pseq)):
-                gm.gen_dashframe(pseq[i], rotseq[i], length=.01, thickness=.0005, alpha=1).attach_to(base)
+                gm.gen_dashframe(pseq[i], rotseq[i], length=.006, thickness=.0004, alpha=1).attach_to(base)
             # gm.gen_frame(pseq[0], rotseq[0], length=.01, thickness=.0004, alpha=.5,
             #              rgbmatrix=np.asarray([[1, 1, 0, 1], [1, 0, 1, 1], [0, 1, 1, 1]])).attach_to(base)
         if show_pseq:
@@ -505,7 +505,7 @@ class BendSim(object):
             rot_angle = -rot_angle
             self.pseq = self._rot_new_orgin(self.pseq, np.asarray((-self.bend_r, 0, 0)), rot)
             self.rotseq = np.asarray([rot.dot(r) for r in self.rotseq])
-        # self.show(rgba=(.7, .7, .7, 0), show_dashframe=True)
+        self.show(rgba=(.7, .7, .7, .7), show_dashframe=True)
 
         if rot_angle != 0:
             self._rot(rot_angle)
@@ -800,8 +800,12 @@ if __name__ == '__main__':
     import visualization.panda.world as wd
 
     base = wd.World(cam_pos=[.075, .1, .05], lookat_pos=[0, 0, 0])
-    bs = BendSim(show=True, cm_type='stick', granularity=np.pi / 30)
+    bs = BendSim(show=False, cm_type='stick', granularity=np.pi / 30)
     bs.set_stick_sec(180)
+    cm.gen_stick(spos=np.asarray([0, 0, -.015]),
+                 epos=np.asarray([0, 0, .015]),
+                 thickness=.015, sections=180,
+                 rgba=[1, 1, 1, 1]).attach_to(base)
     # bs.pillar_center = cm.gen_stick(spos=np.asarray([0, 0, -bconfig.PILLAR_H / 2.5]),
     #                                 epos=np.asarray([0, 0, bconfig.PILLAR_H / 2.5]),
     #                                 thickness=bs.r_center * 2, sections=90,
@@ -814,7 +818,7 @@ if __name__ == '__main__':
         # [np.radians(45), np.radians(0), np.radians(0), .04],
         # [np.radians(45), np.radians(0), np.radians(0), .04],
         # [np.radians(45), np.radians(30), np.radians(0), .04],
-        [np.radians(45), np.radians(0), np.radians(45), .02],
+        [np.radians(45), np.radians(0), np.radians(45), .015],
         # [np.radians(90), np.radians(0), np.radians(0), .04],
         # [np.radians(180), np.radians(0), np.radians(0), .04],
         # [np.radians(-90), np.radians(0), np.radians(0), .08],
@@ -824,14 +828,14 @@ if __name__ == '__main__':
     # bendseq = pickle.load(open('./penta_bendseq.pkl', 'rb'))
     # bendset = bs.gen_random_bendset(5)
     # print(bendset)
-    bs.reset([(0, 0, 0), (0, max(np.asarray(bendset)[:, 3]), 0)], [np.eye(3), np.eye(3)])
+    bs.reset([(0, 0, 0), (0, max(np.asarray(bendset)[:, 3])-.01, 0)], [np.eye(3), np.eye(3)])
 
     is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, toggledebug=False)
     # bs.show(rgba=(.7, .7, 0, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
     bs.show(rgba=(.7, .7, 0, .7), show_frame=True)
     # bu.visualize_voxel([bs.voxelize()], colors=['r'])
 
-    bs.get_updown_primitive()
+    # bs.get_updown_primitive()
 
     # bs.move_to_org(.04)
     # bs.show(rgba=(.7, .7, .7, .7), show_frame=True, show_pseq=False)
