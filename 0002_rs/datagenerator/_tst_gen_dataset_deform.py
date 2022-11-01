@@ -14,8 +14,6 @@ import visualization.panda.world as wd
 import bendplanner.bend_utils as bu
 import utils.recons_utils as ru
 
-from stl import mesh
-
 
 def random_rot_radians(n=3):
     rot_axial = []
@@ -27,6 +25,7 @@ def random_rot_radians(n=3):
 
 
 def save_stl(objcm, path):
+    from stl import mesh
     vertices = np.asarray(objcm.objtrm.vertices) * 1000
     faces = np.asarray(objcm.objtrm.faces)
     objmesh = mesh.Mesh(np.zeros(faces.shape[0], dtype=mesh.Mesh.dtype))
@@ -37,7 +36,6 @@ def save_stl(objcm, path):
 
 
 if __name__ == '__main__':
-
     base = wd.World(cam_pos=[.1, .2, .4], lookat_pos=[0, 0, 0])
     # base = wd.World(cam_pos=[.1, .4, 0], lookat_pos=[.1, 0, 0])
     gm.gen_frame(thickness=.002, length=.05).attach_to(base)
@@ -53,26 +51,22 @@ if __name__ == '__main__':
 
     vs = objcm.objtrm.vertices
 
-    for i in range(10):
-        # goal_pseq = np.asarray([[0, 0, 0],
-        #                         [.04 + random.uniform(-.02, .01), 0, random.uniform(-.005, .005)],
-        #                         [.08 + random.uniform(-.01, .01), 0, random.uniform(-.01, .01)],
-        #                         [.12 + random.uniform(-.01, .02), 0, random.uniform(-.005, .005)],
-        #                         [.16, 0, 0]])
-        # goal_pseq = np.asarray([[0, 0, 0],
-        #                         [.04 + random.uniform(-.02, .04), 0, random.uniform(-.015, .015)],
-        #                         [.12 + random.uniform(-.04, .02), 0, random.uniform(-.015, .015)],
-        #                         [.16, 0, 0]])
-        goal_pseq = np.asarray([[0, 0, 0],
-                                [.08 + random.uniform(-.02, .02), 0,
-                                 random.uniform(.015, .02) * random.choice([-1, 1])],
-                                [.16, 0, 0]])
-        # goal_pseq = du.uni_length(goal_pseq, goal_len=.128)
-        # goal_pseq = du.uni_length(goal_pseq, goal_len=.143)
-        rot_axial, rot_radial = random_rot_radians(len(goal_pseq))
+    # goal_pseq = np.asarray([[0, 0, 0],
+    #                         [.04 + random.uniform(-.02, .01), 0, random.uniform(-.005, .005)],
+    #                         [.08 + random.uniform(-.01, .01), 0, random.uniform(-.01, .01)],
+    #                         [.12 + random.uniform(-.01, .02), 0, random.uniform(-.005, .005)],
+    #                         [.16, 0, 0]])
+    goal_pseq = np.asarray([[0, 0, 0],
+                            [.04 + random.uniform(-.02, .04), 0, random.uniform(-.015, .015)],
+                            [.12 + random.uniform(-.04, .02), 0, random.uniform(-.015, .015)],
+                            [.16, 0, 0]])
+    # goal_pseq = np.asarray([[0, 0, 0],
+    #                         [.08 + random.uniform(-.02, .02), 0,
+    #                          random.uniform(.015, .02) * random.choice([-1, 1])],
+    #                         [.16, 0, 0]])
 
-        deformed_objcm, objcm_gt = du.deform_cm(objcm, goal_pseq, rot_axial, rot_radial, show=True)
-    base.run()
+    rot_axial, rot_radial = random_rot_radians(len(goal_pseq))
+    deformed_objcm, objcm_gt = du.deform_cm(objcm, goal_pseq, rot_axial, rot_radial, show=True)
 
     '''
     gen data
@@ -81,19 +75,13 @@ if __name__ == '__main__':
     icomats = rm.gen_icorotmats(rotation_interval=np.radians(90))
     cnt = 0
     obj_id = 0
+    # rot = np.eye(3)
+    rot = rm.rotmat_from_axangle((1, 0, 0), np.pi / 3)
 
-    homomat4_dict = {}
-    homomat4_dict[str(obj_id)] = {}
-    for i, mats in enumerate(icomats):
-        for j, rot in enumerate(mats):
-            du.get_objpcd_partial_o3d(deformed_objcm, objcm_gt, rot, rot_center, path=fo,
-                                      f_name=f'{obj_id}_{str(cnt).zfill(3)}',
-                                      occ_vt_ratio=random.uniform(.05, .1), noise_vt_ratio=random.uniform(.2, 5),
-                                      add_occ=True, add_noise=True, add_rnd_occ=True, toggledebug=True)
-
-            homomat4_dict[str(obj_id)][str(cnt).zfill(3)] = rm.homomat_from_posrot(rot_center, rot)
-            cnt += 1
-            pickle.dump(homomat4_dict, open(f'{fo}/homomat4_dict.pkl', 'wb'))
+    du.get_objpcd_partial_o3d(deformed_objcm, objcm_gt, rot, rot_center, path=fo,
+                              f_name=f'{obj_id}_{str(cnt).zfill(3)}',
+                              occ_vt_ratio=random.uniform(.05, .1), noise_vt_ratio=random.uniform(.2, 5),
+                              add_occ=True, add_noise=True, add_rnd_occ=True, toggledebug=True)
 
     # '''
     # show data

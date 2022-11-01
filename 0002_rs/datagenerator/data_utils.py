@@ -16,6 +16,8 @@ import basis.trimesh as trm
 import modeling.collision_model as cm
 import modeling.geometric_model as gm
 
+COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40]]) / 255
+
 '''
 basic func
 '''
@@ -136,7 +138,7 @@ def get_rotseq_by_pseq_smooth(pseq):
     for i in range(1, len(pseq) - 1):
         v = pseq[i - 1] - pseq[i]
 
-        indices = kdt.query([pseq[i]], k=50, return_distance=False)
+        indices = kdt.query([pseq[i]], k=20, return_distance=False)
         knn = pseq[indices][0]
         pcv, pcaxmat = rm.compute_pca(knn)
         n = pcaxmat[:, np.argmin(pcv)]
@@ -522,8 +524,9 @@ def get_objpcd_partial_o3d(objcm, objcm_gt, rot, rot_center, path='./', f_name='
         o3dpcd = o3d.io.read_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'))
         o3dpcd_gt = o3d.io.read_point_cloud(os.path.join(path, 'complete', f'{f_name}{ext_name}'))
         o3dpcd_org.paint_uniform_color([0, 0.7, 1])
-        o3dpcd.paint_uniform_color([0, 0, 1])
-        o3dpcd_gt.paint_uniform_color([0, 1, 0])
+        o3dpcd.paint_uniform_color(COLOR[0])
+        o3dpcd_gt.paint_uniform_color(COLOR[1])
+        o3d.visualization.draw_geometries([o3dmesh])
         o3d.visualization.draw_geometries([o3dpcd_gt])
         o3d.visualization.draw_geometries([o3dpcd_org])
         o3d.visualization.draw_geometries([o3dpcd])

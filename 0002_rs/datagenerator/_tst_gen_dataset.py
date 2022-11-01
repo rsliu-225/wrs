@@ -21,6 +21,7 @@ import datagenerator.data_utils as utl
 import visualization.panda.world as wd
 
 if __name__ == '__main__':
+
     cam_pos = np.asarray([0, 0, .5])
     base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
     width = .005
@@ -43,33 +44,13 @@ if __name__ == '__main__':
     cnt = 0
     obj_id = 0
     rot_center = (0, 0, 0)
-    homomat4_dict = dict()
-    homomat4_dict[str(obj_id)] = {}
 
-    # icomats = rm.gen_icorotmats(rotation_interval=np.radians(90))
-    # for i, mats in enumerate(icomats):
-    #     for j, rot in enumerate(mats):
-    #         utl.get_objpcd_partial_o3d(objcm, rot, rot_center, path=path,
-    #                                    f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
-    #                                    occ_vt_ratio=random.uniform(.5, 1), noise_vt_ration=random.uniform(.5, 1),
-    #                                    add_noise=True, add_occ=True, toggledebug=True)
-    #         homomat4_dict[str(obj_id)][str(cnt).zfill(3)] = rm.homomat_from_posrot(rot_center, rot)
-    #         cnt += 1
-    #         pickle.dump(homomat4_dict, open(f'{path}/homomat4_dict.pkl', 'wb'))
-    # cammat4_seq = []
-    # for i, mats in enumerate(icomats):
-    #     for j, rot in enumerate(mats):
-    #         cammat4_seq.append(rm.homomat_from_posrot())
-    # utl.get_objpcd_partial_o3d_vctrl(objcm, path=path,
-    #                                  f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
-    #                                  occ_vt_ratio=random.uniform(.5, 1), noise_vt_ration=random.uniform(.5, 1),
-    #                                  add_noise=True, add_occ=True, toggledebug=True)
-    # utl.get_objpcd_partial_o3d(objcm, objcm, np.eye(3), rot_center, path=path, resolusion=(550, 550),
-    #                            f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
-    #                            occ_vt_ratio=random.uniform(.5, 1),
-    #                            noise_vt_ratio=random.uniform(.5, 1),
-    #                            add_noise=True, add_occ=True, toggledebug=True,
-    #                            savemesh=True, savedepthimg=True, savergbimg=True)
+    utl.get_objpcd_partial_o3d(objcm, objcm, np.eye(3), rot_center, path=path, resolusion=(550, 550),
+                               f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
+                               occ_vt_ratio=random.uniform(.5, 1),
+                               noise_vt_ratio=random.uniform(.5, 1),
+                               add_noise=True, add_occ=True, toggledebug=True,
+                               savemesh=False, savedepthimg=False, savergbimg=False)
 
     '''
     show data
@@ -80,7 +61,7 @@ if __name__ == '__main__':
             o3dpcd = o3d.io.read_point_cloud(f"{path}/{f}")
             gm.gen_pointcloud(o3dpcd.points).attach_to(base)
     base.run()
-    #
+
     # '''
     # show key point
     # '''

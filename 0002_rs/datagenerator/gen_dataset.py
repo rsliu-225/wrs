@@ -12,7 +12,7 @@ import pickle
 from multiprocessing import Process
 
 # PATH = 'E:/liu/dataset_2048_flat/'
-PATH = 'E:/liu/dataset_2048_prim/'
+PATH = 'E:/liu/dataset_2048_prim_v10/'
 
 
 def runInParallel(fn, args):
@@ -105,7 +105,7 @@ def gen_seed(num_kpts=4, max=.02, width=.008, length=.2, thickness=.0015, n=10, 
 #     pickle.dump(cache_data, open(os.path.join(path, f'partial/{cat}.pkl'), 'wb'))
 #     cal_stats(os.path.join(path, 'partial'), cat)
 
-def init_gen(cat, num_kpts, max_kts, res=(550, 550), rot_center=(0, 0, 0), max_num=50, length=.2, path=PATH):
+def init_gen(cat, num_kpts, max_kts, res=(550, 550), rot_center=(0, 0, 0), max_num=10, length=.2, path=PATH):
     path = os.path.join(path, cat[:4])
     icomats = rm.gen_icorotmats(rotation_interval=math.radians(360 / 60))
     icomats = [x for row in icomats for x in row]
@@ -175,7 +175,7 @@ def init_gen(cat, num_kpts, max_kts, res=(550, 550), rot_center=(0, 0, 0), max_n
 #     pickle.dump(cache_data, open(os.path.join(path, f'partial/{class_name}.pkl'), 'wb'))
 #     cal_stats(os.path.join(path, 'partial'), class_name)
 
-def init_gen_deform(cat, num_kpts, res=(550, 550), rot_center=(0, 0, 0), max_num=50, path=PATH):
+def init_gen_deform(cat, num_kpts, res=(550, 550), rot_center=(0, 0, 0), max_num=10, path=PATH):
     path = os.path.join(path, cat[:4])
     icomats = rm.gen_icorotmats(rotation_interval=math.radians(360 / 60))
     icomats = [x for row in icomats for x in row]
@@ -222,10 +222,10 @@ def init_gen_deform(cat, num_kpts, res=(550, 550), rot_center=(0, 0, 0), max_num
 def cal_stats(path, class_name):
     num_pts = []
     class_name = str(class_name[4:]).zfill(4)
-    for file in os.listdir(path):
-        if not "pcd" in file or not class_name in file:
+    for f in os.listdir(path):
+        if not "pcd" in f or f[:4] != class_name:
             continue
-        num_pts.append(len(utl.read_pcd(os.path.join(path, file))))
+        num_pts.append(len(utl.read_pcd(os.path.join(path, f))))
     print("[lowest:highest:average]", min(num_pts), max(num_pts), int(sum(num_pts) / len(num_pts)),
           ": with a total of", len(num_pts), "pcd")
 
@@ -291,11 +291,11 @@ def gen_args_deform(cat, rng):
 
 
 if __name__ == '__main__':
-    for i in range(0, 5):
+    for i in range(20, 30):
         runInParallel(init_gen, gen_args("bspl", range(i * 8, (i + 1) * 8)))
-    # for i in range(0, 5):
-    #     runInParallel(init_gen, gen_args("quad", range(i * 8, (i + 1) * 8)))
-    for i in range(0, 5):
+    for i in range(20, 30):
+        runInParallel(init_gen, gen_args("quad", range(i * 8, (i + 1) * 8)))
+    for i in range(20, 30):
         runInParallel(init_gen_deform, gen_args_deform("plat", range(i * 8, (i + 1) * 8)))
-    for i in range(0, 5):
+    for i in range(2, 30):
         runInParallel(init_gen_deform, gen_args_deform("tmpl", range(i * 8, (i + 1) * 8)))

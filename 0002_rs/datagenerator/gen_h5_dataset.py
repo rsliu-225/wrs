@@ -4,8 +4,6 @@ import open3d as o3d
 import numpy as np
 
 ROOT = os.path.abspath('./')
-ORG_DATA_PATH = 'E:/liu/dataset_2048_prim/'
-GOAL_DATA_PATH = 'D:/liu/MVP_Benchmark/completion/data_2048_prim/'
 
 COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40]]) / 255
 
@@ -20,16 +18,13 @@ def nparray2o3dpcd(nx3nparray_pnts, nx3nparray_nrmls=None, estimate_normals=Fals
     return o3dpcd
 
 
-def gen_h5(f_name, multiview=True):
-    if not os.path.exists(GOAL_DATA_PATH):
-        os.mkdir(GOAL_DATA_PATH)
+def gen_h5(f_name, org_path, goal_path, multiview=True):
+    if not os.path.exists(goal_path):
+        os.mkdir(goal_path)
     complete_pcds = []
     incomplete_pcds = []
     labels = []
-    for fo in os.listdir(ORG_DATA_PATH):
-        print(fo)
-        # elif fo == 'linear':
-        #     label = 0
+    for fo in os.listdir(org_path):
         if fo == 'quad':
             label = 1
         elif fo == 'bspl':
@@ -40,10 +35,11 @@ def gen_h5(f_name, multiview=True):
             label = 4
         else:
             continue
-
         # id_list = [int(f.split('_')[0]) for f in os.listdir(os.path.join(ORG_DATA_PATH, fo, 'complete'))]
+        print('category:', fo)
+
         id_list = [int(f.split(fo)[1].split('.pcd')[0]) for f in
-                   os.listdir(os.path.join(ORG_DATA_PATH, fo, 'complete'))]
+                   os.listdir(os.path.join(org_path, fo, 'complete'))]
         if f_name == 'train':
             id_range = range(0, int(np.floor(.8 * max(id_list))))
         elif f_name == 'val':
@@ -54,10 +50,13 @@ def gen_h5(f_name, multiview=True):
             id_range = (0, max(id_list) + 1)
         print(id_range)
 
-        for f in os.listdir(os.path.join(ORG_DATA_PATH, fo, 'complete')):
+        for f in os.listdir(os.path.join(org_path, fo, 'complete')):
             if f[-3:] == 'pcd' and int(f.split(fo)[1].split('.pcd')[0]) in id_range:
-                o3dpcd_gt = o3d.io.read_point_cloud(os.path.join(ORG_DATA_PATH, fo, 'complete', f))
-                o3dpcd_i = o3d.io.read_point_cloud(os.path.join(ORG_DATA_PATH, fo, 'partial', f))
+                if not os.path.exists(os.path.join(org_path, fo, 'partial', f)):
+                    print(f)
+                    continue
+                o3dpcd_gt = o3d.io.read_point_cloud(os.path.join(org_path, fo, 'complete', f))
+                o3dpcd_i = o3d.io.read_point_cloud(os.path.join(org_path, fo, 'partial', f))
                 incomplete_pcds.append(np.asarray(o3dpcd_i.points, dtype='<f4'))
                 complete_pcds.append(np.asarray(o3dpcd_gt.points, dtype='<f4'))
                 # o3dpcd_gt.paint_uniform_color([0, 1, 0])
@@ -65,75 +64,12 @@ def gen_h5(f_name, multiview=True):
                 # o3d.visualization.draw_geometries([o3dpcd_gt, o3dpcd_i])
                 labels.append(label)
                 if multiview:
-                    try:
-                        o3dpcd_mv_gt = o3d.io.read_point_cloud(os.path.join(ORG_DATA_PATH, 'multiview', 'complete', f))
-                        o3dpcd_mv_i = o3d.io.read_point_cloud(os.path.join(ORG_DATA_PATH, 'multiview', 'partial', f))
-                        incomplete_pcds.append(np.asarray(o3dpcd_mv_i.points, dtype='<f4'))
-                        complete_pcds.append(np.asarray(o3dpcd_mv_gt.points, dtype='<f4'))
-                        # o3dpcd_mv_gt.paint_uniform_color([0, 1, 0])
-                        # o3dpcd_mv_i.paint_uniform_color([1, 0, 0])
-                        # o3d.visualization.draw_geometries([o3dpcd_mv_gt, o3dpcd_mv_i])
-                        labels.append(-label)
-                    except:
+                    if not os.path.exists(os.path.join(org_path, 'multiview', 'complete', f)) or \
+                            not os.path.exists(os.path.join(org_path, 'multiview', 'partial', f)):
+                        print(f)
                         continue
-
-    print('complete pcd shape:', np.asarray(complete_pcds).shape)
-    print('incomplete pcd shape:', np.asarray(incomplete_pcds).shape)
-    print('label pcd shape:', np.asarray(labels).shape)
-    with h5py.File(f"{GOAL_DATA_PATH}/{f_name}.h5", "w") as f:
-        dset = f.create_dataset("complete_pcds", data=np.asarray(complete_pcds, dtype='<f4'))
-        dset = f.create_dataset("incomplete_pcds", data=np.asarray(incomplete_pcds, dtype='<f4'))
-        dset = f.create_dataset("labels", data=np.asarray(labels, dtype='<f4'))
-        print(f.keys())
-
-
-def gen_h5_new(f_name, multiview=True):
-    if not os.path.exists(GOAL_DATA_PATH):
-        os.mkdir(GOAL_DATA_PATH)
-    complete_pcds = []
-    incomplete_pcds = []
-    labels = []
-    for fo in os.listdir(ORG_DATA_PATH):
-        print(fo)
-        # elif fo == 'linear':
-        #     label = 0
-        if fo == 'quad':
-            label = 1
-        elif fo == 'bspl':
-            label = 2
-        elif fo == 'plat':
-            label = 3
-        elif fo == 'tmpl':
-            label = 4
-        else:
-            continue
-
-        id_list = [int(f.split('_')[0]) for f in os.listdir(os.path.join(ORG_DATA_PATH, fo, 'complete'))]
-        if f_name == 'train':
-            id_range = range(0, int(np.floor(.8 * max(id_list))))
-        elif f_name == 'val':
-            id_range = range(int(np.floor(.8 * max(id_list))), int(np.floor(.9 * max(id_list))))
-        elif f_name == 'test':
-            id_range = range(int(np.floor(.9 * max(id_list))), max(id_list) + 1)
-        else:
-            id_range = (0, max(id_list) + 1)
-        print(id_range)
-
-        for f in os.listdir(os.path.join(ORG_DATA_PATH, fo, 'complete')):
-            if f[-3:] == 'pcd' and int(f.split('_')[0]) in id_range:
-                o3dpcd_gt = o3d.io.read_point_cloud(os.path.join(ORG_DATA_PATH, fo, 'complete', f))
-                o3dpcd_i = o3d.io.read_point_cloud(os.path.join(ORG_DATA_PATH, fo, 'partial', f))
-                incomplete_pcds.append(np.asarray(o3dpcd_i.points, dtype='<f4'))
-                complete_pcds.append(np.asarray(o3dpcd_gt.points, dtype='<f4'))
-                # o3dpcd_gt.paint_uniform_color([0, 1, 0])
-                # o3dpcd_i.paint_uniform_color([1, 0, 0])
-                # o3d.visualization.draw_geometries([o3dpcd_gt, o3dpcd_i])
-                labels.append(label)
-                if multiview:
-                    o3dpcd_mv_gt = o3d.io.read_point_cloud(
-                        os.path.join(ORG_DATA_PATH, 'multiview', 'complete', f'{fo}_{f}'))
-                    o3dpcd_mv_i = o3d.io.read_point_cloud(
-                        os.path.join(ORG_DATA_PATH, 'multiview', 'partial', f'{fo}_{f}'))
+                    o3dpcd_mv_gt = o3d.io.read_point_cloud(os.path.join(org_path, 'multiview', 'complete', f))
+                    o3dpcd_mv_i = o3d.io.read_point_cloud(os.path.join(org_path, 'multiview', 'partial', f))
                     incomplete_pcds.append(np.asarray(o3dpcd_mv_i.points, dtype='<f4'))
                     complete_pcds.append(np.asarray(o3dpcd_mv_gt.points, dtype='<f4'))
                     # o3dpcd_mv_gt.paint_uniform_color([0, 1, 0])
@@ -144,50 +80,93 @@ def gen_h5_new(f_name, multiview=True):
     print('complete pcd shape:', np.asarray(complete_pcds).shape)
     print('incomplete pcd shape:', np.asarray(incomplete_pcds).shape)
     print('label pcd shape:', np.asarray(labels).shape)
-    with h5py.File(f"{GOAL_DATA_PATH}/{f_name}.h5", "w") as f:
+    with h5py.File(f"{goal_path}/{f_name}.h5", "w") as f:
         dset = f.create_dataset("complete_pcds", data=np.asarray(complete_pcds, dtype='<f4'))
         dset = f.create_dataset("incomplete_pcds", data=np.asarray(incomplete_pcds, dtype='<f4'))
         dset = f.create_dataset("labels", data=np.asarray(labels, dtype='<f4'))
         print(f.keys())
 
 
-def show_dataset_h5(f_name, label=4):
-    f = h5py.File(f'{GOAL_DATA_PATH}/{f_name}.h5', 'r')
-    print(f.name, f.keys())
-    for i in range(len(f['complete_pcds'])):
-        if f['labels'][i] == label:
-            o3dpcd_gt = nparray2o3dpcd(np.asarray(f['complete_pcds'][i]))
-            o3dpcd_i = nparray2o3dpcd(np.asarray(f['incomplete_pcds'][i]))
-            o3dpcd_gt.paint_uniform_color(COLOR[1])
-            o3dpcd_i.paint_uniform_color(COLOR[0])
-            o3d.visualization.draw_geometries([o3dpcd_i, o3dpcd_gt])
+def gen_h5_new(f_name, org_path, goal_path, multiview=True):
+    if not os.path.exists(goal_path):
+        os.mkdir(goal_path)
+    complete_pcds = []
+    incomplete_pcds = []
+    labels = []
+    for fo in os.listdir(org_path):
+        # elif fo == 'linear':
+        #     label = 0
+        if fo == 'quad':
+            label = 1
+        elif fo == 'bspl':
+            label = 2
+        elif fo == 'plat':
+            label = 3
+        elif fo == 'tmpl':
+            label = 4
+        else:
+            continue
+        print('category:', fo)
+        id_list = [int(f.split('_')[0]) for f in os.listdir(os.path.join(org_path, fo, 'complete'))]
+        if f_name == 'train':
+            id_range = range(0, int(np.floor(.8 * max(id_list))))
+        elif f_name == 'val':
+            id_range = range(int(np.floor(.8 * max(id_list))), int(np.floor(.9 * max(id_list))))
+        elif f_name == 'test':
+            id_range = range(int(np.floor(.9 * max(id_list))), max(id_list) + 1)
+        else:
+            id_range = (0, max(id_list) + 1)
+        print(id_range)
+
+        for f in os.listdir(os.path.join(org_path, fo, 'complete')):
+            if f[-3:] == 'pcd' and int(f.split('_')[0]) in id_range:
+                o3dpcd_gt = o3d.io.read_point_cloud(os.path.join(org_path, fo, 'complete', f))
+                o3dpcd_i = o3d.io.read_point_cloud(os.path.join(org_path, fo, 'partial', f))
+                incomplete_pcds.append(np.asarray(o3dpcd_i.points, dtype='<f4'))
+                complete_pcds.append(np.asarray(o3dpcd_gt.points, dtype='<f4'))
+                # o3dpcd_gt.paint_uniform_color([0, 1, 0])
+                # o3dpcd_i.paint_uniform_color([1, 0, 0])
+                # o3d.visualization.draw_geometries([o3dpcd_gt, o3dpcd_i])
+                labels.append(label)
+                if multiview:
+                    o3dpcd_mv_gt = o3d.io.read_point_cloud(
+                        os.path.join(org_path, 'multiview', 'complete', f'{fo}_{f}'))
+                    o3dpcd_mv_i = o3d.io.read_point_cloud(
+                        os.path.join(org_path, 'multiview', 'partial', f'{fo}_{f}'))
+                    incomplete_pcds.append(np.asarray(o3dpcd_mv_i.points, dtype='<f4'))
+                    complete_pcds.append(np.asarray(o3dpcd_mv_gt.points, dtype='<f4'))
+                    # o3dpcd_mv_gt.paint_uniform_color([0, 1, 0])
+                    # o3dpcd_mv_i.paint_uniform_color([1, 0, 0])
+                    # o3d.visualization.draw_geometries([o3dpcd_mv_gt, o3dpcd_mv_i])
+                    labels.append(-label)
+
+    print('complete pcd shape:', np.asarray(complete_pcds).shape)
+    print('incomplete pcd shape:', np.asarray(incomplete_pcds).shape)
+    print('label pcd shape:', np.asarray(labels).shape)
+    with h5py.File(f"{goal_path}/{f_name}.h5", "w") as f:
+        dset = f.create_dataset("complete_pcds", data=np.asarray(complete_pcds, dtype='<f4'))
+        dset = f.create_dataset("incomplete_pcds", data=np.asarray(incomplete_pcds, dtype='<f4'))
+        dset = f.create_dataset("labels", data=np.asarray(labels, dtype='<f4'))
+        print(f.keys())
+    print('-----------------------------')
 
 
-def show_dataset_o3d(cat='plat'):
-    for fo in os.listdir(ORG_DATA_PATH):
-        if fo == cat:
-            for f in os.listdir(os.path.join(ORG_DATA_PATH, fo, 'complete')):
-                if f[-3:] == 'pcd':
-                    print(f)
-                    o3dpcd_gt = o3d.io.read_point_cloud(os.path.join(ORG_DATA_PATH, fo, 'complete', f))
-                    o3dpcd_i = o3d.io.read_point_cloud(os.path.join(ORG_DATA_PATH, fo, 'partial', f))
-                    # gm.gen_pointcloud(np.asarray(o3dpcd_gt.points)).attach_to(base)
-                    o3dpcd_i.paint_uniform_color(COLOR[0])
-                    o3dpcd_gt.paint_uniform_color(COLOR[1])
-                    o3d.visualization.draw_geometries([o3dpcd_gt, o3dpcd_i])
 
 
 if __name__ == '__main__':
     import modeling.geometric_model as gm
     import visualization.panda.world as wd
 
+    org_path = 'E:/liu/dataset_2048_prim_v10/'
+    goal_path = 'D:/liu/MVP_Benchmark/completion/data_2048_prim_v10_mv/'
     base = wd.World(cam_pos=[.1, .2, .4], lookat_pos=[0, 0, 0])
 
-    gen_h5_new('train')
-    gen_h5_new('test')
-    gen_h5_new('val')
-    # show_dataset_h5('train', label=3)
-    # show_dataset_h5('test')
-    # show_dataset_h5('val')
-    # show_dataset_o3d(cat='plat')
-    # base.run()
+    gen_h5_new('train', org_path, goal_path, multiview=True)
+    gen_h5_new('test', org_path, goal_path, multiview=True)
+    gen_h5_new('val', org_path, goal_path, multiview=True)
+
+    # gen_h5('train', org_path, goal_path, multiview=False)
+    # gen_h5('test', org_path, goal_path, multiview=False)
+    # gen_h5('val', org_path, goal_path, multiview=False)
+
+

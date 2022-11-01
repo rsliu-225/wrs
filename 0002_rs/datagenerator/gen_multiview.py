@@ -54,10 +54,12 @@ def gen_multiview(cat, comb_num=1, path='', trans_diff=(.01, .01, .01), rot_diff
             f_name_dict[objid].append(rid)
     # for k, v in f_name_dict.items():
     #     print(k, v)
-    i = 0
+    cnt = 0
     for f in os.listdir(os.path.join(path, cat, 'partial')):
-        if i % 10 == 0:
-            print(printProgressBar(i, len(f_name_dict.keys()), prefix=f'Progress({cat}):',
+        cnt += 1
+        if cnt % 40 == 0:
+            print(printProgressBar(cnt, len(os.listdir(os.path.join(path, cat, 'partial'))),
+                                   prefix=f'Progress({cat}):',
                                    suffix='Complete', length=100), "\r")
         if f[-3:] != 'pcd':
             continue
@@ -97,7 +99,6 @@ def gen_multiview(cat, comb_num=1, path='', trans_diff=(.01, .01, .01), rot_diff
                 o3dpcd_gt.paint_uniform_color([0, 1, 0])
                 o3dpcd_mv.paint_uniform_color([1, 0, 0])
                 o3d.visualization.draw_geometries([o3dpcd_gt, o3dpcd_mv])
-        i += 1
 
 
 def gen_multiview_lc(comb_num=1, cat='', class_name=None, trans_diff=(.004, .004, .004),
@@ -171,8 +172,9 @@ def gen_multiview_for_complete_pcd(cat='', class_name=None):
     print(f"A total of {cnt} pcd generated")
 
 
-def show(fo='./', cat='multiview'):
-    for f in sorted(os.listdir(os.path.join(fo, cat, 'complete'))):
+def show(fo='./', cat='bspl'):
+    random_f = random.choices(sorted(os.listdir(os.path.join(fo, cat, 'complete'))), k=10)
+    for f in random_f:
         if f[-3:] == 'pcd':
             o3dpcd = o3d.io.read_point_cloud(os.path.join(fo, cat, 'complete', f))
             gm.gen_pointcloud(o3dpcd.points, rgbas=[[0, 1, 0, 1]]).attach_to(base)
@@ -184,24 +186,25 @@ def show(fo='./', cat='multiview'):
 if __name__ == '__main__':
     base = wd.World(cam_pos=[.1, .2, .4], lookat_pos=[0, 0, 0])
     # base = wd.World(cam_pos=[.1, .4, 0], lookat_pos=[.1, 0, 0])
-    path = 'E:/liu/dataset_2048_prim'
+    path = 'E:/liu/dataset_2048_prim_v10'
     trans_diff = (.001, .001, .001)
     rot_diff = np.radians((1, 1, 1))
     comb_num = 1
 
     cat_list = []
     for fo in os.listdir(path):
-        if fo in ['bspl', 'plat', 'tmpl']:
-            cat_list.append(fo)
+        cat_list.append(fo)
+    # cat_list = ['plat']
 
     proc = []
     for cat in cat_list:
-        p = Process(target=gen_multiview, args=[cat, comb_num, path, trans_diff, rot_diff, True, False])
-        # gen_multiview(cat, comb_num=comb_num, path=path, trans_diff=trans_diff, rot_diff=rot_diff,
-        #               add_occ=True, toggledebug=False)
-        p.start()
-        proc.append(p)
-        for p in proc:
-            p.join()
+        if cat != 'multiview':
+            p = Process(target=gen_multiview, args=[cat, comb_num, path, trans_diff, rot_diff, True, False])
+            # gen_multiview(cat, comb_num=comb_num, path=path, trans_diff=trans_diff, rot_diff=rot_diff,
+            #               add_occ=True, toggledebug=False)
+            p.start()
+            proc.append(p)
+    for p in proc:
+        p.join()
 
     # show(path)
