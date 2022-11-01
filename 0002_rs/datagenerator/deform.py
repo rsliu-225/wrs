@@ -14,6 +14,8 @@ import visualization.panda.world as wd
 import bendplanner.bend_utils as bu
 import utils.recons_utils as ru
 
+from stl import mesh
+
 
 def random_rot_radians(n=3):
     rot_axial = []
@@ -22,6 +24,16 @@ def random_rot_radians(n=3):
         rot_axial.append(random.randint(10, 30) * random.choice([1, -1]))
         rot_radial.append(random.randint(0, 1) * random.choice([1, -1]))
     return np.radians(rot_axial), np.radians(rot_radial)
+
+
+def save_stl(objcm, path):
+    vertices = np.asarray(objcm.objtrm.vertices) * 1000
+    faces = np.asarray(objcm.objtrm.faces)
+    objmesh = mesh.Mesh(np.zeros(faces.shape[0], dtype=mesh.Mesh.dtype))
+    for i, f in enumerate(faces):
+        for j in range(3):
+            objmesh.vectors[i][j] = vertices[f[j], :]
+    objmesh.save(path)
 
 
 if __name__ == '__main__':
