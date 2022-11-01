@@ -326,30 +326,37 @@ def gen_deformed_ctr_pts(ctr_pts, goal_pseq, rot_axial=None, rot_radial=None, sh
 
 def deform_cm(objcm, goal_kpts, rot_axial, rot_radial, width=.008, thickness=0, rbf_radius=.05, show=False):
     from pygem import RBF
-
     cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
+    success = False
+    objcm_deformed, objcm_gt = None, None
+    while not success:
+        vs = objcm.objtrm.vertices
+        org_ctr_pts = gen_plate_ctr_pts(vs, goal_kpts)
+        deformed_ctr_pts = gen_deformed_ctr_pts(org_ctr_pts, goal_kpts,
+                                                rot_axial=rot_axial, rot_radial=rot_radial, show_ctrl_pts=show)
+        rbf = RBF(original_control_points=org_ctr_pts, deformed_control_points=deformed_ctr_pts, radius=rbf_radius)
+        new_vs = rbf(vs)
+        objcm_deformed = cm.CollisionModel(initor=trm.Trimesh(vertices=np.asarray(new_vs), faces=objcm.objtrm.faces),
+                                           btwosided=True, name='plate_deform')
+        new_pts, _ = objcm_deformed.sample_surface(radius=.0005)
 
-    vs = objcm.objtrm.vertices
-    org_ctr_pts = gen_plate_ctr_pts(vs, goal_kpts)
-    deformed_ctr_pts = gen_deformed_ctr_pts(org_ctr_pts, goal_kpts,
-                                            rot_axial=rot_axial, rot_radial=rot_radial, show_ctrl_pts=show)
-    rbf = RBF(original_control_points=org_ctr_pts, deformed_control_points=deformed_ctr_pts, radius=rbf_radius)
-    new_vs = rbf(vs)
-    objcm_deformed = cm.CollisionModel(initor=trm.Trimesh(vertices=np.asarray(new_vs), faces=objcm.objtrm.faces),
-                                       btwosided=True, name='plate_deform')
-    new_pts, _ = objcm_deformed.sample_surface(radius=.0005)
-
-    kpts, kpts_rotseq = get_kpts_gmm(new_pts, rgba=(1, 1, 0, 1), n_components=16, show=False)
-    objcm_gt = gen_swap(kpts, kpts_rotseq, cross_sec, toggledebug=False)
-
+        kpts, kpts_rotseq = get_kpts_gmm(new_pts, rgba=(1, 1, 0, 1), n_components=16, show=False)
+        objcm_gt = gen_swap(kpts, kpts_rotseq, cross_sec, toggledebug=False)
+        for i in range(len(kpts_rotseq) - 1):
+            if rm.angle_between_vectors(kpts_rotseq[i][:, 1], kpts_rotseq[i + 1][:, 1]) > np.pi / 3:
+                success = False
+                break
+            success = True
     if show:
         for i, rot in enumerate(kpts_rotseq):
             gm.gen_frame(kpts[i], kpts_rotseq[i], thickness=.001, length=.02).attach_to(base)
+
         gm.gen_pointcloud(new_pts).attach_to(base)
-        objcm_deformed.set_rgba((.7, .7, 0, 1))
-        objcm_deformed.attach_to(base)
+        # objcm_deformed.set_rgba((.7, .7, 0, 1))
+        # objcm_deformed.attach_to(base)
         objcm_gt.set_rgba((1, 1, 0, 1))
         objcm_gt.attach_to(base)
+
     return objcm_deformed, objcm_gt
 
 

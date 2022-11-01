@@ -4,7 +4,7 @@ import numpy
 
 from _tst_gen_dataset import *
 import data_utils as utl
-from multiview import *
+from gen_multiview import *
 import open3d as o3d
 import pickle
 from multiprocessing import Process

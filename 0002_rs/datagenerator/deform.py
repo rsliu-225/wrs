@@ -34,14 +34,14 @@ if __name__ == '__main__':
     thickness = 0
     cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
 
-    objcm = cm.CollisionModel('../obstacles/template.stl')
+    objcm = cm.CollisionModel('../obstacles/plate.stl')
     fo = 'tst_plate'
     # objcm.attach_to(base)
     # objcm.set_rgba((.7, .7, .7, .7))
 
     vs = objcm.objtrm.vertices
 
-    for i in range(3):
+    for i in range(10):
         # goal_pseq = np.asarray([[0, 0, 0],
         #                         [.04 + random.uniform(-.02, .01), 0, random.uniform(-.005, .005)],
         #                         [.08 + random.uniform(-.01, .01), 0, random.uniform(-.01, .01)],
@@ -59,8 +59,8 @@ if __name__ == '__main__':
         # goal_pseq = du.uni_length(goal_pseq, goal_len=.143)
         rot_axial, rot_radial = random_rot_radians(len(goal_pseq))
 
-        deformed_objcm, objcm_gt = du.deform_cm(objcm, goal_pseq, rot_axial, rot_radial)
-
+        deformed_objcm, objcm_gt = du.deform_cm(objcm, goal_pseq, rot_axial, rot_radial, show=True)
+    base.run()
 
     '''
     gen data
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     homomat4_dict[str(obj_id)] = {}
     for i, mats in enumerate(icomats):
         for j, rot in enumerate(mats):
-            du.get_objpcd_partial_o3d(deformed_objcm, objcm, rot, rot_center, path=fo,
+            du.get_objpcd_partial_o3d(deformed_objcm, objcm_gt, rot, rot_center, path=fo,
                                       f_name=f'{obj_id}_{str(cnt).zfill(3)}',
                                       occ_vt_ratio=random.uniform(.05, .1), noise_vt_ratio=random.uniform(.2, 5),
                                       add_occ=True, add_noise=True, add_rnd_occ=True, toggledebug=True)

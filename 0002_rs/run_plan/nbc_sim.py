@@ -13,6 +13,8 @@ import utils.recons_utils as rcu
 import visualization.panda.world as wd
 import basis.o3dhelper as o3dh
 
+COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40]]) / 255
+
 
 def show_pcn_res_pytorch(result_path, test_path):
     res_f = h5py.File(result_path, 'r')
@@ -21,9 +23,9 @@ def show_pcn_res_pytorch(result_path, test_path):
         o3dpcd_gt = o3dh.nparray2o3dpcd(np.asarray(test_f['complete_pcds'][i]))
         o3dpcd_i = o3dh.nparray2o3dpcd(np.asarray(test_f['incomplete_pcds'][i]))
         o3dpcd_o = o3dh.nparray2o3dpcd(np.asarray(res_f['results'][i]))
-        o3dpcd_gt.paint_uniform_color([0, 1, 0])
-        o3dpcd_i.paint_uniform_color([0, 0, 1])
-        o3dpcd_o.paint_uniform_color([1, 0, 0])
+        o3dpcd_gt.paint_uniform_color(COLOR[1])
+        o3dpcd_i.paint_uniform_color(COLOR[0])
+        o3dpcd_o.paint_uniform_color(COLOR[2])
         o3d.visualization.draw_geometries([o3dpcd_i, o3dpcd_o])
         o3d.visualization.draw_geometries([o3dpcd_o, o3dpcd_gt])
 
@@ -35,9 +37,9 @@ def read_pcn_res_pytorch(result_path, test_path, id, toggledebug=False):
         o3dpcd_gt = o3dh.nparray2o3dpcd(np.asarray(test_f['complete_pcds'][id]))
         o3dpcd_i = o3dh.nparray2o3dpcd(np.asarray(test_f['incomplete_pcds'][id]))
         o3dpcd_o = o3dh.nparray2o3dpcd(np.asarray(res_f['results'][id]))
-        o3dpcd_gt.paint_uniform_color([0, 1, 0])
-        o3dpcd_i.paint_uniform_color([0, 0, 1])
-        o3dpcd_o.paint_uniform_color([1, 0, 0])
+        o3dpcd_gt.paint_uniform_color(COLOR[1])
+        o3dpcd_i.paint_uniform_color(COLOR[0])
+        o3dpcd_o.paint_uniform_color(COLOR[2])
         o3d.visualization.draw_geometries([o3dpcd_i, o3dpcd_o])
         o3d.visualization.draw_geometries([o3dpcd_o, o3dpcd_gt])
     return np.asarray(test_f['complete_pcds'][id]), \
@@ -50,7 +52,8 @@ if __name__ == '__main__':
 
     cam_pos = [.5, .5, .5]
     # fo = 'D:/liu/MVP_Benchmark/completion'
-    fo = 'D:/mvp/data_2048_flat'
+    # fo = 'D:/mvp/data_2048_flat'
+    fo = 'D:/liu/MVP_Benchmark/completion/log/pcn_emd_plate'
 
     base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
     # rbt = el.loadXarm(showrbt=False)
@@ -58,12 +61,12 @@ if __name__ == '__main__':
     #
     # seedjntagls = m_planner.get_armjnts()
     icomats = rm.gen_icorotmats(rotation_interval=math.radians(360 / 60))
-    result_path = f'{fo}/results_pcn_cd.h5'
-    test_path = f'{fo}/test.h5'
-    pcd_gt, pcd_i, pcd_o = read_pcn_res_pytorch(result_path, test_path, 1)
+    result_path = f'D:/liu/MVP_Benchmark/completion/log/pcn_emd_plate/results.h5'
+    test_path = f'D:/liu/MVP_Benchmark/completion/data_2048_flat/test.h5'
+    pcd_gt, pcd_i, pcd_o = read_pcn_res_pytorch(result_path, test_path, 1, toggledebug=False)
 
-    # pcdu.show_pcd(pcd_gt, rgba=(1, 0, 0, 1))
-    # pcdu.show_pcd(pcd_i, rgba=(1, 0, 0, 1))
+    pcdu.show_pcd(pcd_gt, rgba=(0, 1, 0, 1))
+    pcdu.show_pcd(pcd_i, rgba=(0, 0, 1, 1))
 
     pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd_i, pcd_o, theta=np.pi / 6, toggledebug=True)
     base.run()
