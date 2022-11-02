@@ -1,3 +1,4 @@
+import copy
 import itertools
 import os
 import pickle
@@ -11,6 +12,8 @@ import basis.robot_math as rm
 import modeling.geometric_model as gm
 import visualization.panda.world as wd
 from multiprocessing import Process
+
+COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40]]) / 255
 
 
 def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█'):
@@ -39,9 +42,16 @@ def gen_multiview(cat, comb_num=1, path='', trans_diff=(.01, .01, .01), rot_diff
         os.mkdir(os.path.join(path, 'multiview'))
         os.mkdir(os.path.join(path, 'multiview/partial'))
         os.mkdir(os.path.join(path, 'multiview/complete'))
-    # icomats = rm.gen_icorotmats(rotation_interval=np.radians(360 / 60))
-    # icomats = [x for row in icomats for x in row]
-
+    icomats = rm.gen_icorotmats(rotation_interval=np.radians(360 / 60))
+    icomats = [x for row in icomats for x in row]
+    for f in os.listdir(os.path.join(path, cat)):
+        if f[-3:] == 'pcd':
+            print(cat,f.split('_'))
+            f_org = f'{f.split("_")[0]}_{f.split("_")[1]}.pcd'
+            # os.remove(os.path.join(path, cat, 'complete', f_org))
+            os.remove(os.path.join(path, cat, 'partial', f_org))
+            os.remove(os.path.join(path, cat, f))
+            continue
     f_name_dict = {}
     for f in os.listdir(os.path.join(path, cat, 'partial')):
         if f[-3:] != 'pcd':
@@ -66,20 +76,20 @@ def gen_multiview(cat, comb_num=1, path='', trans_diff=(.01, .01, .01), rot_diff
         objid = f.split('_')[0]
         rid_init = f.split('_')[1].split('.pcd')[0]
         f_name = f"{objid}_{rid_init}"
-        # init_homomat = rm.homomat_from_posrot((0, 0, 0), icomats[int(rid_init)])
+        init_homomat = rm.homomat_from_posrot((0, 0, 0), icomats[int(rid_init)])
         o3dpcd = o3d.io.read_point_cloud(f"{path}/{cat}/partial/{f_name}.pcd")
         pcd_mv = o3dpcd.points
         view_num = random.randint(2, 4)
         combs = random.choices(
             list(itertools.combinations([i for i in f_name_dict[objid] if i != rid_init], view_num)), k=comb_num)
-        # print(rid_init, combs)
+        # print(objid, rid_init, combs)
         for i, comb in enumerate(combs):
             for rid in comb:
-                # homomat4 = rm.homomat_from_posrot((0, 0, 0), icomats[int(rid)])
+                homomat4 = rm.homomat_from_posrot((0, 0, 0), icomats[int(rid)])
                 random_homomat4 = utl.gen_random_homomat4(trans_diff, rot_diff)
-                o3dpcd = o3d.io.read_point_cloud(f"{path}/{cat}/partial/{f}")
+                o3dpcd = o3d.io.read_point_cloud(f"{path}/{cat}/partial/{objid}_{str(rid).zfill(4)}.pcd")
                 pcd = np.asarray(o3dpcd.points)
-                # pcd = utl.trans_pcd(pcd, np.dot(init_homomat, np.linalg.inv(homomat4)))
+                pcd = utl.trans_pcd(pcd, np.dot(init_homomat, np.linalg.inv(homomat4)))
                 pcd = utl.trans_pcd(pcd, random_homomat4)
                 if add_occ:
                     pcd = utl.add_random_occ_narry(pcd, occ_ratio_rng=(.3, .5))
@@ -92,13 +102,16 @@ def gen_multiview(cat, comb_num=1, path='', trans_diff=(.01, .01, .01), rot_diff
                                      o3dpcd_gt)
 
             if toggledebug:
+                o3dpcd_mv_init = o3d.io.read_point_cloud(f"{path}/{cat}/partial/{f_name}.pcd")
                 o3dpcd_gt = o3d.io.read_point_cloud(
                     os.path.join(path, 'multiview', 'complete', f'{cat}_{f_name}.pcd'))
                 o3dpcd_mv = o3d.io.read_point_cloud(
                     os.path.join(path, 'multiview', 'partial', f'{cat}_{f_name}.pcd'))
-                o3dpcd_gt.paint_uniform_color([0, 1, 0])
-                o3dpcd_mv.paint_uniform_color([1, 0, 0])
-                o3d.visualization.draw_geometries([o3dpcd_gt, o3dpcd_mv])
+                o3dpcd_mv_init.paint_uniform_color(COLOR[0])
+                o3dpcd_gt.paint_uniform_color(COLOR[1])
+                o3dpcd_mv.paint_uniform_color([.7, .7, .7])
+                o3d.visualization.draw_geometries([o3dpcd_gt])
+                o3d.visualization.draw_geometries([o3dpcd_mv, o3dpcd_mv_init])
 
 
 def gen_multiview_lc(comb_num=1, cat='', class_name=None, trans_diff=(.004, .004, .004),
@@ -195,16 +208,15 @@ if __name__ == '__main__':
     for fo in os.listdir(path):
         cat_list.append(fo)
     # cat_list = ['plat']
-
+    # gen_multiview('tmpl', comb_num=comb_num, path=path, trans_diff=trans_diff, rot_diff=rot_diff,
+    #               add_occ=True, toggledebug=True)
     proc = []
     for cat in cat_list:
         if cat != 'multiview':
             p = Process(target=gen_multiview, args=[cat, comb_num, path, trans_diff, rot_diff, True, False])
-            # gen_multiview(cat, comb_num=comb_num, path=path, trans_diff=trans_diff, rot_diff=rot_diff,
-            #               add_occ=True, toggledebug=False)
             p.start()
             proc.append(p)
     for p in proc:
         p.join()
 
-    # show(path)
+    show(path, cat='multiview')

@@ -1,3 +1,5 @@
+import random
+
 import h5py
 import os
 import open3d as o3d
@@ -158,7 +160,7 @@ if __name__ == '__main__':
     import visualization.panda.world as wd
 
     org_path = 'E:/liu/dataset_2048_prim_v10/'
-    goal_path = 'D:/liu/MVP_Benchmark/completion/data_2048_prim_v10_mv/'
+    goal_path = 'D:/liu/MVP_Benchmark/completion/data_2048_prim/'
     base = wd.World(cam_pos=[.1, .2, .4], lookat_pos=[0, 0, 0])
 
     gen_h5_new('train', org_path, goal_path, multiview=True)

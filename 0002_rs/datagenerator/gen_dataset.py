@@ -117,7 +117,7 @@ def init_gen(cat, num_kpts, max_kts, res=(550, 550), rot_center=(0, 0, 0), max_n
             print(printProgressBar(cnt, len(rotid_list), prefix='Progress:', suffix='Complete', length=100), "\r")
         f_name = '_'.join([cat[4:].zfill(4), str(i).zfill(4)])
         utl.get_objpcd_partial_o3d(objcm, objcm_flat, icomats[i], rot_center, f_name=f_name, path=path,
-                                   resolusion=res, add_occ=True, add_noise=True, add_rnd_occ=True,
+                                   resolusion=res, add_occ=True, add_noise=True, add_rnd_occ=True, add_noise_pts=True,
                                    occ_vt_ratio=random.uniform(.5, 1), noise_vt_ratio=random.uniform(.5, 1))
         if cnt - 1 == len(rotid_list):
             print(printProgressBar(cnt, len(rotid_list), prefix='Progress:', suffix='Complete', length=100), "\r")
@@ -210,7 +210,7 @@ def init_gen_deform(cat, num_kpts, res=(550, 550), rot_center=(0, 0, 0), max_num
             print(printProgressBar(cnt, len(rotid_list), prefix='Progress:', suffix='Complete', length=100), "\r")
         f_name = '_'.join([cat[4:].zfill(4), str(i).zfill(4)])
         utl.get_objpcd_partial_o3d(deformed_objcm, objcm_gt, icomats[i], rot_center, f_name=f_name, path=path,
-                                   resolusion=res, add_occ=True, add_noise=True, add_rnd_occ=True,
+                                   resolusion=res, add_occ=True, add_noise=True, add_rnd_occ=True, add_noise_pts=True,
                                    occ_vt_ratio=random.uniform(.05, .08), noise_vt_ratio=random.uniform(.2, .5))
         if cnt - 1 == len(rotid_list):
             print(printProgressBar(cnt, len(rotid_list), prefix='Progress:', suffix='Complete', length=100), "\r")
@@ -279,9 +279,13 @@ def test_pcd(class_name, id='1'):
 
 def gen_args(cat, rng):
     if cat == 'quad':
-        return [[cat + str(i), 3, random.choice([.01, .02, .03, .04])] for i in rng]
+        args = [[cat + str(i), 3, random.choice([.01, .02, .03, .04])] for i in rng]
     elif cat == 'bspl':
-        return [[cat + str(i), 4, random.choice([.01, .02, .03, .04])] for i in rng]
+        args = [[cat + str(i), 4, random.choice([.01, .02, .03, .04])] for i in rng]
+    else:
+        args = None
+    print(args)
+    return args
 
 
 def gen_args_deform(cat, rng):
@@ -291,11 +295,13 @@ def gen_args_deform(cat, rng):
 
 
 if __name__ == '__main__':
-    for i in range(20, 30):
+    start = 150
+    end = 180
+    for i in range(start, end):
         runInParallel(init_gen, gen_args("bspl", range(i * 8, (i + 1) * 8)))
-    for i in range(20, 30):
+    for i in range(start, end):
         runInParallel(init_gen, gen_args("quad", range(i * 8, (i + 1) * 8)))
-    for i in range(20, 30):
+    for i in range(start, end):
         runInParallel(init_gen_deform, gen_args_deform("plat", range(i * 8, (i + 1) * 8)))
-    for i in range(2, 30):
+    for i in range(start, end):
         runInParallel(init_gen_deform, gen_args_deform("tmpl", range(i * 8, (i + 1) * 8)))
