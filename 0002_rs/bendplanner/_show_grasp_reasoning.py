@@ -68,14 +68,13 @@ if __name__ == '__main__':
     # brp.pre_grasp_reasoning()
     # brp.run(f_name=f_name, fo=fo)
 
-    goal_pseq, bendset = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/yumi/{f}_bendseq.pkl', 'rb'))
+    goal_pseq, bendset = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/yumi/{f}_bendset.pkl', 'rb'))
     seqs, _, bendresseq = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/yumi/{f}_bendresseq.pkl', 'rb'))
     armjntsseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/yumi/{f}_armjntsseq.pkl', 'rb'))
     pathseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/yumi/{f}_pathseq.pkl', 'rb'))
     min_f_list, f_list = brp.check_force(bendresseq, armjntsseq_list, show_step=0)
     armjntsseq_list = np.asarray(armjntsseq_list)[np.argsort(min_f_list)[::-1]]
     # brp.show_motion_withrbt(bendresseq, pathseq_list[0][1])
-    base.run()
     # for i, armjnts in enumerate(pathseq_list[0][1][1][1:-2]):
     #     if i == 0:
     #         continue
@@ -85,6 +84,7 @@ if __name__ == '__main__':
     #     # gm.gen_sphere(np.asarray(eepos_s), radius=.002, rgba=(0, 1, 0, 1)).attach_to(base)
     #     if i % 2 == 0:
     #         mp.ah.show_armjnts(armjnts=armjnts, rgba=(0, 1, 0, .5))
+    # base.run()
 
     # brp.show_bend(bendresseq[0], show_start=True, show_end=True)
     brp.show_bend(bendresseq[-1], show_start=True, show_end=True)

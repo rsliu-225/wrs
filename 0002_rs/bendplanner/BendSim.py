@@ -102,7 +102,7 @@ class BendSim(object):
             self.pillar_center.attach_to(base)
             for obj in self.__staticobslist:
                 obj.attach_to(base)
-            self.bender.show_cdprimit()
+            # self.bender.show_cdprimit()
 
     def reset(self, pseq, rotseq, extend=True):
         self.pseq = list(copy.deepcopy(pseq))
@@ -505,7 +505,7 @@ class BendSim(object):
             rot_angle = -rot_angle
             self.pseq = self._rot_new_orgin(self.pseq, np.asarray((-self.bend_r, 0, 0)), rot)
             self.rotseq = np.asarray([rot.dot(r) for r in self.rotseq])
-        self.show(rgba=(.7, .7, .7, .7), show_dashframe=True)
+        # self.show(rgba=(.7, .7, .7, .7), show_dashframe=True)
 
         if rot_angle != 0:
             self._rot(rot_angle)

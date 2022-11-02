@@ -155,7 +155,8 @@ class BendRbtPlanner(object):
             for i, grasp in enumerate(self.grasp_list):
                 self.gripper.jaw_to(grasp[0])
                 self.gripper.fix_to(grasp[3], grasp[4])
-                self.gripper.gen_meshmodel(rgba=(0, min_f_list[i], 1 - min_f_list[i], .2)).attach_to(base)
+                # self.gripper.gen_meshmodel(rgba=(0, min_f_list[i], 1 - min_f_list[i], .2)).attach_to(base)
+                self.gripper.gen_meshmodel(rgba=(min_f_list[i], min_f_list[i], min_f_list[i], .2)).attach_to(base)
         if show_common_grasp:
             for i, grasp in enumerate(self.grasp_list):
                 if i in remain_id:

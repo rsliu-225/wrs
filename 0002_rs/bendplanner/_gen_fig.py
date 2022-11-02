@@ -1,5 +1,7 @@
 import copy
 import math
+import os
+import config
 import visualization.panda.world as wd
 import modeling.geometric_model as gm
 import numpy as np
@@ -28,13 +30,16 @@ if __name__ == '__main__':
 
     base, env = el.loadEnv_yumi()
     rbt = el.loadYumi(showrbt=False)
-    bs = b_sim.BendSim(show=True)
+    bs = b_sim.BendSim(show=False)
     mp = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
 
     # transmat4 = rm.homomat_from_posrot((.9, -.35, .78 + bconfig.BENDER_H), rm.rotmat_from_axangle((0, 0, 1), np.pi))
     transmat4 = rm.homomat_from_posrot((.45, 0, bconfig.BENDER_H), rm.rotmat_from_axangle((0, 0, 1), np.pi))
 
-    goal_pseq = bu.gen_polygen(5, .05)
+    f = 'tri'
+    fo = 'stick'
+
+    # goal_pseq = bu.gen_polygen(3, .05)
     # goal_pseq = bu.gen_ramdom_curve(kp_num=4, length=.12, step=.0005, z_max=.005, toggledebug=False)
     # goal_pseq = bu.gen_screw_thread(r=.02, lift_a=np.radians(5), rot_num=2)
     # goal_pseq = bu.gen_circle(.05)
@@ -44,24 +49,28 @@ if __name__ == '__main__':
     #                         [.1, .1, .1], [.1, .1, .2]]) * .4
     # goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
     #                         [.1, 0, 0], [.1, .1, 0]])
-    init_pseq = [(0, 0, 0), (0, .05 + bu.cal_length(goal_pseq), 0)]
+
+    goal_pseq, bendset = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/yumi/{f}_bendset.pkl', 'rb'))
+    seqs, _, bendresseq = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/yumi/{f}_bendresseq.pkl', 'rb'))
+    armjntsseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/yumi/{f}_armjntsseq.pkl', 'rb'))
+    pathseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/yumi/{f}_pathseq.pkl', 'rb'))
+
+    init_pseq = [(0, 0, 0), (0, .1 + bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
 
     brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp)
 
-    grasp_list = mp.load_all_grasp('stick')
-    grasp_list = grasp_list[:200]
+    grasp_list = mp.load_all_grasp('stick_yumi')
+    grasp_list = grasp_list
 
     fit_pseq, _ = bu.decimate_pseq(goal_pseq, tor=.002, toggledebug=False)
-    bendset = bu.pseq2bendset(fit_pseq, init_l=.1, toggledebug=True)[::-1]
+    # bendset = bu.pseq2bendset(fit_pseq, init_l=.1, toggledebug=True)
     init_rot = bu.get_init_rot(fit_pseq)
-
-    # bendset = pickle.load(open('planres/stick/penta_bendseq.pkl', 'rb'))
-    armjntsseq_list = pickle.load(open('planres/stick/yumi/penta_armjntsseq.pkl', 'rb'))
-    seq, is_success, bendresseq = pickle.load(open('planres/stick/yumi/penta_bendresseq.pkl', 'rb'))
 
     brp.set_up(bendset, grasp_list, transmat4)
     brp.pre_grasp_reasoning()
+    base.run()
+
     brp.show_bendresseq_withrbt(bendresseq, armjntsseq_list[0][1])
     brp.show_bendresseq(bendresseq)
     base.run()
