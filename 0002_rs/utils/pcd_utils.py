@@ -831,9 +831,9 @@ def cal_nbv_pcn(pts, pts_pcn, theta=np.pi / 6, toggledebug=False):
 
     _, _, trans = o3dh.registration_icp_ptpt(pts_pcn, pts, maxcorrdist=.02, toggledebug=False)
     pts_pcn = trans_pcd(pts_pcn, trans)
-    show_pcd(pts_pcn, rgba=(1, 0, 0, 1))
+    show_pcd(pts_pcn, rgba=(.7, .7, .7, .5))
     # show_pcd(pts, rgba=(0, 0, 1, 1))
-    base.run()
+    # base.run()
     pts, nrmls, confs = \
         cal_conf(np.asarray(pts), voxel_size=.005, radius=.005, theta=None, toggledebug=False)
     pts_pcn, nrmls_pcn, confs_pcn = \
@@ -870,6 +870,20 @@ def cal_nbv_pcn(pts, pts_pcn, theta=np.pi / 6, toggledebug=False):
             #              rgba=(0, 0, 1, 1), thickness=.002).attach_to(base)
 
     return pts_nbv, nrmls_nbv, confs_nbv
+
+
+def cal_coverage(pcd_partial, pcd_gt, voxel_size=.001, tor=.001, toggledebug=False):
+    o3dpcd = o3d_helper.nparray2o3dpcd(pcd_gt)
+    downpcd = o3dpcd.voxel_down_sample(voxel_size=voxel_size)
+    kdt_partial, _ = get_kdt(pcd_partial)
+    cnt = 0
+    for p in np.asarray(downpcd.points):
+        dist = get_min_dist(p, kdt_partial)
+        if dist > tor:
+            cnt += 1
+            if toggledebug:
+                gm.gen_sphere(p, radius=.001, rgba=(1, 0, 0, .5)).attach_to(base)
+    return cnt / len(np.asarray(downpcd.points))
 
 
 def show_pcd(pcd, rgba=(1, 1, 1, 1)):

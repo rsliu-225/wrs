@@ -51,9 +51,6 @@ if __name__ == '__main__':
     import math
 
     cam_pos = [.5, .5, .5]
-    # fo = 'D:/liu/MVP_Benchmark/completion'
-    # fo = 'D:/mvp/data_2048_flat'
-    fo = 'D:/liu/MVP_Benchmark/completion/log/pcn_emd_plate'
 
     base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
     # rbt = el.loadXarm(showrbt=False)
@@ -61,12 +58,16 @@ if __name__ == '__main__':
     #
     # seedjntagls = m_planner.get_armjnts()
     icomats = rm.gen_icorotmats(rotation_interval=math.radians(360 / 60))
-    result_path = f'D:/liu/MVP_Benchmark/completion/log/pcn_emd_plate/results.h5'
-    test_path = f'D:/liu/MVP_Benchmark/completion/data_2048_flat/test.h5'
+    # result_path = f'D:/liu/MVP_Benchmark/completion/log/pcn_emd_plate/results.h5'
+    # test_path = f'D:/liu/MVP_Benchmark/completion/data_2048_flat/test.h5'
+    result_path = f'D:/mvp/data_2048_flat/results_pcn_cd.h5'
+    test_path = f'D:/mvp/data_2048_flat/test.h5'
     pcd_gt, pcd_i, pcd_o = read_pcn_res_pytorch(result_path, test_path, 1, toggledebug=False)
 
-    pcdu.show_pcd(pcd_gt, rgba=(0, 1, 0, 1))
+    # pcdu.show_pcd(pcd_gt, rgba=(0, 1, 0, 1))
     pcdu.show_pcd(pcd_i, rgba=(0, 0, 1, 1))
-
+    # base.run()
     pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd_i, pcd_o, theta=np.pi / 6, toggledebug=True)
+    # coverage = pcdu.cal_coverage(pcd_i, pcd_gt, voxel_size=.001, tor=.002, toggledebug=True)
+    # print(coverage)
     base.run()

@@ -49,13 +49,13 @@ if __name__ == "__main__":
 
     base = wd.World(cam_pos=[.1, .2, .4], lookat_pos=[0, 0, 0])
 
-    # o3dmesh = o3d.io.read_triangle_mesh('./tst/mesh/0_000.ply')
-    # custom_draw_geometry_with_camera_trajectory(o3dmesh)
-    for f in os.listdir('./tst/'):
-        if f[-3:] == 'pcd':
-            pcd = o3d.io.read_point_cloud(f"./tst/{f}")
-            pcd_cm = gm.gen_pointcloud(np.asarray(pcd.points),
-                                       rgbas=[[random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1), 1]])
-            pcd_cm.attach_to(base)
-
-    base.run()
+    o3dmesh = o3d.io.read_triangle_mesh('./tst/mesh/0_000.ply')
+    custom_draw_geometry_with_camera_trajectory(o3dmesh)
+    # for f in os.listdir('./tst/'):
+    #     if f[-3:] == 'pcd':
+    #         pcd = o3d.io.read_point_cloud(f"./tst/{f}")
+    #         pcd_cm = gm.gen_pointcloud(np.asarray(pcd.points),
+    #                                    rgbas=[[random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1), 1]])
+    #         pcd_cm.attach_to(base)
+    #
+    # base.run()

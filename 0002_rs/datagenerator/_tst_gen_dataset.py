@@ -19,48 +19,73 @@ import modeling.geometric_model as gm
 
 import datagenerator.data_utils as utl
 import visualization.panda.world as wd
+from basis.trimesh.creation import icosphere
+
+
+def show_ico():
+    tm = icosphere(subdivisions=3)
+    origin = gm.gen_sphere(radius=.00001)
+    origin.attach_to(base)
+    for i in tm.vertices:
+        gm.gen_sphere(i, radius=.01).attach_to(origin)
+    icosphere_cm = cm.CollisionModel(tm)
+    icosphere_cm.set_rgba([1, 1, 1, .7])
+
+    icosphere_cm.attach_to(base)
+    icosphere_cm.show_cdmesh()
+
+    selection_vector = gm.gen_arrow(np.array([0, 0, 0]), np.array([0, 0, 1]), thickness=.1)
+    selection_vector.set_rgba(np.array([31 / 255, 191 / 255, 31 / 255, 1]))
+
+    vertices, vertex_normals, faces = icosphere_cm.extract_rotated_vvnf()
+    objwm = gm.WireFrameModel(cm.da.trm.Trimesh(vertices=vertices, vertex_normals=vertex_normals, faces=faces))
+    objwm.attach_to(base)
+    icosphere_cm.set_scale([.995, .995, .995])
+
 
 if __name__ == '__main__':
-
     cam_pos = np.asarray([0, 0, .5])
     base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
-    width = .005
-    thickness = .0015
+
+    show_ico()
+
+    width = .05
+    thickness = .015
     path = './tst'
     cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
 
-    pseq = utl.poly_inp(pseq=np.asarray([[0, 0, 0], [.018, .03, .02], [.06, .06, 0], [.12, 0, 0]]))
-    pseq = utl.uni_length(pseq, goal_len=.2)
+    pseq = utl.poly_inp(pseq=np.asarray([[0, 0, 0], [.018, .02, .02], [.06, .03, 0], [.12, 0, 0]]))
+    pseq = utl.uni_length(pseq, goal_len=1.5)
     pseq, rotseq = utl.get_rotseq_by_pseq(pseq)
 
     objcm = utl.gen_swap(pseq, rotseq, cross_sec)
-    # objcm.set_rgba((1, 1, 0, 1))
-    # objcm.attach_to(base)
-    # base.run()
+    objcm.set_rgba((1, 1, 0, 1))
+    objcm.attach_to(base)
+    base.run()
 
     '''
     gen data
     '''
-    cnt = 0
-    obj_id = 0
-    rot_center = (0, 0, 0)
-
-    utl.get_objpcd_partial_o3d(objcm, objcm, np.eye(3), rot_center, path=path, resolusion=(550, 550),
-                               f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
-                               occ_vt_ratio=random.uniform(.5, 1),
-                               noise_vt_ratio=random.uniform(.5, 1),
-                               add_noise=True, add_occ=True, toggledebug=True,
-                               savemesh=False, savedepthimg=False, savergbimg=False)
+    # cnt = 0
+    # obj_id = 0
+    # rot_center = (0, 0, 0)
+    #
+    # utl.get_objpcd_partial_o3d(objcm, objcm, np.eye(3), rot_center, path=path, resolusion=(550, 550),
+    #                            f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
+    #                            occ_vt_ratio=random.uniform(.5, 1),
+    #                            noise_vt_ratio=random.uniform(.5, 1),
+    #                            add_noise=True, add_occ=True, toggledebug=True,
+    #                            savemesh=False, savedepthimg=False, savergbimg=False)
 
     '''
     show data
     '''
-    path = './tst/'
-    for f in sorted(os.listdir(path)):
-        if f[-3:] == 'pcd':
-            o3dpcd = o3d.io.read_point_cloud(f"{path}/{f}")
-            gm.gen_pointcloud(o3dpcd.points).attach_to(base)
-    base.run()
+    # path = './tst/'
+    # for f in sorted(os.listdir(path)):
+    #     if f[-3:] == 'pcd':
+    #         o3dpcd = o3d.io.read_point_cloud(f"{path}/{f}")
+    #         gm.gen_pointcloud(o3dpcd.points).attach_to(base)
+    # base.run()
 
     # '''
     # show key point
