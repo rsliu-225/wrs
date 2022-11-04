@@ -68,6 +68,6 @@ if __name__ == '__main__':
     pcdu.show_pcd(pcd_i, rgba=(0, 0, 1, 1))
     # base.run()
     pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd_i, pcd_o, theta=np.pi / 6, toggledebug=True)
-    # coverage = pcdu.cal_coverage(pcd_i, pcd_gt, voxel_size=.001, tor=.002, toggledebug=True)
+    coverage = pcdu.cal_coverage(pcd_i, pcd_gt, voxel_size=.001, tor=.002, toggledebug=True)
     # print(coverage)
     base.run()

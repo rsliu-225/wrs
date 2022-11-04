@@ -207,13 +207,12 @@ if __name__ == '__main__':
     cat_list = []
     for fo in os.listdir(path):
         cat_list.append(fo)
-    # cat_list = ['plat']
     # gen_multiview('tmpl', comb_num=comb_num, path=path, trans_diff=trans_diff, rot_diff=rot_diff,
     #               add_occ=True, toggledebug=True)
     proc = []
     for cat in cat_list:
         if cat != 'multiview':
-            p = Process(target=gen_multiview, args=[cat, comb_num, path, trans_diff, rot_diff, True, False])
+            p = Process(target=gen_multiview, args=(cat, comb_num, path, trans_diff, rot_diff, True, False))
             p.start()
             proc.append(p)
     for p in proc:

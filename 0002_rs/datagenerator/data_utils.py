@@ -492,20 +492,19 @@ def get_objpcd_partial_o3d(objcm, objcm_gt, rot, rot_center, path='./', f_name='
                                   convert_to_world_coordinate=True)
     o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f_name + f'_tmp{ext_name}'))
     if add_rnd_occ:
-        o3dpcd = add_random_occ(o3dpcd, occ_ratio_rng=(.05, .1))
+        o3dpcd = add_random_occ(o3dpcd, occ_ratio_rng=(.01, .1))
         o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
     if add_occ:
-        o3dpcd = add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=(.3, .6))
-        # o3dpcd = add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=(.6, .9))
+        o3dpcd = add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=(.2, .6))
         o3dpcd = add_random_occ_by_vt(o3dpcd, np.asarray(o3dmesh.vertices),
-                                      edg_radius=1e-3, edg_sigma=5e-4, ratio=occ_vt_ratio)
+                                      edg_radius=5e-4, edg_sigma=5e-4, ratio=occ_vt_ratio)
         o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
     if add_noise:
         o3dpcd = add_guassian_noise_by_vt(o3dpcd, np.asarray(o3dmesh.vertices), np.asarray(o3dmesh.vertex_normals),
                                           noise_mean=1e-3, noise_sigma=1e-4, ratio=noise_vt_ratio)
         o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
     if add_noise_pts:
-        o3dpcd = add_noise_pts_by_vt(o3dpcd, np.asarray(o3dmesh.vertices), noise_cnt=random.randint(1, 5), size=.01)
+        o3dpcd = add_noise_pts_by_vt(o3dpcd, np.asarray(o3dmesh.vertices), noise_cnt=random.randint(0, 5), size=.01)
         o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
 
     o3dpcd = resample(o3dpcd, smp_num=2048)
@@ -727,6 +726,8 @@ def add_guassian_noise_by_vt(o3dpcd, vts, nrmls, noise_mean=1e-4, noise_sigma=1e
 
 
 def add_noise_pts_by_vt(o3dpcd, vts, noise_cnt=3, size=.01):
+    if noise_cnt == 0:
+        return o3dpcd
     for p in random.choices(vts, k=noise_cnt):
         p = np.asarray(p)
         vts_n = [

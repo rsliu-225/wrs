@@ -50,7 +50,7 @@ if __name__ == '__main__':
     goal_path = 'D:/liu/MVP_Benchmark/completion/data_2048_prim/'
 
     # show_dataset_h5(goal_path, 'train', label=3)
-    # show_dataset_h5('test')
+    show_dataset_h5(goal_path, 'test', label=1)
     # show_dataset_h5('val')
-    show_dataset_o3d(cat='plat')
+    # show_dataset_o3d(cat='plat')
     # base.run()

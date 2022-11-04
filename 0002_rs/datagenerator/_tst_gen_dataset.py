@@ -55,14 +55,14 @@ if __name__ == '__main__':
     path = './tst'
     cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
 
-    pseq = utl.poly_inp(pseq=np.asarray([[0, 0, 0], [.018, .03, .02], [.06, .06, 0], [.12, 0, 0]]))
-    pseq = utl.uni_length(pseq, goal_len=.15)
+    pseq = utl.poly_inp(pseq=np.asarray([[0, 0, 0], [.018, .02, .02], [.06, .04, 0], [.12, 0, 0]]))
+    pseq = utl.uni_length(pseq, goal_len=1.6)
     pseq, rotseq = utl.get_rotseq_by_pseq(pseq)
 
     objcm = utl.gen_swap(pseq, rotseq, cross_sec)
     objcm.set_rgba((1, 1, 0, 1))
     objcm.attach_to(base)
-    base.run()
+    # base.run()
 
     '''
     gen data
@@ -73,8 +73,8 @@ if __name__ == '__main__':
 
     utl.get_objpcd_partial_o3d(objcm, objcm, np.eye(3), rot_center, path=path, resolusion=(550, 550),
                                f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
-                               occ_vt_ratio=random.uniform(.5, 1), noise_vt_ratio=random.uniform(.5, 1),
-                               add_noise=True, add_occ=True, add_rnd_occ=True, add_noise_pts=True,
+                               occ_vt_ratio=random.uniform(.1, .5), noise_vt_ratio=random.uniform(.5, 1),
+                               add_noise=True, add_occ=False, add_rnd_occ=False, add_noise_pts=True,
                                savemesh=False, savedepthimg=False, savergbimg=False,
                                toggledebug=True)
 
