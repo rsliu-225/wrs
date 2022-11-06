@@ -432,6 +432,7 @@ class BendRbtPlanner(object):
         armjntsseq_list = []
         for i in range(len(pathseq_list)):
             g, pathseq = pathseq_list[i]
+        return armjntsseq_list
 
     def check_force(self, bendresseq, armjntsseq_list, show_step=None):
         min_f_list = []
@@ -467,8 +468,7 @@ class BendRbtPlanner(object):
         #     self._mp.ah.show_armjnts(armjnts=path[0], rgba=(0, 1, 0, .5))
         # print(min_f_list.index(min(min_f_list)), min_f_list[min_f_list.index(min(min_f_list))])
         print('Sorting time cost:', time.time() - start_time)
-        return np.asarray(min_f_list)[np.argsort(min_f_list)[::-1]], \
-               np.asarray(f_list)[np.argsort(min_f_list)[::-1]]
+        return np.asarray(min_f_list), np.asarray(f_list)
 
     def show_bendres_withrbt(self, bendres, armjnts):
         self._bs.move_posrot(self.transmat4)

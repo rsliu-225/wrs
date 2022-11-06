@@ -32,8 +32,6 @@ if __name__ == '__main__':
     bs = b_sim.BendSim(show=False)
     mp = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
 
-    # f_name = 'randomc'
-    # f_name = 'chair'
     f = 'tri'
     fo = 'stick'
 
@@ -74,6 +72,7 @@ if __name__ == '__main__':
     pathseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/yumi/{f}_pathseq.pkl', 'rb'))
     min_f_list, f_list = brp.check_force(bendresseq, armjntsseq_list, show_step=0)
     armjntsseq_list = np.asarray(armjntsseq_list)[np.argsort(min_f_list)[::-1]]
+
     # brp.show_motion_withrbt(bendresseq, pathseq_list[0][1])
     # for i, armjnts in enumerate(pathseq_list[0][1][1][1:-2]):
     #     if i == 0:

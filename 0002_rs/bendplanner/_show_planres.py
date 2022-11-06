@@ -42,7 +42,7 @@ if __name__ == '__main__':
 
     bs = b_sim.BendSim(show=False)
     mp = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
-    goal_pseq = pickle.load(open(os.path.join(config.ROOT, f'bendplanner/goal/pseq/{f_name}.pkl'), 'rb'))
+    # goal_pseq = pickle.load(open(os.path.join(config.ROOT, f'bendplanner/goal/pseq/{f_name}.pkl'), 'rb'))
 
     '''
     show result
@@ -80,21 +80,28 @@ if __name__ == '__main__':
     # bu.scatter_pseq(ax, pseq[:1], c='g')
     # plt.show()
 
-    min_f_list, f_list = brp.check_force(bendresseq, armjntsseq_list, show_step=0)
-    armjntsseq_list = np.asarray(armjntsseq_list)[np.argsort(min_f_list)]
-
-    # for i, f in enumerate(min_f_list):
-    #     mp.ah.show_armjnts(armjnts=pathseq_list[i][1][0][-1],
-    #                        rgba=(0, (f / max(min_f_list)), 1 - f / max(min_f_list), .5))
-    # brp.show_motion_withrbt(bendresseq, pathseq_list[0][1])
-
     show_step = 0
-    f_list_step = f_list[:, show_step]
-    brp.show_bend(bendresseq[show_step])
-    print(min_f_list)
-    print([np.argsort(min_f_list)[::-1]])
-    mp.ah.show_armjnts(armjnts=armjntsseq_list[0][1][show_step], rgba=None)
-    mp.ah.show_armjnts(armjnts=armjntsseq_list[-1][1][show_step], rgba=(0, 0, 1, .5))
+    show_armjnts_id = 50
+    min_f_list, f_list = brp.check_force(bendresseq, armjntsseq_list, show_step=show_step)
+    armjntsseq_list = np.asarray(armjntsseq_list)[np.argsort(min_f_list)[::-1]]
+    print(min_f_list[np.argsort(min_f_list)[::-1][show_armjnts_id]],
+          f_list[np.argsort(min_f_list)[::-1][show_armjnts_id]])
+    brp.show_bendresseq_withrbt(bendresseq, armjntsseq_list[show_armjnts_id][1])
+
+    # scale = max(min_f_list)-min(min_f_list)
+    # mp.ah.show_armjnts(armjnts=armjntsseq_list[0][1][show_step])
+    # for i, f in enumerate(min_f_list):
+    #     mp.ah.show_armjnts(armjnts=armjntsseq_list[i][1][show_step],
+    #                        rgba=(0, (f-min(min_f_list))/scale, 1 - (f-min(min_f_list))/scale, .5))
+
+    # show_step = 0
+    # f_list_step = f_list[:, show_step]
+    # brp.show_bend(bendresseq[show_step])
+    # print(min_f_list)
+    # print([np.argsort(min_f_list)[::-1]])
+    # mp.ah.show_armjnts(armjnts=armjntsseq_list[0][1][show_step], rgba=None)
+    # mp.ah.show_armjnts(armjnts=armjntsseq_list[-1][1][show_step], rgba=(0, 0, 1, .5))
+
     # for i, f in enumerate(f_list_step):
     #     scale = max(f_list_step) - min(f_list_step)
     #     mp.ah.show_armjnts(armjnts=armjntsseq_list[i][1][show_step],
