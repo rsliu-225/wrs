@@ -13,7 +13,7 @@ from multiprocessing import Process
 
 # PATH = 'E:/liu/dataset_2048_flat/'
 # PATH = 'E:/liu/dataset_2048_prim_v10/'
-PATH = './tst'
+PATH = 'D:/nbv_mesh'
 
 
 def random_kts(n=3, max=.02):
@@ -56,20 +56,28 @@ def gen_seed(num_kpts=4, max=.02, width=.008, length=.2, thickness=.0015, n=10, 
     return utl.gen_swap(pseq, rotseq, cross_sec), utl.gen_swap(pseq, rotseq, flat_sec)
 
 
-def init_gen(cat, num_kpts, max, num=10, length=.2, path=PATH):
-    path = os.path.join(path, cat[:4])
+def init_gen(cat, num_kpts, max, i, length=.2, path=PATH, toggledebug=False):
+    if not os.path.exists(path):
+        os.mkdir(path)
+    if not os.path.exists(os.path.join(path, cat)):
+        os.mkdir(os.path.join(path, cat))
+
     objcm, objcm_gt = gen_seed(num_kpts, max=max, n=100, length=length, rand_wid=False)
-    for i in range(num):
-        f_name = '_'.join([cat[4:].zfill(4), str(i).zfill(4)])
-        o3dmesh = utl.cm2o3dmesh(objcm, wnormal=False)
-        o3dmesh_gt = utl.cm2o3dmesh(objcm_gt, wnormal=False)
-        o3d.io.write_triangle_mesh(os.path.join(path, 'mesh', f_name + '.ply'), o3dmesh)
-        o3d.io.write_triangle_mesh(os.path.join(path, 'mesh', f_name + '.ply'), o3dmesh_gt)
+    f_name = str(i).zfill(4)
+    o3dmesh = utl.cm2o3dmesh(objcm, wnormal=False)
+    o3dmesh_gt = utl.cm2o3dmesh(objcm_gt, wnormal=False)
+    o3d.io.write_triangle_mesh(os.path.join(path, cat, f_name + '.ply'), o3dmesh)
+    o3d.io.write_triangle_mesh(os.path.join(path, cat, f_name + '.ply'), o3dmesh_gt)
+    if toggledebug:
+        o3dmesh_gt.paint_uniform_color([1, 1, 0])
         o3d.visualization.draw_geometries([o3dmesh, o3dmesh_gt])
 
 
-def init_gen_deform(cat, num_kpts, num=10, path=PATH):
-    path = os.path.join(path, cat[:4])
+def init_gen_deform(cat, num_kpts, i, path=PATH, toggledebug=False):
+    if not os.path.exists(path):
+        os.mkdir(path)
+    if not os.path.exists(os.path.join(path, cat)):
+        os.mkdir(os.path.join(path, cat))
 
     if cat[:4] == 'tmpl':
         objcm = cm.CollisionModel(f'../obstacles/template.stl')
@@ -94,15 +102,20 @@ def init_gen_deform(cat, num_kpts, num=10, path=PATH):
     rot_axial, rot_radial = random_rot_radians(num_kpts)
     rbf_radius = random.uniform(.05, .2)
     objcm_deformed, objcm_gt = utl.deform_cm(objcm, goal_pseq, rot_axial, rot_radial, rbf_radius=rbf_radius)
-    for i in range(num):
-        f_name = '_'.join([cat[4:].zfill(4), str(i).zfill(4)])
-        o3dmesh = utl.cm2o3dmesh(objcm_deformed, wnormal=False)
-        o3dmesh_gt = utl.cm2o3dmesh(objcm_gt, wnormal=False)
-        o3d.io.write_triangle_mesh(os.path.join(path, 'mesh', f_name + '.ply'), o3dmesh)
-        o3d.io.write_triangle_mesh(os.path.join(path, 'mesh', f_name + '.ply'), o3dmesh_gt)
+    f_name = str(i).zfill(4)
+    o3dmesh = utl.cm2o3dmesh(objcm_deformed, wnormal=False)
+    o3dmesh_gt = utl.cm2o3dmesh(objcm_gt, wnormal=False)
+    o3d.io.write_triangle_mesh(os.path.join(path, cat, f_name + '.ply'), o3dmesh)
+    o3d.io.write_triangle_mesh(os.path.join(path, cat, f_name + '.ply'), o3dmesh_gt)
+    if toggledebug:
+        o3dmesh_gt.paint_uniform_color([1, 1, 0])
         o3d.visualization.draw_geometries([o3dmesh, o3dmesh_gt])
 
 
 if __name__ == '__main__':
-    init_gen('bspl', num_kpts=4, max=.04, num=10)
-    init_gen_deform('plat', num_kpts=4, num=10)
+    num = 100
+    for i in range(num):
+        print(i)
+        init_gen('bspl', num_kpts=4, max=random.choice([.01, .02, .03, .04]), i=i)
+        init_gen_deform('plat', num_kpts=random.choice([3, 4, 5]), i=i)
+        init_gen_deform('tmpl', num_kpts=random.choice([3, 4, 5]), i=i)
