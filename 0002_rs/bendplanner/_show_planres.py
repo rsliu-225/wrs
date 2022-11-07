@@ -31,7 +31,7 @@ if __name__ == '__main__':
     fo = 'stick'
     rbt_name = 'yumi'
 
-    base, env = el.loadEnv_yumi()
+    base, env = el.loadEnv_yumi(camp=[-1, -.5, .5])
     rbt = el.loadYumi(showrbt=False)
     # rbt = el.loadUr3e()
     # transmat4 = rm.homomat_from_posrot((.45, .15, bconfig.BENDER_H + .035), rm.rotmat_from_axangle((0, 0, 1), np.pi))
@@ -81,12 +81,20 @@ if __name__ == '__main__':
     # plt.show()
 
     show_step = 0
-    show_armjnts_id = 50
+    show_armjnts_id = 30
+
     min_f_list, f_list = brp.check_force(bendresseq, armjntsseq_list, show_step=show_step)
     armjntsseq_list = np.asarray(armjntsseq_list)[np.argsort(min_f_list)[::-1]]
     print(min_f_list[np.argsort(min_f_list)[::-1][show_armjnts_id]],
           f_list[np.argsort(min_f_list)[::-1][show_armjnts_id]])
-    brp.show_bendresseq_withrbt(bendresseq, armjntsseq_list[show_armjnts_id][1])
+    # brp.show_bendresseq_withrbt(bendresseq, armjntsseq_list[show_armjnts_id][1])
+
+    grasp = armjntsseq_list[show_armjnts_id][0]
+    brp.gripper.fix_to(grasp[3], grasp[4])
+    brp.gripper.jaw_to(.01)
+    brp.gripper.gen_meshmodel().attach_to(base)
+    gm.gen_stick(epos=(0, .2, 0), thickness=.01, rgba=(1, 1, 1, .5), sections=90).attach_to(base)
+    gm.gen_frame().attach_to(base)
 
     # scale = max(min_f_list)-min(min_f_list)
     # mp.ah.show_armjnts(armjnts=armjntsseq_list[0][1][show_step])
