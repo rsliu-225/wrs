@@ -12,6 +12,7 @@ import utils.pcd_utils as pcdu
 import utils.recons_utils as rcu
 import visualization.panda.world as wd
 import basis.o3dhelper as o3dh
+import pcn.inference as pcn
 
 COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40]]) / 255
 
@@ -49,7 +50,9 @@ def read_pcn_res_pytorch(result_path, test_path, id, toggledebug=False):
 
 if __name__ == '__main__':
     import math
+    import basis.o3dhelper as o3dh
 
+    COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40]]) / 255
     cam_pos = [.5, .5, .5]
 
     base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
@@ -63,6 +66,19 @@ if __name__ == '__main__':
     result_path = f'D:/mvp/data_2048_flat/results_pcn_cd.h5'
     test_path = f'D:/mvp/data_2048_flat/test.h5'
     pcd_gt, pcd_i, pcd_o = read_pcn_res_pytorch(result_path, test_path, 1, toggledebug=False)
+    pcd_res = pcn.inference_sgl(pcd_i)
+
+    o3dpcd_gt = o3dh.nparray2o3dpcd(pcd_gt)
+    o3dpcd_i = o3dh.nparray2o3dpcd(pcd_i)
+    o3dpcd_o = o3dh.nparray2o3dpcd(pcd_o)
+    o3dpcd_res = o3dh.nparray2o3dpcd(pcd_res)
+
+    o3dpcd_i.paint_uniform_color(COLOR[0])
+    o3dpcd_gt.paint_uniform_color(COLOR[1])
+    o3dpcd_o.paint_uniform_color(COLOR[2])
+    o3dpcd_res.paint_uniform_color((.7, 0, .7))
+    o3d.visualization.draw_geometries([o3dpcd_i, o3dpcd_o, o3dpcd_gt])
+    o3d.visualization.draw_geometries([o3dpcd_o, o3dpcd_res, o3dpcd_gt])
 
     # pcdu.show_pcd(pcd_gt, rgba=(0, 1, 0, 1))
     pcdu.show_pcd(pcd_i, rgba=(0, 0, 1, 1))
