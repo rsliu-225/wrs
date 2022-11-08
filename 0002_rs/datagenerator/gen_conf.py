@@ -24,7 +24,7 @@ def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=
     return f'\r{prefix} |{bar}| {percent}% {suffix}'
 
 
-def gen_conf(cat, tor=.001, path='', toggledebug=False):
+def gen_conf(cat, tor=.001, overwrite=False, path='', toggledebug=False):
     if not os.path.exists(os.path.join(path, cat, 'conf')):
         os.mkdir(os.path.join(path, cat, 'conf'))
     cnt = 0
@@ -32,11 +32,13 @@ def gen_conf(cat, tor=.001, path='', toggledebug=False):
         cnt += 1
         conf = []
         colors = []
-        if cnt % 40 == 0:
+        if cnt % 100 == 0:
             print(printProgressBar(cnt, len(os.listdir(os.path.join(path, cat, 'partial'))),
                                    prefix=f'Progress({cat}):',
                                    suffix='Complete', length=100), "\r")
         if f[-3:] != 'pcd':
+            continue
+        if os.path.exists(os.path.join(path, cat, 'conf', f'{f.split(".pcd")[0]}.pkl')) and not overwrite:
             continue
         o3dpcd_i = o3d.io.read_point_cloud(f"{path}/{cat}/partial/{f}")
         o3dpcd_gt = o3d.io.read_point_cloud(f"{path}/{cat}/complete/{f}")
@@ -47,10 +49,10 @@ def gen_conf(cat, tor=.001, path='', toggledebug=False):
         for p in np.asarray(pcd_gt):
             dist, indices = kdt_i.query([p], k=1, return_distance=True)
             if dist[0] > tor:
-                conf.append(1)
+                conf.append(0)
                 colors.append([1, 0, 0])
             else:
-                conf.append(0)
+                conf.append(1)
                 colors.append([0, 1, 0])
         if toggledebug:
             if cnt % 40 == 0:
@@ -59,6 +61,9 @@ def gen_conf(cat, tor=.001, path='', toggledebug=False):
                 o3d.visualization.draw_geometries([o3dpcd_gt])
                 o3d.visualization.draw_geometries([o3dpcd_i, o3dpcd_gt])
         pickle.dump(conf, open(os.path.join(path, cat, 'conf', f'{f.split(".pcd")[0]}.pkl'), 'wb'))
+    print(printProgressBar(cnt, len(os.listdir(os.path.join(path, cat, 'partial'))),
+                           prefix=f'Progress({cat}):',
+                           suffix='Finished!', length=100), "\r")
 
 
 def show(fo='./', cat='bspl'):
@@ -75,23 +80,23 @@ def show(fo='./', cat='bspl'):
 if __name__ == '__main__':
     base = wd.World(cam_pos=[.1, .2, .4], lookat_pos=[0, 0, 0])
     # base = wd.World(cam_pos=[.1, .4, 0], lookat_pos=[.1, 0, 0])
-    path = 'E:/liu/dataset_2048_prim_v10'
-    trans_diff = (.001, .001, .001)
-    rot_diff = np.radians((1, 1, 1))
-    comb_num = 1
+    path = 'E:/liu/org_data/dataset_prim'
+    overwrite = False
     # gen_conf('bspl', tor=.001, path=path, toggledebug=True)
-    # for fo in os.listdir(path):
-    #     cat_list.append(fo)
-    cat_list = ['multiview']
+    cat_list = []
+    for fo in os.listdir(path):
+        cat_list.append(fo)
+    print(cat_list)
+    cat_list = ['bspl']
     proc = []
     for cat in cat_list:
         if cat in ['plat', 'tmpl']:
-            tor = .002
+            tor = .0025
         elif cat in ['multiview']:
             tor = .003
         else:
-            tor = .001
-        p = Process(target=gen_conf, args=(cat, tor, path, False))
+            tor = .002
+        p = Process(target=gen_conf, args=(cat, tor, overwrite, path, False))
         p.start()
         proc.append(p)
     for p in proc:

@@ -1,8 +1,11 @@
+import pickle
+
 import h5py
 import os
 import open3d as o3d
 import numpy as np
 import basis.o3dhelper as o3dh
+import collections
 
 ROOT = os.path.abspath('./')
 
@@ -43,14 +46,49 @@ def show_dataset_o3d(cat='plat'):
             o3d.visualization.draw_geometries([o3dpcd_gt])
 
 
+def show_conf(cat=['plat'], toggledebug=False):
+    coverage_list = []
+    for fo in os.listdir(org_path):
+        if fo not in cat:
+            continue
+        print(fo)
+        for f in os.listdir(os.path.join(org_path, fo, 'complete')):
+            if f[-3:] != 'pcd':
+                continue
+            # if int(f.split('_')[0]) != 802:
+            #     continue
+            conf = pickle.load(open(os.path.join(org_path, fo, 'conf', f[:-3] + 'pkl'), 'rb'))
+            coverage_list.append(collections.Counter(conf)[1] / 2048)
+            # print(f, coverage_list[-1])
+            if toggledebug:
+                if coverage_list[-1] < .8:
+                    o3dpcd_gt = o3d.io.read_point_cloud(os.path.join(org_path, fo, 'complete', f))
+                    colors = []
+                    for v in conf:
+                        if v == 1:
+                            colors.append(COLOR[1])
+                        else:
+                            colors.append(COLOR[2])
+                    o3dpcd_gt.colors = o3d.utility.Vector3dVector(colors)
+                    o3dpcd_i = o3d.io.read_point_cloud(os.path.join(org_path, fo, 'partial', f))
+                    # gm.gen_pointcloud(np.asarray(o3dpcd_gt.points)).attach_to(base)
+                    o3dpcd_i.paint_uniform_color(COLOR[0])
+                    # o3d.visualization.draw_geometries([o3dpcd_gt, o3dpcd_i])
+                    o3d.visualization.draw_geometries([o3dpcd_i])
+                    o3d.visualization.draw_geometries([o3dpcd_gt])
+    print('coverage', np.asarray(coverage_list).mean())
+    print('coverage', np.asarray(coverage_list).std())
+
+
 if __name__ == '__main__':
     import visualization.panda.world as wd
 
-    org_path = 'E:/liu/dataset_2048_prim_v10/'
-    goal_path = 'D:/liu/MVP_Benchmark/completion/data_2048_prim/'
+    org_path = 'E:/liu/org_data/dataset_prim/'
+    goal_path = 'E:/liu/h5_data/data_prim/'
 
     # show_dataset_h5(goal_path, 'train', label=3)
-    show_dataset_h5(goal_path, 'test', label=1)
+    # show_dataset_h5(goal_path, 'test', label=2)
+    show_conf(cat=['multiview'], toggledebug=False)
     # show_dataset_h5('val')
     # show_dataset_o3d(cat='plat')
     # base.run()

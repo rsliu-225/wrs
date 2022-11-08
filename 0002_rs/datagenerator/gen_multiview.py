@@ -37,7 +37,7 @@ def gen_random_homomat4(trans_diff=(.01, .01, .01), rot_diff=np.radians((10, 10,
 
 
 def gen_multiview(cat, comb_num=1, path='', trans_diff=(.01, .01, .01), rot_diff=np.radians((10, 10, 10)),
-                  add_occ=True, toggledebug=False):
+                  add_occ=True, overwrite=False, toggledebug=False):
     if not os.path.exists(os.path.join(path, 'multiview/')):
         os.mkdir(os.path.join(path, 'multiview'))
         os.mkdir(os.path.join(path, 'multiview/partial'))
@@ -46,7 +46,7 @@ def gen_multiview(cat, comb_num=1, path='', trans_diff=(.01, .01, .01), rot_diff
     icomats = [x for row in icomats for x in row]
     for f in os.listdir(os.path.join(path, cat)):
         if f[-3:] == 'pcd':
-            print(cat,f.split('_'))
+            print(cat, f.split('_'))
             f_org = f'{f.split("_")[0]}_{f.split("_")[1]}.pcd'
             # os.remove(os.path.join(path, cat, 'complete', f_org))
             os.remove(os.path.join(path, cat, 'partial', f_org))
@@ -62,20 +62,21 @@ def gen_multiview(cat, comb_num=1, path='', trans_diff=(.01, .01, .01), rot_diff
             f_name_dict[objid] = [rid]
         else:
             f_name_dict[objid].append(rid)
-    # for k, v in f_name_dict.items():
-    #     print(k, v)
     cnt = 0
     for f in os.listdir(os.path.join(path, cat, 'partial')):
         cnt += 1
-        if cnt % 40 == 0:
+        if cnt % 100 == 0:
             print(printProgressBar(cnt, len(os.listdir(os.path.join(path, cat, 'partial'))),
-                                   prefix=f'Progress({cat}):',
-                                   suffix='Complete', length=100), "\r")
+                                   prefix=f'Progress({cat}):', suffix='Complete', length=100), "\r")
         if f[-3:] != 'pcd':
             continue
+
         objid = f.split('_')[0]
         rid_init = f.split('_')[1].split('.pcd')[0]
         f_name = f"{objid}_{rid_init}"
+        if os.path.exists(os.path.join(os.path.join(path, 'multiview', 'complete', f'{cat}_{f_name}.pcd'))) \
+                and not overwrite:
+            continue
         init_homomat = rm.homomat_from_posrot((0, 0, 0), icomats[int(rid_init)])
         o3dpcd = o3d.io.read_point_cloud(f"{path}/{cat}/partial/{f_name}.pcd")
         pcd_mv = o3dpcd.points
@@ -112,7 +113,8 @@ def gen_multiview(cat, comb_num=1, path='', trans_diff=(.01, .01, .01), rot_diff
                 o3dpcd_mv.paint_uniform_color([.7, .7, .7])
                 o3d.visualization.draw_geometries([o3dpcd_gt])
                 o3d.visualization.draw_geometries([o3dpcd_mv, o3dpcd_mv_init])
-
+    print(printProgressBar(cnt, len(os.listdir(os.path.join(path, cat, 'partial'))),
+                           prefix=f'Progress({cat}):', suffix='Finished!', length=100), "\r")
 
 def gen_multiview_lc(comb_num=1, cat='', class_name=None, trans_diff=(.004, .004, .004),
                      rot_diff=np.radians((1, 1, 1))):
@@ -199,7 +201,7 @@ def show(fo='./', cat='bspl'):
 if __name__ == '__main__':
     base = wd.World(cam_pos=[.1, .2, .4], lookat_pos=[0, 0, 0])
     # base = wd.World(cam_pos=[.1, .4, 0], lookat_pos=[.1, 0, 0])
-    path = 'E:/liu/dataset_2048_prim_v10'
+    path = 'E:/liu/org_data/dataset_prim'
     trans_diff = (.001, .001, .001)
     rot_diff = np.radians((1, 1, 1))
     comb_num = 1
@@ -207,12 +209,14 @@ if __name__ == '__main__':
     cat_list = []
     for fo in os.listdir(path):
         cat_list.append(fo)
+    # cat_list = ['bspl']
+
     # gen_multiview('tmpl', comb_num=comb_num, path=path, trans_diff=trans_diff, rot_diff=rot_diff,
     #               add_occ=True, toggledebug=True)
     proc = []
     for cat in cat_list:
         if cat != 'multiview':
-            p = Process(target=gen_multiview, args=(cat, comb_num, path, trans_diff, rot_diff, True, False))
+            p = Process(target=gen_multiview, args=(cat, comb_num, path, trans_diff, rot_diff, True, False, False))
             p.start()
             proc.append(p)
     for p in proc:

@@ -222,13 +222,13 @@ def gen_h5_conf(f_name, org_path, goal_path, multiview=True):
 if __name__ == '__main__':
     import visualization.panda.world as wd
 
-    org_path = 'E:/liu/dataset_2048_prim_v10/'
-    goal_path = 'D:/liu/MVP_Benchmark/completion/data_2048_prim_conf/'
+    org_path = 'E:/liu/org_data/dataset_prim/'
+    goal_path = 'E:/liu/h5_data/data_prim_conf_womv/'
     base = wd.World(cam_pos=[.1, .2, .4], lookat_pos=[0, 0, 0])
 
-    # gen_h5_new('train', org_path, goal_path, multiview=True)
-    # gen_h5_new('test', org_path, goal_path, multiview=True)
-    # gen_h5_new('val', org_path, goal_path, multiview=True)
+    # gen_h5_new('train', org_path, goal_path, multiview=False)
+    # gen_h5_new('test', org_path, goal_path, multiview=False)
+    # gen_h5_new('val', org_path, goal_path, multiview=False)
 
     # gen_h5('train', org_path, goal_path, multiview=False)
     # gen_h5('test', org_path, goal_path, multiview=False)

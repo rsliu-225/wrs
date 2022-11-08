@@ -462,7 +462,8 @@ def get_objpcd_partial_sample(objcm, objmat4=np.eye(4), smp_num=100000, cam_pos=
 
 
 def get_objpcd_partial_o3d(objcm, objcm_gt, rot, rot_center, path='./', f_name='', resolusion=(1280, 720),
-                           ext_name='.pcd', occ_vt_ratio=1, noise_vt_ratio=1,
+                           ext_name='.pcd',
+                           rnd_occ_ratio_rng=(.2, .5), occ_vt_ratio=1, noise_vt_ratio=1, noise_cnt=random.randint(0, 5),
                            add_noise=False, add_occ=False, add_rnd_occ=True, add_noise_pts=True,
                            toggledebug=False, savemesh=False, savedepthimg=False, savergbimg=False):
     if not os.path.exists(path):
@@ -492,10 +493,10 @@ def get_objpcd_partial_o3d(objcm, objcm_gt, rot, rot_center, path='./', f_name='
                                   convert_to_world_coordinate=True)
     o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f_name + f'_tmp{ext_name}'))
     if add_rnd_occ:
-        o3dpcd = add_random_occ(o3dpcd, occ_ratio_rng=(.01, .1))
+        o3dpcd = add_random_occ(o3dpcd, occ_ratio_rng=(.2, .5))
         o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
     if add_occ:
-        o3dpcd = add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=(.2, .6))
+        o3dpcd = add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=rnd_occ_ratio_rng)
         o3dpcd = add_random_occ_by_vt(o3dpcd, np.asarray(o3dmesh.vertices),
                                       edg_radius=5e-4, edg_sigma=5e-4, ratio=occ_vt_ratio)
         o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
@@ -504,7 +505,7 @@ def get_objpcd_partial_o3d(objcm, objcm_gt, rot, rot_center, path='./', f_name='
                                           noise_mean=1e-3, noise_sigma=1e-4, ratio=noise_vt_ratio)
         o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
     if add_noise_pts:
-        o3dpcd = add_noise_pts_by_vt(o3dpcd, np.asarray(o3dmesh.vertices), noise_cnt=random.randint(0, 5), size=.01)
+        o3dpcd = add_noise_pts_by_vt(o3dpcd, np.asarray(o3dmesh.vertices), noise_cnt=noise_cnt, size=.01)
         o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
 
     o3dpcd = resample(o3dpcd, smp_num=2048)
@@ -525,12 +526,12 @@ def get_objpcd_partial_o3d(objcm, objcm_gt, rot, rot_center, path='./', f_name='
         o3dpcd_org = o3d.io.read_point_cloud(os.path.join(path, f_name + f'_tmp{ext_name}'))
         o3dpcd = o3d.io.read_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'))
         o3dpcd_gt = o3d.io.read_point_cloud(os.path.join(path, 'complete', f'{f_name}{ext_name}'))
-        o3dpcd_org.paint_uniform_color([0, 0.7, 1])
+        o3dpcd_org.paint_uniform_color(COLOR[0])
         o3dpcd.paint_uniform_color(COLOR[0])
         o3dpcd_gt.paint_uniform_color(COLOR[1])
         o3d.visualization.draw_geometries([o3dmesh])
         o3d.visualization.draw_geometries([o3dpcd_gt])
-        o3d.visualization.draw_geometries([o3dpcd_org])
+        o3d.visualization.draw_geometries([o3dpcd_org, o3dmesh])
         o3d.visualization.draw_geometries([o3dpcd])
         print(len(o3dpcd.points), len(o3dpcd_gt.points))
     os.remove(os.path.join(path, f_name + f'_tmp{ext_name}'))

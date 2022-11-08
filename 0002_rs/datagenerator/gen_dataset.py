@@ -11,8 +11,8 @@ import open3d as o3d
 import pickle
 from multiprocessing import Process
 
-# PATH = 'E:/liu/dataset_2048_flat/'
-PATH = 'E:/liu/dataset_2048_prim/'
+# PATH = 'E:/liu/dataset_flat/'
+PATH = 'E:/liu/org_data/dataset_prim/'
 
 
 def runInParallel(fn, args):
@@ -118,6 +118,7 @@ def init_gen(cat, num_kpts, max_kts, res=(550, 550), rot_center=(0, 0, 0), max_n
         f_name = '_'.join([cat[4:].zfill(4), str(i).zfill(4)])
         utl.get_objpcd_partial_o3d(objcm, objcm_flat, icomats[i], rot_center, f_name=f_name, path=path, resolusion=res,
                                    add_occ=True, add_noise=True, add_rnd_occ=True, add_noise_pts=True,
+                                   rnd_occ_ratio_rng=(.1, .4),
                                    occ_vt_ratio=random.uniform(.5, 1), noise_vt_ratio=random.uniform(.5, 1))
         if cnt - 1 == len(rotid_list):
             print(printProgressBar(cnt, len(rotid_list), prefix='Progress:', suffix='Complete', length=100), "\r")
@@ -212,6 +213,7 @@ def init_gen_deform(cat, num_kpts, res=(550, 550), rot_center=(0, 0, 0), max_num
         utl.get_objpcd_partial_o3d(deformed_objcm, objcm_gt, icomats[i], rot_center, f_name=f_name, path=path,
                                    resolusion=res,
                                    add_occ=True, add_noise=True, add_rnd_occ=True, add_noise_pts=True,
+                                   rnd_occ_ratio_rng=(.1, .4),
                                    occ_vt_ratio=random.uniform(.05, .08), noise_vt_ratio=random.uniform(.2, .5))
         if cnt - 1 == len(rotid_list):
             print(printProgressBar(cnt, len(rotid_list), prefix='Progress:', suffix='Complete', length=100), "\r")
@@ -296,7 +298,7 @@ def gen_args_deform(cat, rng):
 
 
 if __name__ == '__main__':
-    start = 200
+    start = 213
     end = 250
     for i in range(start, end):
         runInParallel(init_gen, gen_args("bspl", range(i * 8, (i + 1) * 8)))
