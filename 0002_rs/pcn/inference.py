@@ -16,9 +16,10 @@ import config
 import pcn.models.pcn as model_module
 
 warnings.filterwarnings("ignore")
+COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40]]) / 255
 
 
-def inference_sgl(input_narry, model_name='pcn', load_model='pcn_emd_prim_mv/best_cd_p_network.pth'):
+def inference_sgl(input_narry, model_name='pcn', load_model='pcn_emd_prim_mv/best_cd_p_network.pth', toggledebug=False):
     load_model = os.path.join(config.ROOT, model_name, 'trained_model', load_model)
     device = torch.device('cpu')
     args = munch.munchify({'num_points': 2048, 'loss': 'cd', 'eval_emd': False})
@@ -38,6 +39,13 @@ def inference_sgl(input_narry, model_name='pcn', load_model='pcn_emd_prim_mv/bes
         print(inputs.shape)
         result_dict = net(inputs)
         output = result_dict['result'].cpu().numpy()
+    if toggledebug:
+        o3dpcd_i = nparray2o3dpcd(input_narry)
+        o3dpcd_o = nparray2o3dpcd(output[0])
+        o3dpcd_i.paint_uniform_color(COLOR[0])
+        o3dpcd_o.paint_uniform_color(COLOR[2])
+        o3d.visualization.draw_geometries([o3dpcd_i, o3dpcd_o])
+
     return output[0]
 
 
@@ -53,7 +61,6 @@ def nparray2o3dpcd(nx3nparray_pnts, nx3nparray_nrmls=None, estimate_normals=Fals
 
 if __name__ == "__main__":
 
-    COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40]]) / 255
     f_name = 'test'
 
     model_name = 'pcn'

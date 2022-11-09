@@ -47,7 +47,7 @@ def gen_seed(num_kpts=4, max=.02, width=.008, length=.2, thickness=.0015, n=10, 
         else:
             pseq = utl.uni_length(utl.spl_inp(pseq=np.asarray(kpts), n=n, toggledebug=toggledebug), goal_len=length)
         pseq = np.asarray(pseq) - pseq[0]
-        pseq, rotseq = utl.get_rotseq_by_pseq_smooth(pseq)
+        pseq, rotseq = utl.get_rotseq_by_pseq(pseq)
         for i in range(len(rotseq) - 1):
             if rm.angle_between_vectors(rotseq[i][:, 2], rotseq[i + 1][:, 2]) > np.pi / 15:
                 success = False
@@ -61,13 +61,15 @@ def init_gen(cat, num_kpts, max, i, length=.2, path=PATH, toggledebug=False):
         os.mkdir(path)
     if not os.path.exists(os.path.join(path, cat)):
         os.mkdir(os.path.join(path, cat))
+        os.mkdir(os.path.join(path, cat, 'mesh'))
+        os.mkdir(os.path.join(path, cat, 'prim'))
 
     objcm, objcm_gt = gen_seed(num_kpts, max=max, n=100, length=length, rand_wid=False)
     f_name = str(i).zfill(4)
     o3dmesh = utl.cm2o3dmesh(objcm, wnormal=False)
     o3dmesh_gt = utl.cm2o3dmesh(objcm_gt, wnormal=False)
-    o3d.io.write_triangle_mesh(os.path.join(path, cat, f_name + '.ply'), o3dmesh)
-    o3d.io.write_triangle_mesh(os.path.join(path, cat, f_name + '.ply'), o3dmesh_gt)
+    o3d.io.write_triangle_mesh(os.path.join(path, cat, 'mesh', f_name + '.ply'), o3dmesh)
+    o3d.io.write_triangle_mesh(os.path.join(path, cat, 'prim', f_name + '.ply'), o3dmesh_gt)
     if toggledebug:
         o3dmesh_gt.paint_uniform_color([1, 1, 0])
         o3d.visualization.draw_geometries([o3dmesh, o3dmesh_gt])
@@ -78,6 +80,8 @@ def init_gen_deform(cat, num_kpts, i, path=PATH, toggledebug=False):
         os.mkdir(path)
     if not os.path.exists(os.path.join(path, cat)):
         os.mkdir(os.path.join(path, cat))
+        os.mkdir(os.path.join(path, cat, 'mesh'))
+        os.mkdir(os.path.join(path, cat, 'prim'))
 
     if cat[:4] == 'tmpl':
         objcm = cm.CollisionModel(f'../obstacles/template.stl')
@@ -105,8 +109,8 @@ def init_gen_deform(cat, num_kpts, i, path=PATH, toggledebug=False):
     f_name = str(i).zfill(4)
     o3dmesh = utl.cm2o3dmesh(objcm_deformed, wnormal=False)
     o3dmesh_gt = utl.cm2o3dmesh(objcm_gt, wnormal=False)
-    o3d.io.write_triangle_mesh(os.path.join(path, cat, f_name + '.ply'), o3dmesh)
-    o3d.io.write_triangle_mesh(os.path.join(path, cat, f_name + '.ply'), o3dmesh_gt)
+    o3d.io.write_triangle_mesh(os.path.join(path, cat, 'mesh', f_name + '.ply'), o3dmesh)
+    o3d.io.write_triangle_mesh(os.path.join(path, cat, 'prim', f_name + '.ply'), o3dmesh_gt)
     if toggledebug:
         o3dmesh_gt.paint_uniform_color([1, 1, 0])
         o3d.visualization.draw_geometries([o3dmesh, o3dmesh_gt])

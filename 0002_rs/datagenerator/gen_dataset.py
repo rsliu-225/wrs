@@ -68,7 +68,7 @@ def gen_seed(num_kpts=4, max=.02, width=.008, length=.2, thickness=.0015, n=10, 
         else:
             pseq = utl.uni_length(utl.spl_inp(pseq=np.asarray(kpts), n=n, toggledebug=toggledebug), goal_len=length)
         pseq = np.asarray(pseq) - pseq[0]
-        pseq, rotseq = utl.get_rotseq_by_pseq_smooth(pseq)
+        pseq, rotseq = utl.get_rotseq_by_pseq(pseq)
         for i in range(len(rotseq) - 1):
             if rm.angle_between_vectors(rotseq[i][:, 2], rotseq[i + 1][:, 2]) > np.pi / 15:
                 success = False
