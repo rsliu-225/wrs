@@ -296,8 +296,10 @@ class BendRbtPlanner(object):
     def run(self, f_name='tmp', grasp_l=0.0, h=0.0, fo='stick'):
         start_time = time.time()
         seq, _ = self._iptree.get_potential_valid()
+        attempt = 0
         while len(seq) != 0:
             print(seq)
+            attempt += 1
             bendseq = [self.bendset[i] for i in seq]
             self._iptree.show()
             self.reset_bs(self.init_pseq, self.init_rotseq)
@@ -332,15 +334,14 @@ class BendRbtPlanner(object):
             # fail_index, pathseq_list = self.check_pull_motion(bendresseq, armjntsseq_list)
             if fail_index != -1:
                 self._iptree.add_invalid_seq(seq[:fail_index + 1])
-                seq = self._iptree.get_potential_valid()
+                seq, _ = self._iptree.get_potential_valid()
                 continue
             pickle.dump(pathseq_list, open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_pathseq.pkl', 'wb'))
-
             print(f'Grasp Reasoning time cost: {time_gr - time_seq}')
             print(f'Sequence Planning time cost: {time_seq}')
             print(f'Success {seq}')
-
             break
+        print(f'Fail! Number of attempt: {attempt} times; time cost: {time.time() - start_time}')
 
     def fine_tune(self, seq, f_name='tmp', grasp_l=0.0, h=0.0, fo='stick'):
         self.set_bs_stick_sec(30)
@@ -371,12 +372,10 @@ class BendRbtPlanner(object):
     def show_bend_crop(self, bendres_i, l_i):
         init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendres_i
         pseq_end, rotseq_end = self.transseq(pseq_end, rotseq_end, self.transmat4)
-        pseq_end = pseq_end
-        rotseq_end = rotseq_end
         tmp_l = 0
         pseq_res = []
         rotseq_res = []
-        l_i = l_i - 2 * self._bs.bend_r * (end_a - init_a) + .0005
+        l_i = l_i - self._bs.bend_r * (end_a - init_a) + .0005
 
         for i in range(len(pseq_end) - 1):
             p1 = np.asarray(pseq_end[i])
@@ -387,7 +386,7 @@ class BendRbtPlanner(object):
             else:
                 pseq_res = pseq_end[i - 1:]
                 rotseq_res = rotseq_end[i - 1:]
-                gm.gen_frame(pseq_end[i - 1], rotseq_end[i - 1]).attach_to(base)
+                gm.gen_frame(pseq_end[i - 1], rotseq_end[i - 1], thickness=.002).attach_to(base)
                 break
         vertices, faces = self._bs.gen_stick(pseq_res, rotseq_res, self._bs.thickness / 2, section=180)
         objcm = cm.CollisionModel(initor=trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces)))
@@ -428,10 +427,14 @@ class BendRbtPlanner(object):
         # return bu.linear_inp3d_by_step(pseq_init), bu.linear_inp3d_by_step(pseq_end)
         return objcm_init, objcm_end
 
-    def pathseq_list_2_armjntsseq_list(self, pathseq_list, armjntsseq_list):
+    def pathseq_list_2_armjntsseq_list(self, pathseq_list):
         armjntsseq_list = []
         for i in range(len(pathseq_list)):
+            armjntsseq = []
             g, pathseq = pathseq_list[i]
+            for path in pathseq:
+                armjntsseq.append(path[0])
+            armjntsseq_list.append([g, armjntsseq])
         return armjntsseq_list
 
     def check_force(self, bendresseq, armjntsseq_list, show_step=None):

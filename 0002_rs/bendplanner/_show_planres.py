@@ -25,15 +25,15 @@ if __name__ == '__main__':
     import localenv.envloader as el
     import utils.pcd_utils as pcdu
 
-    # f_name = 'randomc'
-    # f_name = 'chair'
-    f_name = 'tri'
+    f_name = 'penta'
     fo = 'stick'
-    rbt_name = 'yumi'
+    rbt_name = 'ur'
 
     base, env = el.loadEnv_yumi(camp=[-1, -.5, .5])
-    rbt = el.loadYumi(showrbt=False)
-    # rbt = el.loadUr3e()
+    if rbt_name == 'yumi':
+        rbt = el.loadYumi(showrbt=False)
+    else:
+        rbt = el.loadUr3e()
     # transmat4 = rm.homomat_from_posrot((.45, .15, bconfig.BENDER_H + .035), rm.rotmat_from_axangle((0, 0, 1), np.pi))
     # transmat4 = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_transmat4.pkl', 'rb'))
     transmat4 = rm.homomat_from_posrot((.45, .1, bconfig.BENDER_H), rm.rotmat_from_axangle((0, 0, 1), np.pi))
@@ -81,10 +81,12 @@ if __name__ == '__main__':
     # plt.show()
 
     show_step = 0
-    show_armjnts_id = 30
+    show_armjnts_id = 0
 
+    armjntsseq_list = brp.pathseq_list_2_armjntsseq_list(pathseq_list)
     min_f_list, f_list = brp.check_force(bendresseq, armjntsseq_list, show_step=show_step)
     armjntsseq_list = np.asarray(armjntsseq_list)[np.argsort(min_f_list)[::-1]]
+    print(min_f_list[np.argsort(min_f_list)[::-1]])
     print(min_f_list[np.argsort(min_f_list)[::-1][show_armjnts_id]],
           f_list[np.argsort(min_f_list)[::-1][show_armjnts_id]])
     # brp.show_bendresseq_withrbt(bendresseq, armjntsseq_list[show_armjnts_id][1])

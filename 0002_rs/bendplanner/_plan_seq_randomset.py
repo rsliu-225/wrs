@@ -135,13 +135,13 @@ if __name__ == '__main__':
     bs = b_sim.BendSim(show=False)
 
     # bendset = pickle.load(open('./penta_bendseq.pkl', 'rb'))
-    random_cnt = 6
+    random_cnt = 9
     for i in range(0, 15):
         print(f'--------------{str(i)}--------------')
         flag = False
         while not flag:
             print('The seq is not feasible!')
-            bendset = bs.gen_random_bendset(random_cnt, np.pi/2)
+            bendset = bs.gen_random_bendset(random_cnt, np.pi/4)
             bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
             # is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, prune=False, toggledebug=False)
             # ax = plt.axes(projection='3d')
@@ -150,7 +150,7 @@ if __name__ == '__main__':
             # plt.show()
             flag = inf_bend_check(bs, bendset)
         res, tc, attemp_cnt_list, total_tc = \
-            plan_ipt(bs, bendset, snum=10, fo='90', f_name=f'{str(random_cnt)}_{str(i)}')
+            plan_ipt(bs, bendset, snum=10, fo='45', f_name=f'{str(random_cnt)}_{str(i)}')
         print(tc, attemp_cnt_list)
         print(total_tc)
 

@@ -23,10 +23,10 @@ affine_mat = np.asarray([[0.00282079054, -1.00400178, -0.000574846621, 0.3125535
                          [-0.202360828, 0.00546017392, -0.96800006, 0.94915224],
                          [0.0, 0.0, 0.0, 1.0]])
 
-# amat = np.asarray([[6.01298773e-02, -9.78207659e-01, 1.98731412e-01, 5.16091421e+02]
-#                    [-9.79046435e-01, -1.89910797e-02, 2.02749641e-01, -1.70789291e+02]
-#                    [-1.94557128e-01, -2.06758591e-01, -9.58852652e-01, 1.75997120e+03]
-#                    [0, 0, 0, 1]])
+# affine_mat = np.asarray([[6.01298773e-02, -9.78207659e-01, 1.98731412e-01, 5.16091421e+02]
+#                          [-9.79046435e-01, -1.89910797e-02, 2.02749641e-01, -1.70789291e+02]
+#                          [-1.94557128e-01, -2.06758591e-01, -9.58852652e-01, 1.75997120e+03]
+#                          [0, 0, 0, 1]])
 
 
 def get_transmat4_marker():
@@ -61,13 +61,13 @@ def cal_pseq_lenght(pseq):
 
 
 if __name__ == '__main__':
-    # f_name = 'randomc'
+    f_name = 'randomc'
     # f_name = 'chair'
-    f_name = 'penta'
+    # f_name = 'penta'
     fo = 'stick'
     rbt_name = 'ur'
 
-    plan = False
+    plan = True
     opt = False
     calibrate = False
     refine = False
@@ -131,8 +131,8 @@ if __name__ == '__main__':
         brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp)
         # grasp_list = grasp_list[140:190]
         brp.set_up(bendset, grasp_list, transmat4)
-        # base.run()
         brp.run(f_name=f_name, fo=f'{fo}/{rbt_name}')
+        # base.run()
 
     '''
     show result
@@ -144,8 +144,8 @@ if __name__ == '__main__':
     armjntsseq_list = \
         pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{rbt_name}/{f_name}_armjntsseq.pkl', 'rb'))
     pathseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{rbt_name}/{f_name}_pathseq.pkl', 'rb'))
-    print('Num. of solution', len(pathseq_list))
     print('Num. of solution', len(armjntsseq_list))
+    print('Num. of solution', len(pathseq_list))
     for bendres in bendresseq:
         init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendres
     print(seq)
