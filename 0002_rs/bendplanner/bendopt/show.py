@@ -127,9 +127,12 @@ def show_sgl_method(f_name):
     # ax2.set_ylabel('Avg. point to point error(mm)')
 
     ax3 = fig.add_subplot(1, 3, 3)
+    ax4 = ax3.twinx()
     grid_on(ax3)
     ax3.plot(x, time_cost_list, color='black')
-    print(bend_num_list)
+    print(len(time_cost_list), len(bend_num_list))
+    print(np.asarray(bend_num_list)+2)
+    ax4.plot(x, np.asarray(bend_num_list)+2)
     # ax3.set_xlabel('Num. of key point')
     # ax3.set_ylabel('Time cost(s)')
 
