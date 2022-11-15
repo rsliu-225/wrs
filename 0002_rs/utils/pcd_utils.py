@@ -705,7 +705,7 @@ def extract_lines_from_pcd(img, pcd, z_range, line_thresh=0.002, line_size_thres
     return lines
 
 
-def cal_conf(pcd_narry, voxel_size=.01, radius=.01, cam_pos=(0, 0, 0), theta=np.pi / 6, toggledebug=False):
+def cal_conf(pcd_narry, voxel_size=.01, radius=.01, cam_pos=(0, 0, 0), theta=None, toggledebug=False):
     o3dpcd = o3d_helper.nparray2o3dpcd(pcd_narry)
     downpcd = o3dpcd.voxel_down_sample(voxel_size=voxel_size)
     # downpcd = o3dpcd.uniform_down_sample(10)
@@ -782,16 +782,50 @@ def extract_main_vec(pts, nrmls, confs, threshold=np.radians(30)):
     return np.asarray(pts)[nbv_inx_list], np.asarray(nrmls)[nbv_inx_list], np.asarray(confs)[nbv_inx_list]
 
 
+def sort_kpts(kpts, seed):
+    sort_ids = []
+    while len(sort_ids) < len(kpts):
+        dist_list = np.linalg.norm(kpts - seed, axis=1)
+        sort_ids_tmp = np.argsort(dist_list)
+        for i in sort_ids_tmp:
+            if i not in sort_ids:
+                sort_ids.append(i)
+                break
+        seed = kpts[sort_ids[-1]]
+    return kpts[sort_ids]
+
+
 def get_kpts_gmm(objpcd, n_components=20, show=True, rgba=(1, 0, 0, 1)):
     X = np.array(objpcd)
     gmix = GaussianMixture(n_components=n_components, random_state=0).fit(X)
+    kpts = sort_kpts(gmix.means_, seed=np.asarray([0, 0, 0]))
+
     if show:
-        for p in gmix.means_:
+        for i, p in enumerate(kpts[1:]):
             gm.gen_sphere(p, radius=.001, rgba=rgba).attach_to(base)
-    return np.asarray(gmix.means_)
+
+    kdt, _ = get_kdt(objpcd)
+    kpts_rotseq = []
+    for i, p in enumerate(kpts[:-1]):
+        knn = get_knn(kpts[i], kdt, k=int(len(objpcd) / n_components))
+        pcv, pcaxmat = rm.compute_pca(knn)
+        y_v = kpts[i + 1] - kpts[i]
+        x_v = pcaxmat[:, np.argmin(pcv)]
+        if len(kpts_rotseq) != 0:
+            if rm.angle_between_vectors(kpts_rotseq[-1][:, 0], x_v) > np.pi / 2:
+                x_v = -x_v
+            if rm.angle_between_vectors(kpts_rotseq[-1][:, 1], y_v) > np.pi / 2:
+                y_v = -y_v
+        z_v = np.cross(x_v, y_v)
+
+        rot = np.asarray([rm.unit_vector(x_v), rm.unit_vector(y_v), rm.unit_vector(z_v)]).T
+        kpts_rotseq.append(rot)
+    kpts_rotseq.append(kpts_rotseq[-1])
+
+    return kpts, np.asarray(kpts_rotseq)
 
 
-def cal_nbv(pts, nrmls, confs, cam_pos=np.asarray([0, 0, 0]), toggledebug=False):
+def cal_nbv(pts, nrmls, confs, toggledebug=False):
     inx = sorted(range(len(confs)), key=lambda k: confs[k])
     confs = np.asarray(confs)[inx]
     pts = np.asarray(pts)[inx]
@@ -822,10 +856,14 @@ def cal_nbv(pts, nrmls, confs, cam_pos=np.asarray([0, 0, 0]), toggledebug=False)
                 # gm.gen_stick(cam_pos, p, rgba=(1, 1, 0, .2)).attach_to(base)
 
     nbv_inx_list = list(nbv_inx_dict.keys())
-    return np.asarray(pts)[nbv_inx_list], np.asarray(nrmls)[nbv_inx_list], np.asarray(confs)[nbv_inx_list]
+    confs = np.asarray(confs)[nbv_inx_list]
+
+    return np.asarray(pts)[nbv_inx_list][np.argsort(confs)], \
+           np.asarray(nrmls)[nbv_inx_list][np.argsort(confs)], \
+           np.asarray(confs)[np.argsort(confs)]
 
 
-def cal_nbv_pcn(pts, pts_pcn, theta=np.pi / 6, toggledebug=False):
+def cal_nbv_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, toggledebug=False):
     def _normalize(l):
         return [(v - min(l)) / (max(l) - min(l)) for v in l]
 
@@ -835,9 +873,9 @@ def cal_nbv_pcn(pts, pts_pcn, theta=np.pi / 6, toggledebug=False):
     # show_pcd(pts, rgba=(0, 0, 1, 1))
     # base.run()
     pts, nrmls, confs = \
-        cal_conf(np.asarray(pts), voxel_size=.005, radius=.005, theta=None, toggledebug=False)
+        cal_conf(np.asarray(pts), voxel_size=.005, radius=.005, theta=None, cam_pos=cam_pos, toggledebug=False)
     pts_pcn, nrmls_pcn, confs_pcn = \
-        cal_conf(np.asarray(pts_pcn), voxel_size=.005, radius=.005, theta=theta, toggledebug=False)
+        cal_conf(np.asarray(pts_pcn), voxel_size=.005, radius=.005, theta=theta, cam_pos=cam_pos, toggledebug=False)
     kdt, _ = get_kdt(pts)
     confs_pcn_res = []
     dist_list = []
@@ -861,15 +899,58 @@ def cal_nbv_pcn(pts, pts_pcn, theta=np.pi / 6, toggledebug=False):
     pts_nbv, nrmls_nbv, confs_nbv = extract_main_vec(pts_pcn, nrmls_pcn, confs_pcn_res)
     if toggledebug:
         for i in range(len(confs_nbv)):
-            if confs_nbv[i] > .3:
-                gm.gen_sphere(pts_nbv[i], radius=.001, rgba=(confs_pcn_res[i], 0, 1 - confs_pcn_res[i], 1)).attach_to(
-                    base)
-                gm.gen_arrow(pts_nbv[i], pts_nbv[i] + nrmls_nbv[i] * .03,
-                             rgba=(confs_pcn_res[i], 0, 1 - confs_pcn_res[i], 1), thickness=.002).attach_to(base)
+            # if confs_nbv[i] > .3:
+            gm.gen_sphere(pts_nbv[i], radius=.001, rgba=(confs_pcn_res[i], 0, 1 - confs_pcn_res[i], 1)).attach_to(
+                base)
+            gm.gen_arrow(pts_nbv[i], pts_nbv[i] + nrmls_nbv[i] * .03,
+                         rgba=(confs_pcn_res[i], 0, 1 - confs_pcn_res[i], 1), thickness=.002).attach_to(base)
             # gm.gen_arrow(pts_nbv[i], pts_nbv[i] + nrmls_nbv[i] * .05,
             #              rgba=(0, 0, 1, 1), thickness=.002).attach_to(base)
 
-    return pts_nbv, nrmls_nbv, confs_nbv
+    confs = np.asarray(confs)
+    return np.asarray(pts)[np.argsort(confs)], \
+           np.asarray(nrmls)[np.argsort(confs)], \
+           np.asarray(confs)[np.argsort(confs)]
+
+
+def cal_nbv_pcn_kpts(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, toggledebug=False):
+    def _normalize(l):
+        return [(v - min(l)) / (max(l) - min(l)) for v in l]
+
+    _, _, trans = o3dh.registration_icp_ptpt(pts_pcn, pts, maxcorrdist=.02, toggledebug=False)
+    pts_pcn = trans_pcd(pts_pcn, trans)
+    show_pcd(pts_pcn, rgba=(.7, .7, .7, .5))
+    show_pcd(pts, rgba=(.7, 0, 0, .5))
+    kpts, kpts_rotseq = get_kpts_gmm(pts_pcn, n_components=16, show=False)
+
+    o3dpcd = o3dh.nparray2o3dpcd(pts)
+    confs = []
+    kdt_i = o3d.geometry.KDTreeFlann(o3dpcd)
+    for i, p in enumerate(np.asarray(kpts)):
+        k, _, _ = kdt_i.search_radius_vector_3d(p, .005)
+        # print(k, len(pcd_i) / len(kpts))
+        confs.append(k)
+    if max(confs) != min(confs):
+        confs = [(c - min(confs)) / (max(confs) - min(confs)) for c in confs]
+    else:
+        confs = np.ones(len(confs))
+    nrmls = kpts_rotseq[:, :, 0]
+    if theta is not None:
+        res_inx_list = []
+        for i in range(len(kpts)):
+            if rm.angle_between_vectors(nrmls[i], cam_pos - kpts[i]) > theta:
+                res_inx_list.append(i)
+        kpts = np.asarray(kpts)[res_inx_list]
+        nrmls = np.asarray(nrmls)[res_inx_list]
+        confs = np.asarray(confs)[res_inx_list]
+    if toggledebug:
+        for i in range(len(confs)):
+            gm.gen_sphere(kpts[i], radius=.005, rgba=[confs[i], 0, 1 - confs[i], .3]).attach_to(base)
+            gm.gen_arrow(kpts[i], kpts[i] + kpts_rotseq[i][:, 0] * .02, rgba=[confs[i], 0, 1 - confs[i], 1],
+                         thickness=.001).attach_to(base)
+    return np.asarray(kpts)[np.argsort(confs)], \
+           np.asarray(nrmls)[np.argsort(confs)], \
+           np.asarray(confs)[np.argsort(confs)]
 
 
 def cal_coverage(pcd_partial, pcd_gt, voxel_size=.001, tor=.001, toggledebug=False):
@@ -879,7 +960,7 @@ def cal_coverage(pcd_partial, pcd_gt, voxel_size=.001, tor=.001, toggledebug=Fal
     cnt = 0
     for p in np.asarray(downpcd.points):
         dist = get_min_dist(p, kdt_partial)
-        if dist > tor:
+        if dist < tor:
             cnt += 1
             if toggledebug:
                 gm.gen_sphere(p, radius=.001, rgba=(1, 0, 0, .5)).attach_to(base)

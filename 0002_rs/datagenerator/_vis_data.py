@@ -1,4 +1,5 @@
 import pickle
+import random
 
 import h5py
 import os
@@ -33,7 +34,7 @@ def show_dataset_o3d(cat='plat'):
         for f in os.listdir(os.path.join(org_path, fo, 'complete')):
             if f[-3:] != 'pcd':
                 continue
-            if int(f.split('_')[0]) != 802:
+            if int(f.split('_')[0]) < 1600:
                 continue
             print(f)
             o3dpcd_gt = o3d.io.read_point_cloud(os.path.join(org_path, fo, 'complete', f))
@@ -59,9 +60,9 @@ def show_conf(cat=['plat'], toggledebug=False):
             #     continue
             conf = pickle.load(open(os.path.join(org_path, fo, 'conf', f[:-3] + 'pkl'), 'rb'))
             coverage_list.append(collections.Counter(conf)[1] / 2048)
-            # print(f, coverage_list[-1])
             if toggledebug:
-                if coverage_list[-1] < .8:
+                if coverage_list[-1] < .6:
+                    print(f, coverage_list[-1])
                     o3dpcd_gt = o3d.io.read_point_cloud(os.path.join(org_path, fo, 'complete', f))
                     colors = []
                     for v in conf:
@@ -80,8 +81,37 @@ def show_conf(cat=['plat'], toggledebug=False):
     print('coverage', np.asarray(coverage_list).std())
 
 
+def show_kpts(path, cat):
+    import modeling.geometric_model as gm
+    for fo in os.listdir(path):
+        if fo not in cat:
+            continue
+        print(fo)
+        f_list = os.listdir(os.path.join(path, fo, 'complete'))
+        random.shuffle(f_list)
+        for f in f_list:
+            print(f)
+            if f[-3:] != 'pcd':
+                continue
+            kpts, kpts_rotseq, conf = pickle.load(open(os.path.join(path, fo, 'kpts', f[:-3] + 'pkl'), 'rb'))
+            o3dpcd_i = o3d.io.read_point_cloud(os.path.join(path, fo, 'partial', f))
+            pcd_i = np.asarray(o3dpcd_i.points)
+            # gm.gen_pointcloud(pcd_gt).attach_to(base)
+            gm.gen_pointcloud(pcd_i, rgbas=[[1, 0, 0, 1]]).attach_to(base)
+            for i, p in enumerate(kpts):
+                if conf[i] == 1:
+                    gm.gen_sphere(p, radius=.005, rgba=[0, 1, 0, .4]).attach_to(base)
+                else:
+                    gm.gen_sphere(p, radius=.005, rgba=[1, 0, 0, .4]).attach_to(base)
+
+                gm.gen_frame(p, rotmat=kpts_rotseq[i], length=.02, thickness=.001).attach_to(base)
+            base.run()
+
+
 if __name__ == '__main__':
     import visualization.panda.world as wd
+
+    base = wd.World(cam_pos=[.1, .2, .4], lookat_pos=[0, 0, 0])
 
     org_path = 'E:/liu/org_data/dataset_prim/'
     goal_path = 'E:/liu/h5_data/data_prim/'
@@ -89,6 +119,7 @@ if __name__ == '__main__':
     # show_dataset_h5(goal_path, 'train', label=3)
     # show_dataset_h5(goal_path, 'test', label=2)
     show_conf(cat=['multiview'], toggledebug=False)
+    # show_kpts('E:/liu/org_data/dataset_kpts/', cat=['plat'])
     # show_dataset_h5('val')
-    # show_dataset_o3d(cat='plat')
+    # show_dataset_o3d(cat='quad')
     # base.run()

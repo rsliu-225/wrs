@@ -1,6 +1,7 @@
 import copy
 import os
 import random
+import pickle
 
 import cv2
 import matplotlib.pyplot as plt
@@ -333,7 +334,7 @@ def deform_cm(objcm, goal_kpts, rot_axial, rot_radial, width=.008, thickness=0, 
         objcm_gt.set_rgba((1, 1, 0, 1))
         objcm_gt.attach_to(base)
 
-    return objcm_deformed, objcm_gt
+    return objcm_deformed, objcm_gt, kpts, kpts_rotseq
 
 
 '''
@@ -435,25 +436,34 @@ def get_objpcd_partial_sample(objcm, objmat4=np.eye(4), smp_num=100000, cam_pos=
     return objpcd_partial
 
 
-def get_objpcd_partial_o3d(objcm, objcm_gt, rot, rot_center, path='./', f_name='', resolusion=(1280, 720),
-                           ext_name='.pcd',
+def cal_kpts_conf(o3dpcd_i, kpts, kpts_rotseq, tor=.5, radius=.005):
+    conf = []
+    colors = []
+    kdt_i = o3d.geometry.KDTreeFlann(o3dpcd_i)
+    pcd_i = np.asarray(o3dpcd_i.points)
+    for p in np.asarray(kpts):
+        k, _, _ = kdt_i.search_radius_vector_3d(p, radius)
+        # print(k, len(pcd_i) / len(kpts))
+        if k < (len(pcd_i) / len(kpts)) * tor:
+            conf.append(0)
+            colors.append([1, 0, 0, .3])
+        else:
+            conf.append(1)
+            colors.append([0, 1, 0, .3])
+
+    return [kpts, kpts_rotseq, conf]
+
+
+def get_objpcd_partial_o3d(objcm, objcm_gt, rot, rot_center, pseq=None, rotseq=None,
+                           path='./', f_name='', resolusion=(1280, 720), ext_name='.pcd',
                            rnd_occ_ratio_rng=(.2, .5), nrml_occ_ratio_rng=(.2, .6),
                            occ_vt_ratio=1, noise_vt_ratio=1, noise_cnt=random.randint(0, 5),
                            add_noise=False, add_occ=False, add_rnd_occ=True, add_noise_pts=True,
-                           toggledebug=False, savemesh=False, savedepthimg=False, savergbimg=False):
+                           savemesh=False, savedepthimg=False, savergbimg=False, savekpts=True, toggledebug=False):
     if not os.path.exists(path):
         os.mkdir(path)
     if not os.path.exists(os.path.join(path, 'partial/')):
         os.mkdir(os.path.join(path, 'partial/'))
-    if savemesh:
-        if not os.path.exists(os.path.join(path, 'mesh/')):
-            os.mkdir(os.path.join(path, 'mesh/'))
-    if savedepthimg:
-        if not os.path.exists(os.path.join(path, 'depthimg/')):
-            os.mkdir(os.path.join(path, 'depthimg/'))
-    if savergbimg:
-        if not os.path.exists(os.path.join(path, 'rgbimg/')):
-            os.mkdir(os.path.join(path, 'rgbimg/'))
 
     vis = o3d.visualization.Visualizer()
     vis.create_window('win', width=resolusion[0], height=resolusion[1], left=0, top=0)
@@ -480,7 +490,7 @@ def get_objpcd_partial_o3d(objcm, objcm_gt, rot, rot_center, path='./', f_name='
                                           noise_mean=1e-3, noise_sigma=1e-4, ratio=noise_vt_ratio)
         o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
     if add_noise_pts:
-        o3dpcd = add_noise_pts_by_vt(o3dpcd, np.asarray(o3dmesh.vertices), noise_cnt=noise_cnt, size=.01)
+        o3dpcd = add_noise_pts_by_vt(o3dpcd, noise_cnt=noise_cnt, size=.01)
         o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
 
     o3dpcd = resample(o3dpcd, smp_num=2048)
@@ -488,12 +498,30 @@ def get_objpcd_partial_o3d(objcm, objcm_gt, rot, rot_center, path='./', f_name='
     save_complete_pcd(f_name, o3dmesh_gt, path=path, method='possion', smp_num=2048)
 
     if savemesh:
-        o3d.io.write_triangle_mesh(os.path.join(path, 'mesh', f_name + '.ply'), o3dmesh)
+        if not os.path.exists(os.path.join(path, 'mesh/')):
+            os.mkdir(os.path.join(path, 'mesh/'))
+        o3d.io.write_triangle_mesh(os.path.join(path, 'mesh', f'{f_name}.ply'), o3dmesh)
     if savergbimg:
-        vis.capture_screen_image(os.path.join(path, 'rgbimg', f_name + '.jpg'), do_render=False)
+        if not os.path.exists(os.path.join(path, 'rgbimg/')):
+            os.mkdir(os.path.join(path, 'rgbimg/'))
+        vis.capture_screen_image(os.path.join(path, 'rgbimg', f'{f_name}.jpg'), do_render=False)
     if savedepthimg:
+        if not os.path.exists(os.path.join(path, 'depthimg/')):
+            os.mkdir(os.path.join(path, 'depthimg/'))
         depthimg = np.asarray(vis.capture_depth_float_buffer()) * 1000
-        cv2.imwrite(os.path.join(path, 'depthimg', f_name + '.jpg'), depthimg)
+        cv2.imwrite(os.path.join(path, 'depthimg', f'{f_name}.jpg'), depthimg)
+    if savekpts:
+        if not os.path.exists(os.path.join(path, 'kpts/')):
+            os.mkdir(os.path.join(path, 'kpts/'))
+        if pseq is None or rotseq is None:
+            o3dpcd_gt = o3d.io.read_point_cloud(os.path.join(path, 'complete', f'{f_name}{ext_name}'))
+            pseq, rotseq = get_kpts_gmm(np.asarray(o3dpcd_gt.points), n_components=16, show=False)
+        else:
+            pseq = trans_pcd(pseq, rm.homomat_from_posrot(pos=rot_center, rot=rot))
+            rotseq = [np.dot(rot, r) for r in rotseq]
+        pseq, rotseq, conf = cal_kpts_conf(o3dpcd, pseq, rotseq, tor=.5, radius=.005)
+        # pickle.dump([pseq, rotseq], open(os.path.join(path, 'kpts', f_name + '.pkl'), 'wb'))
+        pickle.dump([pseq, rotseq, conf], open(os.path.join(path, 'kpts', f'{f_name}.pkl'), 'wb'))
 
     vis.destroy_window()
 
@@ -701,10 +729,10 @@ def add_guassian_noise_by_vt(o3dpcd, vts, nrmls, noise_mean=1e-4, noise_sigma=1e
     return o3dh.nparray2o3dpcd(pcd)
 
 
-def add_noise_pts_by_vt(o3dpcd, vts, noise_cnt=3, size=.01):
+def add_noise_pts_by_vt(o3dpcd, noise_cnt=3, size=.01):
     if noise_cnt == 0:
         return o3dpcd
-    for p in random.choices(vts, k=noise_cnt):
+    for p in random.choices(np.asarray(o3dpcd.points), k=noise_cnt):
         p = np.asarray(p)
         vts_n = [
             p,

@@ -36,7 +36,7 @@ def inference_sgl(input_narry, model_name='pcn', load_model='pcn_emd_prim_mv/bes
         inputs = inputs_cpu.float().cpu()
         inputs = torch.unsqueeze(inputs, 0)
         inputs = inputs.transpose(2, 1).contiguous()
-        print(inputs.shape)
+        # print(inputs.shape)
         result_dict = net(inputs)
         output = result_dict['result'].cpu().numpy()
     if toggledebug:
@@ -64,12 +64,13 @@ if __name__ == "__main__":
     f_name = 'test'
 
     model_name = 'pcn'
-    load_model = 'pcn_emd_prim_mv/best_cd_p_network.pth'
+    load_model = 'pcn_emd_prim_mv_2/best_cd_p_network.pth'
 
     # o3dpcd_1 = o3d.io.read_point_cloud('D:/liu/MVP_Benchmark/completion/data_real/020.pcd')
     # o3dpcd_2 = o3d.io.read_point_cloud('D:/liu/MVP_Benchmark/completion/data_real/001.pcd')
-    o3dpcd_1 = o3d.io.read_point_cloud(config.ROOT + '/recons_data/nbc/plate_a_cubic/000.pcd')
-    path = os.path.join(config.ROOT, 'recons_data/nbc/plate_a_cubic')
+    # o3dpcd_1 = o3d.io.read_point_cloud(config.ROOT + '/recons_data/nbc/plate_a_cubic/000.pcd')
+    # path = os.path.join(config.ROOT, 'recons_data/nbc/plate_a_cubic')
+    path = 'D:/liu/MVP_Benchmark/completion/data_real/'
     for f in os.listdir(path):
         o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f))
         if len(np.asarray(o3dpcd.points)) > 2048:

@@ -87,7 +87,7 @@ if __name__ == '__main__':
     for fo in os.listdir(path):
         cat_list.append(fo)
     print(cat_list)
-    cat_list = ['bspl']
+    cat_list = ['multiview']
     proc = []
     for cat in cat_list:
         if cat in ['plat', 'tmpl']:
