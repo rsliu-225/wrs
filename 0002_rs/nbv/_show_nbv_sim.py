@@ -254,6 +254,6 @@ if __name__ == '__main__':
     #         # o3d.visualization.draw_geometries([o3dpcd_init, o3dpcd_o, o3dmesh, coord])
     #         o3d.visualization.draw_geometries([o3dpcd_init, o3dpcd_o, coord])
 
-    pcd_i, pcd_o, o3dpcd_gt = pickle.load(open('tmp.pkl', 'rb'))
+    pcd_i, pcd_o, o3dpcd_gt = pickle.load(open('../run_plan/tmp.pkl', 'rb'))
     pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn_kpts(pcd_i, pcd_o, theta=None, toggledebug=True)
     base.run()
