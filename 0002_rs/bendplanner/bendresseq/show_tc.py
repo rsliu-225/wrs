@@ -20,7 +20,7 @@ def load_res(num, fo='180'):
     for f in os.listdir(f'./{fo}'):
         if f[-3:] == 'pkl' and f[0] == str(num):
             result, tc_list, attemp_cnt_list, total_tc, bendset = pickle.load(open(f'./{fo}/{f}', 'rb'))
-            print(f, total_tc)
+            # print(f, total_tc)
             if len(result) != 0:
                 success_cnt += 1
                 success_cnt_list.append(len(result))
@@ -233,7 +233,7 @@ def gen_img(bs, num, fo='180', show=False):
     print('Num. of attempts:', np.average(total_cnt_list))
 
 
-def plot_success(ax, x_range, fo, clr, marker='+'):
+def plot_success(ax, x_range, fo, clr, d, marker='+'):
     avg_first_tc_list = []
     avg_top10_tc_list = []
     avg_attempt_list = []
@@ -243,17 +243,30 @@ def plot_success(ax, x_range, fo, clr, marker='+'):
         print(f'---------{fo}, {num}---------')
         success_cnt, fail_tc, top10_tc, first_tc, attemps = load_res(num, fo=fo)
         print(success_cnt, top10_tc, first_tc)
+        print('first:', ' & '.join([str(round(t, 2)) for t in first_tc + [np.asarray(first_tc).mean()]]))
+        print('top10:', ' & '.join([str(round(t, 2)) for t in top10_tc + [np.asarray(top10_tc).mean()]]))
         first_tc_box.append(first_tc)
         top10_tc_box.append(top10_tc)
         avg_first_tc_list.append(np.average(first_tc))
         avg_top10_tc_list.append(np.average(top10_tc))
         avg_attempt_list.append(np.average(attemps))
         ax.set_xticks(x_range)
-        ax.scatter([num] * len(first_tc), first_tc, color=clr, marker=marker, s=150)
+        # ax.scatter([num] * len(first_tc), first_tc, color=clr, marker=marker, s=150)
         # ax.scatter([num] * len(top10_tc), top10_tc, color=clr, marker=marker, s=150)
-    # ax.boxplot(first_tc_box, positions=x_range)
-    # ax.boxplot(top10_tc_box, positions=x_range)
-    ax.plot(x_range, avg_first_tc_list, color=clr)
+    # box1 = ax.boxplot(first_tc_box, positions=x_range, patch_artist=True)
+    box1 = ax.boxplot(top10_tc_box, positions=x_range, patch_artist=True)
+    # if d == 1:
+    #     box1 = ax.boxplot(first_tc_box, positions=[d + 3 * (x - 1) + .25 for x in x_range], patch_artist=True)
+    # elif d == 2:
+    #     box1 = ax.boxplot(first_tc_box, positions=[d + 3 * (x - 1) for x in x_range], patch_artist=True)
+    # else:
+    #     box1 = ax.boxplot(first_tc_box, positions=[d + 3 * (x - 1) - .25 for x in x_range], patch_artist=True)
+
+    for item in ['boxes', 'whiskers', 'fliers', 'medians', 'caps']:
+        plt.setp(box1[item], color=clr)
+    plt.setp(box1["boxes"], facecolor=clr)
+    plt.setp(box1["fliers"], markeredgecolor=clr)
+    # ax.plot(x_range, avg_first_tc_list, color=clr)
     # ax.plot(x_range, avg_top10_tc_list, color=clr)
 
 
@@ -279,25 +292,26 @@ def grid_on(ax):
 if __name__ == '__main__':
     base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
     bs = b_sim.BendSim(show=True)
-    fo = '45'
-    for i in range(3, 9):
-        gen_img(bs, i, fo=fo)
+    # fo = '90'
+    # for i in range(5, 9):
+    #     gen_img(bs, i, fo=fo)
 
     x_range = range(3, 9)
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams["font.size"] = 24
     ax = plt.axes()
     grid_on(ax)
-    plot_success(ax, x_range, '45', clr='tab:green', marker='1')
-    plot_success(ax, x_range, '90', clr='tab:blue', marker='2')
-    # plot_success(ax, x_range, '135', clr='tab:red', marker='3')
-    plot_success(ax, x_range, '180', clr='tab:orange', marker='4')
+    # plot_success(ax, x_range, '45', d=1, clr='tab:green', marker='1')
+    # plot_success(ax, x_range, '90', d=2, clr='tab:blue', marker='2')
+    plot_success(ax, x_range, '180', d=3, clr='tab:orange', marker='4')
+    # plt.xticks([2 + 3 * (x - 1) for x in x_range], x_range)
+    plt.xticks(x_range, x_range)
     plt.show()
 
-    grid_on(ax)
-    ax = plt.axes()
-    ax.grid()
-    plot_failed(ax, x_range, '90', clr='tab:blue')
-    plot_failed(ax, x_range, '180', clr='tab:orange')
-
-    plt.show()
+    # grid_on(ax)
+    # ax = plt.axes()
+    # ax.grid()
+    # plot_failed(ax, x_range, '90', clr='tab:blue')
+    # plot_failed(ax, x_range, '180', clr='tab:orange')
+    #
+    # plt.show()
