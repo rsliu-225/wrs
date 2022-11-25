@@ -1,23 +1,12 @@
-import copy
-import math
 import os
-import pickle
 import random
 
-import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 import open3d as o3d
-from scipy import interpolate
-from sklearn.neighbors import KDTree
-
-import basis.o3dhelper as o3dh
-import basis.robot_math as rm
-import basis.trimesh as trm
-import modeling.collision_model as cm
-import modeling.geometric_model as gm
 
 import datagenerator.data_utils as utl
+import modeling.collision_model as cm
+import modeling.geometric_model as gm
 import visualization.panda.world as wd
 from basis.trimesh.creation import icosphere
 
@@ -78,16 +67,16 @@ if __name__ == '__main__':
                                savemesh=False, savedepthimg=False, savergbimg=False,
                                toggledebug=True)
 
-    '''
-    show data
-    '''
+    # '''
+    # show data
+    # '''
     # path = './tst/'
     # for f in sorted(os.listdir(path)):
     #     if f[-3:] == 'pcd':
     #         o3dpcd = o3d.io.read_point_cloud(f"{path}/{f}")
     #         gm.gen_pointcloud(o3dpcd.points).attach_to(base)
     # base.run()
-
+    #
     # '''
     # show key point
     # '''

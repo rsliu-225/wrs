@@ -1,15 +1,15 @@
+import math
+import os
 import os.path
 import random
-
-import numpy
-import numpy as np
-
-from _tst_gen_dataset import *
-import data_utils as utl
-from gen_multiview import *
-import open3d as o3d
-import pickle
 from multiprocessing import Process
+
+import numpy as np
+import open3d as o3d
+
+import basis.robot_math as rm
+import data_utils as utl
+import modeling.collision_model as cm
 
 # PATH = 'E:/liu/dataset_flat/'
 # PATH = 'E:/liu/org_data/dataset_prim/'
@@ -26,10 +26,6 @@ def runInParallel(fn, args):
         p.join()
 
 
-def function(num_output, name, class_name):
-    gen_multiview_lc(comb_num=num_output, cat=name, class_name=class_name)
-
-
 # Print iterations progress
 def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█'):
     percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
@@ -38,52 +34,12 @@ def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=
     return f'\r{prefix} |{bar}| {percent}% {suffix}'
 
 
-def random_kts(n=3, max=.02):
-    kpts = [(0, 0, 0)]
-    for j in range(n - 1):
-        kpts.append(((j + 1) * .02, random.uniform(-max, max), random.uniform(-max, max)))
-    return kpts
-
-
-def random_rot_radians(n=3):
-    rot_axial = []
-    rot_radial = []
-    for i in range(n):
-        rot_axial.append(random.randint(10, 30) * random.choice([1, -1]))
-        rot_radial.append(random.randint(0, 1) * random.choice([1, -1]))
-    return np.radians(rot_axial), np.radians(rot_radial)
-
-
-def gen_seed(num_kpts=4, max=.02, width=.008, length=.2, thickness=.0015, n=10, toggledebug=False, rand_wd=False):
-    width = width + (np.random.uniform(0, 0.005) if rand_wd else 0)
-    cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
-    flat_sec = [[0, width / 2], [0, -width / 2], [0, -width / 2], [0, width / 2]]
-    success = False
-    pseq, rotseq = [], []
-    while not success:
-        kpts = random_kts(num_kpts, max=max)
-        if len(kpts) == 3:
-            pseq = utl.uni_length(utl.poly_inp(step=.001, kind='quadratic', pseq=np.asarray(kpts)), goal_len=length)
-        # elif len(kpts) == 4:
-        #     pseq = utl.uni_length(utl.poly_inp(step=.001, kind='cubic', pseq=np.asarray(kpts)), goal_len=length)
-        else:
-            pseq = utl.uni_length(utl.spl_inp(pseq=np.asarray(kpts), n=n, toggledebug=toggledebug), goal_len=length)
-        pseq = np.asarray(pseq) - pseq[0]
-        pseq, rotseq = utl.get_rotseq_by_pseq(pseq)
-        for i in range(len(rotseq) - 1):
-            if rm.angle_between_vectors(rotseq[i][:, 2], rotseq[i + 1][:, 2]) > np.pi / 15:
-                success = False
-                break
-            success = True
-    return utl.gen_swap(pseq, rotseq, cross_sec), utl.gen_swap(pseq, rotseq, flat_sec), pseq, rotseq
-
-
 def init_gen(cat, num_kpts, max_kts, res=(550, 550), rot_center=(0, 0, 0), max_num=10, length=.2, path=PATH):
     path = os.path.join(path, cat[:4])
     icomats = rm.gen_icorotmats(rotation_interval=math.radians(360 / 60))
     icomats = [x for row in icomats for x in row]
     rotid_list = random.choices(range(len(icomats)), k=max_num)
-    objcm, objcm_flat, _, _ = gen_seed(num_kpts, max=max_kts, n=100, length=length, rand_wd=False)
+    objcm, objcm_flat, _, _ = utl.gen_seed(num_kpts, max=max_kts, n=100, length=length, rand_wd=False)
     cnt = 0
     for i in rotid_list:
         if cnt % 10 == 0:
@@ -175,7 +131,7 @@ def show_all_pcd(folder_path, class_name):
     cal_stats(folder_path, class_name)
 
 
-def show_some_pcd(path, num, class_name, dist=0.01):
+def show_some_pcd(path, num, class_name, num_scan, dist=0.01):
     total = cal_stats(path, class_name)
     ids = set(np.random.permutation(total)[:num].tolist())
     print("Random IDs:", ids)

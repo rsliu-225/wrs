@@ -72,20 +72,16 @@ def poly_inp(pseq, step=.001, toggledebug=False, kind="cubic"):
 
 
 def spl_inp(pseq, n=200, toggledebug=False):
-    from mpl_toolkits.mplot3d import Axes3D
-
     pseq = pseq.transpose()
-    tck = interpolate.splprep(pseq, k=len(pseq))[0]
-    # increase the resolution by increasing the spacing, 500 in this example
+    tck = interpolate.splprep(pseq, k=min([pseq.shape[1] - 1, 5]))[0]
     new = interpolate.splev(np.linspace(0, 1, n), tck, der=0)
     pts = np.asarray(new).transpose()
 
     if toggledebug:
-        fig = plt.figure()
-        ax = Axes3D(fig)
-        plt.plot(pseq[0], pseq[1], pseq[2], label='key points', lw=2, c='Dodgerblue')
-        plt.plot(new[0], new[1], new[2], label='fit', lw=2, c='red')
-        plt.legend()
+        ax = plt.axes(projection='3d')
+        ax.plot(pseq[0], pseq[1], pseq[2], label='key points', lw=2, c='Dodgerblue')
+        ax.plot(new[0], new[1], new[2], label='fit', lw=2, c='red')
+        ax.legend()
         plt.show()
     return pts
 
@@ -116,7 +112,8 @@ def get_rotseq_by_pseq(pseq):
     for i in range(1, len(pseq) - 1):
         v = pseq[i - 1] - pseq[i]
 
-        indices = kdt.query([pseq[i]], k=min([20, len(pseq) / 5]), return_distance=False)
+        # indices = kdt.query([pseq[i]], k=min([20, len(pseq) / 5]), return_distance=False)
+        indices = kdt.query([pseq[i]], k=min([5, len(pseq) / 5]), return_distance=False)
         knn = pseq[indices][0]
         pcv, pcaxmat = rm.compute_pca(knn)
         n = pcaxmat[:, np.argmin(pcv)]
@@ -217,6 +214,74 @@ def gen_swap(pseq, rotseq, cross_sec, toggledebug=False):
     objtrm = trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces))
 
     return cm.CollisionModel(initor=objtrm, btwosided=True, name='obj')
+
+
+'''
+gen shape primitive
+'''
+
+
+def random_kpts(n=3, max=.02):
+    kpts = [(0, 0, 0)]
+    for j in range(n - 1):
+        kpts.append(((j + 1) * .02, random.uniform(-max, max), random.uniform(-max, max)))
+    return kpts
+
+
+def random_kpts_sprl(num_kpts, z_max=.04, cir_num=1, toggledebug=True):
+    theta_min = random.uniform(-2, 0) * np.pi
+    theta = np.append(np.linspace(theta_min, 0, int(num_kpts / 2)),
+                      np.linspace(0, theta_min + 2 * cir_num * np.pi, int(num_kpts / 2) + 1)[1:])
+    z = np.sort(np.asarray(random.choices(np.linspace(0, z_max, 100)[10:], k=num_kpts)))
+    # z = np.linspace(0, z_max, 100)[-num_kpts:]
+    r = z ** 2 * 100
+    x = r * np.sin(theta)
+    y = r * np.cos(theta)
+    if toggledebug:
+        ax = plt.axes(projection='3d')
+        ax.plot(x, y, z, label='parametric curve')
+        ax.legend()
+        plt.show()
+
+    return np.asarray(list(zip(x, y, z))) - np.asarray([x[0], y[0], z[0]])
+
+
+def random_rot_radians(n=3):
+    rot_axial = []
+    rot_radial = []
+    for i in range(n):
+        rot_axial.append(random.randint(10, 30) * random.choice([1, -1]))
+        rot_radial.append(random.randint(0, 1) * random.choice([1, -1]))
+    return np.radians(rot_axial), np.radians(rot_radial)
+
+
+def gen_seed(num_kpts=4, max=.02, width=.008, length=.2, thickness=.0015, n=10, toggledebug=False, rand_wd=False):
+    width = width + (np.random.uniform(0, 0.005) if rand_wd else 0)
+    cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
+    flat_sec = [[0, width / 2], [0, -width / 2], [0, -width / 2], [0, width / 2]]
+    success = False
+    pseq, rotseq = [], []
+    while not success:
+        if num_kpts <= 5:
+            kpts = random_kpts(num_kpts, max=max)
+        else:
+            kpts = random_kpts_sprl(num_kpts, z_max=max, toggledebug=toggledebug)
+        if len(kpts) == 3:
+            pseq = uni_length(poly_inp(step=.001, kind='quadratic', pseq=np.asarray(kpts)), goal_len=length)
+        else:
+            pseq = uni_length(spl_inp(pseq=np.asarray(kpts), n=n, toggledebug=toggledebug), goal_len=length)
+
+        pseq = np.asarray(pseq) - pseq[0]
+        pseq, rotseq = get_rotseq_by_pseq(pseq)
+        for i in range(len(rotseq) - 1):
+            if rm.angle_between_vectors(rotseq[i][:, 2], rotseq[i + 1][:, 2]) > np.pi / 15:
+                success = False
+                break
+            success = True
+    for i in range(len(pseq)):
+        if i % 10 == 0:
+            gm.gen_frame(pseq[i], rotseq[i], length=.02, thickness=.002).attach_to(base)
+    return gen_swap(pseq, rotseq, cross_sec), gen_swap(pseq, rotseq, flat_sec), pseq, rotseq
 
 
 '''
@@ -458,6 +523,7 @@ def get_objpcd_partial_o3d(objcm, objcm_gt, rot, rot_center, pseq=None, rotseq=N
                            path='./', f_name='', resolusion=(1280, 720), ext_name='.pcd',
                            rnd_occ_ratio_rng=(.2, .5), nrml_occ_ratio_rng=(.2, .6),
                            occ_vt_ratio=1, noise_vt_ratio=1, noise_cnt=random.randint(0, 5),
+                           visible_threshold=np.pi / 3,
                            add_noise=False, add_occ=False, add_rnd_occ=True, add_noise_pts=True,
                            savemesh=False, savedepthimg=False, savergbimg=False, savekpts=True, toggledebug=False):
     if not os.path.exists(path):
@@ -477,6 +543,12 @@ def get_objpcd_partial_o3d(objcm, objcm_gt, rot, rot_center, pseq=None, rotseq=N
     vis.capture_depth_point_cloud(os.path.join(path, f_name + f'_tmp{ext_name}'), do_render=False,
                                   convert_to_world_coordinate=True)
     o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f_name + f'_tmp{ext_name}'))
+    o3dpcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.001, max_nn=10))
+    o3dpcd_nrml = np.asarray(o3dpcd.normals)
+    vis_idx = np.argwhere(np.arccos(abs(o3dpcd_nrml.dot(np.asarray([0, 0, 1])))) < visible_threshold).flatten()
+    print(len(o3dpcd_nrml), len(vis_idx), vis_idx)
+    o3dpcd = o3dpcd.select_by_index(vis_idx)
+
     if add_rnd_occ:
         o3dpcd = add_random_occ(o3dpcd, occ_ratio_rng=rnd_occ_ratio_rng)
         o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)

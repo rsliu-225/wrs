@@ -15,14 +15,6 @@ import bendplanner.bend_utils as bu
 import utils.recons_utils as ru
 
 
-def random_rot_radians(n=3):
-    rot_axial = []
-    rot_radial = []
-    for i in range(n):
-        rot_axial.append(random.randint(10, 30) * random.choice([1, -1]))
-        rot_radial.append(random.randint(0, 1) * random.choice([1, -1]))
-    return np.radians(rot_axial), np.radians(rot_radial)
-
 
 def save_stl(objcm, path):
     from stl import mesh
@@ -65,7 +57,7 @@ if __name__ == '__main__':
     #                          random.uniform(.015, .02) * random.choice([-1, 1])],
     #                         [.16, 0, 0]])
 
-    rot_axial, rot_radial = random_rot_radians(len(goal_pseq))
+    rot_axial, rot_radial = du.random_rot_radians(len(goal_pseq))
     deformed_objcm, objcm_gt = du.deform_cm(objcm, goal_pseq, rot_axial, rot_radial, show=True)
 
     '''
