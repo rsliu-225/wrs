@@ -15,7 +15,6 @@ import bendplanner.bend_utils as bu
 import utils.recons_utils as ru
 
 
-
 def save_stl(objcm, path):
     from stl import mesh
     vertices = np.asarray(objcm.objtrm.vertices) * 1000
@@ -72,8 +71,10 @@ if __name__ == '__main__':
 
     du.get_objpcd_partial_o3d(deformed_objcm, objcm_gt, rot, rot_center, path=fo,
                               f_name=f'{obj_id}_{str(cnt).zfill(3)}',
+                              visible_threshold=np.radians(75), noise_cnt=3,
                               occ_vt_ratio=random.uniform(.05, .1), noise_vt_ratio=random.uniform(.2, 5),
-                              add_occ=True, add_noise=True, add_rnd_occ=True, toggledebug=True)
+                              add_occ=True, add_noise=True, add_rnd_occ=True, add_noise_pts=True,
+                              savemesh=False, savedepthimg=False, savergbimg=False, toggledebug=True)
 
     # '''
     # show data

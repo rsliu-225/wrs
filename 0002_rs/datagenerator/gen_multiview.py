@@ -44,14 +44,14 @@ def gen_multiview(cat, comb_num=1, path='', trans_diff=(.01, .01, .01), rot_diff
         os.mkdir(os.path.join(path, 'multiview/complete'))
     icomats = rm.gen_icorotmats(rotation_interval=np.radians(360 / 60))
     icomats = [x for row in icomats for x in row]
-    for f in os.listdir(os.path.join(path, cat)):
-        if f[-3:] == 'pcd':
-            print(cat, f.split('_'))
-            f_org = f'{f.split("_")[0]}_{f.split("_")[1]}.pcd'
-            # os.remove(os.path.join(path, cat, 'complete', f_org))
-            os.remove(os.path.join(path, cat, 'partial', f_org))
-            os.remove(os.path.join(path, cat, f))
-            continue
+    # for f in os.listdir(os.path.join(path, cat)):
+    #     if f[-3:] == 'pcd':
+    #         print(cat, f.split('_'))
+    #         f_org = f'{f.split("_")[0]}_{f.split("_")[1]}.pcd'
+    #         # os.remove(os.path.join(path, cat, 'complete', f_org))
+    #         os.remove(os.path.join(path, cat, 'partial', f_org))
+    #         os.remove(os.path.join(path, cat, f))
+    #         continue
     f_name_dict = {}
     for f in os.listdir(os.path.join(path, cat, 'partial')):
         if f[-3:] != 'pcd':

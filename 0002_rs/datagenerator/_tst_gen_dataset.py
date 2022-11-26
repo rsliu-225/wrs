@@ -1,6 +1,7 @@
 import os
 import random
-
+import math
+import basis.robot_math as rm
 import numpy as np
 import open3d as o3d
 
@@ -38,9 +39,14 @@ if __name__ == '__main__':
 
     show_ico()
 
+    icomats = rm.gen_icorotmats(rotation_interval=math.radians(360 / 60))
+    # icos = trm.creation.icosphere(1)
+    # icos_cm = cm.CollisionModel(icos)
+    # icos_cm.attach_to(base)
+
     width = .005
     thickness = .0015
-    path = './tst'
+    fo = './tst'
     cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
 
     pseq = utl.poly_inp(pseq=np.asarray([[0, 0, 0], [.018, .02, .02], [.06, .04, 0], [.12, 0, 0]]))
@@ -51,6 +57,16 @@ if __name__ == '__main__':
     objcm = utl.gen_swap(pseq, rotseq, cross_sec)
     objcm.set_rgba((1, 1, 0, 1))
     objcm.attach_to(base)
+
+    # for matlist in icomats:
+    #     np.random.shuffle(matlist)
+    #     for j, rot in enumerate(matlist):
+    #         gm.gen_sphere(pos=rot[:, 0] * .1, radius=.001, rgba=(.7, .7, .7, .7)).attach_to(base)
+    #     for j, rot in enumerate(matlist[:10]):
+    #         gm.gen_sphere(pos=rot[:, 0] * .1, radius=.001).attach_to(base)
+    #         # objcm_tmp = copy.deepcopy(objcm)
+    #         # objcm_tmp.set_homomat(rm.homomat_from_posrot(rot=rot))
+    #         # objcm_tmp.attach_to(base)
     # base.run()
 
     '''
@@ -60,12 +76,12 @@ if __name__ == '__main__':
     obj_id = 0
     rot_center = (0, 0, 0)
 
-    utl.get_objpcd_partial_o3d(objcm, objcm, np.eye(3), rot_center, path=path, resolusion=(550, 550),
+    utl.get_objpcd_partial_o3d(objcm, objcm, np.eye(3), rot_center, path=fo,
                                f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
-                               occ_vt_ratio=random.uniform(.1, .5), noise_vt_ratio=random.uniform(.5, 1), noise_cnt=3,
+                               visible_threshold=np.radians(75), noise_cnt=3,
+                               occ_vt_ratio=random.uniform(.1, .5), noise_vt_ratio=random.uniform(.5, 1),
                                add_noise=False, add_occ=False, add_rnd_occ=True, add_noise_pts=False,
-                               savemesh=False, savedepthimg=False, savergbimg=False,
-                               toggledebug=True)
+                               savemesh=False, savedepthimg=False, savergbimg=False, toggledebug=True)
 
     # '''
     # show data
