@@ -13,7 +13,7 @@ import modeling.geometric_model as gm
 import visualization.panda.world as wd
 from multiprocessing import Process
 
-COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40]]) / 255
+COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40], [255, 127, 14]]) / 255
 
 
 def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█'):
@@ -201,7 +201,7 @@ def show(fo='./', cat='bspl'):
 if __name__ == '__main__':
     base = wd.World(cam_pos=[.1, .2, .4], lookat_pos=[0, 0, 0])
     # base = wd.World(cam_pos=[.1, .4, 0], lookat_pos=[.1, 0, 0])
-    path = 'E:/liu/org_data/dataset_prim'
+    path = 'E:/liu/org_data/dataset_1'
     trans_diff = (.001, .001, .001)
     rot_diff = np.radians((1, 1, 1))
     comb_num = 1

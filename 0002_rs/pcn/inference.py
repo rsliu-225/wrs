@@ -16,7 +16,7 @@ import config
 import pcn.models.pcn as model_module
 
 warnings.filterwarnings("ignore")
-COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40]]) / 255
+COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40], [255, 127, 14]]) / 255
 
 
 def inference_sgl(input_narry, model_name='pcn', load_model='pcn_emd_prim_mv/best_cd_p_network.pth', toggledebug=False):

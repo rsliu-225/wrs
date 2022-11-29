@@ -10,7 +10,7 @@ import collections
 
 ROOT = os.path.abspath('./')
 
-COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40]]) / 255
+COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40], [255, 127, 14]]) / 255
 
 
 def show_dataset_h5(goal_path, f_name, label=4):

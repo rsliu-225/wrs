@@ -78,7 +78,7 @@ if __name__ == '__main__':
 
     utl.get_objpcd_partial_o3d(objcm, objcm, np.eye(3), rot_center, path=fo,
                                f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
-                               visible_threshold=np.radians(75), noise_cnt=3,
+                               visible_threshold=np.radians(30), noise_cnt=3,
                                occ_vt_ratio=random.uniform(.1, .5), noise_vt_ratio=random.uniform(.5, 1),
                                add_noise=False, add_occ=False, add_rnd_occ=True, add_noise_pts=False,
                                savemesh=False, savedepthimg=False, savergbimg=False, toggledebug=True)

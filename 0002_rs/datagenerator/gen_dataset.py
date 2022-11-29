@@ -83,18 +83,18 @@ def init_gen_deform(cat, num_kpts, res=(550, 550), rot_center=(0, 0, 0), max_num
 
     if num_kpts == 3:
         goal_pseq = np.asarray([[0, 0, 0],
-                                [.08 + random.uniform(-.02, .02), 0, random.uniform(.015, .02)],
+                                [.08 + random.uniform(-.02, .02), 0, random.uniform(.01, .04) * random.choice([-1, 1])],
                                 [.16, 0, 0]])
     elif num_kpts == 4:
         goal_pseq = np.asarray([[0, 0, 0],
-                                [.04 + random.uniform(-.02, .04), 0, random.uniform(-.015, .015)],
-                                [.12 + random.uniform(-.04, .02), 0, random.uniform(-.015, .015)],
+                                [.04 + random.uniform(-.02, .04), 0, random.uniform(.01, .03) * random.choice([-1, 1])],
+                                [.12 + random.uniform(-.04, .02), 0, random.uniform(.01, .03) * random.choice([-1, 1])],
                                 [.16, 0, 0]])
     else:
         goal_pseq = np.asarray([[0, 0, 0],
-                                [.04 + random.uniform(-.02, .01), 0, random.uniform(-.005, .005)],
-                                [.08 + random.uniform(-.01, .01), 0, random.uniform(-.015, .015)],
-                                [.12 + random.uniform(-.01, .02), 0, random.uniform(-.005, .005)],
+                                [.04 + random.uniform(-.02, .01), 0, random.uniform(-.01, .01)],
+                                [.08 + random.uniform(-.01, .01), 0, random.uniform(-.02, .02)],
+                                [.12 + random.uniform(-.01, .02), 0, random.uniform(-.01, .01)],
                                 [.16, 0, 0]])
     rot_axial, rot_radial = utl.random_rot_radians(num_kpts)
     rbf_radius = random.uniform(.05, .2)
@@ -219,16 +219,16 @@ if __name__ == '__main__':
     # init_gen('bspl', 4, .02, rot_center=(0, 0, 0), max_num=10, length=.2)
     # init_gen_deform('plat', 4, rot_center=(0, 0, 0), max_num=10)
 
-    start = 0
+    start = 15
     end = 100
-    for i in range(start, end):
-        runInParallel(init_gen, gen_args("bspl", range(i * 8, (i + 1) * 8)))
-    for i in range(start, end):
-        runInParallel(init_gen, gen_args("quad", range(i * 8, (i + 1) * 8)))
+    # for i in range(start, end):
+    #     runInParallel(init_gen, gen_args("bspl", range(i * 8, (i + 1) * 8)))
+    # for i in range(start, end):
+    #     runInParallel(init_gen, gen_args("quad", range(i * 8, (i + 1) * 8)))
     # for i in range(start, end):
     #     runInParallel(init_gen, gen_args("sprl", range(i * 8, (i + 1) * 8)))
-    for i in range(start, end):
-        runInParallel(init_gen_deform, gen_args_deform("plat", range(i * 8, (i + 1) * 8)))
+    # for i in range(start, end):
+    #     runInParallel(init_gen_deform, gen_args_deform("plat", range(i * 8, (i + 1) * 8)))
     for i in range(start, end):
         runInParallel(init_gen_deform, gen_args_deform("tmpl", range(i * 8, (i + 1) * 8)))
 

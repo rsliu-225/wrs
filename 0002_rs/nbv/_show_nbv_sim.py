@@ -1,4 +1,5 @@
 import copy
+import json
 import math
 import os
 import pickle
@@ -16,7 +17,7 @@ import pcn.inference as pcn
 import utils.pcd_utils as pcdu
 import visualization.panda.world as wd
 
-COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40]]) / 255
+COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40], [255, 127, 14]]) / 255
 
 
 def show_pcn_res_pytorch(result_path, test_path):
@@ -50,178 +51,18 @@ def read_pcn_res_pytorch(result_path, test_path, id, toggledebug=False):
            np.asarray(res_f['results'][id])
 
 
-def gen_partial_view(path, f, rot, rot_center, resolusion=(1280, 720),
-                     rnd_occ_ratio_rng=(.2, .5), nrml_occ_ratio_rng=(.2, .6),
-                     occ_vt_ratio=1, noise_vt_ratio=1, noise_cnt=random.randint(0, 5),
-                     add_noise=False, add_vt_occ=False, add_rnd_occ=True, add_noise_pts=True, toggledebug=False):
-    o3dmesh = o3d.io.read_triangle_mesh(os.path.join(path, 'mesh', f + '.ply'))
-
-    vis = o3d.visualization.Visualizer()
-    vis.create_window('win', width=resolusion[0], height=resolusion[1], left=0, top=0)
-
-    o3dmesh.rotate(rot, center=rot_center)
-    # ctr = vis.get_view_control()
-    # camera_parameters = ctr.convert_to_pinhole_camera_parameters()
-    # print("{}\n"
-    #       "{}".format(camera_parameters.extrinsic, camera_parameters.intrinsic.intrinsic_matrix))
-    vis.add_geometry(o3dmesh)
-    vis.poll_events()
-    vis.capture_depth_point_cloud(os.path.join(path, f'{f}_tmp.pcd'), do_render=False, convert_to_world_coordinate=True)
-    o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f'{f}_tmp.pcd'))
-    if add_rnd_occ:
-        o3dpcd = du.add_random_occ(o3dpcd, occ_ratio_rng=rnd_occ_ratio_rng)
-    if add_vt_occ:
-        o3dpcd = du.add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=nrml_occ_ratio_rng)
-        o3dpcd = du.add_random_occ_by_vt(o3dpcd, np.asarray(o3dmesh.vertices),
-                                         edg_radius=5e-4, edg_sigma=5e-4, ratio=occ_vt_ratio)
-    if add_noise:
-        o3dpcd = du.add_guassian_noise_by_vt(o3dpcd, np.asarray(o3dmesh.vertices), np.asarray(o3dmesh.vertex_normals),
-                                             noise_mean=1e-3, noise_sigma=1e-4, ratio=noise_vt_ratio)
-    if add_noise_pts:
-        o3dpcd = du.add_noise_pts_by_vt(o3dpcd, noise_cnt=noise_cnt, size=.01)
-
-    o3dpcd = du.resample(o3dpcd, smp_num=2048)
-    vis.destroy_window()
-
-    if toggledebug:
-        o3dpcd_org = o3d.io.read_point_cloud(os.path.join(path, f'{f}_tmp.pcd'))
-        o3dpcd_org.paint_uniform_color([0, 0.7, 1])
-        o3dpcd.paint_uniform_color(COLOR[0])
-        o3d.visualization.draw_geometries([o3dmesh])
-        o3d.visualization.draw_geometries([o3dpcd_org])
-        o3d.visualization.draw_geometries([o3dpcd])
-    os.remove(os.path.join(path, f'{f}_tmp.pcd'))
-    return o3dpcd
-
-
-def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, coverage_tor=.001, toggledebug=False):
-    coverage = 0
-    cnt = 0
-    exp_dict = {}
-    print(f'-----------pcn------------')
-    rot_center = [0, 0, 0]
-
-    pcd_i = np.asarray(o3dpcd_init.points)
-    pcd_gt = np.asarray(o3dpcd_gt.points)
-
-    init_coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=coverage_tor)
-    print('init coverage:', init_coverage)
-
-    exp_dict['gt'] = pcd_gt.tolist()
-    exp_dict['init_coverage'] = init_coverage
-    o3dpcd = copy.deepcopy(o3dpcd_init)
-
-    while coverage < .95 and cnt < 5:
-        cnt += 1
-
-        rot = rm.rotmat_between_vectors(np.asarray(cam_pos), nrmls_nbv[0])
-        o3dpcd_tmp = gen_partial_view(os.path.join(path, cat), f.split('.ply')[0], rot, rot_center,
-                                      rnd_occ_ratio_rng=(.2, .5), nrml_occ_ratio_rng=(.2, .6),
-                                      occ_vt_ratio=1, noise_vt_ratio=1, noise_cnt=random.randint(0, 5),
-                                      add_noise=False, add_vt_occ=False, add_rnd_occ=False, add_noise_pts=False,
-                                      toggledebug=False)
-        o3dpcd_tmp.rotate(np.linalg.inv(rot), center=rot_center)
-        o3dpcd += o3dpcd_tmp
-        pcd_i = np.asarray(o3dpcd.points)
-        coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=coverage_tor)
-        exp_dict[cnt - 1] = {'coverage': coverage}
-        print('coverage:', coverage)
-    exp_dict['final'] = pcd_i.tolist()
-
-
-def run_pcn_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, coverage_tor=.001, toggledebug=False):
-    coverage = 0
-    cnt = 0
-    exp_dict = {}
-    print(f'-----------pcn+nbv------------')
-    rot_center = [0, 0, 0]
-
-    pcd_i = np.asarray(o3dpcd_init.points)
-    pcd_gt = np.asarray(o3dpcd_gt.points)
-
-    init_coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=coverage_tor)
-    print('init coverage:', init_coverage)
-
-    exp_dict['gt'] = pcd_gt.tolist()
-    exp_dict['init_coverage'] = init_coverage
-    o3dpcd = copy.deepcopy(o3dpcd_init)
-
-    while coverage < .95 and cnt < 5:
-        cnt += 1
-        pcd_o = pcn.inference_sgl(pcd_i, model_name, load_model, toggledebug=False)
-        exp_dict[cnt - 1] = {'input': pcd_i.tolist(), 'pcn_output': pcd_o.tolist()}
-        if toggledebug:
-            o3dmesh = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'mesh', f))
-            o3dpcd_o = du.nparray2o3dpcd(pcd_o)
-            o3dpcd.paint_uniform_color(COLOR[0])
-            o3dpcd_gt.paint_uniform_color(COLOR[1])
-            o3dpcd_o.paint_uniform_color(COLOR[2])
-            coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.01)
-            o3d.visualization.draw_geometries([o3dpcd, o3dpcd_o, o3dmesh, coord])
-            o3d.visualization.draw_geometries([o3dpcd, o3dpcd_o, o3dpcd_gt, coord])
-
-        pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd_i, pcd_o, theta=None, toggledebug=True)
-
-        rot = rm.rotmat_between_vectors(np.asarray(cam_pos), nrmls_nbv[0])
-        o3dpcd_tmp = gen_partial_view(os.path.join(path, cat), f.split('.ply')[0], rot, rot_center,
-                                      rnd_occ_ratio_rng=(.2, .5), nrml_occ_ratio_rng=(.2, .6),
-                                      occ_vt_ratio=1, noise_vt_ratio=1, noise_cnt=random.randint(0, 5),
-                                      add_noise=False, add_vt_occ=False, add_rnd_occ=False, add_noise_pts=False,
-                                      toggledebug=False)
-        o3dpcd_tmp.rotate(np.linalg.inv(rot), center=rot_center)
-        o3dpcd += o3dpcd_tmp
-        pcd_i = np.asarray(o3dpcd.points)
-        coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=coverage_tor)
-        exp_dict[cnt - 1] = {'coverage': coverage}
-        print('coverage:', coverage)
-    exp_dict['final'] = pcd_i.tolist()
-
-
-def run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, coverage_tor=.001):
-    coverage = 0
-    cnt = 0
-    exp_dict = {}
-    print(f'-----------org------------')
-    rot_center = [0, 0, 0]
-
-    pcd_i = np.asarray(o3dpcd_init.points)
-    pcd_gt = np.asarray(o3dpcd_gt.points)
-
-    init_coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=coverage_tor)
-    print('init coverage:', init_coverage)
-    exp_dict['gt'] = pcd_gt.tolist()
-    exp_dict['init_coverage'] = init_coverage
-    o3dpcd = copy.deepcopy(o3dpcd_init)
-
-    while coverage < .95 and cnt < 5:
-        cnt += 1
-        exp_dict[cnt - 1] = {'input': pcd_i.tolist()}
-
-        pts, nrmls, confs = pcdu.cal_conf(pcd_i, voxel_size=.005, radius=.005, cam_pos=cam_pos, theta=None)
-        pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv(pts, nrmls, confs)
-
-        rot = rm.rotmat_between_vectors(np.asarray(cam_pos), nrmls_nbv[0])
-        o3dpcd_tmp = gen_partial_view(os.path.join(path, cat), f.split('.ply')[0], rot, rot_center,
-                                      rnd_occ_ratio_rng=(.2, .5), nrml_occ_ratio_rng=(.2, .6),
-                                      occ_vt_ratio=1, noise_vt_ratio=1, noise_cnt=random.randint(0, 5),
-                                      add_noise=False, add_vt_occ=False, add_rnd_occ=False, add_noise_pts=False,
-                                      toggledebug=False)
-        o3dpcd_tmp.rotate(np.linalg.inv(rot), center=rot_center)
-        o3dpcd += o3dpcd_tmp
-        pcd_i = np.asarray(o3dpcd.points)
-        coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=coverage_tor)
-        exp_dict[cnt - 1] = {'coverage': coverage}
-        print('coverage:', coverage)
-    exp_dict['final'] = pcd_i.tolist()
-
-
 if __name__ == '__main__':
+    import modeling.geometric_model as gm
+    import datagenerator.data_utils as du
+
     model_name = 'pcn'
     load_model = 'pcn_emd_prim_mv/best_cd_p_network.pth'
-    COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40]]) / 255
+    COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40], [255, 127, 14]]) / 255
     cam_pos = [0, 0, .5]
 
     base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
+    gm.gen_cone(epos=[0, 0, .1], radius=.05, sections=60).attach_to(base)
+
     # rbt = el.loadXarm(showrbt=False)
     # m_planner = mp.MotionPlanner(env=None, rbt=rbt, armname="arm")
     #
@@ -230,30 +71,46 @@ if __name__ == '__main__':
 
     path = 'E:/liu/nbv_mesh/'
     cat = 'bspl'
+    fo = 'res_90'
+    coverage_pcn = []
+    coverage_org = []
+
     coverage_tor = .001
     toggledebug = True
-    # for f in os.listdir(os.path.join(path, cat, 'mesh')):
-    #     print(f'-----------{f}------------')
-    #     o3dpcd_init = gen_partial_view(os.path.join(path, cat), f.split('.ply')[0], np.eye(3), [0, 0, 0],
-    #                                    rnd_occ_ratio_rng=(.2, .5), nrml_occ_ratio_rng=(.2, .6),
-    #                                    occ_vt_ratio=1, noise_vt_ratio=1, noise_cnt=random.randint(0, 5),
-    #                                    add_noise=False, add_vt_occ=False, add_rnd_occ=True, add_noise_pts=True,
-    #                                    toggledebug=False)
-    #     o3dmesh_gt = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'prim', f))
-    #     o3dpcd_gt = du.get_objpcd_full_sample_o3d(o3dmesh_gt, smp_num=2048, method='possion')
-    #     pcd_i = np.asarray(o3dpcd_init.points)
-    #     pcd_o = pcn.inference_sgl(pcd_i, model_name, load_model, toggledebug=False)
-    #     pickle.dump([pcd_i, pcd_o, np.asarray(o3dpcd_gt.points)], open('tmp.pkl', 'wb'))
-    #     if toggledebug:
-    #         o3dmesh = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'mesh', f))
-    #         o3dpcd_o = du.nparray2o3dpcd(pcd_o)
-    #         o3dpcd_init.paint_uniform_color(COLOR[0])
-    #         o3dpcd_gt.paint_uniform_color(COLOR[1])
-    #         o3dpcd_o.paint_uniform_color(COLOR[2])
-    #         coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.01)
-    #         # o3d.visualization.draw_geometries([o3dpcd_init, o3dpcd_o, o3dmesh, coord])
-    #         o3d.visualization.draw_geometries([o3dpcd_init, o3dpcd_o, coord])
+    f = '0000.ply'
 
-    pcd_i, pcd_o, o3dpcd_gt = pickle.load(open('../run_plan/tmp.pkl', 'rb'))
+    res_pcn = json.load(open(os.path.join(path, cat, fo, f'pcn_{f.split(".ply")[0]}.json'), 'rb'))
+
+    pcd_i = np.asarray(res_pcn['0']['input'])
+    pcd_add = np.asarray(res_pcn['0']['add'])
+    pcd_o = np.asarray(res_pcn['0']['pcn_output'])
+    pcd_res = np.asarray(res_pcn['final'])
+    pcd_gt = np.asarray(res_pcn['gt'])
+    pcdu.show_pcd(pcd_add, rgba=(0, .7, 0, 1))
+
     pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn_kpts(pcd_i, pcd_o, theta=None, toggledebug=True)
+    # pts, nrmls, confs = pcdu.cal_conf(pcd_i, voxel_size=.005, radius=.005, cam_pos=cam_pos, theta=None)
+    # pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv(pts, nrmls, confs)
+
+    rot = rm.rotmat_between_vectors(np.asarray(cam_pos), nrmls_nbv[0])
+    rot = np.linalg.inv(rot)
+    pcd_i_new = pcdu.trans_pcd(pcd_i, rm.homomat_from_posrot((0, 0, 0), rot))
+    pcdu.show_pcd(pcd_i_new, rgba=(.7, .7, .7, .5))
+    gm.gen_arrow(np.dot(rot, pts_nbv[0]),
+                 np.dot(rot, pts_nbv[0]) + np.dot(rot, nrmls_nbv[0]) * .04, thickness=.002).attach_to(base)
+
+    gm.gen_sphere(pts_nbv[0], radius=.01, rgba=[1, 1, 1, .2]).attach_to(base)
+    base.run()
+
+    width = .008
+    thickness = .002
+    cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
+    # gm.gen_pointcloud(res).attach_to(base)
+    gm.gen_pointcloud(pcd_i).attach_to(base)
+    kpts, kpts_rotseq = pcdu.get_kpts_gmm(pcd_res, n_components=16, show=True)
+    cov = pcdu.cal_coverage(pcd_i, pcd_gt, voxel_size=.001, tor=coverage_tor, toggledebug=True)
+    print(cov)
+    # objcm = du.gen_swap(kpts, kpts_rotseq, cross_sec)
+    # objcm.attach_to(base)
+
     base.run()

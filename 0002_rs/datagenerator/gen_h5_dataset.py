@@ -7,7 +7,7 @@ import open3d as o3d
 
 ROOT = os.path.abspath('./')
 
-COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40]]) / 255
+COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40], [255, 127, 14]]) / 255
 
 
 def nparray2o3dpcd(nx3nparray_pnts, nx3nparray_nrmls=None, estimate_normals=False):
@@ -35,6 +35,8 @@ def gen_h5(f_name, org_path, goal_path, multiview=True):
             label = 3
         elif fo == 'tmpl':
             label = 4
+        elif fo == 'sprl':
+            label = 5
         else:
             continue
         # id_list = [int(f.split('_')[0]) for f in os.listdir(os.path.join(ORG_DATA_PATH, fo, 'complete'))]

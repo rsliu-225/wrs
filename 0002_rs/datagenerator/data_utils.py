@@ -17,7 +17,7 @@ import basis.trimesh as trm
 import modeling.collision_model as cm
 import modeling.geometric_model as gm
 
-COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40]]) / 255
+COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40], [255, 127, 14]]) / 255
 
 '''
 basic func
@@ -606,12 +606,13 @@ def get_objpcd_partial_o3d(objcm, objcm_gt, rot, rot_center, pseq=None, rotseq=N
     if toggledebug:
         o3dpcd = o3d.io.read_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'))
         o3dpcd_gt = o3d.io.read_point_cloud(os.path.join(path, 'complete', f'{f_name}{ext_name}'))
+        o3dpcd_org = nparray2o3dpcd(np.asarray(o3dpcd_org.points))
         o3dpcd_org.paint_uniform_color(COLOR[0])
         o3dpcd.paint_uniform_color(COLOR[0])
         o3dpcd_gt.paint_uniform_color(COLOR[1])
         o3d.visualization.draw_geometries([o3dmesh])
         o3d.visualization.draw_geometries([o3dpcd_gt])
-        o3d.visualization.draw_geometries([o3dpcd_org, o3dmesh])
+        o3d.visualization.draw_geometries([o3dpcd_org])
         o3d.visualization.draw_geometries([o3dpcd])
         print(len(o3dpcd.points), len(o3dpcd_gt.points))
     os.remove(os.path.join(path, f_name + f'_tmp{ext_name}'))
@@ -817,7 +818,7 @@ def add_noise_pts_by_vt(o3dpcd, noise_cnt=3, size=.01):
             p + np.asarray([random.uniform(-size, size), random.uniform(-size, size), random.uniform(-size, size)])]
         tmp_gm = gm.GeometricModel(initor=trm.Trimesh(vertices=np.asarray(vts_n),
                                                       faces=np.asarray([[0, 1, 2]])), btwosided=False)
-        o3dpcd += nparray2o3dpcd(tmp_gm.sample_surface(radius=random.uniform(.0001, .002))[0])
+        o3dpcd += nparray2o3dpcd(tmp_gm.sample_surface(radius=random.uniform(.001, .002))[0])
 
     return o3dpcd
 

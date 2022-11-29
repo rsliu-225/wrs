@@ -31,6 +31,40 @@ def transpose(data):
     return mat
 
 
+def load_cov(prefix='pcn'):
+    cov_list = []
+    max_list = []
+    cnt_list = [0] * 5
+    for f in os.listdir(os.path.join(path, cat, 'mesh')):
+        print(f'-----------{f}------------')
+        try:
+            res_dict = json.load(open(os.path.join(path, cat, fo, f'{prefix}_{f.split(".ply")[0]}.json'), 'rb'))
+        except:
+            break
+        pcd_gt = res_dict['gt']
+        cov_list_tmp = [res_dict['init_coverage']]
+        max_tmp = [res_dict['init_coverage']]
+        max = 0
+        for i in range(5):
+            if str(i) in res_dict.keys():
+                print(prefix, i, res_dict[str(i)]['coverage'])
+                cov_list_tmp.append(res_dict[str(i)]['coverage'])
+                max = res_dict[str(i)]['coverage']
+                cnt_list[i] += 1
+            max_tmp.append(max)
+        max_list.append(max_tmp)
+        cov_list.append(cov_list_tmp)
+    return cov_list, max_list, [cnt_list[0]] + cnt_list
+
+
+def plot_box(ax, data, clr, positions):
+    box = ax.boxplot(data, positions=positions)
+    for item in ['boxes', 'whiskers', 'fliers', 'medians', 'caps']:
+        plt.setp(box[item], color=clr)
+    # plt.setp(box["boxes"], facecolor=clr)
+    plt.setp(box["fliers"], markeredgecolor=clr)
+
+
 if __name__ == '__main__':
     model_name = 'pcn'
     load_model = 'pcn_emd_prim_mv/best_cd_p_network.pth'
@@ -40,60 +74,45 @@ if __name__ == '__main__':
     base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
 
     path = 'E:/liu/nbv_mesh/'
-    cat = 'plat'
-    coverage_pcn = []
-    coverage_org = []
-    for f in os.listdir(os.path.join(path, cat, 'mesh')):
-        print(f'-----------{f}------------')
-        try:
-            res_pcn = json.load(open(os.path.join(path, cat, 'res', f'pcn_{f.split(".ply")[0]}.json'), 'rb'))
-            res_org = json.load(open(os.path.join(path, cat, 'res', f'org_{f.split(".ply")[0]}.json'), 'rb'))
-        except:
-            break
-        pcd_gt = res_pcn['gt']
-        coverage_pcn_tmp = [res_pcn['init_coverage']]
-        coverage_org_tmp = [res_org['init_coverage']]
-        for k, v in res_pcn.items():
-            if k == 'gt' or k == 'init_coverage' or k == 'final':
-                continue
-            print('org', k, v['coverage'])
-            coverage_pcn_tmp.append(v['coverage'])
-        for k, v in res_org.items():
-            if k == 'gt' or k == 'init_coverage' or k == 'final':
-                continue
-            print('pcn', k, v['coverage'])
-            coverage_org_tmp.append(v['coverage'])
-
-        coverage_pcn.append(coverage_pcn_tmp)
-        coverage_org.append(coverage_org_tmp)
+    cat = 'bspl'
+    fo = 'res_75'
+    coverage_pcn, max_pcn, cnt_pcn = load_cov(prefix='pcn')
+    coverage_org, max_org, cnt_org = load_cov(prefix='org')
+    coverage_random, max_random, cnt_random = load_cov(prefix='random')
 
     coverage_pcn = transpose(coverage_pcn)
     coverage_org = transpose(coverage_org)
+    coverage_random = transpose(coverage_random)
 
-    cnt_pcn = []
-    cnt_org = []
-    print('org')
-    for i, r in enumerate(coverage_org):
-        print(i, len(r))
-        cnt_org.append(len(r))
-    print('pcn')
-    for i, r in enumerate(coverage_pcn):
-        print(i, len(r))
-        cnt_pcn.append(len(r))
+    max_pcn = transpose(max_pcn)
+    max_org = transpose(max_org)
+    max_random = transpose(max_random)
+
     x = [0, 1, 2, 3, 4, 5]
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
-    ax1.grid()
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    plt.rcParams["font.family"] = "Times New Roman"
+    plt.rcParams["font.size"] = 20
+
+    ax1.set_title('Coverage')
+    # ax1.grid()
+    ax1.grid(which='major', linestyle='-', linewidth='0.5', color='gray')
+    ax1.grid(which='minor', linestyle=':', linewidth='0.5', color='black')
+    ax1.set_xticks([3 * v + 1 for v in x], labels=['0', '1', '2', '3', '4', '5'])
+    ax1.axhline(y=.95)
+    ax2.set_title('Num. of Attempts')
     ax2.grid()
-    ax3.grid()
-    # ax1.set_xticks(x)
-    # ax2.set_xticks(x)
-    ax3.set_xticks(x)
-    ax1.set_title('Original Method')
-    ax1.boxplot(coverage_org)
-    ax2.set_title('PCN')
-    ax2.boxplot(coverage_pcn)
-    ax3.set_title('')
-    ax3.plot(x, cnt_org)
-    ax3.plot(x, cnt_pcn)
+    ax2.set_xticks(x)
+
+    # plot_box(ax1, coverage_random, 'tab:blue', positions=[3 * v + .25 for v in x])
+    # plot_box(ax1, coverage_org, 'tab:orange', positions=[3 * v + 1 for v in x])
+    # plot_box(ax1, coverage_pcn, 'tab:green', positions=[3 * v + 2 - .25 for v in x])
+    plot_box(ax1, max_random, 'tab:blue', positions=[3 * v + .25 for v in x])
+    plot_box(ax1, max_org, 'tab:orange', positions=[3 * v + 1 for v in x])
+    plot_box(ax1, max_pcn, 'tab:green', positions=[3 * v + 2 - .25 for v in x])
+
+    ax2.plot(x, cnt_random)
+    ax2.plot(x, cnt_org)
+    ax2.plot(x, cnt_pcn)
+
     plt.show()
     # base.run()
