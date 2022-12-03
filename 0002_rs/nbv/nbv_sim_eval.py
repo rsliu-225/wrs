@@ -18,6 +18,7 @@ import utils.recons_utils as rcu
 import visualization.panda.world as wd
 import pcn.inference as pcn
 import datagenerator.data_utils as du
+import matplotlib.ticker as mticker
 
 
 def transpose(data):
@@ -73,7 +74,8 @@ if __name__ == '__main__':
 
     base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
 
-    path = 'E:/liu/nbv_mesh/'
+    # path = 'E:/liu/nbv_mesh/'
+    path = 'D:/nbv_mesh/'
     cat = 'bspl'
     fo = 'res_75'
     coverage_pcn, max_pcn, cnt_pcn = load_cov(prefix='pcn')
@@ -89,19 +91,12 @@ if __name__ == '__main__':
     max_random = transpose(max_random)
 
     x = [0, 1, 2, 3, 4, 5]
-    fig, (ax1, ax2) = plt.subplots(1, 2)
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams["font.size"] = 20
-
+    fig, (ax1, ax2) = plt.subplots(1, 2)
     ax1.set_title('Coverage')
-    # ax1.grid()
-    ax1.grid(which='major', linestyle='-', linewidth='0.5', color='gray')
-    ax1.grid(which='minor', linestyle=':', linewidth='0.5', color='black')
-    ax1.set_xticks([3 * v + 1 for v in x], labels=['0', '1', '2', '3', '4', '5'])
-    ax1.axhline(y=.95)
+    ax1.axhline(y=.95, color='r', linewidth='0.5', linestyle=':')
     ax2.set_title('Num. of Attempts')
-    ax2.grid()
-    ax2.set_xticks(x)
 
     # plot_box(ax1, coverage_random, 'tab:blue', positions=[3 * v + .25 for v in x])
     # plot_box(ax1, coverage_org, 'tab:orange', positions=[3 * v + 1 for v in x])
@@ -109,6 +104,24 @@ if __name__ == '__main__':
     plot_box(ax1, max_random, 'tab:blue', positions=[3 * v + .25 for v in x])
     plot_box(ax1, max_org, 'tab:orange', positions=[3 * v + 1 for v in x])
     plot_box(ax1, max_pcn, 'tab:green', positions=[3 * v + 2 - .25 for v in x])
+
+    ax1.set_xticks([3 * v + 1 for v in x])
+    ax1.set_xticklabels(x)
+    ax1.set_yticks(np.linspace(0, 1, 10))
+
+    ax1.minorticks_on()
+    ax1.yaxis.set_major_locator(mticker.MultipleLocator(base=1 / 5))
+    ax1.yaxis.set_minor_locator(mticker.MultipleLocator(base=1 / 20))
+
+    ax1.grid(which='major', linestyle='-', linewidth='0.5', color='black', alpha=.8)
+    ax1.grid(which='minor', linestyle=':', linewidth='0.5', color='gray', alpha=.5)
+
+    ax2.set_xticks(x)
+    ax2.set_yticks(np.linspace(0, 100, 10))
+    ax2.yaxis.set_major_locator(mticker.MultipleLocator(base=100 / 5))
+    ax2.yaxis.set_minor_locator(mticker.MultipleLocator(base=100 / 20))
+    ax2.grid(which='major', linestyle='-', linewidth='0.5', color='black', alpha=.8)
+    ax2.grid(which='minor', linestyle=':', linewidth='0.5', color='gray', alpha=.5)
 
     ax2.plot(x, cnt_random)
     ax2.plot(x, cnt_org)
