@@ -43,15 +43,15 @@ def rot_new_orgin(pts, new_orgin, rot):
 
 
 def gen_random_homomat4(trans_diff=(.01, .01, .01), rot_diff=np.radians((10, 10, 10))):
-    random_pos = np.asarray([random.uniform(-trans_diff[0], -trans_diff[0]),
-                             random.uniform(-trans_diff[1], -trans_diff[1]),
-                             random.uniform(-trans_diff[2], -trans_diff[2])])
+    random_pos = np.asarray([random.uniform(-trans_diff[0], trans_diff[0]),
+                             random.uniform(-trans_diff[1], trans_diff[1]),
+                             random.uniform(-trans_diff[2], trans_diff[2])])
     if rot_diff is None:
         random_rot = np.eye(3)
     else:
-        random_rot = rm.rotmat_from_axangle((1, 0, 0), random.uniform(-rot_diff[0], -rot_diff[0])).dot(
-            rm.rotmat_from_axangle((0, 1, 0), random.uniform(-rot_diff[1], -rot_diff[1]))).dot(
-            rm.rotmat_from_axangle((0, 0, 1), random.uniform(-rot_diff[2], -rot_diff[2])))
+        random_rot = rm.rotmat_from_axangle((1, 0, 0), random.uniform(-rot_diff[0], rot_diff[0])).dot(
+            rm.rotmat_from_axangle((0, 1, 0), random.uniform(-rot_diff[1], rot_diff[1]))).dot(
+            rm.rotmat_from_axangle((0, 0, 1), random.uniform(-rot_diff[2], rot_diff[2])))
     return rm.homomat_from_posrot(random_pos, random_rot)
 
 
@@ -73,17 +73,56 @@ def poly_inp(pseq, step=.001, toggledebug=False, kind="cubic"):
 
 def spl_inp(pseq, n=200, toggledebug=False):
     pseq = pseq.transpose()
-    tck = interpolate.splprep(pseq, k=min([pseq.shape[1] - 1, 5]))[0]
-    new = interpolate.splev(np.linspace(0, 1, n), tck, der=0)
-    pts = np.asarray(new).transpose()
+    inp_pseq = np.asarray(
+        interpolate.splev(np.linspace(0, 1, n),
+                          interpolate.splprep(pseq, k=min([pseq.shape[1] - 1, 5]))[0], der=0)
+    ).transpose()
 
     if toggledebug:
+        width = .008
+        thickness = .0015
+        cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
+        inp_pseq_2 = np.asarray(
+            interpolate.splev(np.linspace(0, 1, n),
+                              interpolate.splprep(pseq, k=2)[0], der=0)
+        ).transpose()
+        inp_pseq_3 = np.asarray(
+            interpolate.splev(np.linspace(0, 1, n),
+                              interpolate.splprep(pseq, k=3)[0], der=0)
+        ).transpose()
+        inp_pseq_4 = np.asarray(
+            interpolate.splev(np.linspace(0, 1, n),
+                              interpolate.splprep(pseq, k=4)[0], der=0)
+        ).transpose()
         ax = plt.axes(projection='3d')
-        ax.plot(pseq[0], pseq[1], pseq[2], label='key points', lw=2, c='Dodgerblue')
-        ax.plot(new[0], new[1], new[2], label='fit', lw=2, c='red')
+        ax.plot(pseq[0], pseq[1], pseq[2], label='key points', lw=2, c='black')
+        ax.plot(inp_pseq.transpose()[0], inp_pseq.transpose()[1], inp_pseq.transpose()[2], label='fit', lw=2)
+        ax.plot(inp_pseq_2.transpose()[0], inp_pseq_2.transpose()[1], inp_pseq_2.transpose()[2], label='2', lw=2)
+        ax.plot(inp_pseq_3.transpose()[0], inp_pseq_3.transpose()[1], inp_pseq_3.transpose()[2], label='3', lw=2)
+        ax.plot(inp_pseq_4.transpose()[0], inp_pseq_4.transpose()[1], inp_pseq_4.transpose()[2], label='4', lw=2)
         ax.legend()
         plt.show()
-    return pts
+
+        inp_pseq_2 = np.asarray(inp_pseq_2) - inp_pseq_2[0]
+        inp_pseq_2, rotseq_2 = get_rotseq_by_pseq(inp_pseq_2)
+        objcm = gen_swap(inp_pseq_2, rotseq_2, cross_sec)
+        o3dmesh_2 = cm2o3dmesh(objcm, wnormal=False)
+        o3dmesh_2.paint_uniform_color(COLOR[0])
+
+        inp_pseq_3 = np.asarray(inp_pseq_3) - inp_pseq_3[0]
+        inp_pseq_3, rotseq_3 = get_rotseq_by_pseq(inp_pseq_3)
+        objcm = gen_swap(inp_pseq_3, rotseq_3, cross_sec)
+        o3dmesh_3 = cm2o3dmesh(objcm, wnormal=False)
+        o3dmesh_3.paint_uniform_color(COLOR[1])
+
+        inp_pseq_4 = np.asarray(inp_pseq_4) - inp_pseq_4[0]
+        inp_pseq_4, rotseq_4 = get_rotseq_by_pseq(inp_pseq_4)
+        objcm = gen_swap(inp_pseq_4, rotseq_4, cross_sec)
+        o3dmesh_4 = cm2o3dmesh(objcm, wnormal=False)
+        o3dmesh_4.paint_uniform_color(COLOR[2])
+
+        o3d.visualization.draw_geometries([o3dmesh_2, o3dmesh_3, o3dmesh_4])
+    return inp_pseq
 
 
 def uni_length(pseq, goal_len):
@@ -225,7 +264,7 @@ def random_kpts(n=3, max=.02):
     kpts = [(0, 0, 0)]
     for j in range(n - 1):
         kpts.append(((j + 1) * .02, random.uniform(-max, max), random.uniform(-max, max)))
-    return kpts
+    return np.asarray(kpts)
 
 
 def random_kpts_sprl(num_kpts, z_max=.04, toggledebug=True):
@@ -268,9 +307,9 @@ def gen_seed(num_kpts=4, max=.02, width=.008, length=.2, thickness=.0015, n=10, 
         else:
             kpts = random_kpts_sprl(num_kpts, z_max=max, toggledebug=toggledebug)
         if len(kpts) == 3:
-            pseq = uni_length(poly_inp(step=.001, kind='quadratic', pseq=np.asarray(kpts)), goal_len=length)
+            pseq = uni_length(poly_inp(step=.001, kind='quadratic', pseq=kpts), goal_len=length)
         elif len(kpts) != n:
-            pseq = uni_length(spl_inp(pseq=np.asarray(kpts), n=n, toggledebug=toggledebug), goal_len=length)
+            pseq = uni_length(spl_inp(pseq=kpts, n=n, toggledebug=toggledebug), goal_len=length)
         else:
             pseq = uni_length(kpts, goal_len=length)
         pseq = np.asarray(pseq) - pseq[0]
@@ -521,6 +560,34 @@ def cal_kpts_conf(o3dpcd_i, kpts, kpts_rotseq, tor=.5, radius=.005):
     return [kpts, kpts_rotseq, conf]
 
 
+def cnt_objs(path, objid):
+    rid_list = []
+    if not os.path.exists(os.path.join(path, 'complete')):
+        return 0
+    for f in os.listdir(os.path.join(path, 'complete')):
+        if f[-3:] != 'pcd' or f.split('_')[0] != objid:
+            continue
+        rid_list.append(int(f.split('_')[1].split('.pcd')[0]))
+    return len(rid_list)
+
+
+def cnt_remove_objid(path, objid, max_num):
+    f_list = []
+    if not os.path.exists(os.path.join(path, 'complete')):
+        return 0
+    for f in os.listdir(os.path.join(path, 'complete')):
+        if f[-3:] != 'pcd' or f.split('_')[0] != objid:
+            continue
+        f_list.append(f)
+    if max_num > len(f_list) > 0:
+        for f in f_list:
+            os.remove(os.path.join(path, 'complete', f))
+            os.remove(os.path.join(path, 'partial', f))
+            os.remove(os.path.join(path, 'kpts', f[:9] + '.pkl'))
+        print(f'{objid}: {len(f_list)} files removed!')
+    return len(f_list)
+
+
 def get_objpcd_partial_o3d(objcm, objcm_gt, rot, rot_center, pseq=None, rotseq=None,
                            path='./', f_name='', resolusion=(1280, 720), ext_name='.pcd',
                            rnd_occ_ratio_rng=(.2, .5), nrml_occ_ratio_rng=(.2, .6),
@@ -547,61 +614,56 @@ def get_objpcd_partial_o3d(objcm, objcm_gt, rot, rot_center, pseq=None, rotseq=N
     o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f_name + f'_tmp{ext_name}'))
     o3dpcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.001, max_nn=10))
     o3dpcd_nrml = np.asarray(o3dpcd.normals)
-    try:
-        vis_idx = np.argwhere(np.arccos(abs(o3dpcd_nrml.dot(np.asarray([0, 0, 1])))) < visible_threshold).flatten()
-        # print(len(o3dpcd_nrml), len(vis_idx), vis_idx)
-        o3dpcd = o3dpcd.select_by_index(vis_idx)
-        o3dpcd_org = copy.deepcopy(o3dpcd)
+    vis_idx = np.argwhere(np.arccos(abs(o3dpcd_nrml.dot(np.asarray([0, 0, 1])))) < visible_threshold).flatten()
+    # print(len(vis_idx) / len(o3dpcd_nrml))
+    o3dpcd = o3dpcd.select_by_index(vis_idx)
+    o3dpcd_org = copy.deepcopy(o3dpcd)
 
-        if add_rnd_occ:
-            o3dpcd = add_random_occ(o3dpcd, occ_ratio_rng=rnd_occ_ratio_rng)
-            o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
-        if add_occ:
-            o3dpcd = add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=nrml_occ_ratio_rng)
-            o3dpcd = add_random_occ_by_vt(o3dpcd, np.asarray(o3dmesh.vertices),
-                                          edg_radius=5e-4, edg_sigma=5e-4, ratio=occ_vt_ratio)
-            o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
-        if add_noise:
-            o3dpcd = add_guassian_noise_by_vt(o3dpcd, np.asarray(o3dmesh.vertices), np.asarray(o3dmesh.vertex_normals),
-                                              noise_mean=1e-3, noise_sigma=1e-4, ratio=noise_vt_ratio)
-            o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
-        if add_noise_pts:
-            o3dpcd = add_noise_pts_by_vt(o3dpcd, noise_cnt=noise_cnt, size=.01)
-            o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
-
-        o3dpcd = resample(o3dpcd, smp_num=2048)
+    if add_rnd_occ:
+        o3dpcd = add_random_occ(o3dpcd, occ_ratio_rng=rnd_occ_ratio_rng)
         o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
-        save_complete_pcd(f_name, o3dmesh_gt, path=path, method='possion', smp_num=2048)
+    if add_occ:
+        # o3dpcd = add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=nrml_occ_ratio_rng)
+        o3dpcd = add_random_occ_by_vt(o3dpcd, np.asarray(o3dmesh.vertices),
+                                      edg_radius=5e-4, edg_sigma=5e-4, ratio=occ_vt_ratio)
+        o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
+    if add_noise:
+        o3dpcd = add_guassian_noise_by_vt(o3dpcd, np.asarray(o3dmesh.vertices), np.asarray(o3dmesh.vertex_normals),
+                                          noise_mean=1e-3, noise_sigma=1e-4, ratio=noise_vt_ratio)
+        o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
+    if add_noise_pts:
+        o3dpcd = add_noise_pts_by_vt(o3dpcd, noise_cnt=noise_cnt, size=.01)
+        o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
 
-        if savemesh:
-            if not os.path.exists(os.path.join(path, 'mesh/')):
-                os.mkdir(os.path.join(path, 'mesh/'))
-            o3d.io.write_triangle_mesh(os.path.join(path, 'mesh', f'{f_name}.ply'), o3dmesh)
-        if savergbimg:
-            if not os.path.exists(os.path.join(path, 'rgbimg/')):
-                os.mkdir(os.path.join(path, 'rgbimg/'))
-            vis.capture_screen_image(os.path.join(path, 'rgbimg', f'{f_name}.jpg'), do_render=False)
-        if savedepthimg:
-            if not os.path.exists(os.path.join(path, 'depthimg/')):
-                os.mkdir(os.path.join(path, 'depthimg/'))
-            depthimg = np.asarray(vis.capture_depth_float_buffer()) * 1000
-            cv2.imwrite(os.path.join(path, 'depthimg', f'{f_name}.jpg'), depthimg)
-        if savekpts:
-            if not os.path.exists(os.path.join(path, 'kpts/')):
-                os.mkdir(os.path.join(path, 'kpts/'))
-            if pseq is None or rotseq is None:
-                o3dpcd_gt = o3d.io.read_point_cloud(os.path.join(path, 'complete', f'{f_name}{ext_name}'))
-                pseq, rotseq = get_kpts_gmm(np.asarray(o3dpcd_gt.points), n_components=16, show=False)
-            else:
-                pseq = trans_pcd(pseq, rm.homomat_from_posrot(pos=rot_center, rot=rot))
-                rotseq = [np.dot(rot, r) for r in rotseq]
-            pseq, rotseq, conf = cal_kpts_conf(o3dpcd, pseq, rotseq, tor=.5, radius=.005)
-            # pickle.dump([pseq, rotseq], open(os.path.join(path, 'kpts', f_name + '.pkl'), 'wb'))
-            pickle.dump([pseq, rotseq, conf], open(os.path.join(path, 'kpts', f'{f_name}.pkl'), 'wb'))
-        vis.destroy_window()
-    except:
-        vis.destroy_window()
-        return 0
+    o3dpcd = resample(o3dpcd, smp_num=2048)
+    o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
+    save_complete_pcd(f_name, o3dmesh_gt, path=path, method='possion', smp_num=2048)
+
+    if savemesh:
+        if not os.path.exists(os.path.join(path, 'mesh/')):
+            os.mkdir(os.path.join(path, 'mesh/'))
+        o3d.io.write_triangle_mesh(os.path.join(path, 'mesh', f'{f_name}.ply'), o3dmesh)
+    if savergbimg:
+        if not os.path.exists(os.path.join(path, 'rgbimg/')):
+            os.mkdir(os.path.join(path, 'rgbimg/'))
+        vis.capture_screen_image(os.path.join(path, 'rgbimg', f'{f_name}.jpg'), do_render=False)
+    if savedepthimg:
+        if not os.path.exists(os.path.join(path, 'depthimg/')):
+            os.mkdir(os.path.join(path, 'depthimg/'))
+        depthimg = np.asarray(vis.capture_depth_float_buffer()) * 1000
+        cv2.imwrite(os.path.join(path, 'depthimg', f'{f_name}.jpg'), depthimg)
+    if savekpts:
+        if not os.path.exists(os.path.join(path, 'kpts/')):
+            os.mkdir(os.path.join(path, 'kpts/'))
+        if pseq is None or rotseq is None:
+            o3dpcd_gt = o3d.io.read_point_cloud(os.path.join(path, 'complete', f'{f_name}{ext_name}'))
+            pseq, rotseq = get_kpts_gmm(np.asarray(o3dpcd_gt.points), n_components=16, show=False)
+        else:
+            pseq = trans_pcd(pseq, rm.homomat_from_posrot(pos=rot_center, rot=rot))
+            rotseq = [np.dot(rot, r) for r in rotseq]
+        pseq, rotseq, conf = cal_kpts_conf(o3dpcd, pseq, rotseq, tor=.5, radius=.005)
+        pickle.dump([pseq, rotseq, conf], open(os.path.join(path, 'kpts', f'{f_name}.pkl'), 'wb'))
+    vis.destroy_window()
 
     if toggledebug:
         o3dpcd = o3d.io.read_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'))
@@ -616,75 +678,6 @@ def get_objpcd_partial_o3d(objcm, objcm_gt, rot, rot_center, pseq=None, rotseq=N
         o3d.visualization.draw_geometries([o3dpcd])
         print(len(o3dpcd.points), len(o3dpcd_gt.points))
     os.remove(os.path.join(path, f_name + f'_tmp{ext_name}'))
-    return 1
-
-
-def get_objpcd_partial_o3d_vctrl(objcm, path='./', f_name='', resolusion=(1280, 720), ext_name='.pcd',
-                                 occ_vt_ratio=1, noise_vt_ration=1, add_noise=False, add_occ=False, toggledebug=False):
-    if not os.path.exists(path):
-        os.mkdir(path)
-    if not os.path.exists(os.path.join(path, 'partial/')):
-        os.mkdir(os.path.join(path, 'partial/'))
-    if not os.path.exists(os.path.join(path, 'mesh/')):
-        os.mkdir(os.path.join(path, 'mesh/'))
-
-    vis = o3d.visualization.Visualizer()
-    vis.create_window('win', width=resolusion[0], height=resolusion[1], left=0, top=0)
-    o3dmesh = o3d.geometry.TriangleMesh(vertices=o3d.utility.Vector3dVector(objcm.objtrm.vertices),
-                                        triangles=o3d.utility.Vector3iVector(objcm.objtrm.faces))
-    o3dmesh.compute_vertex_normals()
-    vis.add_geometry(o3dmesh)
-
-    ctr = o3d.visualization.ViewControl()
-    vis.get_render_option().load_from_json("./renderoption.json")
-
-    init_param = ctr.convert_to_pinhole_camera_parameters()
-    w, h = 4000, 3000
-    K = np.asarray([[0.744375, 0.0, 0.0],
-                    [0.0, 0.744375, 0.0],
-                    [0.4255, 0.2395, 1.0]])
-    fx = K[0, 0]
-    fy = K[1, 1]
-    cx = K[0, 2]
-    cy = K[1, 2]
-    init_param.intrinsic.width = w
-    init_param.intrinsic.height = h
-    init_param.intrinsic.set_intrinsics(init_param.intrinsic.width, init_param.intrinsic.height, fx, fy, cx, cy)
-    init_param.extrinsic = np.eye(4)
-    ctr.convert_from_pinhole_camera_parameters(init_param)
-    vis.poll_events()
-
-    ctr.rotate(10, 0)
-    image = vis.capture_screen_float_buffer()
-    cv2.imshow('', cv2.cvtColor(np.asarray(image), cv2.COLOR_BGR2RGB))
-    cv2.waitKey(0)
-
-    vis.capture_depth_point_cloud(os.path.join(path, f_name + f'_partial_org{ext_name}'), do_render=False,
-                                  convert_to_world_coordinate=True)
-    o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f_name + f'_partial_org{ext_name}'))
-    if add_occ:
-        o3dpcd = add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=(.3, .6))
-        o3dpcd = add_random_occ_by_vt(o3dpcd, np.asarray(o3dmesh.vertices),
-                                      edg_radius=1e-3, edg_sigma=3e-4, ratio=occ_vt_ratio)
-        o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}_partial{ext_name}'), o3dpcd)
-    if add_noise:
-        o3dpcd = add_guassian_noise_by_vt(o3dpcd, np.asarray(o3dmesh.vertices), np.asarray(o3dmesh.vertex_normals),
-                                          noise_mean=1e-4, noise_sigma=1e-4, ratio=noise_vt_ration)
-        o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}_partial{ext_name}'), o3dpcd)
-    o3d.io.write_triangle_mesh(os.path.join(path, 'mesh', f_name + '.ply'), o3dmesh)
-
-    # vis.capture_screen_image(os.path.join(path, f_name + '.png'), do_render=False)
-    save_complete_pcd(f_name, o3dmesh, path=path)
-    vis.destroy_window()
-    # o3d.visualization.draw_geometries([o3dpcd], point_show_normal=True)
-    if toggledebug:
-        o3dpcd_org = o3d.io.read_point_cloud(os.path.join(path, f_name + f'_partial_org{ext_name}'))
-        o3dpcd = o3d.io.read_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'))
-        o3dpcd_org.paint_uniform_color([0, 0.706, 1])
-        o3dpcd.paint_uniform_color([0.706, 0, 1])
-        # print(o3dpcd_org.get_center())
-        o3d.visualization.draw_geometries([o3dpcd, o3dpcd_org])
-    os.remove(os.path.join(path, f_name + f'_partial_org{ext_name}'))
     return o3dpcd
 
 

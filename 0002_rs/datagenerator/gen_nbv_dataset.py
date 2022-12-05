@@ -22,13 +22,15 @@ def init_gen(cat, num_kpts, max, i, length=.2, path=PATH, toggledebug=False):
         os.mkdir(os.path.join(path, cat, 'mesh'))
         os.mkdir(os.path.join(path, cat, 'prim'))
 
-    objcm, objcm_gt, _, _ = utl.gen_seed(num_kpts, max=max, n=100, length=length, rand_wd=False)
+    objcm, objcm_gt, _, _ = utl.gen_seed(num_kpts, max=max, n=100, length=length, rand_wd=False,
+                                         toggledebug=toggledebug)
     f_name = str(i).zfill(4)
     o3dmesh = utl.cm2o3dmesh(objcm, wnormal=False)
     o3dmesh_gt = utl.cm2o3dmesh(objcm_gt, wnormal=False)
-    o3d.io.write_triangle_mesh(os.path.join(path, cat, 'mesh', f_name + '.ply'), o3dmesh)
-    o3d.io.write_triangle_mesh(os.path.join(path, cat, 'prim', f_name + '.ply'), o3dmesh_gt)
-    if toggledebug:
+    if not toggledebug:
+        o3d.io.write_triangle_mesh(os.path.join(path, cat, 'mesh', f_name + '.ply'), o3dmesh)
+        o3d.io.write_triangle_mesh(os.path.join(path, cat, 'prim', f_name + '.ply'), o3dmesh_gt)
+    else:
         o3dmesh_gt.paint_uniform_color([1, 1, 0])
         o3d.visualization.draw_geometries([o3dmesh, o3dmesh_gt])
 
@@ -86,8 +88,10 @@ def init_gen_deform(cat, num_kpts, i, path=PATH, toggledebug=False):
 
 if __name__ == '__main__':
     num = 100
-    for i in range(60, num):
+    for i in range(0, num):
         print(i)
-        # init_gen('bspl', num_kpts=4, max=random.choice([.01, .02, .03, .04]), i=i)
-        init_gen_deform('plat', num_kpts=random.choice([3, 4, 5]), i=i)
+        # init_gen('bspl_3', num_kpts=4, max=random.choice([.01, .02, .03, .04]), i=i, toggledebug=False)
+        # init_gen('bspl_4', num_kpts=5, max=random.choice([.01, .02, .03, .04]), i=i, toggledebug=False)
+        init_gen('bspl_5', num_kpts=6, max=random.choice([.01, .02, .03, .04]), i=i, toggledebug=True)
+        # init_gen_deform('plat', num_kpts=random.choice([3, 4, 5]), i=i)
         # init_gen_deform('tmpl', num_kpts=random.choice([3, 4, 5]), i=i)

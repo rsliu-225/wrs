@@ -13,11 +13,10 @@ import modeling.collision_model as cm
 
 # PATH = 'E:/liu/dataset_flat/'
 # PATH = 'E:/liu/org_data/dataset_prim/'
-PATH = 'E:/liu/org_data/dataset_1/'
+PATH = 'E:/liu/org_data/dataset/'
 # include visible threshold
 
-RND_OCC_RADIO_RNG = (0, .4)
-VISIBLE_THRESHOLD = np.radians(80)
+RND_OCC_RADIO_RNG = (.1, .4)
 
 
 def runInParallel(fn, args):
@@ -38,88 +37,88 @@ def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=
     return f'\r{prefix} |{bar}| {percent}% {suffix}'
 
 
-def init_gen(cat, num_kpts, max_kts, res=(550, 550), rot_center=(0, 0, 0), max_num=10, length=.2, path=PATH):
+def init_gen(cat, num_kpts, max_kts, visible_threshold=np.radians(75),
+             res=(550, 550), rot_center=(0, 0, 0), max_num=10, length=.2, path=PATH):
     path = os.path.join(path, cat[:4])
-    icomats = rm.gen_icorotmats(rotation_interval=math.radians(360 / 60))
-    icomats = [x for row in icomats for x in row]
-    rotid_list = list(range(len(icomats)))
-    random.shuffle(rotid_list)
-    objcm, objcm_flat, _, _ = utl.gen_seed(num_kpts, max=max_kts, n=100, length=length, rand_wd=False)
-    cnt = 0
-    for i in rotid_list:
-        if cnt % 10 == 0:
-            print(printProgressBar(cnt, max_num, prefix='Progress:', suffix='Complete', length=100), "\r")
-        f_name = '_'.join([cat[4:].zfill(4), str(i).zfill(4)])
-        flag = utl.get_objpcd_partial_o3d(objcm, objcm_flat, icomats[i], rot_center, pseq=None, rotseq=None,
-                                          f_name=f_name, path=path, resolusion=res,
-                                          add_occ=True, add_noise=True, add_rnd_occ=True, add_noise_pts=True,
-                                          rnd_occ_ratio_rng=RND_OCC_RADIO_RNG, visible_threshold=VISIBLE_THRESHOLD,
-                                          occ_vt_ratio=random.uniform(.5, 1), noise_vt_ratio=random.uniform(.5, 1))
-        if flag:
-            cnt += 1
-        else:
-            print('Failed:', f_name)
-            os.remove(os.path.join(path, f_name + f'_tmp.pcd'))
-            os.remove(os.path.join(path, 'partial', f_name + f'.pcd'))
-        if cnt == max_num:
-            print(printProgressBar(cnt, max_num, prefix='Progress:', suffix='Complete', length=100), "\r")
-            print(f"A total of {cnt} different objects created")
-            break
+    objs_num = utl.cnt_objs(path, cat[4:].zfill(4))
+    if objs_num < max_num:
+        icomats = rm.gen_icorotmats(rotation_interval=math.radians(360 / 60))
+        icomats = [x for row in icomats for x in row]
+        rotid_list = list(range(len(icomats)))
+        random.shuffle(rotid_list)
+        objcm, objcm_flat, _, _ = utl.gen_seed(num_kpts, max=max_kts, n=100, length=length, rand_wd=False)
+        utl.cnt_remove_objid(path, cat[4:].zfill(4), max_num)
+
+        for i in rotid_list:
+            objs_num = utl.cnt_objs(path, cat[4:].zfill(4))
+            # print(cat, objs_num, i)
+            if objs_num >= max_num:
+                # print(printProgressBar(objs_num, max_num, prefix='Progress:', suffix='Complete', length=100), "\r")
+                # print(f"{cat}: A total of {objs_num} different objects created")
+                break
+            # if objs_num % 10 == 0:
+            #     print(printProgressBar(objs_num, max_num, prefix='Progress:', suffix='Complete', length=100), "\r")
+            f_name = '_'.join([cat[4:].zfill(4), str(i).zfill(4)])
+            utl.get_objpcd_partial_o3d(objcm, objcm_flat, icomats[i], rot_center, pseq=None, rotseq=None,
+                                       f_name=f_name, path=path, resolusion=res,
+                                       add_occ=True, add_noise=True, add_rnd_occ=True, add_noise_pts=True,
+                                       rnd_occ_ratio_rng=RND_OCC_RADIO_RNG, visible_threshold=visible_threshold,
+                                       occ_vt_ratio=random.uniform(.5, 1), noise_vt_ratio=random.uniform(.5, 1))
 
     cal_stats(os.path.join(path, 'partial'), cat)
 
 
-def init_gen_deform(cat, num_kpts, res=(550, 550), rot_center=(0, 0, 0), max_num=10, path=PATH):
+def init_gen_deform(cat, num_kpts, visible_threshold=np.radians(75),
+                    res=(550, 550), rot_center=(0, 0, 0), max_num=10, path=PATH):
     path = os.path.join(path, cat[:4])
-    icomats = rm.gen_icorotmats(rotation_interval=math.radians(360 / 60))
-    icomats = [x for row in icomats for x in row]
-    rotid_list = list(range(len(icomats)))
-    random.shuffle(rotid_list)
+    objs_num = utl.cnt_objs(path, cat[4:].zfill(4))
+    if objs_num < max_num:
+        icomats = rm.gen_icorotmats(rotation_interval=math.radians(360 / 60))
+        icomats = [x for row in icomats for x in row]
+        rotid_list = list(range(len(icomats)))
+        random.shuffle(rotid_list)
 
-    if cat[:4] == 'tmpl':
-        objcm = cm.CollisionModel(f'../obstacles/template.stl')
-    else:
-        objcm = cm.CollisionModel(f'../obstacles/plate.stl')
-
-    if num_kpts == 3:
-        goal_pseq = np.asarray([[0, 0, 0],
-                                [.08 + random.uniform(-.02, .02), 0, random.uniform(.01, .04) * random.choice([-1, 1])],
-                                [.16, 0, 0]])
-    elif num_kpts == 4:
-        goal_pseq = np.asarray([[0, 0, 0],
-                                [.04 + random.uniform(-.02, .04), 0, random.uniform(.01, .03) * random.choice([-1, 1])],
-                                [.12 + random.uniform(-.04, .02), 0, random.uniform(.01, .03) * random.choice([-1, 1])],
-                                [.16, 0, 0]])
-    else:
-        goal_pseq = np.asarray([[0, 0, 0],
-                                [.04 + random.uniform(-.02, .01), 0, random.uniform(-.01, .01)],
-                                [.08 + random.uniform(-.01, .01), 0, random.uniform(-.02, .02)],
-                                [.12 + random.uniform(-.01, .02), 0, random.uniform(-.01, .01)],
-                                [.16, 0, 0]])
-    rot_axial, rot_radial = utl.random_rot_radians(num_kpts)
-    rbf_radius = random.uniform(.05, .2)
-    deformed_objcm, objcm_gt, kpts, kpts_rotseq = \
-        utl.deform_cm(objcm, goal_pseq, rot_axial, rot_radial, rbf_radius=rbf_radius)
-    cnt = 0
-    for i in rotid_list:
-        if cnt % 10 == 0:
-            print(printProgressBar(cnt, max_num, prefix='Progress:', suffix='Complete', length=100), "\r")
-        f_name = '_'.join([cat[4:].zfill(4), str(i).zfill(4)])
-        flag = utl.get_objpcd_partial_o3d(deformed_objcm, objcm_gt, icomats[i], rot_center, pseq=kpts,
-                                          rotseq=kpts_rotseq, f_name=f_name, path=path, resolusion=res,
-                                          add_occ=True, add_noise=True, add_rnd_occ=True, add_noise_pts=True,
-                                          rnd_occ_ratio_rng=RND_OCC_RADIO_RNG, visible_threshold=VISIBLE_THRESHOLD,
-                                          occ_vt_ratio=random.uniform(.05, .08), noise_vt_ratio=random.uniform(.2, .5))
-        if flag:
-            cnt += 1
+        if cat[:4] == 'tmpl':
+            objcm = cm.CollisionModel(f'../obstacles/template.stl')
         else:
-            print('Failed:', f_name)
-            os.remove(os.path.join(path, f_name + f'_tmp.pcd'))
-            os.remove(os.path.join(path, 'partial', f_name + f'.pcd'))
-        if cnt == max_num:
-            print(printProgressBar(cnt, max_num, prefix='Progress:', suffix='Complete', length=100), "\r")
-            print(f"A total of {cnt} different objects created")
-            break
+            objcm = cm.CollisionModel(f'../obstacles/plate.stl')
+
+        if num_kpts == 3:
+            goal_pseq = np.asarray([[0, 0, 0],
+                                    [.08 + random.uniform(-.02, .02), 0, random.uniform(.01, .04) * random.choice([-1, 1])],
+                                    [.16, 0, 0]])
+        elif num_kpts == 4:
+            goal_pseq = np.asarray([[0, 0, 0],
+                                    [.04 + random.uniform(-.02, .04), 0, random.uniform(.01, .02) * random.choice([-1, 1])],
+                                    [.12 + random.uniform(-.04, .02), 0, random.uniform(.01, .02) * random.choice([-1, 1])],
+                                    [.16, 0, 0]])
+        else:
+            goal_pseq = np.asarray([[0, 0, 0],
+                                    [.04 + random.uniform(-.02, .01), 0, random.uniform(-.01, .01)],
+                                    [.08 + random.uniform(-.01, .01), 0, random.uniform(-.02, .02)],
+                                    [.12 + random.uniform(-.01, .02), 0, random.uniform(-.01, .01)],
+                                    [.16, 0, 0]])
+        rot_axial, rot_radial = utl.random_rot_radians(num_kpts)
+        rbf_radius = random.uniform(.05, .2)
+        deformed_objcm, objcm_gt, kpts, kpts_rotseq = \
+            utl.deform_cm(objcm, goal_pseq, rot_axial, rot_radial, rbf_radius=rbf_radius)
+        utl.cnt_remove_objid(path, cat[4:].zfill(4), max_num)
+
+        for i in rotid_list:
+            objs_num = utl.cnt_objs(path, cat[4:].zfill(4))
+            # print(cat, objs_num, i)
+            if objs_num >= max_num:
+                # print(printProgressBar(objs_num, max_num, prefix='Progress:', suffix='Complete', length=100), "\r")
+                # print(f"{cat}: A total of {objs_num} different objects created")
+                break
+            # if objs_num % 10 == 0:
+            #     print(printProgressBar(objs_num, max_num, prefix='Progress:', suffix='Complete', length=100), "\r")
+            f_name = '_'.join([cat[4:].zfill(4), str(i).zfill(4)])
+            utl.get_objpcd_partial_o3d(deformed_objcm, objcm_gt, icomats[i], rot_center, pseq=kpts,
+                                       rotseq=kpts_rotseq, f_name=f_name, path=path, resolusion=res,
+                                       add_occ=True, add_noise=True, add_rnd_occ=True, add_noise_pts=True,
+                                       rnd_occ_ratio_rng=RND_OCC_RADIO_RNG, visible_threshold=visible_threshold,
+                                       occ_vt_ratio=random.uniform(.05, .08), noise_vt_ratio=random.uniform(.2, .5))
     cal_stats(os.path.join(path, 'partial'), cat)
 
 
@@ -130,7 +129,7 @@ def cal_stats(path, class_name):
         if not "pcd" in f or f[:4] != class_name:
             continue
         num_pts.append(len(utl.read_pcd(os.path.join(path, f))))
-    print("[lowest:highest:average]", min(num_pts), max(num_pts), int(sum(num_pts) / len(num_pts)),
+    print(class_name, ": [lowest:highest:average]", min(num_pts), max(num_pts), int(sum(num_pts) / len(num_pts)),
           ": with a total of", len(num_pts), "pcd")
     return len(num_pts)
 
@@ -184,11 +183,14 @@ def test_pcd(class_name, id='1'):
 
 def gen_args(cat, rng):
     if cat == 'quad':
-        args = [[cat + str(i), 3, random.choice([.01, .02, .03, .04])] for i in rng]
+        args = [[cat + str(i), 3, random.choice([.01, .02, .03, .04]),
+                 np.radians(random.uniform(60, 90))] for i in rng]
     elif cat == 'bspl':
-        args = [[cat + str(i), random.choice([4, 5]), random.choice([.01, .02, .03, .04])] for i in rng]
+        args = [[cat + str(i), random.choice([4, 5]), random.choice([.01, .02, .03, .04]),
+                 np.radians(random.uniform(60, 90))] for i in rng]
     elif cat == 'sprl':
-        args = [[cat + str(i), 20, random.choice([.04, .05])] for i in rng]
+        args = [[cat + str(i), 20, random.choice([.04, .05]),
+                 np.radians(random.uniform(60, 90))] for i in rng]
     else:
         args = None
     print(args)
@@ -196,7 +198,7 @@ def gen_args(cat, rng):
 
 
 def gen_args_deform(cat, rng):
-    args = [[cat + str(i), random.choice([3, 4, 5])] for i in rng]
+    args = [[cat + str(i), random.choice([3, 4, 5]), np.radians(random.uniform(60, 90))] for i in rng]
     print(args)
     return args
 
@@ -216,20 +218,20 @@ def remove_tmp(cat_list, path):
 
 
 if __name__ == '__main__':
-    # init_gen('bspl', 4, .02, rot_center=(0, 0, 0), max_num=10, length=.2)
+    # for i in range(10):
+    #     init_gen('bspl'+str(i), 4, .02, np.radians(random.uniform(60, 90)), rot_center=(0, 0, 0), max_num=10, length=.2)
     # init_gen_deform('plat', 4, rot_center=(0, 0, 0), max_num=10)
-
-    start = 15
-    end = 100
+    start = 100
+    end = 125
     # for i in range(start, end):
     #     runInParallel(init_gen, gen_args("bspl", range(i * 8, (i + 1) * 8)))
-    # for i in range(start, end):
-    #     runInParallel(init_gen, gen_args("quad", range(i * 8, (i + 1) * 8)))
+    for i in range(start, end):
+        runInParallel(init_gen, gen_args("quad", range(i * 8, (i + 1) * 8)))
     # for i in range(start, end):
     #     runInParallel(init_gen, gen_args("sprl", range(i * 8, (i + 1) * 8)))
     # for i in range(start, end):
     #     runInParallel(init_gen_deform, gen_args_deform("plat", range(i * 8, (i + 1) * 8)))
-    for i in range(start, end):
-        runInParallel(init_gen_deform, gen_args_deform("tmpl", range(i * 8, (i + 1) * 8)))
+    # for i in range(start, end):
+    #     runInParallel(init_gen_deform, gen_args_deform("tmpl", range(i * 8, (i + 1) * 8)))
 
     remove_tmp(["bspl", "quad", "sprl", "plat", "tmpl"], PATH)

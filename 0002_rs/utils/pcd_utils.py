@@ -913,6 +913,23 @@ def cal_nbv_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, toggledebug=False):
            np.asarray(confs)[np.argsort(confs)]
 
 
+def get_distribution(pcd, kpts, voxel_size=0.001):
+    pts = np.asarray(pcd)
+    o3dpcd = o3dh.nparray2o3dpcd(pts)
+    o3dpcd_down = o3dpcd.voxel_down_sample(voxel_size=voxel_size)
+    confs = []
+    kdt_i = o3d.geometry.KDTreeFlann(o3dpcd_down)
+    for i, p in enumerate(np.asarray(kpts)):
+        k, _, _ = kdt_i.search_radius_vector_3d(p, .005)
+        confs.append(k)
+    print(confs, np.std(np.asarray(confs)),
+          min(confs), len(np.asarray(o3dpcd_down.points))/len(kpts))
+    # o3dpcd.paint_uniform_color((1, 0, 0))
+    # o3dpcd_down.paint_uniform_color((0, 1, 0))
+    # o3d.visualization.draw_geometries([o3dpcd, o3dpcd_down])
+    return confs
+
+
 def cal_nbv_pcn_kpts(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, toggledebug=False):
     def _normalize(l):
         return [(v - min(l)) / (max(l) - min(l)) for v in l]
@@ -922,16 +939,10 @@ def cal_nbv_pcn_kpts(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, toggledebug=Fa
     # show_pcd(pts_pcn, rgba=(.7, 0, 0, .5))
     show_pcd(pts, rgba=(.7, .7, .7, .5))
     kpts, kpts_rotseq = get_kpts_gmm(pts_pcn, n_components=16, show=False)
+    confs = get_distribution(pts, kpts)
 
-    o3dpcd = o3dh.nparray2o3dpcd(pts)
-    confs = []
-    kdt_i = o3d.geometry.KDTreeFlann(o3dpcd)
-    for i, p in enumerate(np.asarray(kpts)):
-        k, _, _ = kdt_i.search_radius_vector_3d(p, .005)
-        # print(k, len(pcd_i) / len(kpts))
-        confs.append(k)
     if max(confs) != min(confs):
-        confs = [(c - min(confs)) / (max(confs) - min(confs)) for c in confs]
+        confs = _normalize(confs)
     else:
         confs = np.ones(len(confs))
     nrmls = kpts_rotseq[:, :, 0]

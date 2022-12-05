@@ -66,40 +66,29 @@ def gen_conf(cat, tor=.001, overwrite=False, path='', toggledebug=False):
                            suffix='Finished!', length=100), "\r")
 
 
-def show(fo='./', cat='bspl'):
-    random_f = random.choices(sorted(os.listdir(os.path.join(fo, cat, 'complete'))), k=10)
-    for f in random_f:
-        if f[-3:] == 'pcd':
-            o3dpcd = o3d.io.read_point_cloud(os.path.join(fo, cat, 'complete', f))
-            gm.gen_pointcloud(o3dpcd.points, rgbas=[[0, 1, 0, 1]]).attach_to(base)
-            o3dpcd = o3d.io.read_point_cloud(os.path.join(fo, cat, 'partial', f))
-            gm.gen_pointcloud(o3dpcd.points, rgbas=[[1, 0, 0, 1]]).attach_to(base)
-    base.run()
-
-
 if __name__ == '__main__':
     base = wd.World(cam_pos=[.1, .2, .4], lookat_pos=[0, 0, 0])
     # base = wd.World(cam_pos=[.1, .4, 0], lookat_pos=[.1, 0, 0])
-    path = 'E:/liu/org_data/dataset_prim'
+    path = 'E:/liu/org_data/dataset'
     overwrite = False
     # gen_conf('bspl', tor=.001, path=path, toggledebug=True)
     cat_list = []
     for fo in os.listdir(path):
         cat_list.append(fo)
     print(cat_list)
-    cat_list = ['multiview']
+    # cat_list = ['multiview']
     proc = []
     for cat in cat_list:
         if cat in ['plat', 'tmpl']:
-            tor = .0025
+            tor = .0018
         elif cat in ['multiview']:
-            tor = .003
+            tor = .0025
+        elif cat in ['multiview_true']:
+            tor = .0018
         else:
-            tor = .002
+            tor = .001
         p = Process(target=gen_conf, args=(cat, tor, overwrite, path, False))
         p.start()
         proc.append(p)
     for p in proc:
         p.join()
-
-    # show(path, cat='multiview')

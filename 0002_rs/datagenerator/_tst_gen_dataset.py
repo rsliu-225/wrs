@@ -11,6 +11,8 @@ import modeling.geometric_model as gm
 import visualization.panda.world as wd
 from basis.trimesh.creation import icosphere
 
+COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40], [255, 127, 14]]) / 255
+
 
 def show_ico():
     tm = icosphere(subdivisions=3)
@@ -49,7 +51,9 @@ if __name__ == '__main__':
     fo = './tst'
     cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
 
-    pseq = utl.poly_inp(pseq=np.asarray([[0, 0, 0], [.018, .02, .02], [.06, .04, 0], [.12, 0, 0]]))
+    # pseq = utl.poly_inp(pseq=np.asarray([[0, 0, 0], [.018, .02, .02], [.06, .04, 0], [.12, 0, 0]]))
+    pseq = utl.spl_inp(pseq=np.asarray([[0, 0, 0], [0.02, -0.00411336, -0.01327048], [0.04, -0.01863003, 0.0190177],
+                                        [0.06, 0.00720252, 0.01764031], [0.08, -0.0065916, -0.00725867]]))
     # pseq = utl.uni_length(pseq, goal_len=1.6)
     pseq = utl.uni_length(pseq, goal_len=.2)
     pseq, rotseq = utl.get_rotseq_by_pseq(pseq)
@@ -76,12 +80,29 @@ if __name__ == '__main__':
     obj_id = 0
     rot_center = (0, 0, 0)
 
-    utl.get_objpcd_partial_o3d(objcm, objcm, np.eye(3), rot_center, path=fo,
-                               f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
-                               visible_threshold=np.radians(30), noise_cnt=3,
-                               occ_vt_ratio=random.uniform(.1, .5), noise_vt_ratio=random.uniform(.5, 1),
-                               add_noise=False, add_occ=False, add_rnd_occ=True, add_noise_pts=False,
-                               savemesh=False, savedepthimg=False, savergbimg=False, toggledebug=True)
+    o3dpcd_1 = utl.get_objpcd_partial_o3d(objcm, objcm, np.eye(3), rot_center, path=fo,
+                                          f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
+                                          visible_threshold=np.radians(75), noise_cnt=3, rnd_occ_ratio_rng=(0, .1),
+                                          occ_vt_ratio=random.uniform(.1, .2), noise_vt_ratio=random.uniform(.5, 1),
+                                          add_noise=True, add_occ=True, add_rnd_occ=True, add_noise_pts=True,
+                                          savemesh=False, savedepthimg=False, savergbimg=False, toggledebug=False)
+
+    o3dpcd_2 = utl.get_objpcd_partial_o3d(objcm, objcm, icomats[0][10], rot_center, path=fo,
+                                          f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
+                                          visible_threshold=np.radians(75), noise_cnt=3, rnd_occ_ratio_rng=(0, .1),
+                                          occ_vt_ratio=random.uniform(.1, .2), noise_vt_ratio=random.uniform(.5, 1),
+                                          add_noise=True, add_occ=True, add_rnd_occ=True, add_noise_pts=True,
+                                          savemesh=False, savedepthimg=False, savergbimg=False, toggledebug=False)
+    homomat4 = rm.homomat_from_posrot((0, 0, 0), icomats[0][10])
+    pcd = np.asarray(o3dpcd_2.points)
+    pcd = utl.trans_pcd(pcd, np.dot(np.eye(4), np.linalg.inv(homomat4)))
+    random_homomat4 = utl.gen_random_homomat4((.001, .001, .001), np.radians((1, 1, 1)))
+    pcd = utl.trans_pcd(pcd, random_homomat4)
+
+    o3dpcd_2 = utl.nparray2o3dpcd(pcd)
+    o3dpcd_1.paint_uniform_color(COLOR[0])
+    o3dpcd_2.paint_uniform_color((.7, .7, .7))
+    o3d.visualization.draw_geometries([o3dpcd_1, o3dpcd_2])
 
     # '''
     # show data

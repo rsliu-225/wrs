@@ -74,9 +74,9 @@ if __name__ == '__main__':
 
     base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
 
-    # path = 'E:/liu/nbv_mesh/'
-    path = 'D:/nbv_mesh/'
-    cat = 'bspl'
+    path = 'E:/liu/nbv_mesh/'
+    # path = 'D:/nbv_mesh/'
+    cat = 'bspl_3'
     fo = 'res_75'
     coverage_pcn, max_pcn, cnt_pcn = load_cov(prefix='pcn')
     coverage_org, max_org, cnt_org = load_cov(prefix='org')
@@ -93,7 +93,7 @@ if __name__ == '__main__':
     x = [0, 1, 2, 3, 4, 5]
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams["font.size"] = 20
-    fig, (ax1, ax2) = plt.subplots(1, 2)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 8))
     ax1.set_title('Coverage')
     ax1.axhline(y=.95, color='r', linewidth='0.5', linestyle=':')
     ax2.set_title('Num. of Attempts')

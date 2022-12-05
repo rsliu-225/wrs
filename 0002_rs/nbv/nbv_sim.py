@@ -19,6 +19,17 @@ import visualization.panda.world as wd
 COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40], [255, 127, 14]]) / 255
 RES_FO_NAME = 'res_75'
 
+def complete():
+    def _normalize(l):
+        return [(v - min(l)) / (max(l) - min(l)) for v in l]
+
+    _, _, trans = o3dh.registration_icp_ptpt(pts_pcn, pts, maxcorrdist=.02, toggledebug=False)
+    pts_pcn = pcdu.trans_pcd(pts_pcn, trans)
+    # show_pcd(pts_pcn, rgba=(.7, 0, 0, .5))
+    pcdu.show_pcd(pts, rgba=(.7, .7, .7, .5))
+    kpts, kpts_rotseq = pcdu.get_kpts_gmm(pts_pcn, n_components=16, show=False)
+    confs = pcdu.get_distribution(pts, kpts)
+
 
 def show_pcn_res_pytorch(result_path, test_path):
     res_f = h5py.File(result_path, 'r')
@@ -151,6 +162,10 @@ def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_mode
         coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=coverage_tor)
         exp_dict[cnt - 1]['coverage'] = coverage
         print('coverage:', coverage)
+    pcd_o = pcn.inference_sgl(pcd_i, model_name, load_model, toggledebug=False)
+    kpts, _ = pcdu.get_kpts_gmm(pcd_o, n_components=16, show=False)
+    _ = pcdu.get_distribution(pcd_i, kpts)
+
     exp_dict['final'] = pcd_i.tolist()
     if not toggledebug:
         json.dump(exp_dict, open(os.path.join(path, cat, RES_FO_NAME, f'pcn_{f.split(".ply")[0]}.json'), 'w'))
@@ -310,7 +325,7 @@ def run_random(path, cat, f, o3dpcd_init, o3dpcd_gt, coverage_tor=.001, goal=.05
 
 if __name__ == '__main__':
     model_name = 'pcn'
-    load_model = 'pcn_emd_prim_mv/best_cd_p_network.pth'
+    load_model = 'pcn_emd_all/best_cd_p_network.pth'
     COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40]]) / 255
     cam_pos = [0, 0, .5]
 
@@ -321,8 +336,8 @@ if __name__ == '__main__':
     # seedjntagls = m_planner.get_armjnts()
 
     path = 'E:/liu/nbv_mesh/'
-    cat = 'plat'
-    coverage_tor = .0016
+    cat = 'bspl_5'
+    coverage_tor = .001
     goal = .95
     visible_threshold = np.radians(75)
 
@@ -331,7 +346,8 @@ if __name__ == '__main__':
     for f in os.listdir(os.path.join(path, cat, 'mesh')):
         print(f'-----------{f}------------')
         if os.path.exists(os.path.join(path, cat, RES_FO_NAME, f'pcn_{f.split(".ply")[0]}.json')) and \
-                os.path.exists(os.path.join(path, cat, RES_FO_NAME, f'org_{f.split(".ply")[0]}.json')):
+                os.path.exists(os.path.join(path, cat, RES_FO_NAME, f'org_{f.split(".ply")[0]}.json')) and \
+                os.path.exists(os.path.join(path, cat, RES_FO_NAME, f'random_{f.split(".ply")[0]}.json')):
             continue
 
         o3dpcd_init = gen_partial_view(os.path.join(path, cat), f.split('.ply')[0], np.eye(3), [0, 0, 0],
@@ -351,5 +367,3 @@ if __name__ == '__main__':
                 visible_threshold=visible_threshold, toggledebug=False)
         run_random(path, cat, f, o3dpcd_init, o3dpcd_gt, goal=goal, coverage_tor=coverage_tor,
                    visible_threshold=visible_threshold, toggledebug=False)
-        # run_pcn_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, goal=goal, coverage_tor=coverage_tor,
-        #             visible_threshold=visible_threshold, toggledebug=False)
