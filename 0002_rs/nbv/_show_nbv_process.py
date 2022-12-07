@@ -19,7 +19,7 @@ if __name__ == '__main__':
 
     if not os.path.exists(os.path.join(path, cat, RES_FO_NAME)):
         os.makedirs(os.path.join(path, cat, RES_FO_NAME))
-    for f in os.listdir(os.path.join(path, cat, 'mesh')):
+    for f in os.listdir(os.path.join(path, cat, 'mesh'))[1:]:
         print(f'-----------{f}------------')
         # if os.path.exists(os.path.join(path, cat, RES_FO_NAME, f'pcn_{f.split(".ply")[0]}.json')) and \
         #         os.path.exists(os.path.join(path, cat, RES_FO_NAME, f'org_{f.split(".ply")[0]}.json')):
@@ -29,7 +29,7 @@ if __name__ == '__main__':
                                        rnd_occ_ratio_rng=(.2, .5), nrml_occ_ratio_rng=(.2, .6),
                                        visible_threshold=visible_threshold,
                                        occ_vt_ratio=random.uniform(.08, .1), noise_vt_ratio=random.uniform(.2, .5),
-                                       add_vt_occ=True, add_noise=False, add_rnd_occ=False, add_noise_pts=True,
+                                       add_vt_occ=False, add_noise=False, add_rnd_occ=False, add_noise_pts=True,
                                        toggledebug=False)
         # o3dpcd_init, ind = o3dpcd_init.remove_radius_outlier(nb_points=50, radius=0.005)
 

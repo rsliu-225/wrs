@@ -19,7 +19,8 @@ import visualization.panda.world as wd
 COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40], [255, 127, 14]]) / 255
 RES_FO_NAME = 'res_75'
 
-def complete():
+
+def complete(pts_pcn, pts):
     def _normalize(l):
         return [(v - min(l)) / (max(l) - min(l)) for v in l]
 
@@ -130,12 +131,16 @@ def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_mode
         exp_dict[cnt - 1] = {'input': pcd_i.tolist(), 'pcn_output': pcd_o.tolist()}
         if toggledebug:
             o3dmesh = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'mesh', f))
+            o3dmesh.compute_vertex_normals()
             o3dpcd_o = du.nparray2o3dpcd(pcd_o)
             o3dpcd.paint_uniform_color(COLOR[0])
             o3dpcd_gt.paint_uniform_color(COLOR[1])
             o3dpcd_o.paint_uniform_color(COLOR[2])
-            coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.01)
+            coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.02)
             # o3d.visualization.draw_geometries([o3dpcd, o3dpcd_o, o3dmesh, coord])
+            o3d.visualization.draw_geometries([o3dpcd, coord])
+            o3d.visualization.draw_geometries([o3dmesh, coord])
+            o3d.visualization.draw_geometries([o3dpcd, o3dmesh, coord])
             o3d.visualization.draw_geometries([o3dpcd, o3dpcd_o, coord])
 
         pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn_kpts(pcd_i, pcd_o, theta=None, toggledebug=True)
@@ -152,12 +157,24 @@ def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_mode
             o3dmesh = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'mesh', f))
             o3dmesh.compute_vertex_normals()
             o3dmesh.rotate(rot, center=(0, 0, 0))
-            o3dpcd.paint_uniform_color(COLOR[0])
-            o3dpcd_gt.paint_uniform_color(COLOR[1])
-            o3dpcd_tmp.paint_uniform_color(COLOR[2])
-            coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.01)
-            o3d.visualization.draw_geometries([o3dpcd, o3dpcd_tmp, o3dmesh, coord])
+            # o3dpcd.paint_uniform_color(COLOR[0])
+            # o3dpcd_gt.paint_uniform_color(COLOR[1])
+            o3dpcd_tmp_vis = copy.deepcopy(o3dpcd_tmp)
+            o3dpcd_tmp_vis.rotate(rot, center=(0, 0, 0))
+            o3dpcd_tmp_vis.paint_uniform_color(COLOR[0])
+            coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.02)
+            o3d.visualization.draw_geometries([o3dpcd_tmp_vis, coord])
+            o3d.visualization.draw_geometries([o3dmesh, coord])
+            o3d.visualization.draw_geometries([o3dpcd_tmp_vis, o3dmesh, coord])
         o3dpcd += o3dpcd_tmp
+        if toggledebug:
+            pcd_o = pcn.inference_sgl(pcd_i, model_name, load_model, toggledebug=False)
+            o3dpcd_o = du.nparray2o3dpcd(pcd_o)
+            o3dpcd_o.paint_uniform_color(COLOR[2])
+            o3dpcd.paint_uniform_color(COLOR[0])
+            coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.02)
+            o3d.visualization.draw_geometries([o3dpcd, coord])
+            o3d.visualization.draw_geometries([o3dpcd, o3dpcd_o, coord])
         pcd_i = np.asarray(o3dpcd.points)
         coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=coverage_tor)
         exp_dict[cnt - 1]['coverage'] = coverage
