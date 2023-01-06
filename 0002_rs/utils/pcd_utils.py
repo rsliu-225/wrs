@@ -24,6 +24,8 @@ import utils.math_utils as mu
 from basis import trimesh
 import cv2
 
+COLOR = np.asarray([[31, 119, 180, 255], [44, 160, 44, 255], [214, 39, 40, 255], [255, 127, 14, 255]]) / 255
+
 
 def make_3dax(grid=False):
     fig = plt.figure()
@@ -572,32 +574,6 @@ def get_plane(pcd, dist_threshold=0.0002, toggledebug=False):
     return plane[:3], plane[3]
 
 
-# def surface_interp(p, v, kdt_d3, inp=0.0005, max_nn=100):
-#     pseq = []
-#     rotseq = []
-#     times = int(np.linalg.norm(v) / inp)
-#     # v = np.asarray([v[0], v[1], 0])
-#     knn = get_knn(p, kdt_d3, k=max_nn)
-#     n = get_nrml_pca(knn)
-#
-#     for _ in range(times):
-#         rotmat = rm.rotmat_between_vectors(np.asarray([0, 0, 1]), n)
-#         v_cur = rm.unit_vector(np.dot(rotmat, v))
-#         pt = np.asarray(p) + v_cur * inp
-#         knn = get_knn(pt, kdt_d3, k=max_nn)
-#         center = get_pcd_center(np.asarray(knn))
-#         n_cur = get_nrml_pca(knn)
-#         p_cur = pt - np.dot((pt - center), n_cur) * n_cur
-#         if np.dot(n_cur, np.asarray([0, 0, 1])) < 0:
-#             n_cur = -n_cur
-#         pseq.append(p_cur)
-#         rot = np.asarray([rm.unit_vector(n_cur), -rm.unit_vector(np.cross(n_cur, np.cross(n_cur, v_cur))),
-#                           rm.unit_vector(np.cross(n_cur, v_cur))]).T
-#         rotseq.append(rot)
-#         p = p_cur
-#         n = n_cur
-#     return pseq, rotseq
-
 def surface_interp(p, v, kdt_d3, inp=0.0005, max_nn=100):
     pseq = []
     rotseq = []
@@ -705,19 +681,33 @@ def extract_lines_from_pcd(img, pcd, z_range, line_thresh=0.002, line_size_thres
     return lines
 
 
-def cal_conf(pcd_narry, voxel_size=.01, radius=.01, cam_pos=(0, 0, 0), theta=None, toggledebug=False):
-    o3dpcd = o3d_helper.nparray2o3dpcd(pcd_narry)
+def remove_outliers(pts, nb_points=50, radius=0.005, toggledebug=False):
+    o3dpcd = o3dh.nparray2o3dpcd(np.asarray(pts))
+    o3dpcd, ind = o3dpcd.remove_radius_outlier(nb_points=nb_points, radius=radius)
+    if toggledebug:
+        inlier_cloud = o3dpcd.select_by_index(ind)
+        outlier_cloud = o3dpcd.select_by_index(ind, invert=True)
+        print("Showing outliers (red) and inliers (gray): ")
+        outlier_cloud.paint_uniform_color([1, 0, 0])
+        inlier_cloud.paint_uniform_color([0.8, 0.8, 0.8])
+        o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
+
+    return np.asarray(o3dpcd.points)
+
+
+def cal_conf(pts, voxel_size=.01, cam_pos=(0, 0, 0), theta=None, toggledebug=False):
+    o3dpcd = o3d_helper.nparray2o3dpcd(pts)
     downpcd = o3dpcd.voxel_down_sample(voxel_size=voxel_size)
     # downpcd = o3dpcd.uniform_down_sample(10)
     # o3d.visualization.draw_geometries([downpcd])
-    kdt_d3, _ = get_kdt(pcd_narry)
+    kdt_d3, _ = get_kdt(pts)
     zeta1_list = []
     d_list = []
     p_list = []
-    nrml_list = []
+    nrmls = []
     conf_list = []
     for p in np.asarray(downpcd.points):
-        knn = get_knn_by_dist(p, kdt_d3, radius=radius)
+        knn = get_knn_by_dist(p, kdt_d3, radius=voxel_size)
         # knn = get_knn(p, kdt_d3, k=50)
         if len(knn) < 5:
             continue
@@ -734,7 +724,7 @@ def cal_conf(pcd_narry, voxel_size=.01, radius=.01, cam_pos=(0, 0, 0), theta=Non
         n = pcaxmat[:, inx[0]]
         if rm.angle_between_vectors(n, cam_pos - p) > np.pi / 2:
             n = -n
-        nrml_list.append(n)
+        nrmls.append(n)
 
     for i in range(len(zeta1_list)):
         c = 1 - (zeta1_list[i] - min(zeta1_list)) / (max(zeta1_list) - min(zeta1_list))
@@ -753,15 +743,18 @@ def cal_conf(pcd_narry, voxel_size=.01, radius=.01, cam_pos=(0, 0, 0), theta=Non
     if theta is not None:
         res_inx_list = []
         for i in range(len(p_list)):
-            if rm.angle_between_vectors(nrml_list[i], cam_pos - p_list[i]) > theta:
+            a = rm.angle_between_vectors(nrmls[i], cam_pos - p_list[i])
+            if a > np.pi / 2:
+                a = np.pi - rm.angle_between_vectors(nrmls[i], cam_pos - p_list[i])
+            if a > theta:
                 res_inx_list.append(i)
         p_list = np.asarray(p_list)[res_inx_list]
-        nrml_list = np.asarray(nrml_list)[res_inx_list]
+        nrmls = np.asarray(nrmls)[res_inx_list]
         conf_list = np.asarray(conf_list)[res_inx_list]
-    return p_list, nrml_list, conf_list
+    return p_list, nrmls, conf_list
 
 
-def extract_main_vec(pts, nrmls, confs, threshold=np.radians(30)):
+def extract_main_vec(pts, nrmls, confs, threshold=np.radians(30), toggledebug=False):
     inx = sorted(range(len(confs)), key=lambda k: confs[k])
     confs = np.asarray(confs)[inx]
     pts = np.asarray(pts)[inx]
@@ -777,6 +770,17 @@ def extract_main_vec(pts, nrmls, confs, threshold=np.radians(30)):
         rm_list_tmp = list(np.argwhere(a_narry <= threshold).flatten())
         nbv_inx_dict[i] = np.asarray(res_list)[rm_list_tmp]
         res_list = np.asarray(res_list)[res_list_tmp]
+
+    if toggledebug:
+        for k, v in nbv_inx_dict.items():
+            print(k, v, confs[k])
+            p = np.asarray(pts[k])
+            n = np.asarray(nrmls[k])
+            gm.gen_arrow(p, p + n * .03, thickness=.002, rgba=(confs[k], 0, 1 - confs[k], 1)).attach_to(base)
+            for i in v:
+                p = np.asarray(pts[i])
+                n = np.asarray(nrmls[i])
+                gm.gen_arrow(p, p + n * .03, thickness=.001, rgba=(confs[k], 0, 1 - confs[k], .1)).attach_to(base)
 
     nbv_inx_list = list(nbv_inx_dict.keys())
     return np.asarray(pts)[nbv_inx_list], np.asarray(nrmls)[nbv_inx_list], np.asarray(confs)[nbv_inx_list]
@@ -822,7 +826,50 @@ def get_kpts_gmm(objpcd, n_components=20, show=True, rgba=(1, 0, 0, 1)):
         kpts_rotseq.append(rot)
     kpts_rotseq.append(kpts_rotseq[-1])
 
-    return kpts, np.asarray(kpts_rotseq)
+    return np.asarray(kpts), np.asarray(kpts_rotseq)
+
+
+def get_rots_wkpts(objpcd, kpts, k=None, show=True, rgba=(1, 0, 0, 1)):
+    if show:
+        for i, p in enumerate(kpts[1:]):
+            gm.gen_sphere(p, radius=.001, rgba=rgba).attach_to(base)
+
+    kdt, _ = get_kdt(objpcd)
+    kpts_rotseq = []
+    for i, p in enumerate(kpts[:-1]):
+        knn = get_knn(kpts[i], kdt, k=int(len(objpcd) / len(kpts)) if k is None else k)
+        pcv, pcaxmat = rm.compute_pca(knn)
+        y_v = kpts[i + 1] - kpts[i]
+        x_v = pcaxmat[:, np.argmin(pcv)]
+        if len(kpts_rotseq) != 0:
+            if rm.angle_between_vectors(kpts_rotseq[-1][:, 0], x_v) > np.pi / 2:
+                x_v = -x_v
+            if rm.angle_between_vectors(kpts_rotseq[-1][:, 1], y_v) > np.pi / 2:
+                y_v = -y_v
+        z_v = np.cross(x_v, y_v)
+
+        rot = np.asarray([rm.unit_vector(x_v), rm.unit_vector(y_v), rm.unit_vector(z_v)]).T
+        kpts_rotseq.append(rot)
+    kpts_rotseq.append(kpts_rotseq[-1])
+
+    return np.asarray(kpts_rotseq)
+
+
+def cal_distribution(pcd, kpts, voxel_size=0.001, radius=.005):
+    pts = np.asarray(pcd)
+    o3dpcd = o3dh.nparray2o3dpcd(pts)
+    o3dpcd_down = o3dpcd.voxel_down_sample(voxel_size=voxel_size)
+    confs = []
+    kdt_i = o3d.geometry.KDTreeFlann(o3dpcd_down)
+    for i, p in enumerate(np.asarray(kpts)):
+        k, _, _ = kdt_i.search_radius_vector_3d(p, radius)
+        confs.append(k)
+    # print(confs, np.std(np.asarray(confs)),
+    #       min(confs), len(np.asarray(o3dpcd_down.points)) / len(kpts))
+    # o3dpcd.paint_uniform_color((1, 0, 0))
+    # o3dpcd_down.paint_uniform_color((0, 1, 0))
+    # o3d.visualization.draw_geometries([o3dpcd, o3dpcd_down])
+    return confs
 
 
 def cal_nbv(pts, nrmls, confs, toggledebug=False):
@@ -830,36 +877,11 @@ def cal_nbv(pts, nrmls, confs, toggledebug=False):
     confs = np.asarray(confs)[inx]
     pts = np.asarray(pts)[inx]
     nrmls = np.asarray(nrmls)[inx]
-    res_list = list(range(len(confs)))
-    nbv_inx_dict = {}
-    threshold = np.radians(30)
+    show_pcd(pts, rgba=COLOR[0])
+    pts, nrmls, confs = extract_main_vec(pts, nrmls, confs, threshold=np.radians(30), toggledebug=toggledebug)
 
-    while len(res_list) > 0:
-        i = res_list[0]
-        n = np.asarray(nrmls[i])
-        a_narry = np.arccos(np.dot(np.asarray(nrmls[res_list]), n))
-        res_list_tmp = list(np.argwhere(a_narry > threshold).flatten())
-        rm_list_tmp = list(np.argwhere(a_narry <= threshold).flatten())
-        nbv_inx_dict[i] = np.asarray(res_list)[rm_list_tmp]
-        res_list = np.asarray(res_list)[res_list_tmp]
-
-    if toggledebug:
-        for k, v in nbv_inx_dict.items():
-            print(k, v, confs[k])
-            p = np.asarray(pts[k])
-            n = np.asarray(nrmls[k])
-            gm.gen_arrow(p, p + n * .03, thickness=.002, rgba=(confs[k], 0, 1 - confs[k], 1)).attach_to(base)
-            for i in v:
-                p = np.asarray(pts[i])
-                n = np.asarray(nrmls[i])
-                gm.gen_arrow(p, p + n * .03, thickness=.002, rgba=(confs[k], 0, 1 - confs[k], .1)).attach_to(base)
-                # gm.gen_stick(cam_pos, p, rgba=(1, 1, 0, .2)).attach_to(base)
-
-    nbv_inx_list = list(nbv_inx_dict.keys())
-    confs = np.asarray(confs)[nbv_inx_list]
-
-    return np.asarray(pts)[nbv_inx_list][np.argsort(confs)], \
-           np.asarray(nrmls)[nbv_inx_list][np.argsort(confs)], \
+    return np.asarray(pts)[np.argsort(confs)], \
+           np.asarray(nrmls)[np.argsort(confs)], \
            np.asarray(confs)[np.argsort(confs)]
 
 
@@ -869,13 +891,13 @@ def cal_nbv_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, toggledebug=False):
 
     _, _, trans = o3dh.registration_icp_ptpt(pts_pcn, pts, maxcorrdist=.02, toggledebug=False)
     pts_pcn = trans_pcd(pts_pcn, trans)
-    show_pcd(pts_pcn, rgba=(.7, .7, .7, .5))
-    # show_pcd(pts, rgba=(0, 0, 1, 1))
+    show_pcd(pts_pcn, rgba=COLOR[1])
+    show_pcd(pts, rgba=COLOR[0])
     # base.run()
     pts, nrmls, confs = \
-        cal_conf(np.asarray(pts), voxel_size=.005, radius=.005, theta=None, cam_pos=cam_pos, toggledebug=False)
+        cal_conf(np.asarray(pts), voxel_size=.005, theta=None, cam_pos=cam_pos, toggledebug=False)
     pts_pcn, nrmls_pcn, confs_pcn = \
-        cal_conf(np.asarray(pts_pcn), voxel_size=.005, radius=.005, theta=theta, cam_pos=cam_pos, toggledebug=False)
+        cal_conf(np.asarray(pts_pcn), voxel_size=.005, theta=theta, cam_pos=cam_pos, toggledebug=False)
     kdt, _ = get_kdt(pts)
     confs_pcn_res = []
     dist_list = []
@@ -900,46 +922,74 @@ def cal_nbv_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, toggledebug=False):
     if toggledebug:
         for i in range(len(confs_nbv)):
             # if confs_nbv[i] > .3:
-            gm.gen_sphere(pts_nbv[i], radius=.001, rgba=(confs_pcn_res[i], 0, 1 - confs_pcn_res[i], 1)).attach_to(
+            gm.gen_sphere(pts_nbv[i], radius=.001, rgba=(confs_nbv[i], 0, 1 - confs_nbv[i], .3)).attach_to(
                 base)
             gm.gen_arrow(pts_nbv[i], pts_nbv[i] + nrmls_nbv[i] * .03,
-                         rgba=(confs_pcn_res[i], 0, 1 - confs_pcn_res[i], 1), thickness=.002).attach_to(base)
-            # gm.gen_arrow(pts_nbv[i], pts_nbv[i] + nrmls_nbv[i] * .05,
-            #              rgba=(0, 0, 1, 1), thickness=.002).attach_to(base)
+                         rgba=(confs_nbv[i], 0, 1 - confs_nbv[i], .3), thickness=.001).attach_to(base)
 
-    confs = np.asarray(confs)
-    return np.asarray(pts)[np.argsort(confs)], \
-           np.asarray(nrmls)[np.argsort(confs)], \
-           np.asarray(confs)[np.argsort(confs)]
+    return np.asarray(pts_nbv)[np.argsort(confs_nbv)], \
+           np.asarray(nrmls_nbv)[np.argsort(confs_nbv)], \
+           np.asarray(confs_nbv)[np.argsort(confs_nbv)]
 
 
-def get_distribution(pcd, kpts, voxel_size=0.001):
-    pts = np.asarray(pcd)
-    o3dpcd = o3dh.nparray2o3dpcd(pts)
-    o3dpcd_down = o3dpcd.voxel_down_sample(voxel_size=voxel_size)
-    confs = []
-    kdt_i = o3d.geometry.KDTreeFlann(o3dpcd_down)
-    for i, p in enumerate(np.asarray(kpts)):
-        k, _, _ = kdt_i.search_radius_vector_3d(p, .005)
-        confs.append(k)
-    print(confs, np.std(np.asarray(confs)),
-          min(confs), len(np.asarray(o3dpcd_down.points))/len(kpts))
-    # o3dpcd.paint_uniform_color((1, 0, 0))
-    # o3dpcd_down.paint_uniform_color((0, 1, 0))
-    # o3d.visualization.draw_geometries([o3dpcd, o3dpcd_down])
-    return confs
-
-
-def cal_nbv_pcn_kpts(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, toggledebug=False):
+def cal_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, radius=.01, toggledebug=False):
     def _normalize(l):
         return [(v - min(l)) / (max(l) - min(l)) for v in l]
 
     _, _, trans = o3dh.registration_icp_ptpt(pts_pcn, pts, maxcorrdist=.02, toggledebug=False)
     pts_pcn = trans_pcd(pts_pcn, trans)
-    # show_pcd(pts_pcn, rgba=(.7, 0, 0, .5))
-    show_pcd(pts, rgba=(.7, .7, .7, .5))
+    show_pcd(pts_pcn, rgba=COLOR[1])
+    show_pcd(pts, rgba=COLOR[0])
+    # base.run()
+    o3d_pcn = o3dh.nparray2o3dpcd(pts_pcn)
+    o3d_pts = o3dh.nparray2o3dpcd(pts)
+    o3d_pcn.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=radius, max_nn=100))
+    o3d_pts.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=radius, max_nn=100))
+
+    o3d_kpts = o3d_pcn.voxel_down_sample(voxel_size=radius)
+    kpts = np.asarray(o3d_kpts.points)
+
+    confs = cal_distribution(pts, kpts, radius=radius)
+    nrmls = np.asarray(o3d_kpts.normals)
+    if max(confs) != min(confs):
+        confs = _normalize(confs)
+    else:
+        confs = np.ones(len(confs))
+    if theta is not None:
+        res_inx_list = []
+        for i in range(len(kpts)):
+            a = rm.angle_between_vectors(nrmls[i], cam_pos - kpts[i])
+            if a > np.pi / 2:
+                a = np.pi - rm.angle_between_vectors(nrmls[i], cam_pos - kpts[i])
+            if a > theta:
+                res_inx_list.append(i)
+        kpts = np.asarray(kpts)[res_inx_list]
+        nrmls = np.asarray(nrmls)[res_inx_list]
+        confs = np.asarray(confs)[res_inx_list]
+
+    if toggledebug:
+        for i in range(len(confs)):
+            gm.gen_sphere(kpts[i], radius=radius, rgba=[confs[i], 0, 1 - confs[i], .3]).attach_to(base)
+            gm.gen_arrow(kpts[i], kpts[i] + nrmls[i] * .02, rgba=[confs[i], 0, 1 - confs[i], .3],
+                         thickness=.001).attach_to(base)
+    # kpts, nrmls, confs = extract_main_vec(kpts, nrmls, confs)
+    # pts, nrmls, confs = extract_main_vec(pts, nrmls, confs, threshold=np.radians(30), toggledebug=toggledebug)
+
+    return np.asarray(kpts)[np.argsort(confs)], \
+           np.asarray(nrmls)[np.argsort(confs)], \
+           np.asarray(confs)[np.argsort(confs)]
+
+
+def cal_pcn_kpts(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, toggledebug=False):
+    def _normalize(l):
+        return [(v - min(l)) / (max(l) - min(l)) for v in l]
+
+    _, _, trans = o3dh.registration_icp_ptpt(pts_pcn, pts, maxcorrdist=.02, toggledebug=False)
+    pts_pcn = trans_pcd(pts_pcn, trans)
+    show_pcd(pts_pcn, rgba=COLOR[1])
+    show_pcd(pts, rgba=COLOR[0])
     kpts, kpts_rotseq = get_kpts_gmm(pts_pcn, n_components=16, show=False)
-    confs = get_distribution(pts, kpts)
+    confs = cal_distribution(pts, kpts)
 
     if max(confs) != min(confs):
         confs = _normalize(confs)
@@ -957,7 +1007,7 @@ def cal_nbv_pcn_kpts(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, toggledebug=Fa
     if toggledebug:
         for i in range(len(confs)):
             gm.gen_sphere(kpts[i], radius=.005, rgba=[confs[i], 0, 1 - confs[i], .3]).attach_to(base)
-            gm.gen_arrow(kpts[i], kpts[i] + kpts_rotseq[i][:, 0] * .02, rgba=[confs[i], 0, 1 - confs[i], 1],
+            gm.gen_arrow(kpts[i], kpts[i] + kpts_rotseq[i][:, 0] * .02, rgba=[confs[i], 0, 1 - confs[i], .3],
                          thickness=.001).attach_to(base)
     return np.asarray(kpts)[np.argsort(confs)], \
            np.asarray(nrmls)[np.argsort(confs)], \
@@ -1086,8 +1136,6 @@ if __name__ == '__main__':
     # inithomomat = pickle.load(
     #     open(el.root + "/graspplanner/graspmap/pentip_cover_objmat4_list.pkl", "rb"))[1070]
     #
-    # get_normals(get_objpcd(objcm, sample_num=10000))
-    # pcd, pcd_normals = get_objpcd_withnormals(objcm, sample_num=100000)
     # for i, p in enumerate(pcd):
     #     base.pggen.plotArrow(base.render, spos=p, epos=p + 10 * pcd_normals[i])
     # base.run()

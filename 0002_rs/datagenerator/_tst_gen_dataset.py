@@ -53,7 +53,7 @@ if __name__ == '__main__':
 
     # pseq = utl.poly_inp(pseq=np.asarray([[0, 0, 0], [.018, .02, .02], [.06, .04, 0], [.12, 0, 0]]))
     pseq = utl.spl_inp(pseq=np.asarray([[0, 0, 0], [0.02, -0.00411336, -0.01327048], [0.04, -0.01863003, 0.0190177],
-                                        [0.06, 0.00720252, 0.01764031], [0.08, -0.0065916, -0.00725867]]))
+                                        [0.06, 0.00720252, 0.01764031], [0.08, -0.0065916, -0.00725867]]),toggledebug=True)
     # pseq = utl.uni_length(pseq, goal_len=1.6)
     pseq = utl.uni_length(pseq, goal_len=.2)
     pseq, rotseq = utl.get_rotseq_by_pseq(pseq)

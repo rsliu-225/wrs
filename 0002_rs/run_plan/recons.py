@@ -41,7 +41,7 @@ if __name__ == '__main__':
     for pcd in pcd_cropped_list:
         pts.extend(pcd)
     pts = rcu.remove_outliers(pts, toggledebug=False)
-    kpts, kpts_rotseq = get_kpts_gmm(pts, rgba=(1, 1, 0, 1), n_components=20)
+    kpts, kpts_rotseq = pcdu.get_kpts_gmm(pts, rgba=(1, 1, 0, 1), n_components=20)
 
     # kpts = bu.linear_inp3d_by_step(kpts)
     # kpts, kpts_rotseq = bu.inp_rotp_by_step(kpts, kpts_rotseq)

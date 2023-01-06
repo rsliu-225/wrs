@@ -82,46 +82,53 @@ def spl_inp(pseq, n=200, toggledebug=False):
         width = .008
         thickness = .0015
         cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
-        inp_pseq_2 = np.asarray(
-            interpolate.splev(np.linspace(0, 1, n),
-                              interpolate.splprep(pseq, k=2)[0], der=0)
-        ).transpose()
-        inp_pseq_3 = np.asarray(
-            interpolate.splev(np.linspace(0, 1, n),
-                              interpolate.splprep(pseq, k=3)[0], der=0)
-        ).transpose()
-        inp_pseq_4 = np.asarray(
-            interpolate.splev(np.linspace(0, 1, n),
-                              interpolate.splprep(pseq, k=4)[0], der=0)
-        ).transpose()
+        # inp_pseq_2 = np.asarray(
+        #     interpolate.splev(np.linspace(0, 1, n),
+        #                       interpolate.splprep(pseq, k=2)[0], der=0)
+        # ).transpose()
+        # inp_pseq_3 = np.asarray(
+        #     interpolate.splev(np.linspace(0, 1, n),
+        #                       interpolate.splprep(pseq, k=3)[0], der=0)
+        # ).transpose()
+        # inp_pseq_4 = np.asarray(
+        #     interpolate.splev(np.linspace(0, 1, n),
+        #                       interpolate.splprep(pseq, k=4)[0], der=0)
+        # ).transpose()
         ax = plt.axes(projection='3d')
         ax.plot(pseq[0], pseq[1], pseq[2], label='key points', lw=2, c='black')
         ax.plot(inp_pseq.transpose()[0], inp_pseq.transpose()[1], inp_pseq.transpose()[2], label='fit', lw=2)
-        ax.plot(inp_pseq_2.transpose()[0], inp_pseq_2.transpose()[1], inp_pseq_2.transpose()[2], label='2', lw=2)
-        ax.plot(inp_pseq_3.transpose()[0], inp_pseq_3.transpose()[1], inp_pseq_3.transpose()[2], label='3', lw=2)
-        ax.plot(inp_pseq_4.transpose()[0], inp_pseq_4.transpose()[1], inp_pseq_4.transpose()[2], label='4', lw=2)
+        # ax.plot(inp_pseq_2.transpose()[0], inp_pseq_2.transpose()[1], inp_pseq_2.transpose()[2], label='2', lw=2)
+        # ax.plot(inp_pseq_3.transpose()[0], inp_pseq_3.transpose()[1], inp_pseq_3.transpose()[2], label='3', lw=2)
+        # ax.plot(inp_pseq_4.transpose()[0], inp_pseq_4.transpose()[1], inp_pseq_4.transpose()[2], label='4', lw=2)
         ax.legend()
         plt.show()
 
-        inp_pseq_2 = np.asarray(inp_pseq_2) - inp_pseq_2[0]
-        inp_pseq_2, rotseq_2 = get_rotseq_by_pseq(inp_pseq_2)
-        objcm = gen_swap(inp_pseq_2, rotseq_2, cross_sec)
-        o3dmesh_2 = cm2o3dmesh(objcm, wnormal=False)
-        o3dmesh_2.paint_uniform_color(COLOR[0])
-
-        inp_pseq_3 = np.asarray(inp_pseq_3) - inp_pseq_3[0]
-        inp_pseq_3, rotseq_3 = get_rotseq_by_pseq(inp_pseq_3)
-        objcm = gen_swap(inp_pseq_3, rotseq_3, cross_sec)
-        o3dmesh_3 = cm2o3dmesh(objcm, wnormal=False)
-        o3dmesh_3.paint_uniform_color(COLOR[1])
-
-        inp_pseq_4 = np.asarray(inp_pseq_4) - inp_pseq_4[0]
-        inp_pseq_4, rotseq_4 = get_rotseq_by_pseq(inp_pseq_4)
-        objcm = gen_swap(inp_pseq_4, rotseq_4, cross_sec)
-        o3dmesh_4 = cm2o3dmesh(objcm, wnormal=False)
-        o3dmesh_4.paint_uniform_color(COLOR[2])
-
-        o3d.visualization.draw_geometries([o3dmesh_2, o3dmesh_3, o3dmesh_4])
+        inp_pseq = np.asarray(inp_pseq) - inp_pseq[0]
+        inp_pseq, rotseq = get_rotseq_by_pseq(inp_pseq)
+        objcm = gen_swap(inp_pseq, rotseq, cross_sec)
+        o3dmesh = cm2o3dmesh(objcm, wnormal=False)
+        o3dmesh.compute_vertex_normals()
+        o3d.visualization.draw_geometries([o3dmesh])
+        #
+        # inp_pseq_2 = np.asarray(inp_pseq_2) - inp_pseq_2[0]
+        # inp_pseq_2, rotseq_2 = get_rotseq_by_pseq(inp_pseq_2)
+        # objcm = gen_swap(inp_pseq_2, rotseq_2, cross_sec)
+        # o3dmesh_2 = cm2o3dmesh(objcm, wnormal=False)
+        # o3dmesh_2.paint_uniform_color(COLOR[0])
+        #
+        # inp_pseq_3 = np.asarray(inp_pseq_3) - inp_pseq_3[0]
+        # inp_pseq_3, rotseq_3 = get_rotseq_by_pseq(inp_pseq_3)
+        # objcm = gen_swap(inp_pseq_3, rotseq_3, cross_sec)
+        # o3dmesh_3 = cm2o3dmesh(objcm, wnormal=False)
+        # o3dmesh_3.paint_uniform_color(COLOR[1])
+        #
+        # inp_pseq_4 = np.asarray(inp_pseq_4) - inp_pseq_4[0]
+        # inp_pseq_4, rotseq_4 = get_rotseq_by_pseq(inp_pseq_4)
+        # objcm = gen_swap(inp_pseq_4, rotseq_4, cross_sec)
+        # o3dmesh_4 = cm2o3dmesh(objcm, wnormal=False)
+        # o3dmesh_4.paint_uniform_color(COLOR[2])
+        #
+        # o3d.visualization.draw_geometries([o3dmesh_2, o3dmesh_3, o3dmesh_4])
     return inp_pseq
 
 

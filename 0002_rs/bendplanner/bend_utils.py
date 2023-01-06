@@ -574,10 +574,18 @@ def gen_surface(pseq, rotseq, thickness, width, toggledebug=False):
     return cm.CollisionModel(initor=objtrm, btwosided=True, name='obj', cdprimit_type='surface_balls')
 
 
-def gen_swap(pseq, rotseq, cross_sec, toggledebug=False):
+def gen_swap(pseq, rotseq, cross_sec, extend=None, toggledebug=False):
     vertices = []
     faces = []
     cross_sec.append(cross_sec[0])
+    if extend:
+        pseq = np.vstack((pseq[0] - rotseq[0, :, 1] * extend, pseq, pseq[-1] + rotseq[-1, :, 1] * extend))
+        rotseq = rotseq.tolist()
+        rotseq.append(rotseq[-1])
+        rotseq = rotseq[::-1]
+        rotseq.append(rotseq[-1])
+        rotseq = rotseq[::-1]
+        rotseq = np.asarray(rotseq)
     for i, p in enumerate(pseq):
         for n in cross_sec:
             vertices.append(p + rotseq[i][:, 0] * n[0] + rotseq[i][:, 2] * n[1])
