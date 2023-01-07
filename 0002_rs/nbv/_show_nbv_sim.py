@@ -61,45 +61,52 @@ if __name__ == '__main__':
     cam_pos = [0, 0, .5]
 
     base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
-    gm.gen_cone(epos=[0, 0, .1], radius=.05, sections=60).attach_to(base)
+    # gm.gen_cone(epos=[0, 0, .1], radius=.05, sections=60).attach_to(base)
 
     # rbt = el.loadXarm(showrbt=False)
     # m_planner = mp.MotionPlanner(env=None, rbt=rbt, armname="arm")
     #
     # seedjntagls = m_planner.get_armjnts()
-    icomats = rm.gen_icorotmats(rotation_interval=math.radians(360 / 60))
+    icomats = rm.gen_icorotmats(rotation_interval=math.radians(360))
 
-    path = 'E:/liu/nbv_mesh/'
+    # path = 'E:/liu/nbv_mesh/'
+    path = 'D:/nbv_mesh/'
     cat = 'bspl'
-    fo = 'res_90'
+    fo = 'res_75'
     coverage_pcn = []
     coverage_org = []
 
     coverage_tor = .001
     toggledebug = True
-    f = '0000.ply'
+    f = '0001.ply'
 
     res_pcn = json.load(open(os.path.join(path, cat, fo, f'pcn_{f.split(".ply")[0]}.json'), 'rb'))
 
-    pcd_i = np.asarray(res_pcn['0']['input'])
-    pcd_add = np.asarray(res_pcn['0']['add'])
-    pcd_o = np.asarray(res_pcn['0']['pcn_output'])
-    pcd_res = np.asarray(res_pcn['final'])
+    # pcd_i = np.asarray(res_pcn['0']['input'])
+    # pcd_add = np.asarray(res_pcn['0']['add'])
+    # pcd_o = np.asarray(res_pcn['0']['pcn_output'])
+    # pcd_res = np.asarray(res_pcn['final'])
     pcd_gt = np.asarray(res_pcn['gt'])
-    pcdu.show_pcd(pcd_add, rgba=(0, .7, 0, 1))
+    pcd_i = np.asarray(o3d.io.read_point_cloud(os.path.join(os.getcwd(), 'tmp', f'1_i.pcd')).points)
+    pcd_o = np.asarray(o3d.io.read_point_cloud(os.path.join(os.getcwd(), 'tmp', f'1_o.pcd')).points)
+    # pcdu.show_pcd(pcd_add, rgba=(0, .7, 0, 1))
 
-    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn_kpts(pcd_i, pcd_o, theta=None, toggledebug=True)
-    # pts, nrmls, confs = pcdu.cal_conf(pcd_i, voxel_size=.005, radius=.005, cam_pos=cam_pos, theta=None)
-    # pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv(pts, nrmls, confs)
+    pts, nrmls, confs = pcdu.cal_conf(pcd_i, voxel_size=.005, cam_pos=cam_pos, theta=None, toggledebug=True)
+    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv(pts, nrmls, confs, toggledebug=True)
+    # pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_pcn_kpts(pcd_i, pcd_o, cam_pos=cam_pos, theta=None, toggledebug=True)
+    # pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd_i, pcd_o, cam_pos=cam_pos, theta=None, toggledebug=True)
+    # pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_pcn(pcd_i, pcd_o, radius=.01, cam_pos=cam_pos, theta=None,
+    #                                              toggledebug=True)
 
     rot = rm.rotmat_between_vectors(np.asarray(cam_pos), nrmls_nbv[0])
     rot = np.linalg.inv(rot)
     pcd_i_new = pcdu.trans_pcd(pcd_i, rm.homomat_from_posrot((0, 0, 0), rot))
-    pcdu.show_pcd(pcd_i_new, rgba=(.7, .7, .7, .5))
-    gm.gen_arrow(np.dot(rot, pts_nbv[0]),
-                 np.dot(rot, pts_nbv[0]) + np.dot(rot, nrmls_nbv[0]) * .04, thickness=.002).attach_to(base)
-
-    gm.gen_sphere(pts_nbv[0], radius=.01, rgba=[1, 1, 1, .2]).attach_to(base)
+    # pcdu.show_pcd(pcd_i_new, rgba=(.7, .7, .7, .5))
+    # gm.gen_arrow(np.dot(rot, pts_nbv[0]),
+    #              np.dot(rot, pts_nbv[0]) + np.dot(rot, nrmls_nbv[0]) * .04, thickness=.002).attach_to(base)
+    gm.gen_sphere(pts_nbv[0], radius=.02, rgba=[1, 1, 1, .2]).attach_to(base)
+    gm.gen_arrow(pts_nbv[0], pts_nbv[0] + nrmls_nbv[0] * .02, rgba=[confs_nbv[0], 0, 1 - confs_nbv[0], 1],
+                 thickness=.001).attach_to(base)
     base.run()
 
     width = .008

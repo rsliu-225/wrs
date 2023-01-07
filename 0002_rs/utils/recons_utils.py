@@ -217,16 +217,6 @@ def opti_in_armarker(corners_lft, corners_rgt):
     return rm.homomat_from_posrot(pos, rot)
 
 
-def display_inlier_outlier(cloud, ind):
-    inlier_cloud = cloud.select_by_index(ind)
-    outlier_cloud = cloud.select_by_index(ind, invert=True)
-
-    print("Showing outliers (red) and inliers (gray): ")
-    outlier_cloud.paint_uniform_color([1, 0, 0])
-    inlier_cloud.paint_uniform_color([0.8, 0.8, 0.8])
-    o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
-
-
 def reg_armarker(fo, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False, to_zero=True,
                  x_range=(.05, .215), y_range=(-.4, .4), z_range=(-.2, -.0155), toggledebug=False):
     if not os.path.exists(os.path.join(config.ROOT, 'recons_data', fo)):
@@ -248,7 +238,7 @@ def reg_armarker(fo, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False, t
             # pcdu.show_pcd(pcd)
             # pcd_cropped, _ = pcdu.get_nearest_cluster(pcd_cropped, seed=seed, eps=.02, min_samples=200)
             # seed = np.mean(pcd_cropped, axis=0)
-            # pcd_cropped = remove_outliers(pcd_cropped, nb_points=16, toggledebug=True)
+            # pcd_cropped = pcdu.remove_outliers(pcd_cropped, nb_points=16, toggledebug=True)
             gm.gen_sphere(seed, rgba=(1, 1, 0, 1)).attach_to(base)
             print('Num. of points in cropped pcd:', len(pcd_cropped))
             if len(pcd_cropped) > 0:
@@ -395,14 +385,6 @@ def reg_opti(fo, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False,
     return pcd_cropped_list
 
 
-def remove_outliers(pts, nb_points=50, radius=0.005, toggledebug=False):
-    o3dpcd = o3dh.nparray2o3dpcd(np.asarray(pts))
-    o3dpcd, ind = o3dpcd.remove_radius_outlier(nb_points=nb_points, radius=radius)
-    if toggledebug:
-        display_inlier_outlier(o3dpcd, ind)
-    return np.asarray(o3dpcd.points)
-
-
 def extract_roi_by_armarker(textureimg, pcd, seed,
                             x_range=(.06, .215), y_range=(-.15, .15), z_range=(-.2, -.0155), toggledebug=False):
     _, gripperframe, pcd_trans, pcd_roi = \
@@ -412,7 +394,7 @@ def extract_roi_by_armarker(textureimg, pcd, seed,
         return None, None, None
 
     # pcd_roi, _ = pcdu.get_nearest_cluster(pcd_roi, seed=seed, eps=.02, min_samples=200)
-    pcd_roi = remove_outliers(pcd_roi, nb_points=50, radius=0.005, toggledebug=False)
+    pcd_roi = pcdu.remove_outliers(pcd_roi, nb_points=50, radius=0.005, toggledebug=False)
 
     print('Num. of points in extracted pcd:', len(pcd_roi))
     if len(pcd) < 0:
@@ -426,7 +408,7 @@ def cal_nbc(pcd, gripperframe, rbt, seedjntagls, gl_transmat4=np.eye(4),
             theta=np.pi / 3, max_a=np.pi / 18, max_dist=1, toggledebug=True, show_cam=True):
     cam_pos = np.linalg.inv(gripperframe)[:3, 3]
 
-    pts, nrmls, confs = pcdu.cal_conf(pcd, voxel_size=.005, radius=.005, cam_pos=cam_pos, theta=theta)
+    pts, nrmls, confs = pcdu.cal_conf(pcd, voxel_size=.005, cam_pos=cam_pos, theta=theta)
     pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv(pts, nrmls, confs, toggledebug=toggledebug)
 
     print('Num. of NBV:', len(pts_nbv))
@@ -452,6 +434,7 @@ def cal_nbc(pcd, gripperframe, rbt, seedjntagls, gl_transmat4=np.eye(4),
     n_new = pcdu.trans_pcd([nrmls_nbv[0]], transmat4)[0]
     p_new = pcdu.trans_pcd([pts_nbv[0]], transmat4)[0]
     pcdu.show_pcd(pcd_cropped_new, rgba=(0, 1, 0, 1))
+
     gm.gen_arrow(p_new, p_new + n_new * .05, rgba=(0, 1, 0, 1)).attach_to(base)
     gm.gen_arrow(pts_nbv[0], pts_nbv[0] + nrmls_nbv[0] * .05, rgba=(1, 0, 0, 1)).attach_to(base)
     gm.gen_stick(cam_pos, p_new, rgba=(0, 1, 1, 1)).attach_to(base)
@@ -465,7 +448,7 @@ def cal_nbc_pcn(pcd, pcd_pcn, gripperframe, rbt, seedjntagls, gl_transmat4=np.ey
     gm.gen_frame().attach_to(base)
     pcd_pcn = pcdu.crop_pcd(pcd_pcn, x_range=(-1, 1), y_range=(-1, 1), z_range=(.0155, 1))
 
-    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd, pcd_pcn, theta=theta)
+    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_pcn(pcd, pcd_pcn, theta=theta, toggledebug=toggledebug)
     print(confs_nbv)
     print('Num. of NBV:', len(pts_nbv))
 
@@ -485,7 +468,7 @@ def cal_nbc_pcn(pcd, pcd_pcn, gripperframe, rbt, seedjntagls, gl_transmat4=np.ey
             # gm.gen_arrow(p, p + n * .05, thickness=.002,
             #              rgba=(0, 0, 1, 1)).attach_to(base)
             gm.gen_stick(cam_pos, p, rgba=(1, 1, 0, 1)).attach_to(base)
-    base.run()
+    # base.run()
 
     nbc_solver = nbcs.NBCOptimizer(rbt, max_a=max_a, max_dist=max_dist)
     jnts, transmat4, _ = nbc_solver.solve(seedjntagls, pts_nbv, nrmls_nbv, cam_pos)
@@ -494,9 +477,9 @@ def cal_nbc_pcn(pcd, pcd_pcn, gripperframe, rbt, seedjntagls, gl_transmat4=np.ey
     p_new = pcdu.trans_pcd([pts_nbv[0]], transmat4)[0]
     pcdu.show_pcd(pcd_cropped_new, rgba=(0, 1, 0, 1))
 
-    # gm.gen_arrow(p_new, p_new + n_new * .05, rgba=(0, 1, 0, 1)).attach_to(base)
-    # gm.gen_arrow(pts_nbv[0], pts_nbv[0] + nrmls_nbv[0] * .05, rgba=(1, 0, 0, 1)).attach_to(base)
-    # gm.gen_stick(cam_pos, p_new, rgba=(0, 1, 1, 1)).attach_to(base)
+    gm.gen_arrow(p_new, p_new + n_new * .05, rgba=(0, 1, 0, 1)).attach_to(base)
+    gm.gen_arrow(pts_nbv[0], pts_nbv[0] + nrmls_nbv[0] * .05, rgba=(1, 0, 0, 1)).attach_to(base)
+    gm.gen_stick(cam_pos, p_new, rgba=(0, 1, 1, 1)).attach_to(base)
 
     return pts_nbv, nrmls_nbv, jnts
 
@@ -527,7 +510,7 @@ def get_kpts_gmm(objpcd, n_components=20, show=True, rgba=(1, 0, 0, 1)):
     kdt, _ = pcdu.get_kdt(objpcd)
     kpts_rotseq = []
     for i, p in enumerate(kpts[:-1]):
-        knn = pcdu.get_knn(kpts[i], kdt, k=int(len(objpcd)/n_components))
+        knn = pcdu.get_knn(kpts[i], kdt, k=int(len(objpcd) / n_components))
         pcv, pcaxmat = rm.compute_pca(knn)
         y_v = kpts[i + 1] - kpts[i]
         x_v = pcaxmat[:, np.argmin(pcv)]

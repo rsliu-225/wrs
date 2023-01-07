@@ -36,7 +36,6 @@ if __name__ == '__main__':
     gl_transmat4 = rm.homomat_from_posrot(gl_transpos, gl_transrot)
 
     icp = False
-    use_pcn = True
 
     seed = (.116, 0, .1)
     center = (.116, 0, -.0155)
@@ -67,16 +66,9 @@ if __name__ == '__main__':
     #                                   toggledebug=True)
     # pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv(pts, nrmls, confs, cam_pos=np.linalg.inv(gripperframe)[:3, 3],
     #                                              toggledebug=True)
-    if use_pcn:
-        pcd_pcn = o3d.io.read_point_cloud(os.path.join(config.ROOT, 'img/phoxi', fo, f'000_output_lc.pcd'))
-        pcd_pcn = np.asarray(pcd_pcn.points) + np.asarray(center)
-        nbv_pts, nbv_nrmls, jnts = \
-            rcu.cal_nbc_pcn(pcd_roi, pcd_pcn, gripperframe, rbt, seedjntagls=seedjntagls, gl_transmat4=gl_transmat4,
-                            theta=theta, max_a=max_a, show_cam=False, toggledebug=True)
-    else:
-        nbv_pts, nbv_nrmls, jnts = \
-            rcu.cal_nbc(pcd_roi, gripperframe, rbt, seedjntagls=seedjntagls, gl_transmat4=gl_transmat4,
-                        theta=theta, max_a=max_a, show_cam=False, toggledebug=True)
+    nbv_pts, nbv_nrmls, jnts = \
+        rcu.cal_nbc(pcd_roi, gripperframe, rbt, seedjntagls=seedjntagls, gl_transmat4=gl_transmat4,
+                    theta=theta, max_a=max_a, show_cam=True, toggledebug=True)
     m_planner.ah.show_armjnts(armjnts=seedjntagls, rgba=(1, 0, 0, .5))
     m_planner.ah.show_armjnts(armjnts=jnts, rgba=(0, 1, 0, .5))
     # path = m_planner.plan_start2end(start=seedjntagls, end=jnts)

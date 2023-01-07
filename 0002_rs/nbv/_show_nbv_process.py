@@ -11,7 +11,8 @@ if __name__ == '__main__':
 
     base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
 
-    path = 'E:/liu/nbv_mesh/'
+    # path = 'E:/liu/nbv_mesh/'
+    path = 'D:/nbv_mesh/'
     cat = 'bspl'
     coverage_tor = .001
     goal = .95
@@ -36,10 +37,10 @@ if __name__ == '__main__':
         o3dmesh_gt = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'prim', f))
         o3dpcd_gt = du.get_objpcd_full_sample_o3d(o3dmesh_gt, smp_num=2048, method='possion')
 
-        run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_model,
-                goal=goal, coverage_tor=coverage_tor, visible_threshold=visible_threshold, toggledebug=True)
-        # run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, goal=goal, coverage_tor=coverage_tor,
-        #         visible_threshold=visible_threshold, toggledebug=False)
+        # run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_model,
+        #         goal=goal, coverage_tor=coverage_tor, visible_threshold=visible_threshold, toggledebug=True)
+        run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, goal=goal, coverage_tor=coverage_tor,
+                visible_threshold=visible_threshold, toggledebug=True)
         # run_random(path, cat, f, o3dpcd_init, o3dpcd_gt, goal=goal, coverage_tor=coverage_tor,
         #            visible_threshold=visible_threshold, toggledebug=False)
         # run_pcn_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, goal=goal, coverage_tor=coverage_tor,

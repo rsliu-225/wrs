@@ -45,8 +45,9 @@ if __name__ == '__main__':
 
     tcppos, tcprot = m_planner.get_tcp(armjnts=seedjntagls)
     # gm.gen_frame(tcppos + tcprot[:, 2] * (.03466 + .065), tcprot).attach_to(base)
-    relrot = np.asarray([[0, 0, -1], [0, -1, 0], [1, 0, 0]])
-    gl_transrot = np.dot(tcprot, relrot)
+    # gl_relrot = np.asarray([[0, 0, -1], [0, -1, 0], [1, 0, 0]])
+    gl_relrot = np.asarray([[0, 0, 1], [0, -1, 0], [1, 0, 0]]).T
+    gl_transrot = np.dot(tcprot, gl_relrot)
     gl_transpos = tcppos + tcprot[:, 2] * (.03466 + .065)
     gl_transmat4 = rm.homomat_from_posrot(gl_transpos, gl_transrot)
 
@@ -67,17 +68,16 @@ if __name__ == '__main__':
     pcd_roi, pcd_trans, gripperframe = \
         rcu.extract_roi_by_armarker(textureimg, pcd, seed=seed,
                                     x_range=x_range, y_range=y_range, z_range=z_range, toggledebug=False)
-
     pcd_gl = pcdu.trans_pcd(pcd_trans, gl_transmat4)
-    # pcdu.show_pcd(pcd_gl, rgba=(1, 0, 0, 1))
-    # pcdu.show_pcd(pcd_roi, rgba=(1, 0, 0, 1))
+    pcdu.show_pcd(pcd_gl, rgba=(1, 0, 0, 1))
+    pcdu.show_pcd(pcd_roi, rgba=(1, 0, 0, 1))
 
-    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd_roi, pcd_pcn, theta=np.pi / 6, toggledebug=True)
-    base.run()
+    # pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_pcn(pcd_roi, pcd_pcn, theta=None, toggledebug=True)
+    # base.run()
 
     pts_nbv, nrmls_nbv, jnts = \
         rcu.cal_nbc_pcn(pcd_roi, pcd_pcn, gripperframe, rbt, seedjntagls=seedjntagls, gl_transmat4=gl_transmat4,
-                        show_cam=False, theta=np.pi / 6)
+                        show_cam=True, theta=np.pi / 6, toggledebug=True)
     pcdu.show_pcd(pcd_roi, rgba=(1, 0, 0, 1))
 
     # base.run()
