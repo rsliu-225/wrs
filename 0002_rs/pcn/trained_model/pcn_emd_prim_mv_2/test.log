@@ -1,5 +1,0 @@
-INFO:root:Munch({'gpu_device_ids': [0], 'batch_size': 64, 'workers': 0, 'nepoch': 100, 'model_name': 'pcn', 'load_model': 'D:/liu/MVP_Benchmark/completion/log/pcn_emd_debug_20221109T221655/best_cd_p_network.pth', 'start_epoch': 0, 'num_points': 2048, 'work_dir': 'D:/liu/MVP_Benchmark/completion/log/', 'flag': 'debug', 'loss': 'emd', 'manual_seed': None, 'use_mean_feature': False, 'step_interval_to_print': 500, 'epoch_interval_to_save': 1, 'epoch_interval_to_val': 1, 'varying_constant': '0.01, 0.1, 0.5, 1', 'varying_constant_epochs': '5, 15, 30', 'lr': 0.0001, 'lr_decay': True, 'lr_decay_interval': 40, 'lr_decay_rate': 0.7, 'lr_step_decay_epochs': None, 'lr_step_decay_rates': None, 'lr_clip': 1e-06, 'optimizer': 'Adam', 'weight_decay': 0, 'betas': '0.9, 0.999', 'save_vis': True, 'eval_emd': False})
-INFO:root:Length of test dataset:15788
-INFO:root:pcn's previous weights loaded.
-INFO:root:Testing...
-INFO:root:test [0/246]

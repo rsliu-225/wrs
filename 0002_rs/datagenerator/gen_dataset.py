@@ -14,6 +14,7 @@ import modeling.collision_model as cm
 # PATH = 'E:/liu/dataset_flat/'
 # PATH = 'E:/liu/org_data/dataset_prim/'
 PATH = 'E:/liu/org_data/dataset/'
+# PATH = 'E:/liu/org_data/dataset_rand/'
 # include visible threshold
 
 RND_OCC_RADIO_RNG = (.1, .4)
@@ -37,7 +38,7 @@ def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=
     return f'\r{prefix} |{bar}| {percent}% {suffix}'
 
 
-def init_gen(cat, num_kpts, max_kts, visible_threshold=np.radians(75),
+def init_gen(cat, num_kpts, max_kts, visible_threshold=np.radians(75), rand_prim=False,
              res=(550, 550), rot_center=(0, 0, 0), max_num=10, length=.2, path=PATH):
     path = os.path.join(path, cat[:4])
     objs_num = utl.cnt_objs(path, cat[4:].zfill(4))
@@ -46,7 +47,7 @@ def init_gen(cat, num_kpts, max_kts, visible_threshold=np.radians(75),
         icomats = [x for row in icomats for x in row]
         rotid_list = list(range(len(icomats)))
         random.shuffle(rotid_list)
-        objcm, objcm_flat, _, _ = utl.gen_seed(num_kpts, max=max_kts, n=100, length=length, rand_wd=False)
+        objcm, objcm_flat, _, _ = utl.gen_seed(num_kpts, max=max_kts, n=100, length=length, rand_prim=rand_prim)
         utl.cnt_remove_objid(path, cat[4:].zfill(4), max_num)
 
         for i in rotid_list:
@@ -85,12 +86,15 @@ def init_gen_deform(cat, num_kpts, visible_threshold=np.radians(75),
 
         if num_kpts == 3:
             goal_pseq = np.asarray([[0, 0, 0],
-                                    [.08 + random.uniform(-.02, .02), 0, random.uniform(.01, .04) * random.choice([-1, 1])],
+                                    [.08 + random.uniform(-.02, .02), 0,
+                                     random.uniform(.01, .04) * random.choice([-1, 1])],
                                     [.16, 0, 0]])
         elif num_kpts == 4:
             goal_pseq = np.asarray([[0, 0, 0],
-                                    [.04 + random.uniform(-.02, .04), 0, random.uniform(.01, .02) * random.choice([-1, 1])],
-                                    [.12 + random.uniform(-.04, .02), 0, random.uniform(.01, .02) * random.choice([-1, 1])],
+                                    [.04 + random.uniform(-.02, .04), 0,
+                                     random.uniform(.01, .02) * random.choice([-1, 1])],
+                                    [.12 + random.uniform(-.04, .02), 0,
+                                     random.uniform(.01, .02) * random.choice([-1, 1])],
                                     [.16, 0, 0]])
         else:
             goal_pseq = np.asarray([[0, 0, 0],
@@ -182,15 +186,36 @@ def test_pcd(class_name, id='1'):
 
 
 def gen_args(cat, rng):
-    if cat == 'quad':
-        args = [[cat + str(i), 3, random.choice([.01, .02, .03, .04]),
-                 np.radians(random.uniform(60, 90))] for i in rng]
-    elif cat == 'bspl':
-        args = [[cat + str(i), random.choice([4, 5]), random.choice([.01, .02, .03, .04]),
-                 np.radians(random.uniform(60, 90))] for i in rng]
+    # if cat == 'quad':
+    #     args = [[cat + str(i), 3, random.choice([.01, .02, .03, .04]),
+    #              np.radians(random.uniform(60, 90))] for i in rng]
+    if cat == 'bspl':
+        rand_prim = False
+        args = [[cat + str(i),
+                 random.choice([3, 4, 5]),
+                 random.choice([.01, .02, .03, .04]),
+                 np.radians(random.uniform(60, 90)),
+                 rand_prim]
+                for i in rng]
+    elif cat == 'rand' or cat == 'rlen':
+        rand_prim = True
+        args = [[cat + str(i),
+                 random.choice([3, 4, 5]),
+                 random.choice([.01, .02, .03, .04]),
+                 np.radians(random.uniform(60, 90)),
+                 rand_prim
+                 ]
+                for i in rng]
     elif cat == 'sprl':
-        args = [[cat + str(i), 20, random.choice([.04, .05]),
-                 np.radians(random.uniform(60, 90))] for i in rng]
+        rand_prim = False
+        args = [[cat + str(i),
+                 20,
+                 random.choice([.04, .05]),
+                 np.radians(random.uniform(60, 90)),
+                 rand_prim
+                 ]
+                for i in rng]
+
     else:
         args = None
     print(args)
@@ -219,19 +244,22 @@ def remove_tmp(cat_list, path):
 
 if __name__ == '__main__':
     # for i in range(10):
-    #     init_gen('bspl'+str(i), 4, .02, np.radians(random.uniform(60, 90)), rot_center=(0, 0, 0), max_num=10, length=.2)
+    #     init_gen('bspl' + str(i), 4, .02, rand_prim=True, visible_threshold=np.radians(random.uniform(60, 90)),
+    #              rot_center=(0, 0, 0), max_num=10, length=.2)
     # init_gen_deform('plat', 4, rot_center=(0, 0, 0), max_num=10)
-    start = 100
-    end = 125
+    start = 0
+    end = 250
     # for i in range(start, end):
     #     runInParallel(init_gen, gen_args("bspl", range(i * 8, (i + 1) * 8)))
-    for i in range(start, end):
-        runInParallel(init_gen, gen_args("quad", range(i * 8, (i + 1) * 8)))
+    # for i in range(start, end):
+    #     runInParallel(init_gen, gen_args("rand", range(i * 8, (i + 1) * 8)))
+    # for i in range(start, end):
+    #     runInParallel(init_gen, gen_args("rlen", range(i * 8, (i + 1) * 8)))
     # for i in range(start, end):
     #     runInParallel(init_gen, gen_args("sprl", range(i * 8, (i + 1) * 8)))
-    # for i in range(start, end):
-    #     runInParallel(init_gen_deform, gen_args_deform("plat", range(i * 8, (i + 1) * 8)))
-    # for i in range(start, end):
-    #     runInParallel(init_gen_deform, gen_args_deform("tmpl", range(i * 8, (i + 1) * 8)))
+    for i in range(start, end):
+        runInParallel(init_gen_deform, gen_args_deform("plat", range(i * 8, (i + 1) * 8)))
+    for i in range(start, end):
+        runInParallel(init_gen_deform, gen_args_deform("tmpl", range(i * 8, (i + 1) * 8)))
 
-    remove_tmp(["bspl", "quad", "sprl", "plat", "tmpl"], PATH)
+    remove_tmp(["bspl", "quad", "sprl", "plat", "tmpl", "rand", "rlen"], PATH)

@@ -4,6 +4,7 @@ import pickle
 import h5py
 import numpy as np
 import open3d as o3d
+from collections import Counter
 
 ROOT = os.path.abspath('./')
 
@@ -153,7 +154,6 @@ def gen_h5_new(f_name, org_path, goal_path, multiview=True):
     print('-----------------------------')
 
 
-from collections import Counter
 
 
 def gen_h5_conf(f_name, org_path, goal_path, multiview_fo=None):
@@ -173,16 +173,20 @@ def gen_h5_conf(f_name, org_path, goal_path, multiview_fo=None):
             label = 3
         elif fo == 'tmpl':
             label = 4
+        elif fo == 'rand':
+            label = 11
+        elif fo == 'rlen':
+            label = 12
         else:
             continue
         print('category:', fo)
         id_list = [int(f.split('_')[0]) for f in os.listdir(os.path.join(org_path, fo, 'complete'))]
         if f_name == 'train':
-            id_range = range(0, int(np.floor(.7 * max(id_list))))
+            id_range = range(0, int(np.ceil(.7 * max(id_list))))
         elif f_name == 'val':
-            id_range = range(int(np.floor(.7 * max(id_list))), int(np.floor(.9 * max(id_list))))
+            id_range = range(int(np.ceil(.7 * max(id_list))), int(np.ceil(.9 * max(id_list))))
         elif f_name == 'test':
-            id_range = range(int(np.floor(.9 * max(id_list))), max(id_list) + 1)
+            id_range = range(int(np.ceil(.9 * max(id_list))), max(id_list) + 1)
         else:
             id_range = (0, max(id_list) + 1)
         print(id_range)

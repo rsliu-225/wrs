@@ -135,6 +135,7 @@ if __name__ == '__main__':
 
     path = 'E:/liu/org_data/dataset/'
     show_conf(path, cat=['bspl', 'quad'], toggledebug=False)
+    show_conf(path, cat=['rand'], toggledebug=False)
     show_conf(path, cat=['plat'], toggledebug=False)
     show_conf(path, cat=['tmpl'], toggledebug=False)
     show_conf(path, cat=['multiview'], toggledebug=False)

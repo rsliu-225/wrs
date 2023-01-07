@@ -15,8 +15,8 @@ if __name__ == '__main__':
     path = './tst'
 
     for i in range(10):
-        objcm, _, _, _ = utl.gen_seed(200, max=random.uniform(.04, .05), n=200, toggledebug=False)
-        # objcm, _, _, _ = utl.gen_seed(4, max=random.uniform(.01, .04), n=200, toggledebug=True)
+        # objcm, _, _, _ = utl.gen_seed(200, max=random.uniform(.04, .05), n=100, toggledebug=False)
+        objcm, _, _, _ = utl.gen_seed(3, max=random.uniform(.01, .04), n=100, toggledebug=False)
 
         objcm.set_rgba((.7, .7, 0, 1))
         objcm.attach_to(base)

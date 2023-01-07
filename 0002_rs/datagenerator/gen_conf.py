@@ -17,13 +17,6 @@ from multiprocessing import Process
 COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40], [255, 127, 14]]) / 255
 
 
-def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█'):
-    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
-    filledLength = int(length * iteration // total)
-    bar = fill * filledLength + '-' * (length - filledLength)
-    return f'\r{prefix} |{bar}| {percent}% {suffix}'
-
-
 def gen_conf(cat, tor=.001, overwrite=False, path='', toggledebug=False):
     if not os.path.exists(os.path.join(path, cat, 'conf')):
         os.mkdir(os.path.join(path, cat, 'conf'))
@@ -33,9 +26,9 @@ def gen_conf(cat, tor=.001, overwrite=False, path='', toggledebug=False):
         conf = []
         colors = []
         if cnt % 100 == 0:
-            print(printProgressBar(cnt, len(os.listdir(os.path.join(path, cat, 'partial'))),
-                                   prefix=f'Progress({cat}):',
-                                   suffix='Complete', length=100), "\r")
+            print(utl.printProgressBar(cnt, len(os.listdir(os.path.join(path, cat, 'partial'))),
+                                       prefix=f'Progress({cat}):',
+                                       suffix='Complete', length=100), "\r")
         if f[-3:] != 'pcd':
             continue
         if os.path.exists(os.path.join(path, cat, 'conf', f'{f.split(".pcd")[0]}.pkl')) and not overwrite:
@@ -61,9 +54,9 @@ def gen_conf(cat, tor=.001, overwrite=False, path='', toggledebug=False):
                 o3d.visualization.draw_geometries([o3dpcd_gt])
                 o3d.visualization.draw_geometries([o3dpcd_i, o3dpcd_gt])
         pickle.dump(conf, open(os.path.join(path, cat, 'conf', f'{f.split(".pcd")[0]}.pkl'), 'wb'))
-    print(printProgressBar(cnt, len(os.listdir(os.path.join(path, cat, 'partial'))),
-                           prefix=f'Progress({cat}):',
-                           suffix='Finished!', length=100), "\r")
+    print(utl.printProgressBar(cnt, len(os.listdir(os.path.join(path, cat, 'partial'))),
+                               prefix=f'Progress({cat}):',
+                               suffix='Finished!', length=100), "\r")
 
 
 if __name__ == '__main__':
@@ -81,8 +74,10 @@ if __name__ == '__main__':
     for cat in cat_list:
         if cat in ['plat', 'tmpl']:
             tor = .0018
+        elif cat in ['rand']:
+            tor = .0015
         elif cat in ['multiview']:
-            tor = .0025
+            tor = .002
         elif cat in ['multiview_true']:
             tor = .0018
         else:

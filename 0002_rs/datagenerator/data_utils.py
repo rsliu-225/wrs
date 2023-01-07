@@ -295,8 +295,13 @@ def random_rot_radians(n=3):
     return np.radians(rot_axial), np.radians(rot_radial)
 
 
-def gen_seed(num_kpts=4, max=.02, width=.008, length=.2, thickness=.0015, n=10, toggledebug=False, rand_wd=False):
-    width = width + (np.random.uniform(0, 0.005) if rand_wd else 0)
+def gen_seed(num_kpts=4, max=.02, width=.008, length=.2, thickness=.0015, n=10, toggledebug=False,
+             rand_prim=False):
+    width = width + (np.random.uniform(-0.003, 0.007) if rand_prim else 0)
+    thickness = thickness + (np.random.uniform(-0.0005, 0.0015) if rand_prim else 0)
+    length = length + (np.random.uniform(-0.05, 0.05) if rand_prim else 0)
+    print(width, thickness, length)
+
     cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
     flat_sec = [[0, width / 2], [0, -width / 2], [0, -width / 2], [0, width / 2]]
     success = False
@@ -306,9 +311,9 @@ def gen_seed(num_kpts=4, max=.02, width=.008, length=.2, thickness=.0015, n=10, 
             kpts = random_kpts(num_kpts, max=max)
         else:
             kpts = random_kpts_sprl(num_kpts, z_max=max, toggledebug=toggledebug)
-        if len(kpts) == 3:
-            pseq = uni_length(poly_inp(step=.001, kind='quadratic', pseq=kpts), goal_len=length)
-        elif len(kpts) != n:
+        # if len(kpts) == 3:
+        #     pseq = uni_length(poly_inp(step=.001, kind='quadratic', pseq=kpts), goal_len=length)
+        if len(kpts) != n:
             pseq = uni_length(spl_inp(pseq=kpts, n=n, toggledebug=toggledebug), goal_len=length)
         else:
             pseq = uni_length(kpts, goal_len=length)
@@ -635,6 +640,7 @@ def get_objpcd_partial_o3d(objcm, objcm_gt, rot, rot_center, pseq=None, rotseq=N
         o3dpcd = add_noise_pts_by_vt(o3dpcd, noise_cnt=noise_cnt, size=.01)
         o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
 
+    o3dpcd, _ = o3dpcd.remove_radius_outlier(nb_points=10, radius=0.05)
     o3dpcd = resample(o3dpcd, smp_num=2048)
     o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
     save_complete_pcd(f_name, o3dmesh_gt, path=path, method='possion', smp_num=2048)
@@ -897,3 +903,9 @@ def save_complete_pcd(name, mesh, path="./", method='uniform', smp_num=16384):
     #         continue
     # if not exist:
     o3d.io.write_point_cloud(path + name + '.pcd', get_objpcd_full_sample_o3d(mesh, method=method, smp_num=smp_num))
+
+def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█'):
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    filledLength = int(length * iteration // total)
+    bar = fill * filledLength + '-' * (length - filledLength)
+    return f'\r{prefix} |{bar}| {percent}% {suffix}'

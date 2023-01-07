@@ -89,7 +89,7 @@ def gen_multiview(cat, comb_num=1, path='', fo='multiview',
                     random_homomat4 = utl.gen_random_homomat4(trans_diff, rot_diff)
                     pcd = utl.trans_pcd(pcd, random_homomat4)
                 if add_occ:
-                    pcd = utl.add_random_occ_narry(pcd, occ_ratio_rng=(.3, .5))
+                    pcd = utl.add_random_occ_narry(pcd, occ_ratio_rng=(.2, .5))
                 pcd_mv.extend(pcd)
             o3dpcd_mv = utl.nparray2o3dpcd(np.asarray(pcd_mv))
             o3dpcd_mv = utl.resample(o3dpcd_mv, smp_num=2048)
@@ -220,4 +220,4 @@ if __name__ == '__main__':
     for p in proc:
         p.join()
 
-    show(path, cat='multiview')
+    show(path, cat='multiview_true')
