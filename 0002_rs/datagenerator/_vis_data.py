@@ -28,24 +28,26 @@ def show_dataset_h5(goal_path, f_name, label=4):
             o3d.visualization.draw_geometries([o3dpcd_gt])
 
 
-def show_dataset_o3d(cat='plat'):
+def show_dataset_o3d(path, cat=['plat']):
     for fo in os.listdir(path):
-        if fo != cat:
+        if fo not in cat:
             continue
-        for f in os.listdir(os.path.join(path, fo, 'complete')):
+        f_list = os.listdir(os.path.join(path, fo, 'complete'))
+        random.shuffle(f_list)
+        for f in f_list:
             if f[-3:] != 'pcd':
                 continue
-            if int(f.split('_')[0]) < 1600:
-                continue
+            # if int(f.split('_')[0]) < 1600:
+            #     continue
             print(f)
             o3dpcd_gt = o3d.io.read_point_cloud(os.path.join(path, fo, 'complete', f))
             o3dpcd_i = o3d.io.read_point_cloud(os.path.join(path, fo, 'partial', f))
             # gm.gen_pointcloud(np.asarray(o3dpcd_gt.points)).attach_to(base)
             o3dpcd_i.paint_uniform_color(COLOR[0])
             o3dpcd_gt.paint_uniform_color(COLOR[1])
-            # o3d.visualization.draw_geometries([o3dpcd_gt, o3dpcd_i])
-            o3d.visualization.draw_geometries([o3dpcd_i])
-            o3d.visualization.draw_geometries([o3dpcd_gt])
+            # o3d.visualization.draw_geometries([o3dpcd_i])
+            # o3d.visualization.draw_geometries([o3dpcd_gt])
+            draw_geometry_with_rotation([o3dpcd_i])
 
 
 def show_conf(path, cat=['plat'], toggledebug=False):
@@ -118,6 +120,15 @@ def show_multiview(path='./', cat='bspl'):
     base.run()
 
 
+def draw_geometry_with_rotation(o3d_geos):
+    def rotate_view(vis):
+        ctr = vis.get_view_control()
+        ctr.rotate(10.0, 0.0)
+        return False
+
+    o3d.visualization.draw_geometries_with_animation_callback(o3d_geos, rotate_view)
+
+
 if __name__ == '__main__':
     import visualization.panda.world as wd
 
@@ -127,19 +138,19 @@ if __name__ == '__main__':
 
     # show_dataset_h5(goal_path, 'train', label=3)
     # show_dataset_h5(goal_path, 'test', label=2)
-    # path = 'E:/liu/org_data/dataset_prim/'
-    # show_conf(path, cat=['bspl', 'quad'], toggledebug=False)
+    path = 'E:/liu/org_data/dataset/'
+    # show_dataset_o3d(path, cat=['bspl', 'quad'])
+    # show_dataset_o3d(path, cat=['plat'])
+    # show_dataset_o3d(path, cat=['tmpl'])
+    # show_dataset_o3d(path, cat=['multiview'])
+
+    # path = 'E:/liu/org_data/dataset/'
+    # show_conf(path, cat=['bspl'], toggledebug=False)
+    show_conf(path, cat=['rlen'], toggledebug=False)
     # show_conf(path, cat=['plat'], toggledebug=False)
     # show_conf(path, cat=['tmpl'], toggledebug=False)
     # show_conf(path, cat=['multiview'], toggledebug=False)
-
-    path = 'E:/liu/org_data/dataset/'
-    show_conf(path, cat=['bspl', 'quad'], toggledebug=False)
-    show_conf(path, cat=['rand'], toggledebug=False)
-    show_conf(path, cat=['plat'], toggledebug=False)
-    show_conf(path, cat=['tmpl'], toggledebug=False)
-    show_conf(path, cat=['multiview'], toggledebug=False)
-    show_conf(path, cat=['multiview_true'], toggledebug=False)
+    # show_conf(path, cat=['multiview_true'], toggledebug=False)
     # show_kpts('E:/liu/org_data/dataset_kpts/', cat=['plat'])
     # show_dataset_h5('val')
     # show_dataset_o3d(cat='quad')

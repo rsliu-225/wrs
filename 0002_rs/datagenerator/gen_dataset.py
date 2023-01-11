@@ -248,18 +248,18 @@ if __name__ == '__main__':
     #              rot_center=(0, 0, 0), max_num=10, length=.2)
     # init_gen_deform('plat', 4, rot_center=(0, 0, 0), max_num=10)
     start = 0
-    end = 250
+    end = 625
     # for i in range(start, end):
     #     runInParallel(init_gen, gen_args("bspl", range(i * 8, (i + 1) * 8)))
-    # for i in range(start, end):
-    #     runInParallel(init_gen, gen_args("rand", range(i * 8, (i + 1) * 8)))
+    for i in range(start, end):
+        runInParallel(init_gen, gen_args("rand", range(i * 8, (i + 1) * 8)))
     # for i in range(start, end):
     #     runInParallel(init_gen, gen_args("rlen", range(i * 8, (i + 1) * 8)))
     # for i in range(start, end):
     #     runInParallel(init_gen, gen_args("sprl", range(i * 8, (i + 1) * 8)))
-    for i in range(start, end):
-        runInParallel(init_gen_deform, gen_args_deform("plat", range(i * 8, (i + 1) * 8)))
-    for i in range(start, end):
-        runInParallel(init_gen_deform, gen_args_deform("tmpl", range(i * 8, (i + 1) * 8)))
+    # for i in range(start, end):
+    #     runInParallel(init_gen_deform, gen_args_deform("plat", range(i * 8, (i + 1) * 8)))
+    # for i in range(start, end):
+    #     runInParallel(init_gen_deform, gen_args_deform("tmpl", range(i * 8, (i + 1) * 8)))
 
     remove_tmp(["bspl", "quad", "sprl", "plat", "tmpl", "rand", "rlen"], PATH)

@@ -306,7 +306,7 @@ def gen_seed(num_kpts=4, max=.02, width=.008, length=.2, thickness=.0015, n=10, 
              rand_prim=False):
     width = width + (np.random.uniform(-0.003, 0.007) if rand_prim else 0)
     thickness = thickness + (np.random.uniform(-0.0005, 0.0015) if rand_prim else 0)
-    length = length + (np.random.uniform(-0.05, 0.05) if rand_prim else 0)
+    # length = length + (np.random.uniform(-0.05, 0.05) if rand_prim else 0)
     print(width, thickness, length)
 
     cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
@@ -910,6 +910,7 @@ def save_complete_pcd(name, mesh, path="./", method='uniform', smp_num=16384):
     #         continue
     # if not exist:
     o3d.io.write_point_cloud(path + name + '.pcd', get_objpcd_full_sample_o3d(mesh, method=method, smp_num=smp_num))
+
 
 def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█'):
     percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))

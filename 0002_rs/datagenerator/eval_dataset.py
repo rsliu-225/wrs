@@ -130,7 +130,7 @@ if __name__ == '__main__':
     for fo in os.listdir(path):
         cat_list.append(fo)
     print(cat_list)
-    cat_list = ['bspl', 'rand']
+    cat_list = ['rand']
     proc = []
     for cat in cat_list:
         p = Process(target=remove_files, args=(path, cat))

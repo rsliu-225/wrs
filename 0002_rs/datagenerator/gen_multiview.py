@@ -89,7 +89,7 @@ def gen_multiview(cat, comb_num=1, path='', fo='multiview',
                     random_homomat4 = utl.gen_random_homomat4(trans_diff, rot_diff)
                     pcd = utl.trans_pcd(pcd, random_homomat4)
                 if add_occ:
-                    pcd = utl.add_random_occ_narry(pcd, occ_ratio_rng=(.2, .5))
+                    pcd = utl.add_random_occ_narry(pcd, occ_ratio_rng=(.1, .5))
                 pcd_mv.extend(pcd)
             o3dpcd_mv = utl.nparray2o3dpcd(np.asarray(pcd_mv))
             o3dpcd_mv = utl.resample(o3dpcd_mv, smp_num=2048)
@@ -196,12 +196,12 @@ if __name__ == '__main__':
     base = wd.World(cam_pos=[.1, .2, .4], lookat_pos=[0, 0, 0])
     # base = wd.World(cam_pos=[.1, .4, 0], lookat_pos=[.1, 0, 0])
     path = 'E:/liu/org_data/dataset'
-    trans_diff = (.001, .001, .001)
-    rot_diff = np.radians((1, 1, 1))
-    # trans_diff = None
-    # rot_diff = None
+    # trans_diff = (.001, .001, .001)
+    # rot_diff = np.radians((1, 1, 1))
+    trans_diff = None
+    rot_diff = None
     comb_num = 1
-    result_fo = 'multiview'
+    result_fo = 'multiview_true'
 
     cat_list = []
     for fo in os.listdir(path):
@@ -221,3 +221,4 @@ if __name__ == '__main__':
         p.join()
 
     show(path, cat='multiview_true')
+    # show(path, cat='multiview')

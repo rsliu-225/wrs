@@ -154,8 +154,6 @@ def gen_h5_new(f_name, org_path, goal_path, multiview=True):
     print('-----------------------------')
 
 
-
-
 def gen_h5_conf(f_name, org_path, goal_path, multiview_fo=None):
     if not os.path.exists(goal_path):
         os.mkdir(goal_path)
@@ -174,13 +172,16 @@ def gen_h5_conf(f_name, org_path, goal_path, multiview_fo=None):
         elif fo == 'tmpl':
             label = 4
         elif fo == 'rand':
-            label = 11
+            continue
         elif fo == 'rlen':
             label = 12
         else:
             continue
         print('category:', fo)
-        id_list = [int(f.split('_')[0]) for f in os.listdir(os.path.join(org_path, fo, 'complete'))]
+        if fo in ['plat', 'tmpl']:
+            id_list = range(1000)
+        else:
+            id_list = [int(f.split('_')[0]) for f in os.listdir(os.path.join(org_path, fo, 'complete'))]
         if f_name == 'train':
             id_range = range(0, int(np.ceil(.7 * max(id_list))))
         elif f_name == 'val':
