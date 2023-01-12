@@ -196,12 +196,12 @@ if __name__ == '__main__':
     base = wd.World(cam_pos=[.1, .2, .4], lookat_pos=[0, 0, 0])
     # base = wd.World(cam_pos=[.1, .4, 0], lookat_pos=[.1, 0, 0])
     path = 'E:/liu/org_data/dataset'
-    # trans_diff = (.001, .001, .001)
-    # rot_diff = np.radians((1, 1, 1))
-    trans_diff = None
-    rot_diff = None
+    trans_diff = (.001, .001, .001)
+    rot_diff = np.radians((1, 1, 1))
+    # trans_diff = None
+    # rot_diff = None
     comb_num = 1
-    result_fo = 'multiview_true'
+    result_fo = 'multiview'
 
     cat_list = []
     for fo in os.listdir(path):
@@ -220,5 +220,5 @@ if __name__ == '__main__':
     for p in proc:
         p.join()
 
-    show(path, cat='multiview_true')
-    # show(path, cat='multiview')
+    # show(path, cat='multiview_true')
+    show(path, cat='multiview')

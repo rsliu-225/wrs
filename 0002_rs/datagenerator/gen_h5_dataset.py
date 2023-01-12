@@ -172,7 +172,7 @@ def gen_h5_conf(f_name, org_path, goal_path, multiview_fo=None):
         elif fo == 'tmpl':
             label = 4
         elif fo == 'rand':
-            continue
+            label = 11
         elif fo == 'rlen':
             label = 12
         else:
@@ -342,7 +342,7 @@ if __name__ == '__main__':
     # gen_h5_new('val', org_path, goal_path, multiview=False)
 
     goal_path = 'E:/liu/h5_data/data_conf/'
-    gen_h5_conf('train', org_path, goal_path, multiview_fo='multiview')
+    # gen_h5_conf('train', org_path, goal_path, multiview_fo='multiview')
     gen_h5_conf('test', org_path, goal_path, multiview_fo='multiview')
     gen_h5_conf('val', org_path, goal_path, multiview_fo='multiview')
 
