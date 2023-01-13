@@ -149,7 +149,7 @@ if __name__ == '__main__':
     show_conf(path, cat=['rlen'], toggledebug=False)
     # show_conf(path, cat=['plat'], toggledebug=False)
     # show_conf(path, cat=['tmpl'], toggledebug=False)
-    # show_conf(path, cat=['multiview'], toggledebug=False)
+    show_conf(path, cat=['multiview'], toggledebug=False)
     # show_conf(path, cat=['multiview_true'], toggledebug=False)
     # show_kpts('E:/liu/org_data/dataset_kpts/', cat=['plat'])
     # show_dataset_h5('val')
