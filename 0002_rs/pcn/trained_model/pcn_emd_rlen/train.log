@@ -832,3 +832,682 @@ INFO:root:Testing...
 INFO:root:Best f1 net saved!
 INFO:root:curr_cd_p: 0.002278; curr_cd_t: 0.000044; curr_emd: 0.005623; curr_f1: 0.974965; 
 INFO:root:best_cd_p: 0.002273 [epoch 97]; best_cd_t: 0.000044 [epoch 93]; best_emd: 0.005584 [epoch 97]; best_f1: 0.974965 [epoch 99]; 
+INFO:root:Munch({'gpu_device_ids': [0], 'batch_size': 128, 'workers': 0, 'nepoch': 100, 'model_name': 'pcn', 'load_model': 'D:/liu/MVP_Benchmark/completion/log/pcn_emd_rlen/best_emd_network.pth', 'start_epoch': 0, 'num_points': 2048, 'work_dir': 'D:/liu/MVP_Benchmark/completion/log/', 'flag': 'debug', 'loss': 'emd', 'manual_seed': None, 'use_mean_feature': False, 'step_interval_to_print': 500, 'epoch_interval_to_save': 1, 'epoch_interval_to_val': 1, 'varying_constant': '0.01, 0.1, 0.5, 1', 'varying_constant_epochs': '5, 15, 30', 'lr': 0.0001, 'lr_decay': True, 'lr_decay_interval': 40, 'lr_decay_rate': 0.7, 'lr_step_decay_epochs': None, 'lr_step_decay_rates': None, 'lr_clip': 1e-06, 'optimizer': 'Adam', 'weight_decay': 0, 'betas': '0.9, 0.999', 'save_vis': True, 'eval_emd': True})
+INFO:root:Length of train dataset:70000
+INFO:root:Length of test dataset:20000
+INFO:root:Random Seed: 8795
+INFO:root:pcn's previous weights loaded.
+INFO:root:pcn_emd_rlen train [0: 0/546]  loss_type: emd, fine_loss: 0.002672 total_loss: 0.002747 lr: 0.000100 alpha: 0.01
+INFO:root:pcn_emd_rlen train [0: 500/546]  loss_type: emd, fine_loss: 0.002706 total_loss: 0.002784 lr: 0.000100 alpha: 0.01
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_p net saved!
+INFO:root:Best cd_t net saved!
+INFO:root:Best emd net saved!
+INFO:root:Best f1 net saved!
+INFO:root:curr_cd_p: 0.002444; curr_cd_t: 0.000046; curr_emd: 0.005881; curr_f1: 0.974073; 
+INFO:root:best_cd_p: 0.002444 [epoch 0]; best_cd_t: 0.000046 [epoch 0]; best_emd: 0.005881 [epoch 0]; best_f1: 0.974073 [epoch 0]; 
+INFO:root:pcn_emd_rlen train [1: 0/546]  loss_type: emd, fine_loss: 0.003033 total_loss: 0.003058 lr: 0.000100 alpha: 0.01
+INFO:root:pcn_emd_rlen train [1: 500/546]  loss_type: emd, fine_loss: 0.003093 total_loss: 0.003108 lr: 0.000100 alpha: 0.01
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_p net saved!
+INFO:root:Best emd net saved!
+INFO:root:Best f1 net saved!
+INFO:root:curr_cd_p: 0.002331; curr_cd_t: 0.000046; curr_emd: 0.005712; curr_f1: 0.974250; 
+INFO:root:best_cd_p: 0.002331 [epoch 1]; best_cd_t: 0.000046 [epoch 0]; best_emd: 0.005712 [epoch 1]; best_f1: 0.974250 [epoch 1]; 
+INFO:root:pcn_emd_rlen train [2: 0/546]  loss_type: emd, fine_loss: 0.002827 total_loss: 0.002865 lr: 0.000100 alpha: 0.01
+INFO:root:pcn_emd_rlen train [2: 500/546]  loss_type: emd, fine_loss: 0.002781 total_loss: 0.002807 lr: 0.000100 alpha: 0.01
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_t net saved!
+INFO:root:Best f1 net saved!
+INFO:root:curr_cd_p: 0.002369; curr_cd_t: 0.000044; curr_emd: 0.005791; curr_f1: 0.974528; 
+INFO:root:best_cd_p: 0.002331 [epoch 1]; best_cd_t: 0.000044 [epoch 2]; best_emd: 0.005712 [epoch 1]; best_f1: 0.974528 [epoch 2]; 
+INFO:root:pcn_emd_rlen train [3: 0/546]  loss_type: emd, fine_loss: 0.002867 total_loss: 0.002907 lr: 0.000100 alpha: 0.01
+INFO:root:pcn_emd_rlen train [3: 500/546]  loss_type: emd, fine_loss: 0.002696 total_loss: 0.002718 lr: 0.000100 alpha: 0.01
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best f1 net saved!
+INFO:root:curr_cd_p: 0.002371; curr_cd_t: 0.000045; curr_emd: 0.005753; curr_f1: 0.974535; 
+INFO:root:best_cd_p: 0.002331 [epoch 1]; best_cd_t: 0.000044 [epoch 2]; best_emd: 0.005712 [epoch 1]; best_f1: 0.974535 [epoch 3]; 
+INFO:root:pcn_emd_rlen train [4: 0/546]  loss_type: emd, fine_loss: 0.002901 total_loss: 0.002940 lr: 0.000100 alpha: 0.01
+INFO:root:pcn_emd_rlen train [4: 500/546]  loss_type: emd, fine_loss: 0.002976 total_loss: 0.002981 lr: 0.000100 alpha: 0.01
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002358; curr_cd_t: 0.000045; curr_emd: 0.005735; curr_f1: 0.974377; 
+INFO:root:best_cd_p: 0.002331 [epoch 1]; best_cd_t: 0.000044 [epoch 2]; best_emd: 0.005712 [epoch 1]; best_f1: 0.974535 [epoch 3]; 
+INFO:root:pcn_emd_rlen train [5: 0/546]  loss_type: emd, fine_loss: 0.002953 total_loss: 0.003269 lr: 0.000100 alpha: 0.1
+INFO:root:pcn_emd_rlen train [5: 500/546]  loss_type: emd, fine_loss: 0.002916 total_loss: 0.003190 lr: 0.000100 alpha: 0.1
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002398; curr_cd_t: 0.000045; curr_emd: 0.005780; curr_f1: 0.974061; 
+INFO:root:best_cd_p: 0.002331 [epoch 1]; best_cd_t: 0.000044 [epoch 2]; best_emd: 0.005712 [epoch 1]; best_f1: 0.974535 [epoch 3]; 
+INFO:root:pcn_emd_rlen train [6: 0/546]  loss_type: emd, fine_loss: 0.002973 total_loss: 0.003250 lr: 0.000100 alpha: 0.1
+INFO:root:pcn_emd_rlen train [6: 500/546]  loss_type: emd, fine_loss: 0.002822 total_loss: 0.003101 lr: 0.000100 alpha: 0.1
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best f1 net saved!
+INFO:root:curr_cd_p: 0.002354; curr_cd_t: 0.000045; curr_emd: 0.005809; curr_f1: 0.974579; 
+INFO:root:best_cd_p: 0.002331 [epoch 1]; best_cd_t: 0.000044 [epoch 2]; best_emd: 0.005712 [epoch 1]; best_f1: 0.974579 [epoch 6]; 
+INFO:root:pcn_emd_rlen train [7: 0/546]  loss_type: emd, fine_loss: 0.002854 total_loss: 0.003132 lr: 0.000100 alpha: 0.1
+INFO:root:pcn_emd_rlen train [7: 500/546]  loss_type: emd, fine_loss: 0.002655 total_loss: 0.002920 lr: 0.000100 alpha: 0.1
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_t net saved!
+INFO:root:curr_cd_p: 0.002353; curr_cd_t: 0.000044; curr_emd: 0.005719; curr_f1: 0.974515; 
+INFO:root:best_cd_p: 0.002331 [epoch 1]; best_cd_t: 0.000044 [epoch 7]; best_emd: 0.005712 [epoch 1]; best_f1: 0.974579 [epoch 6]; 
+INFO:root:pcn_emd_rlen train [8: 0/546]  loss_type: emd, fine_loss: 0.002956 total_loss: 0.003256 lr: 0.000100 alpha: 0.1
+INFO:root:pcn_emd_rlen train [8: 500/546]  loss_type: emd, fine_loss: 0.002972 total_loss: 0.003250 lr: 0.000100 alpha: 0.1
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best f1 net saved!
+INFO:root:curr_cd_p: 0.002396; curr_cd_t: 0.000044; curr_emd: 0.005787; curr_f1: 0.974584; 
+INFO:root:best_cd_p: 0.002331 [epoch 1]; best_cd_t: 0.000044 [epoch 7]; best_emd: 0.005712 [epoch 1]; best_f1: 0.974584 [epoch 8]; 
+INFO:root:pcn_emd_rlen train [9: 0/546]  loss_type: emd, fine_loss: 0.003063 total_loss: 0.003325 lr: 0.000100 alpha: 0.1
+INFO:root:pcn_emd_rlen train [9: 500/546]  loss_type: emd, fine_loss: 0.002709 total_loss: 0.002994 lr: 0.000100 alpha: 0.1
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_t net saved!
+INFO:root:Best emd net saved!
+INFO:root:Best f1 net saved!
+INFO:root:curr_cd_p: 0.002346; curr_cd_t: 0.000044; curr_emd: 0.005692; curr_f1: 0.974791; 
+INFO:root:best_cd_p: 0.002331 [epoch 1]; best_cd_t: 0.000044 [epoch 9]; best_emd: 0.005692 [epoch 9]; best_f1: 0.974791 [epoch 9]; 
+INFO:root:pcn_emd_rlen train [10: 0/546]  loss_type: emd, fine_loss: 0.002648 total_loss: 0.002926 lr: 0.000100 alpha: 0.1
+INFO:root:pcn_emd_rlen train [10: 500/546]  loss_type: emd, fine_loss: 0.002787 total_loss: 0.003080 lr: 0.000100 alpha: 0.1
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_p net saved!
+INFO:root:Best cd_t net saved!
+INFO:root:Best emd net saved!
+INFO:root:Best f1 net saved!
+INFO:root:curr_cd_p: 0.002319; curr_cd_t: 0.000044; curr_emd: 0.005647; curr_f1: 0.974997; 
+INFO:root:best_cd_p: 0.002319 [epoch 10]; best_cd_t: 0.000044 [epoch 10]; best_emd: 0.005647 [epoch 10]; best_f1: 0.974997 [epoch 10]; 
+INFO:root:pcn_emd_rlen train [11: 0/546]  loss_type: emd, fine_loss: 0.002848 total_loss: 0.003138 lr: 0.000100 alpha: 0.1
+INFO:root:pcn_emd_rlen train [11: 500/546]  loss_type: emd, fine_loss: 0.002933 total_loss: 0.003248 lr: 0.000100 alpha: 0.1
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002325; curr_cd_t: 0.000044; curr_emd: 0.005684; curr_f1: 0.974993; 
+INFO:root:best_cd_p: 0.002319 [epoch 10]; best_cd_t: 0.000044 [epoch 10]; best_emd: 0.005647 [epoch 10]; best_f1: 0.974997 [epoch 10]; 
+INFO:root:pcn_emd_rlen train [12: 0/546]  loss_type: emd, fine_loss: 0.002873 total_loss: 0.003179 lr: 0.000100 alpha: 0.1
+INFO:root:pcn_emd_rlen train [12: 500/546]  loss_type: emd, fine_loss: 0.002773 total_loss: 0.003044 lr: 0.000100 alpha: 0.1
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002337; curr_cd_t: 0.000044; curr_emd: 0.005662; curr_f1: 0.974744; 
+INFO:root:best_cd_p: 0.002319 [epoch 10]; best_cd_t: 0.000044 [epoch 10]; best_emd: 0.005647 [epoch 10]; best_f1: 0.974997 [epoch 10]; 
+INFO:root:pcn_emd_rlen train [13: 0/546]  loss_type: emd, fine_loss: 0.002716 total_loss: 0.002995 lr: 0.000100 alpha: 0.1
+INFO:root:pcn_emd_rlen train [13: 500/546]  loss_type: emd, fine_loss: 0.003010 total_loss: 0.003286 lr: 0.000100 alpha: 0.1
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002337; curr_cd_t: 0.000045; curr_emd: 0.005709; curr_f1: 0.974996; 
+INFO:root:best_cd_p: 0.002319 [epoch 10]; best_cd_t: 0.000044 [epoch 10]; best_emd: 0.005647 [epoch 10]; best_f1: 0.974997 [epoch 10]; 
+INFO:root:pcn_emd_rlen train [14: 0/546]  loss_type: emd, fine_loss: 0.002719 total_loss: 0.002989 lr: 0.000100 alpha: 0.1
+INFO:root:pcn_emd_rlen train [14: 500/546]  loss_type: emd, fine_loss: 0.002954 total_loss: 0.003241 lr: 0.000100 alpha: 0.1
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best f1 net saved!
+INFO:root:curr_cd_p: 0.002328; curr_cd_t: 0.000044; curr_emd: 0.005672; curr_f1: 0.975062; 
+INFO:root:best_cd_p: 0.002319 [epoch 10]; best_cd_t: 0.000044 [epoch 10]; best_emd: 0.005647 [epoch 10]; best_f1: 0.975062 [epoch 14]; 
+INFO:root:pcn_emd_rlen train [15: 0/546]  loss_type: emd, fine_loss: 0.002753 total_loss: 0.004118 lr: 0.000100 alpha: 0.5
+INFO:root:pcn_emd_rlen train [15: 500/546]  loss_type: emd, fine_loss: 0.002914 total_loss: 0.004356 lr: 0.000100 alpha: 0.5
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002394; curr_cd_t: 0.000046; curr_emd: 0.005746; curr_f1: 0.974397; 
+INFO:root:best_cd_p: 0.002319 [epoch 10]; best_cd_t: 0.000044 [epoch 10]; best_emd: 0.005647 [epoch 10]; best_f1: 0.975062 [epoch 14]; 
+INFO:root:pcn_emd_rlen train [16: 0/546]  loss_type: emd, fine_loss: 0.002937 total_loss: 0.004394 lr: 0.000100 alpha: 0.5
+INFO:root:pcn_emd_rlen train [16: 500/546]  loss_type: emd, fine_loss: 0.002753 total_loss: 0.004126 lr: 0.000100 alpha: 0.5
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_p net saved!
+INFO:root:Best emd net saved!
+INFO:root:curr_cd_p: 0.002318; curr_cd_t: 0.000044; curr_emd: 0.005588; curr_f1: 0.974738; 
+INFO:root:best_cd_p: 0.002318 [epoch 16]; best_cd_t: 0.000044 [epoch 10]; best_emd: 0.005588 [epoch 16]; best_f1: 0.975062 [epoch 14]; 
+INFO:root:pcn_emd_rlen train [17: 0/546]  loss_type: emd, fine_loss: 0.002853 total_loss: 0.004300 lr: 0.000100 alpha: 0.5
+INFO:root:pcn_emd_rlen train [17: 500/546]  loss_type: emd, fine_loss: 0.003023 total_loss: 0.004504 lr: 0.000100 alpha: 0.5
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_p net saved!
+INFO:root:Best cd_t net saved!
+INFO:root:Best f1 net saved!
+INFO:root:curr_cd_p: 0.002312; curr_cd_t: 0.000043; curr_emd: 0.005645; curr_f1: 0.975321; 
+INFO:root:best_cd_p: 0.002312 [epoch 17]; best_cd_t: 0.000043 [epoch 17]; best_emd: 0.005588 [epoch 16]; best_f1: 0.975321 [epoch 17]; 
+INFO:root:pcn_emd_rlen train [18: 0/546]  loss_type: emd, fine_loss: 0.002607 total_loss: 0.003906 lr: 0.000100 alpha: 0.5
+INFO:root:pcn_emd_rlen train [18: 500/546]  loss_type: emd, fine_loss: 0.002781 total_loss: 0.004181 lr: 0.000100 alpha: 0.5
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002353; curr_cd_t: 0.000044; curr_emd: 0.005633; curr_f1: 0.974792; 
+INFO:root:best_cd_p: 0.002312 [epoch 17]; best_cd_t: 0.000043 [epoch 17]; best_emd: 0.005588 [epoch 16]; best_f1: 0.975321 [epoch 17]; 
+INFO:root:pcn_emd_rlen train [19: 0/546]  loss_type: emd, fine_loss: 0.002696 total_loss: 0.004027 lr: 0.000100 alpha: 0.5
+INFO:root:pcn_emd_rlen train [19: 500/546]  loss_type: emd, fine_loss: 0.002775 total_loss: 0.004165 lr: 0.000100 alpha: 0.5
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002353; curr_cd_t: 0.000044; curr_emd: 0.005632; curr_f1: 0.974779; 
+INFO:root:best_cd_p: 0.002312 [epoch 17]; best_cd_t: 0.000043 [epoch 17]; best_emd: 0.005588 [epoch 16]; best_f1: 0.975321 [epoch 17]; 
+INFO:root:pcn_emd_rlen train [20: 0/546]  loss_type: emd, fine_loss: 0.002751 total_loss: 0.004108 lr: 0.000100 alpha: 0.5
+INFO:root:pcn_emd_rlen train [20: 500/546]  loss_type: emd, fine_loss: 0.002833 total_loss: 0.004271 lr: 0.000100 alpha: 0.5
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_p net saved!
+INFO:root:Best cd_t net saved!
+INFO:root:Best emd net saved!
+INFO:root:Best f1 net saved!
+INFO:root:curr_cd_p: 0.002297; curr_cd_t: 0.000043; curr_emd: 0.005551; curr_f1: 0.975510; 
+INFO:root:best_cd_p: 0.002297 [epoch 20]; best_cd_t: 0.000043 [epoch 20]; best_emd: 0.005551 [epoch 20]; best_f1: 0.975510 [epoch 20]; 
+INFO:root:pcn_emd_rlen train [21: 0/546]  loss_type: emd, fine_loss: 0.002723 total_loss: 0.004105 lr: 0.000100 alpha: 0.5
+INFO:root:pcn_emd_rlen train [21: 500/546]  loss_type: emd, fine_loss: 0.002658 total_loss: 0.003986 lr: 0.000100 alpha: 0.5
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_p net saved!
+INFO:root:curr_cd_p: 0.002285; curr_cd_t: 0.000043; curr_emd: 0.005560; curr_f1: 0.975124; 
+INFO:root:best_cd_p: 0.002285 [epoch 21]; best_cd_t: 0.000043 [epoch 20]; best_emd: 0.005551 [epoch 20]; best_f1: 0.975510 [epoch 20]; 
+INFO:root:pcn_emd_rlen train [22: 0/546]  loss_type: emd, fine_loss: 0.002781 total_loss: 0.004190 lr: 0.000100 alpha: 0.5
+INFO:root:pcn_emd_rlen train [22: 500/546]  loss_type: emd, fine_loss: 0.002698 total_loss: 0.004041 lr: 0.000100 alpha: 0.5
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_t net saved!
+INFO:root:curr_cd_p: 0.002327; curr_cd_t: 0.000043; curr_emd: 0.005640; curr_f1: 0.975063; 
+INFO:root:best_cd_p: 0.002285 [epoch 21]; best_cd_t: 0.000043 [epoch 22]; best_emd: 0.005551 [epoch 20]; best_f1: 0.975510 [epoch 20]; 
+INFO:root:pcn_emd_rlen train [23: 0/546]  loss_type: emd, fine_loss: 0.002779 total_loss: 0.004165 lr: 0.000100 alpha: 0.5
+INFO:root:pcn_emd_rlen train [23: 500/546]  loss_type: emd, fine_loss: 0.002710 total_loss: 0.004057 lr: 0.000100 alpha: 0.5
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002328; curr_cd_t: 0.000043; curr_emd: 0.005581; curr_f1: 0.975341; 
+INFO:root:best_cd_p: 0.002285 [epoch 21]; best_cd_t: 0.000043 [epoch 22]; best_emd: 0.005551 [epoch 20]; best_f1: 0.975510 [epoch 20]; 
+INFO:root:pcn_emd_rlen train [24: 0/546]  loss_type: emd, fine_loss: 0.002721 total_loss: 0.004082 lr: 0.000100 alpha: 0.5
+INFO:root:pcn_emd_rlen train [24: 500/546]  loss_type: emd, fine_loss: 0.002674 total_loss: 0.004022 lr: 0.000100 alpha: 0.5
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002415; curr_cd_t: 0.000044; curr_emd: 0.005740; curr_f1: 0.974936; 
+INFO:root:best_cd_p: 0.002285 [epoch 21]; best_cd_t: 0.000043 [epoch 22]; best_emd: 0.005551 [epoch 20]; best_f1: 0.975510 [epoch 20]; 
+INFO:root:pcn_emd_rlen train [25: 0/546]  loss_type: emd, fine_loss: 0.002927 total_loss: 0.004335 lr: 0.000100 alpha: 0.5
+INFO:root:pcn_emd_rlen train [25: 500/546]  loss_type: emd, fine_loss: 0.003007 total_loss: 0.004452 lr: 0.000100 alpha: 0.5
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best emd net saved!
+INFO:root:curr_cd_p: 0.002309; curr_cd_t: 0.000043; curr_emd: 0.005538; curr_f1: 0.975142; 
+INFO:root:best_cd_p: 0.002285 [epoch 21]; best_cd_t: 0.000043 [epoch 22]; best_emd: 0.005538 [epoch 25]; best_f1: 0.975510 [epoch 20]; 
+INFO:root:pcn_emd_rlen train [26: 0/546]  loss_type: emd, fine_loss: 0.002794 total_loss: 0.004190 lr: 0.000100 alpha: 0.5
+INFO:root:pcn_emd_rlen train [26: 500/546]  loss_type: emd, fine_loss: 0.002599 total_loss: 0.003898 lr: 0.000100 alpha: 0.5
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002345; curr_cd_t: 0.000043; curr_emd: 0.005600; curr_f1: 0.974847; 
+INFO:root:best_cd_p: 0.002285 [epoch 21]; best_cd_t: 0.000043 [epoch 22]; best_emd: 0.005538 [epoch 25]; best_f1: 0.975510 [epoch 20]; 
+INFO:root:pcn_emd_rlen train [27: 0/546]  loss_type: emd, fine_loss: 0.002679 total_loss: 0.004018 lr: 0.000100 alpha: 0.5
+INFO:root:pcn_emd_rlen train [27: 500/546]  loss_type: emd, fine_loss: 0.002604 total_loss: 0.003907 lr: 0.000100 alpha: 0.5
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_p net saved!
+INFO:root:Best cd_t net saved!
+INFO:root:Best emd net saved!
+INFO:root:curr_cd_p: 0.002268; curr_cd_t: 0.000042; curr_emd: 0.005458; curr_f1: 0.975345; 
+INFO:root:best_cd_p: 0.002268 [epoch 27]; best_cd_t: 0.000042 [epoch 27]; best_emd: 0.005458 [epoch 27]; best_f1: 0.975510 [epoch 20]; 
+INFO:root:pcn_emd_rlen train [28: 0/546]  loss_type: emd, fine_loss: 0.002870 total_loss: 0.004276 lr: 0.000100 alpha: 0.5
+INFO:root:pcn_emd_rlen train [28: 500/546]  loss_type: emd, fine_loss: 0.002824 total_loss: 0.004242 lr: 0.000100 alpha: 0.5
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_t net saved!
+INFO:root:Best f1 net saved!
+INFO:root:curr_cd_p: 0.002275; curr_cd_t: 0.000042; curr_emd: 0.005489; curr_f1: 0.975587; 
+INFO:root:best_cd_p: 0.002268 [epoch 27]; best_cd_t: 0.000042 [epoch 28]; best_emd: 0.005458 [epoch 27]; best_f1: 0.975587 [epoch 28]; 
+INFO:root:pcn_emd_rlen train [29: 0/546]  loss_type: emd, fine_loss: 0.002620 total_loss: 0.003938 lr: 0.000100 alpha: 0.5
+INFO:root:pcn_emd_rlen train [29: 500/546]  loss_type: emd, fine_loss: 0.002528 total_loss: 0.003800 lr: 0.000100 alpha: 0.5
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_p net saved!
+INFO:root:Best f1 net saved!
+INFO:root:curr_cd_p: 0.002254; curr_cd_t: 0.000043; curr_emd: 0.005481; curr_f1: 0.975670; 
+INFO:root:best_cd_p: 0.002254 [epoch 29]; best_cd_t: 0.000042 [epoch 28]; best_emd: 0.005458 [epoch 27]; best_f1: 0.975670 [epoch 29]; 
+INFO:root:pcn_emd_rlen train [30: 0/546]  loss_type: emd, fine_loss: 0.002584 total_loss: 0.005186 lr: 0.000100 alpha: 1.0
+INFO:root:pcn_emd_rlen train [30: 500/546]  loss_type: emd, fine_loss: 0.002655 total_loss: 0.005319 lr: 0.000100 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002316; curr_cd_t: 0.000043; curr_emd: 0.005564; curr_f1: 0.975343; 
+INFO:root:best_cd_p: 0.002254 [epoch 29]; best_cd_t: 0.000042 [epoch 28]; best_emd: 0.005458 [epoch 27]; best_f1: 0.975670 [epoch 29]; 
+INFO:root:pcn_emd_rlen train [31: 0/546]  loss_type: emd, fine_loss: 0.002623 total_loss: 0.005273 lr: 0.000100 alpha: 1.0
+INFO:root:pcn_emd_rlen train [31: 500/546]  loss_type: emd, fine_loss: 0.002764 total_loss: 0.005531 lr: 0.000100 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002324; curr_cd_t: 0.000043; curr_emd: 0.005550; curr_f1: 0.975214; 
+INFO:root:best_cd_p: 0.002254 [epoch 29]; best_cd_t: 0.000042 [epoch 28]; best_emd: 0.005458 [epoch 27]; best_f1: 0.975670 [epoch 29]; 
+INFO:root:pcn_emd_rlen train [32: 0/546]  loss_type: emd, fine_loss: 0.002733 total_loss: 0.005462 lr: 0.000100 alpha: 1.0
+INFO:root:pcn_emd_rlen train [32: 500/546]  loss_type: emd, fine_loss: 0.002756 total_loss: 0.005512 lr: 0.000100 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002303; curr_cd_t: 0.000042; curr_emd: 0.005512; curr_f1: 0.975323; 
+INFO:root:best_cd_p: 0.002254 [epoch 29]; best_cd_t: 0.000042 [epoch 28]; best_emd: 0.005458 [epoch 27]; best_f1: 0.975670 [epoch 29]; 
+INFO:root:pcn_emd_rlen train [33: 0/546]  loss_type: emd, fine_loss: 0.002731 total_loss: 0.005477 lr: 0.000100 alpha: 1.0
+INFO:root:pcn_emd_rlen train [33: 500/546]  loss_type: emd, fine_loss: 0.002596 total_loss: 0.005219 lr: 0.000100 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002322; curr_cd_t: 0.000043; curr_emd: 0.005616; curr_f1: 0.975498; 
+INFO:root:best_cd_p: 0.002254 [epoch 29]; best_cd_t: 0.000042 [epoch 28]; best_emd: 0.005458 [epoch 27]; best_f1: 0.975670 [epoch 29]; 
+INFO:root:pcn_emd_rlen train [34: 0/546]  loss_type: emd, fine_loss: 0.002680 total_loss: 0.005361 lr: 0.000100 alpha: 1.0
+INFO:root:pcn_emd_rlen train [34: 500/546]  loss_type: emd, fine_loss: 0.002729 total_loss: 0.005457 lr: 0.000100 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_t net saved!
+INFO:root:curr_cd_p: 0.002323; curr_cd_t: 0.000042; curr_emd: 0.005565; curr_f1: 0.975363; 
+INFO:root:best_cd_p: 0.002254 [epoch 29]; best_cd_t: 0.000042 [epoch 34]; best_emd: 0.005458 [epoch 27]; best_f1: 0.975670 [epoch 29]; 
+INFO:root:pcn_emd_rlen train [35: 0/546]  loss_type: emd, fine_loss: 0.002708 total_loss: 0.005436 lr: 0.000100 alpha: 1.0
+INFO:root:pcn_emd_rlen train [35: 500/546]  loss_type: emd, fine_loss: 0.002524 total_loss: 0.005060 lr: 0.000100 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002311; curr_cd_t: 0.000042; curr_emd: 0.005557; curr_f1: 0.975592; 
+INFO:root:best_cd_p: 0.002254 [epoch 29]; best_cd_t: 0.000042 [epoch 34]; best_emd: 0.005458 [epoch 27]; best_f1: 0.975670 [epoch 29]; 
+INFO:root:pcn_emd_rlen train [36: 0/546]  loss_type: emd, fine_loss: 0.002831 total_loss: 0.005704 lr: 0.000100 alpha: 1.0
+INFO:root:pcn_emd_rlen train [36: 500/546]  loss_type: emd, fine_loss: 0.002646 total_loss: 0.005307 lr: 0.000100 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best f1 net saved!
+INFO:root:curr_cd_p: 0.002268; curr_cd_t: 0.000042; curr_emd: 0.005473; curr_f1: 0.975691; 
+INFO:root:best_cd_p: 0.002254 [epoch 29]; best_cd_t: 0.000042 [epoch 34]; best_emd: 0.005458 [epoch 27]; best_f1: 0.975691 [epoch 36]; 
+INFO:root:pcn_emd_rlen train [37: 0/546]  loss_type: emd, fine_loss: 0.002528 total_loss: 0.005069 lr: 0.000100 alpha: 1.0
+INFO:root:pcn_emd_rlen train [37: 500/546]  loss_type: emd, fine_loss: 0.002754 total_loss: 0.005493 lr: 0.000100 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002356; curr_cd_t: 0.000043; curr_emd: 0.005588; curr_f1: 0.975204; 
+INFO:root:best_cd_p: 0.002254 [epoch 29]; best_cd_t: 0.000042 [epoch 34]; best_emd: 0.005458 [epoch 27]; best_f1: 0.975691 [epoch 36]; 
+INFO:root:pcn_emd_rlen train [38: 0/546]  loss_type: emd, fine_loss: 0.002837 total_loss: 0.005633 lr: 0.000100 alpha: 1.0
+INFO:root:pcn_emd_rlen train [38: 500/546]  loss_type: emd, fine_loss: 0.002717 total_loss: 0.005448 lr: 0.000100 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002267; curr_cd_t: 0.000042; curr_emd: 0.005466; curr_f1: 0.975408; 
+INFO:root:best_cd_p: 0.002254 [epoch 29]; best_cd_t: 0.000042 [epoch 34]; best_emd: 0.005458 [epoch 27]; best_f1: 0.975691 [epoch 36]; 
+INFO:root:pcn_emd_rlen train [39: 0/546]  loss_type: emd, fine_loss: 0.002698 total_loss: 0.005413 lr: 0.000100 alpha: 1.0
+INFO:root:pcn_emd_rlen train [39: 500/546]  loss_type: emd, fine_loss: 0.002814 total_loss: 0.005631 lr: 0.000100 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002414; curr_cd_t: 0.000043; curr_emd: 0.005685; curr_f1: 0.975193; 
+INFO:root:best_cd_p: 0.002254 [epoch 29]; best_cd_t: 0.000042 [epoch 34]; best_emd: 0.005458 [epoch 27]; best_f1: 0.975691 [epoch 36]; 
+INFO:root:pcn_emd_rlen train [40: 0/546]  loss_type: emd, fine_loss: 0.002948 total_loss: 0.005859 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [40: 500/546]  loss_type: emd, fine_loss: 0.002727 total_loss: 0.005469 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_t net saved!
+INFO:root:Best emd net saved!
+INFO:root:curr_cd_p: 0.002260; curr_cd_t: 0.000041; curr_emd: 0.005440; curr_f1: 0.975471; 
+INFO:root:best_cd_p: 0.002254 [epoch 29]; best_cd_t: 0.000041 [epoch 40]; best_emd: 0.005440 [epoch 40]; best_f1: 0.975691 [epoch 36]; 
+INFO:root:pcn_emd_rlen train [41: 0/546]  loss_type: emd, fine_loss: 0.002545 total_loss: 0.005109 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [41: 500/546]  loss_type: emd, fine_loss: 0.002428 total_loss: 0.004880 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_t net saved!
+INFO:root:Best f1 net saved!
+INFO:root:curr_cd_p: 0.002256; curr_cd_t: 0.000041; curr_emd: 0.005459; curr_f1: 0.975716; 
+INFO:root:best_cd_p: 0.002254 [epoch 29]; best_cd_t: 0.000041 [epoch 41]; best_emd: 0.005440 [epoch 40]; best_f1: 0.975716 [epoch 41]; 
+INFO:root:pcn_emd_rlen train [42: 0/546]  loss_type: emd, fine_loss: 0.002514 total_loss: 0.005038 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [42: 500/546]  loss_type: emd, fine_loss: 0.002537 total_loss: 0.005107 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_p net saved!
+INFO:root:Best cd_t net saved!
+INFO:root:Best emd net saved!
+INFO:root:Best f1 net saved!
+INFO:root:curr_cd_p: 0.002206; curr_cd_t: 0.000041; curr_emd: 0.005354; curr_f1: 0.975771; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000041 [epoch 42]; best_emd: 0.005354 [epoch 42]; best_f1: 0.975771 [epoch 42]; 
+INFO:root:pcn_emd_rlen train [43: 0/546]  loss_type: emd, fine_loss: 0.002413 total_loss: 0.004859 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [43: 500/546]  loss_type: emd, fine_loss: 0.002527 total_loss: 0.005054 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_t net saved!
+INFO:root:Best emd net saved!
+INFO:root:curr_cd_p: 0.002222; curr_cd_t: 0.000040; curr_emd: 0.005347; curr_f1: 0.975655; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 43]; best_emd: 0.005347 [epoch 43]; best_f1: 0.975771 [epoch 42]; 
+INFO:root:pcn_emd_rlen train [44: 0/546]  loss_type: emd, fine_loss: 0.002582 total_loss: 0.005200 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [44: 500/546]  loss_type: emd, fine_loss: 0.002565 total_loss: 0.005172 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best emd net saved!
+INFO:root:curr_cd_p: 0.002208; curr_cd_t: 0.000042; curr_emd: 0.005328; curr_f1: 0.975749; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 43]; best_emd: 0.005328 [epoch 44]; best_f1: 0.975771 [epoch 42]; 
+INFO:root:pcn_emd_rlen train [45: 0/546]  loss_type: emd, fine_loss: 0.002408 total_loss: 0.004845 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [45: 500/546]  loss_type: emd, fine_loss: 0.002566 total_loss: 0.005185 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002233; curr_cd_t: 0.000041; curr_emd: 0.005370; curr_f1: 0.975549; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 43]; best_emd: 0.005328 [epoch 44]; best_f1: 0.975771 [epoch 42]; 
+INFO:root:pcn_emd_rlen train [46: 0/546]  loss_type: emd, fine_loss: 0.002367 total_loss: 0.004761 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [46: 500/546]  loss_type: emd, fine_loss: 0.002413 total_loss: 0.004840 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002239; curr_cd_t: 0.000041; curr_emd: 0.005371; curr_f1: 0.975708; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 43]; best_emd: 0.005328 [epoch 44]; best_f1: 0.975771 [epoch 42]; 
+INFO:root:pcn_emd_rlen train [47: 0/546]  loss_type: emd, fine_loss: 0.002353 total_loss: 0.004767 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [47: 500/546]  loss_type: emd, fine_loss: 0.002755 total_loss: 0.005529 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best emd net saved!
+INFO:root:curr_cd_p: 0.002216; curr_cd_t: 0.000041; curr_emd: 0.005322; curr_f1: 0.975708; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 43]; best_emd: 0.005322 [epoch 47]; best_f1: 0.975771 [epoch 42]; 
+INFO:root:pcn_emd_rlen train [48: 0/546]  loss_type: emd, fine_loss: 0.002347 total_loss: 0.004726 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [48: 500/546]  loss_type: emd, fine_loss: 0.002486 total_loss: 0.005003 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best emd net saved!
+INFO:root:curr_cd_p: 0.002218; curr_cd_t: 0.000041; curr_emd: 0.005307; curr_f1: 0.975675; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 43]; best_emd: 0.005307 [epoch 48]; best_f1: 0.975771 [epoch 42]; 
+INFO:root:pcn_emd_rlen train [49: 0/546]  loss_type: emd, fine_loss: 0.002454 total_loss: 0.004955 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [49: 500/546]  loss_type: emd, fine_loss: 0.002347 total_loss: 0.004708 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002255; curr_cd_t: 0.000041; curr_emd: 0.005362; curr_f1: 0.975670; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 43]; best_emd: 0.005307 [epoch 48]; best_f1: 0.975771 [epoch 42]; 
+INFO:root:pcn_emd_rlen train [50: 0/546]  loss_type: emd, fine_loss: 0.002523 total_loss: 0.005079 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [50: 500/546]  loss_type: emd, fine_loss: 0.002496 total_loss: 0.004997 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002250; curr_cd_t: 0.000041; curr_emd: 0.005381; curr_f1: 0.975568; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 43]; best_emd: 0.005307 [epoch 48]; best_f1: 0.975771 [epoch 42]; 
+INFO:root:pcn_emd_rlen train [51: 0/546]  loss_type: emd, fine_loss: 0.002642 total_loss: 0.005328 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [51: 500/546]  loss_type: emd, fine_loss: 0.002521 total_loss: 0.005080 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002242; curr_cd_t: 0.000041; curr_emd: 0.005369; curr_f1: 0.975515; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 43]; best_emd: 0.005307 [epoch 48]; best_f1: 0.975771 [epoch 42]; 
+INFO:root:pcn_emd_rlen train [52: 0/546]  loss_type: emd, fine_loss: 0.002475 total_loss: 0.004988 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [52: 500/546]  loss_type: emd, fine_loss: 0.002430 total_loss: 0.004866 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002245; curr_cd_t: 0.000041; curr_emd: 0.005366; curr_f1: 0.975614; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 43]; best_emd: 0.005307 [epoch 48]; best_f1: 0.975771 [epoch 42]; 
+INFO:root:pcn_emd_rlen train [53: 0/546]  loss_type: emd, fine_loss: 0.002444 total_loss: 0.004902 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [53: 500/546]  loss_type: emd, fine_loss: 0.002428 total_loss: 0.004861 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002235; curr_cd_t: 0.000041; curr_emd: 0.005352; curr_f1: 0.975432; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 43]; best_emd: 0.005307 [epoch 48]; best_f1: 0.975771 [epoch 42]; 
+INFO:root:pcn_emd_rlen train [54: 0/546]  loss_type: emd, fine_loss: 0.002413 total_loss: 0.004866 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [54: 500/546]  loss_type: emd, fine_loss: 0.002572 total_loss: 0.005174 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best f1 net saved!
+INFO:root:curr_cd_p: 0.002219; curr_cd_t: 0.000041; curr_emd: 0.005341; curr_f1: 0.975980; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 43]; best_emd: 0.005307 [epoch 48]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [55: 0/546]  loss_type: emd, fine_loss: 0.002396 total_loss: 0.004835 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [55: 500/546]  loss_type: emd, fine_loss: 0.002479 total_loss: 0.004966 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002211; curr_cd_t: 0.000041; curr_emd: 0.005332; curr_f1: 0.975896; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 43]; best_emd: 0.005307 [epoch 48]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [56: 0/546]  loss_type: emd, fine_loss: 0.002404 total_loss: 0.004838 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [56: 500/546]  loss_type: emd, fine_loss: 0.002333 total_loss: 0.004699 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best emd net saved!
+INFO:root:curr_cd_p: 0.002223; curr_cd_t: 0.000041; curr_emd: 0.005287; curr_f1: 0.975487; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 43]; best_emd: 0.005287 [epoch 56]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [57: 0/546]  loss_type: emd, fine_loss: 0.002328 total_loss: 0.004722 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [57: 500/546]  loss_type: emd, fine_loss: 0.002523 total_loss: 0.005087 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_t net saved!
+INFO:root:curr_cd_p: 0.002219; curr_cd_t: 0.000040; curr_emd: 0.005337; curr_f1: 0.975845; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 57]; best_emd: 0.005287 [epoch 56]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [58: 0/546]  loss_type: emd, fine_loss: 0.002367 total_loss: 0.004757 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [58: 500/546]  loss_type: emd, fine_loss: 0.002409 total_loss: 0.004841 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002222; curr_cd_t: 0.000040; curr_emd: 0.005329; curr_f1: 0.975870; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 57]; best_emd: 0.005287 [epoch 56]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [59: 0/546]  loss_type: emd, fine_loss: 0.002396 total_loss: 0.004822 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [59: 500/546]  loss_type: emd, fine_loss: 0.002318 total_loss: 0.004652 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002244; curr_cd_t: 0.000041; curr_emd: 0.005353; curr_f1: 0.975719; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 57]; best_emd: 0.005287 [epoch 56]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [60: 0/546]  loss_type: emd, fine_loss: 0.002563 total_loss: 0.005150 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [60: 500/546]  loss_type: emd, fine_loss: 0.002253 total_loss: 0.004556 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002229; curr_cd_t: 0.000041; curr_emd: 0.005333; curr_f1: 0.975649; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 57]; best_emd: 0.005287 [epoch 56]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [61: 0/546]  loss_type: emd, fine_loss: 0.002288 total_loss: 0.004588 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [61: 500/546]  loss_type: emd, fine_loss: 0.002416 total_loss: 0.004846 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002229; curr_cd_t: 0.000041; curr_emd: 0.005325; curr_f1: 0.975522; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 57]; best_emd: 0.005287 [epoch 56]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [62: 0/546]  loss_type: emd, fine_loss: 0.002408 total_loss: 0.004835 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [62: 500/546]  loss_type: emd, fine_loss: 0.002394 total_loss: 0.004800 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002243; curr_cd_t: 0.000041; curr_emd: 0.005346; curr_f1: 0.975607; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 57]; best_emd: 0.005287 [epoch 56]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [63: 0/546]  loss_type: emd, fine_loss: 0.002330 total_loss: 0.004690 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [63: 500/546]  loss_type: emd, fine_loss: 0.002533 total_loss: 0.005079 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_t net saved!
+INFO:root:curr_cd_p: 0.002215; curr_cd_t: 0.000040; curr_emd: 0.005317; curr_f1: 0.975723; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 63]; best_emd: 0.005287 [epoch 56]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [64: 0/546]  loss_type: emd, fine_loss: 0.002339 total_loss: 0.004728 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [64: 500/546]  loss_type: emd, fine_loss: 0.002510 total_loss: 0.005058 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best emd net saved!
+INFO:root:curr_cd_p: 0.002211; curr_cd_t: 0.000040; curr_emd: 0.005266; curr_f1: 0.975693; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 63]; best_emd: 0.005266 [epoch 64]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [65: 0/546]  loss_type: emd, fine_loss: 0.002323 total_loss: 0.004665 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [65: 500/546]  loss_type: emd, fine_loss: 0.002521 total_loss: 0.005064 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002240; curr_cd_t: 0.000041; curr_emd: 0.005325; curr_f1: 0.975522; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 63]; best_emd: 0.005266 [epoch 64]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [66: 0/546]  loss_type: emd, fine_loss: 0.002429 total_loss: 0.004864 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [66: 500/546]  loss_type: emd, fine_loss: 0.002330 total_loss: 0.004695 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002249; curr_cd_t: 0.000040; curr_emd: 0.005352; curr_f1: 0.975729; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 63]; best_emd: 0.005266 [epoch 64]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [67: 0/546]  loss_type: emd, fine_loss: 0.002496 total_loss: 0.005031 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [67: 500/546]  loss_type: emd, fine_loss: 0.002483 total_loss: 0.004958 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002261; curr_cd_t: 0.000041; curr_emd: 0.005351; curr_f1: 0.975684; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 63]; best_emd: 0.005266 [epoch 64]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [68: 0/546]  loss_type: emd, fine_loss: 0.002356 total_loss: 0.004707 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [68: 500/546]  loss_type: emd, fine_loss: 0.002457 total_loss: 0.004930 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best emd net saved!
+INFO:root:curr_cd_p: 0.002214; curr_cd_t: 0.000040; curr_emd: 0.005253; curr_f1: 0.975738; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 63]; best_emd: 0.005253 [epoch 68]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [69: 0/546]  loss_type: emd, fine_loss: 0.002363 total_loss: 0.004751 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [69: 500/546]  loss_type: emd, fine_loss: 0.002371 total_loss: 0.004760 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002230; curr_cd_t: 0.000040; curr_emd: 0.005309; curr_f1: 0.975706; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 63]; best_emd: 0.005253 [epoch 68]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [70: 0/546]  loss_type: emd, fine_loss: 0.002367 total_loss: 0.004791 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [70: 500/546]  loss_type: emd, fine_loss: 0.002327 total_loss: 0.004669 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002218; curr_cd_t: 0.000040; curr_emd: 0.005262; curr_f1: 0.975735; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 63]; best_emd: 0.005253 [epoch 68]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [71: 0/546]  loss_type: emd, fine_loss: 0.002236 total_loss: 0.004508 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [71: 500/546]  loss_type: emd, fine_loss: 0.002295 total_loss: 0.004602 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002247; curr_cd_t: 0.000040; curr_emd: 0.005315; curr_f1: 0.975364; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 63]; best_emd: 0.005253 [epoch 68]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [72: 0/546]  loss_type: emd, fine_loss: 0.002379 total_loss: 0.004768 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [72: 500/546]  loss_type: emd, fine_loss: 0.002406 total_loss: 0.004826 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002229; curr_cd_t: 0.000041; curr_emd: 0.005325; curr_f1: 0.975580; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 63]; best_emd: 0.005253 [epoch 68]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [73: 0/546]  loss_type: emd, fine_loss: 0.002292 total_loss: 0.004596 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [73: 500/546]  loss_type: emd, fine_loss: 0.002245 total_loss: 0.004512 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002230; curr_cd_t: 0.000040; curr_emd: 0.005293; curr_f1: 0.975222; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 63]; best_emd: 0.005253 [epoch 68]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [74: 0/546]  loss_type: emd, fine_loss: 0.002305 total_loss: 0.004646 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [74: 500/546]  loss_type: emd, fine_loss: 0.002213 total_loss: 0.004448 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002215; curr_cd_t: 0.000040; curr_emd: 0.005298; curr_f1: 0.975628; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 63]; best_emd: 0.005253 [epoch 68]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [75: 0/546]  loss_type: emd, fine_loss: 0.002384 total_loss: 0.004793 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [75: 500/546]  loss_type: emd, fine_loss: 0.002324 total_loss: 0.004684 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002246; curr_cd_t: 0.000040; curr_emd: 0.005305; curr_f1: 0.975675; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 63]; best_emd: 0.005253 [epoch 68]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [76: 0/546]  loss_type: emd, fine_loss: 0.002415 total_loss: 0.004858 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [76: 500/546]  loss_type: emd, fine_loss: 0.002266 total_loss: 0.004591 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_t net saved!
+INFO:root:curr_cd_p: 0.002228; curr_cd_t: 0.000040; curr_emd: 0.005255; curr_f1: 0.975691; 
+INFO:root:best_cd_p: 0.002206 [epoch 42]; best_cd_t: 0.000040 [epoch 76]; best_emd: 0.005253 [epoch 68]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [77: 0/546]  loss_type: emd, fine_loss: 0.002447 total_loss: 0.004922 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [77: 500/546]  loss_type: emd, fine_loss: 0.002415 total_loss: 0.004874 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_p net saved!
+INFO:root:Best cd_t net saved!
+INFO:root:Best emd net saved!
+INFO:root:curr_cd_p: 0.002200; curr_cd_t: 0.000039; curr_emd: 0.005223; curr_f1: 0.975694; 
+INFO:root:best_cd_p: 0.002200 [epoch 77]; best_cd_t: 0.000039 [epoch 77]; best_emd: 0.005223 [epoch 77]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [78: 0/546]  loss_type: emd, fine_loss: 0.002281 total_loss: 0.004589 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [78: 500/546]  loss_type: emd, fine_loss: 0.002393 total_loss: 0.004811 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002269; curr_cd_t: 0.000040; curr_emd: 0.005333; curr_f1: 0.975459; 
+INFO:root:best_cd_p: 0.002200 [epoch 77]; best_cd_t: 0.000039 [epoch 77]; best_emd: 0.005223 [epoch 77]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [79: 0/546]  loss_type: emd, fine_loss: 0.002363 total_loss: 0.004746 lr: 0.000070 alpha: 1.0
+INFO:root:pcn_emd_rlen train [79: 500/546]  loss_type: emd, fine_loss: 0.002421 total_loss: 0.004877 lr: 0.000070 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002218; curr_cd_t: 0.000040; curr_emd: 0.005276; curr_f1: 0.975836; 
+INFO:root:best_cd_p: 0.002200 [epoch 77]; best_cd_t: 0.000039 [epoch 77]; best_emd: 0.005223 [epoch 77]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [80: 0/546]  loss_type: emd, fine_loss: 0.002272 total_loss: 0.004576 lr: 0.000049 alpha: 1.0
+INFO:root:pcn_emd_rlen train [80: 500/546]  loss_type: emd, fine_loss: 0.002430 total_loss: 0.004920 lr: 0.000049 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_p net saved!
+INFO:root:Best cd_t net saved!
+INFO:root:Best emd net saved!
+INFO:root:curr_cd_p: 0.002188; curr_cd_t: 0.000039; curr_emd: 0.005202; curr_f1: 0.975589; 
+INFO:root:best_cd_p: 0.002188 [epoch 80]; best_cd_t: 0.000039 [epoch 80]; best_emd: 0.005202 [epoch 80]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [81: 0/546]  loss_type: emd, fine_loss: 0.002277 total_loss: 0.004581 lr: 0.000049 alpha: 1.0
+INFO:root:pcn_emd_rlen train [81: 500/546]  loss_type: emd, fine_loss: 0.002363 total_loss: 0.004774 lr: 0.000049 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_p net saved!
+INFO:root:curr_cd_p: 0.002188; curr_cd_t: 0.000040; curr_emd: 0.005219; curr_f1: 0.975748; 
+INFO:root:best_cd_p: 0.002188 [epoch 81]; best_cd_t: 0.000039 [epoch 80]; best_emd: 0.005202 [epoch 80]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [82: 0/546]  loss_type: emd, fine_loss: 0.002245 total_loss: 0.004521 lr: 0.000049 alpha: 1.0
+INFO:root:pcn_emd_rlen train [82: 500/546]  loss_type: emd, fine_loss: 0.002196 total_loss: 0.004431 lr: 0.000049 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002218; curr_cd_t: 0.000040; curr_emd: 0.005247; curr_f1: 0.975631; 
+INFO:root:best_cd_p: 0.002188 [epoch 81]; best_cd_t: 0.000039 [epoch 80]; best_emd: 0.005202 [epoch 80]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [83: 0/546]  loss_type: emd, fine_loss: 0.002353 total_loss: 0.004730 lr: 0.000049 alpha: 1.0
+INFO:root:pcn_emd_rlen train [83: 500/546]  loss_type: emd, fine_loss: 0.002404 total_loss: 0.004834 lr: 0.000049 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best emd net saved!
+INFO:root:curr_cd_p: 0.002190; curr_cd_t: 0.000039; curr_emd: 0.005197; curr_f1: 0.975518; 
+INFO:root:best_cd_p: 0.002188 [epoch 81]; best_cd_t: 0.000039 [epoch 80]; best_emd: 0.005197 [epoch 83]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [84: 0/546]  loss_type: emd, fine_loss: 0.002269 total_loss: 0.004562 lr: 0.000049 alpha: 1.0
+INFO:root:pcn_emd_rlen train [84: 500/546]  loss_type: emd, fine_loss: 0.002224 total_loss: 0.004490 lr: 0.000049 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_p net saved!
+INFO:root:Best cd_t net saved!
+INFO:root:curr_cd_p: 0.002186; curr_cd_t: 0.000039; curr_emd: 0.005224; curr_f1: 0.975807; 
+INFO:root:best_cd_p: 0.002186 [epoch 84]; best_cd_t: 0.000039 [epoch 84]; best_emd: 0.005197 [epoch 83]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [85: 0/546]  loss_type: emd, fine_loss: 0.002233 total_loss: 0.004507 lr: 0.000049 alpha: 1.0
+INFO:root:pcn_emd_rlen train [85: 500/546]  loss_type: emd, fine_loss: 0.002277 total_loss: 0.004580 lr: 0.000049 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best emd net saved!
+INFO:root:curr_cd_p: 0.002195; curr_cd_t: 0.000039; curr_emd: 0.005182; curr_f1: 0.975791; 
+INFO:root:best_cd_p: 0.002186 [epoch 84]; best_cd_t: 0.000039 [epoch 84]; best_emd: 0.005182 [epoch 85]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [86: 0/546]  loss_type: emd, fine_loss: 0.002183 total_loss: 0.004418 lr: 0.000049 alpha: 1.0
+INFO:root:pcn_emd_rlen train [86: 500/546]  loss_type: emd, fine_loss: 0.002295 total_loss: 0.004688 lr: 0.000049 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002244; curr_cd_t: 0.000040; curr_emd: 0.005263; curr_f1: 0.975431; 
+INFO:root:best_cd_p: 0.002186 [epoch 84]; best_cd_t: 0.000039 [epoch 84]; best_emd: 0.005182 [epoch 85]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [87: 0/546]  loss_type: emd, fine_loss: 0.002286 total_loss: 0.004593 lr: 0.000049 alpha: 1.0
+INFO:root:pcn_emd_rlen train [87: 500/546]  loss_type: emd, fine_loss: 0.002362 total_loss: 0.004771 lr: 0.000049 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002205; curr_cd_t: 0.000040; curr_emd: 0.005212; curr_f1: 0.975664; 
+INFO:root:best_cd_p: 0.002186 [epoch 84]; best_cd_t: 0.000039 [epoch 84]; best_emd: 0.005182 [epoch 85]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [88: 0/546]  loss_type: emd, fine_loss: 0.002132 total_loss: 0.004324 lr: 0.000049 alpha: 1.0
+INFO:root:pcn_emd_rlen train [88: 500/546]  loss_type: emd, fine_loss: 0.002184 total_loss: 0.004401 lr: 0.000049 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002231; curr_cd_t: 0.000040; curr_emd: 0.005265; curr_f1: 0.975348; 
+INFO:root:best_cd_p: 0.002186 [epoch 84]; best_cd_t: 0.000039 [epoch 84]; best_emd: 0.005182 [epoch 85]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [89: 0/546]  loss_type: emd, fine_loss: 0.002363 total_loss: 0.004764 lr: 0.000049 alpha: 1.0
+INFO:root:pcn_emd_rlen train [89: 500/546]  loss_type: emd, fine_loss: 0.002316 total_loss: 0.004662 lr: 0.000049 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002205; curr_cd_t: 0.000039; curr_emd: 0.005210; curr_f1: 0.975646; 
+INFO:root:best_cd_p: 0.002186 [epoch 84]; best_cd_t: 0.000039 [epoch 84]; best_emd: 0.005182 [epoch 85]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [90: 0/546]  loss_type: emd, fine_loss: 0.002130 total_loss: 0.004299 lr: 0.000049 alpha: 1.0
+INFO:root:pcn_emd_rlen train [90: 500/546]  loss_type: emd, fine_loss: 0.002259 total_loss: 0.004577 lr: 0.000049 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002202; curr_cd_t: 0.000039; curr_emd: 0.005209; curr_f1: 0.975706; 
+INFO:root:best_cd_p: 0.002186 [epoch 84]; best_cd_t: 0.000039 [epoch 84]; best_emd: 0.005182 [epoch 85]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [91: 0/546]  loss_type: emd, fine_loss: 0.002117 total_loss: 0.004276 lr: 0.000049 alpha: 1.0
+INFO:root:pcn_emd_rlen train [91: 500/546]  loss_type: emd, fine_loss: 0.002360 total_loss: 0.004749 lr: 0.000049 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002206; curr_cd_t: 0.000040; curr_emd: 0.005229; curr_f1: 0.975583; 
+INFO:root:best_cd_p: 0.002186 [epoch 84]; best_cd_t: 0.000039 [epoch 84]; best_emd: 0.005182 [epoch 85]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [92: 0/546]  loss_type: emd, fine_loss: 0.002160 total_loss: 0.004355 lr: 0.000049 alpha: 1.0
+INFO:root:pcn_emd_rlen train [92: 500/546]  loss_type: emd, fine_loss: 0.002133 total_loss: 0.004280 lr: 0.000049 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002213; curr_cd_t: 0.000040; curr_emd: 0.005228; curr_f1: 0.975504; 
+INFO:root:best_cd_p: 0.002186 [epoch 84]; best_cd_t: 0.000039 [epoch 84]; best_emd: 0.005182 [epoch 85]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [93: 0/546]  loss_type: emd, fine_loss: 0.002238 total_loss: 0.004509 lr: 0.000049 alpha: 1.0
+INFO:root:pcn_emd_rlen train [93: 500/546]  loss_type: emd, fine_loss: 0.002266 total_loss: 0.004578 lr: 0.000049 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002198; curr_cd_t: 0.000040; curr_emd: 0.005215; curr_f1: 0.975509; 
+INFO:root:best_cd_p: 0.002186 [epoch 84]; best_cd_t: 0.000039 [epoch 84]; best_emd: 0.005182 [epoch 85]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [94: 0/546]  loss_type: emd, fine_loss: 0.002209 total_loss: 0.004490 lr: 0.000049 alpha: 1.0
+INFO:root:pcn_emd_rlen train [94: 500/546]  loss_type: emd, fine_loss: 0.002277 total_loss: 0.004580 lr: 0.000049 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002200; curr_cd_t: 0.000040; curr_emd: 0.005199; curr_f1: 0.975422; 
+INFO:root:best_cd_p: 0.002186 [epoch 84]; best_cd_t: 0.000039 [epoch 84]; best_emd: 0.005182 [epoch 85]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [95: 0/546]  loss_type: emd, fine_loss: 0.002180 total_loss: 0.004400 lr: 0.000049 alpha: 1.0
+INFO:root:pcn_emd_rlen train [95: 500/546]  loss_type: emd, fine_loss: 0.002316 total_loss: 0.004671 lr: 0.000049 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002216; curr_cd_t: 0.000040; curr_emd: 0.005207; curr_f1: 0.975330; 
+INFO:root:best_cd_p: 0.002186 [epoch 84]; best_cd_t: 0.000039 [epoch 84]; best_emd: 0.005182 [epoch 85]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [96: 0/546]  loss_type: emd, fine_loss: 0.002048 total_loss: 0.004140 lr: 0.000049 alpha: 1.0
+INFO:root:pcn_emd_rlen train [96: 500/546]  loss_type: emd, fine_loss: 0.002202 total_loss: 0.004416 lr: 0.000049 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002232; curr_cd_t: 0.000040; curr_emd: 0.005254; curr_f1: 0.975444; 
+INFO:root:best_cd_p: 0.002186 [epoch 84]; best_cd_t: 0.000039 [epoch 84]; best_emd: 0.005182 [epoch 85]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [97: 0/546]  loss_type: emd, fine_loss: 0.002244 total_loss: 0.004520 lr: 0.000049 alpha: 1.0
+INFO:root:pcn_emd_rlen train [97: 500/546]  loss_type: emd, fine_loss: 0.002112 total_loss: 0.004303 lr: 0.000049 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002210; curr_cd_t: 0.000040; curr_emd: 0.005231; curr_f1: 0.975507; 
+INFO:root:best_cd_p: 0.002186 [epoch 84]; best_cd_t: 0.000039 [epoch 84]; best_emd: 0.005182 [epoch 85]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [98: 0/546]  loss_type: emd, fine_loss: 0.002146 total_loss: 0.004321 lr: 0.000049 alpha: 1.0
+INFO:root:pcn_emd_rlen train [98: 500/546]  loss_type: emd, fine_loss: 0.002254 total_loss: 0.004561 lr: 0.000049 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:Best cd_t net saved!
+INFO:root:curr_cd_p: 0.002201; curr_cd_t: 0.000039; curr_emd: 0.005198; curr_f1: 0.975552; 
+INFO:root:best_cd_p: 0.002186 [epoch 84]; best_cd_t: 0.000039 [epoch 98]; best_emd: 0.005182 [epoch 85]; best_f1: 0.975980 [epoch 54]; 
+INFO:root:pcn_emd_rlen train [99: 0/546]  loss_type: emd, fine_loss: 0.002202 total_loss: 0.004436 lr: 0.000049 alpha: 1.0
+INFO:root:pcn_emd_rlen train [99: 500/546]  loss_type: emd, fine_loss: 0.002349 total_loss: 0.004738 lr: 0.000049 alpha: 1.0
+INFO:root:Saving net...
+INFO:root:Testing...
+INFO:root:curr_cd_p: 0.002218; curr_cd_t: 0.000039; curr_emd: 0.005219; curr_f1: 0.975309; 
+INFO:root:best_cd_p: 0.002186 [epoch 84]; best_cd_t: 0.000039 [epoch 98]; best_emd: 0.005182 [epoch 85]; best_f1: 0.975980 [epoch 54]; 
