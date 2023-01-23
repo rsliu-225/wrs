@@ -12,6 +12,7 @@ import utils.pcd_utils as pcdu
 import utils.recons_utils as rcu
 import visualization.panda.world as wd
 import basis.o3dhelper as o3dh
+import pcn.inference as inference
 
 
 def show_pcn_res(fo, pcn_path="D:\liu\data\output(real)-20220705T140620Z-001\output(real)"):
@@ -62,18 +63,22 @@ if __name__ == '__main__':
     textureimg, depthimg, pcd = rcu.load_frame(os.path.join('nbc_pcn', fo), f_name='000.pkl')
     pcd = np.asarray(pcd) / 1000
     pcd_pcn = o3d.io.read_point_cloud(os.path.join(pcn_path, fo, '000_output_lc.pcd'))
-    pcd_pcn = np.asarray(pcd_pcn.points) + np.asarray(center)
+    pcd_pcn = np.asarray(pcd_pcn) + np.asarray(center)
 
     seedjntagls = rbt.get_jnt_values('arm')
     pcd_roi, pcd_trans, gripperframe = \
         rcu.extract_roi_by_armarker(textureimg, pcd, seed=seed,
                                     x_range=x_range, y_range=y_range, z_range=z_range, toggledebug=False)
+    pcd_roi = pcdu.remove_outliers(pcd_roi, nb_points=100, radius=0.01)
     pcd_gl = pcdu.trans_pcd(pcd_trans, gl_transmat4)
     pcdu.show_pcd(pcd_gl, rgba=(1, 0, 0, 1))
     pcdu.show_pcd(pcd_roi, rgba=(1, 0, 0, 1))
 
-    # pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_pcn(pcd_roi, pcd_pcn, theta=None, toggledebug=True)
-    # base.run()
+    # pcd_pcn = inference.inference_sgl(pcd_roi, load_model='pcn_emd_rlen/best_cd_p_network.pth', toggledebug=True)
+    # pcd_pcn = np.asarray(pcd_pcn) + np.asarray(center)
+
+    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_pcn(pcd_roi, pcd_pcn, theta=None, toggledebug=True)
+    base.run()
 
     pts_nbv, nrmls_nbv, jnts = \
         rcu.cal_nbc_pcn(pcd_roi, pcd_pcn, gripperframe, rbt, seedjntagls=seedjntagls, gl_transmat4=gl_transmat4,

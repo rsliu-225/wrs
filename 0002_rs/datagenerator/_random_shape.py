@@ -16,15 +16,15 @@ if __name__ == '__main__':
 
     for i in range(10):
         # objcm, _, _, _ = utl.gen_seed(200, max=random.uniform(.04, .05), n=100, toggledebug=False)
-        objcm, _, _, _ = utl.gen_seed(3, max=random.uniform(.01, .04), n=100, toggledebug=False)
+        objcm, _, _, _ = utl.gen_seed(5, max=random.uniform(.02, .03), n=100, toggledebug=False)
 
         objcm.set_rgba((.7, .7, 0, 1))
         objcm.attach_to(base)
 
-        # utl.get_objpcd_partial_o3d(objcm, objcm, np.eye(3), (0, 0, 0), path=path, f_name=f'tst',
-        #                            occ_vt_ratio=random.uniform(.5, 1), noise_vt_ratio=random.uniform(.5, 1),
-        #                            rnd_occ_ratio_rng=(.1, .3), visible_threshold=np.radians(75),
-        #                            add_occ=True, add_noise=True, add_rnd_occ=True, add_noise_pts=True,
-        #                            savemesh=False, savedepthimg=False, savergbimg=False, toggledebug=False)
+        utl.get_objpcd_partial_o3d(objcm, objcm, np.eye(3), (0, 0, 0), path=path, f_name=f'tst',
+                                   occ_vt_ratio=random.uniform(.5, 1), noise_vt_ratio=random.uniform(.5, 1),
+                                   rnd_occ_ratio_rng=(.1, .3), visible_threshold=np.radians(75),
+                                   add_occ=True, add_noise=True, add_rnd_occ=True, add_noise_pts=True,
+                                   savemesh=False, savedepthimg=False, savergbimg=False, toggledebug=True)
 
-    base.run()
+    # base.run()

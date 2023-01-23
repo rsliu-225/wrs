@@ -47,6 +47,9 @@ class NBCOptimizer(object):
         self.max_a = max_a
         self.max_dist = max_dist
 
+        self.nbv_pts, self.nbv_nrmls, self.nbv_conf = [], [], []
+        self.init_eepos, self.init_eerot, self.init_eemat4 = None, None, None
+
     def objctive(self, x):
         self.jnts.append(x)
         self.rbth.goto_armjnts(x)

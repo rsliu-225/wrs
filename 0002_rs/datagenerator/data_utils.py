@@ -297,8 +297,8 @@ def random_rot_radians(n=3):
     rot_axial = []
     rot_radial = []
     for i in range(n):
-        rot_axial.append(random.randint(10, 30) * random.choice([1, -1]))
-        rot_radial.append(random.randint(0, 1) * random.choice([1, -1]))
+        rot_axial.append(random.randint(20, 30) * random.choice([1, -1]))
+        rot_radial.append(random.randint(10, 20) * random.choice([1, -1]))
     return np.radians(rot_axial), np.radians(rot_radial)
 
 
@@ -306,7 +306,7 @@ def gen_seed(num_kpts=4, max=.02, width=.008, length=.2, thickness=.0015, n=10, 
              rand_prim=False):
     width = width + (np.random.uniform(-0.003, 0.007) if rand_prim else 0)
     thickness = thickness + (np.random.uniform(-0.0005, 0.0015) if rand_prim else 0)
-    # length = length + (np.random.uniform(-0.05, 0.05) if rand_prim else 0)
+    length = length + (np.random.uniform(-0.05, 0.05) if rand_prim else 0)
     print(width, thickness, length)
 
     cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
@@ -318,12 +318,12 @@ def gen_seed(num_kpts=4, max=.02, width=.008, length=.2, thickness=.0015, n=10, 
             kpts = random_kpts(num_kpts, max=max)
         else:
             kpts = random_kpts_sprl(num_kpts, z_max=max, toggledebug=toggledebug)
-        # if len(kpts) == 3:
-        #     pseq = uni_length(poly_inp(step=.001, kind='quadratic', pseq=kpts), goal_len=length)
+
         if len(kpts) != n:
             pseq = uni_length(spl_inp(pseq=kpts, n=n, toggledebug=toggledebug), goal_len=length)
         else:
             pseq = uni_length(kpts, goal_len=length)
+
         pseq = np.asarray(pseq) - pseq[0]
         pseq, rotseq = get_rotseq_by_pseq(pseq)
         for i in range(len(rotseq) - 1):
@@ -821,7 +821,7 @@ def add_noise_pts_by_vt(o3dpcd, noise_cnt=3, size=.01):
         vts_n = [
             p,
             p + np.asarray([random.uniform(-size, size), random.uniform(-size, size), random.uniform(-size, size)]),
-            p + np.asarray([random.uniform(-size, size), random.uniform(-size, size), random.uniform(-size, size)])]
+            p + np.asarray([random.uniform(-size, size), random.uniform(-size, size), random.uniform(-size, size)])/5]
         tmp_gm = gm.GeometricModel(initor=trm.Trimesh(vertices=np.asarray(vts_n),
                                                       faces=np.asarray([[0, 1, 2]])), btwosided=False)
         o3dpcd += nparray2o3dpcd(tmp_gm.sample_surface(radius=random.uniform(.001, .002))[0])

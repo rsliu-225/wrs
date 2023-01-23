@@ -16,6 +16,8 @@ import pcn.inference as pcn
 # import motionplanner.motion_planner as mp
 import utils.pcd_utils as pcdu
 import visualization.panda.world as wd
+import bendplanner.bend_utils as bu
+import nbv.nbv_utils as nu
 
 COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40], [255, 127, 14]]) / 255
 
@@ -60,6 +62,10 @@ if __name__ == '__main__':
     COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40], [255, 127, 14]]) / 255
     cam_pos = [0, 0, .5]
 
+    width = .008
+    thickness = .0015
+    cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
+
     base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
     # gm.gen_cone(epos=[0, 0, .1], radius=.05, sections=60).attach_to(base)
 
@@ -71,7 +77,7 @@ if __name__ == '__main__':
 
     # path = 'E:/liu/nbv_mesh/'
     path = 'D:/nbv_mesh/'
-    cat = 'bspl'
+    cat = 'bspl_4'
     fo = 'res_75'
     coverage_pcn = []
     coverage_org = []
@@ -87,26 +93,45 @@ if __name__ == '__main__':
     # pcd_o = np.asarray(res_pcn['0']['pcn_output'])
     # pcd_res = np.asarray(res_pcn['final'])
     pcd_gt = np.asarray(res_pcn['gt'])
-    pcd_i = np.asarray(o3d.io.read_point_cloud(os.path.join(os.getcwd(), 'tmp', f'1_i.pcd')).points)
-    pcd_o = np.asarray(o3d.io.read_point_cloud(os.path.join(os.getcwd(), 'tmp', f'1_o.pcd')).points)
-    # pcdu.show_pcd(pcd_add, rgba=(0, .7, 0, 1))
 
-    pts, nrmls, confs = pcdu.cal_conf(pcd_i, voxel_size=.005, cam_pos=cam_pos, theta=None, toggledebug=True)
-    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv(pts, nrmls, confs, toggledebug=True)
+    o3dpcd_i = o3d.io.read_point_cloud(os.path.join(os.getcwd(), 'tmp', f'1_i.pcd'))
+    o3dpcd_i.normals = o3d.utility.Vector3dVector([])
+    o3dpcd_o = o3d.io.read_point_cloud(os.path.join(os.getcwd(), 'tmp', f'1_o.pcd'))
+    pcd_i = np.asarray(o3dpcd_i.points)
+    pcd_o = np.asarray(o3dpcd_o.points)
+    o3dpcd_i.paint_uniform_color(COLOR[0])
+    o3dpcd_o.paint_uniform_color(COLOR[2])
+    # pcdu.show_pcd(pcd_add, rgba=(0, .7, 0, 1))
+    # pcdu.show_pcd(pcd_i, rgba=(COLOR[0][0], COLOR[0][1], COLOR[0][2], 1))
+    # pcdu.show_pcd(pcd_o, rgba=(COLOR[2][0], COLOR[2][1], COLOR[2][2], 1))
+
+    kpts, kpts_rotseq = pcdu.get_kpts_gmm(pcd_o, rgba=(1, 1, 0, 1), n_components=15, show=False)
+    inp_pseq = nu.kpts2bspl(kpts)
+    inp_rotseq = pcdu.get_rots_wkpts(pcd_o, inp_pseq, k=250, show=False, rgba=(1, 0, 0, 1))
+    objcm = bu.gen_swap(inp_pseq, inp_rotseq, cross_sec, extend=.008)
+    o3dmesh = du.cm2o3dmesh(objcm)
+    o3dmesh.compute_vertex_normals()
+
+    # o3d.visualization.draw_geometries([o3dpcd_i, o3dpcd_o])
+    # o3d.visualization.draw_geometries([o3dpcd_o, o3dmesh])
+    # o3d.visualization.draw_geometries([o3dmesh])
+
+    # pts, nrmls, confs = pcdu.cal_conf(pcd_i, voxel_size=.005, cam_pos=cam_pos, theta=None, toggledebug=True)
+    # pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv(pts, nrmls, confs, toggledebug=True)
     # pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_pcn_kpts(pcd_i, pcd_o, cam_pos=cam_pos, theta=None, toggledebug=True)
     # pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd_i, pcd_o, cam_pos=cam_pos, theta=None, toggledebug=True)
-    # pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_pcn(pcd_i, pcd_o, radius=.01, cam_pos=cam_pos, theta=None,
-    #                                              toggledebug=True)
-
+    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_pcn(pcd_i, pcd_o, radius=.01, cam_pos=cam_pos, theta=None,
+                                                 toggledebug=True)
+    objcm.attach_to(base)
     rot = rm.rotmat_between_vectors(np.asarray(cam_pos), nrmls_nbv[0])
     rot = np.linalg.inv(rot)
     pcd_i_new = pcdu.trans_pcd(pcd_i, rm.homomat_from_posrot((0, 0, 0), rot))
     # pcdu.show_pcd(pcd_i_new, rgba=(.7, .7, .7, .5))
     # gm.gen_arrow(np.dot(rot, pts_nbv[0]),
     #              np.dot(rot, pts_nbv[0]) + np.dot(rot, nrmls_nbv[0]) * .04, thickness=.002).attach_to(base)
-    gm.gen_sphere(pts_nbv[0], radius=.02, rgba=[1, 1, 1, .2]).attach_to(base)
-    gm.gen_arrow(pts_nbv[0], pts_nbv[0] + nrmls_nbv[0] * .02, rgba=[confs_nbv[0], 0, 1 - confs_nbv[0], 1],
-                 thickness=.001).attach_to(base)
+    # gm.gen_sphere(pts_nbv[0], radius=.02, rgba=[1, 1, 1, .2]).attach_to(base)
+    # gm.gen_arrow(pts_nbv[0], pts_nbv[0] + nrmls_nbv[0] * .02, rgba=[confs_nbv[0], 0, 1 - confs_nbv[0], 1],
+    #              thickness=.001).attach_to(base)
     base.run()
 
     width = .008

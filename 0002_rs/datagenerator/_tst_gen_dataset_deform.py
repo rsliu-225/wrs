@@ -80,11 +80,14 @@ if __name__ == '__main__':
     # rot_axial, rot_radial = [-0.25, 0.2, -0.3, -0.25], [0, 0.017, 0.017, 0.012]
 
     # TEMPLATE
-    goal_pseq = np.asarray([[0, 0, 0], [0.03, 0, -.01], [0.09, 0, 0.015], [0.16, 0, .01]])
-    rot_axial, rot_radial = [-0.25, 0.2, 0.1, -0.2], [0, 0.01, 0.017, 0.012]
+    # goal_pseq = np.asarray([[0, 0, 0], [0.03, 0, -.01], [0.09, 0, 0.015], [0.16, 0, .01]])
+    # rot_axial, rot_radial = [-0.25, 0.2, 0.1, -0.2], [0, 0.01, 0.017, 0.012]
+
+    goal_pseq = np.asarray([[0, 0, 0], [0.09, 0, 0.04], [0.16, 0, .01]])
+    rot_axial, rot_radial = [-0.6, 0.2,  -0.2], [0, 0,  0]
 
     deformed_objcm, objcm_gt, _, _ = utl.deform_cm(objcm, goal_pseq, rot_axial, rot_radial, show=True)
-
+    base.run()
     '''
     gen data
     '''

@@ -259,7 +259,7 @@ if __name__ == '__main__':
     #     runInParallel(init_gen, gen_args("sprl", range(i * 8, (i + 1) * 8)))
     # for i in range(start, end):
     #     runInParallel(init_gen_deform, gen_args_deform("plat", range(i * 8, (i + 1) * 8)))
-    # for i in range(start, end):
-    #     runInParallel(init_gen_deform, gen_args_deform("tmpl", range(i * 8, (i + 1) * 8)))
+    for i in range(start, end):
+        runInParallel(init_gen_deform, gen_args_deform("tmpl", range(i * 8, (i + 1) * 8)))
 
     remove_tmp(["bspl", "quad", "sprl", "plat", "tmpl", "rand", "rlen"], PATH)

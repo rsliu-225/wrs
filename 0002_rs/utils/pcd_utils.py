@@ -57,7 +57,7 @@ def get_min_dist(p, kdt):
 
 def get_nn_indices_by_dist(p, kdt, step=1.0):
     result_indices = []
-    distances, indices = kdt.query([p], k=1000, return_distance=True)
+    distances, indices = kdt.query([p], k=200, return_distance=True)
     distances = distances[0]
     indices = indices[0]
     for i in range(len(distances)):
@@ -855,8 +855,8 @@ def get_rots_wkpts(objpcd, kpts, k=None, show=True, rgba=(1, 0, 0, 1)):
     return np.asarray(kpts_rotseq)
 
 
-def cal_distribution(pcd, kpts, voxel_size=0.001, radius=.005):
-    pts = np.asarray(pcd)
+def cal_distribution(pts, kpts, voxel_size=0.001, radius=.005):
+    pts = np.asarray(pts)
     o3dpcd = o3dh.nparray2o3dpcd(pts)
     o3dpcd_down = o3dpcd.voxel_down_sample(voxel_size=voxel_size)
     confs = []
@@ -936,10 +936,10 @@ def cal_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, radius=.01, toggledebug
     def _normalize(l):
         return [(v - min(l)) / (max(l) - min(l)) for v in l]
 
-    _, _, trans = o3dh.registration_icp_ptpt(pts_pcn, pts, maxcorrdist=.02, toggledebug=False)
-    pts_pcn = trans_pcd(pts_pcn, trans)
-    show_pcd(pts_pcn, rgba=COLOR[1])
-    show_pcd(pts, rgba=COLOR[0])
+    # _, _, trans = o3dh.registration_icp_ptpt(pts_pcn, pts, maxcorrdist=.02, toggledebug=False)
+    # pts_pcn = trans_pcd(pts_pcn, trans)
+    # show_pcd(pts_pcn, rgba=COLOR[1])
+    # show_pcd(pts, rgba=COLOR[0])
     # base.run()
     o3d_pcn = o3dh.nparray2o3dpcd(pts_pcn)
     o3d_pts = o3dh.nparray2o3dpcd(pts)
@@ -969,9 +969,10 @@ def cal_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, radius=.01, toggledebug
 
     if toggledebug:
         for i in range(len(confs)):
-            gm.gen_sphere(kpts[i], radius=radius, rgba=[confs[i], 0, 1 - confs[i], .3]).attach_to(base)
-            gm.gen_arrow(kpts[i], kpts[i] + nrmls[i] * .02, rgba=[confs[i], 0, 1 - confs[i], .3],
-                         thickness=.001).attach_to(base)
+            # if confs[i] < .3:
+            gm.gen_sphere(kpts[i], radius=radius, rgba=[confs[i], 0, 1 - confs[i], .1]).attach_to(base)
+            # gm.gen_arrow(kpts[i], kpts[i] + nrmls[i] * .02, rgba=[confs[i], 0, 1 - confs[i], .1],
+            #              thickness=.001).attach_to(base)
     # kpts, nrmls, confs = extract_main_vec(kpts, nrmls, confs)
     # pts, nrmls, confs = extract_main_vec(pts, nrmls, confs, threshold=np.radians(30), toggledebug=toggledebug)
 

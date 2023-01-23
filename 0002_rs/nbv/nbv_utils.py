@@ -1,5 +1,7 @@
 import json
 import os
+import random
+import h5py
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,21 +9,25 @@ import open3d as o3d
 from geomdl import BSpline
 from sklearn.neighbors import NearestNeighbors
 import basis.robot_math as rm
+import basis.o3dhelper as o3dh
 import datagenerator.data_utils as du
 # import localenv.envloader as el
 # import motionplanner.motion_planner as mp
 import utils.pcd_utils as pcdu
 import bendplanner.bend_utils as bu
 
+COLOR = np.asarray(
+    [[31, 119, 180], [44, 160, 44], [214, 39, 40], [255, 127, 14], [148, 103, 189], [23, 190, 207]]) / 255
+
 
 def transpose(data):
-    mat = [[]]
+    mat = [[], [], [], [], [], []]
     for i, r in enumerate(data):
         for j, v in enumerate(r):
-            if len(mat) > j:
-                mat[j].append(v)
-            else:
-                mat.append([v])
+            # if len(mat) > j:
+            mat[j].append(v)
+            # else:
+            #     mat.append([v])
     return mat
 
 
@@ -29,44 +35,90 @@ def load_cov(path, cat, fo, prefix='pcn'):
     cov_list = []
     max_list = []
     cnt_list = [0] * 5
+
     for f in os.listdir(os.path.join(path, cat, 'mesh')):
         print(f'-----------{f}------------')
         try:
             res_dict = json.load(open(os.path.join(path, cat, fo, f'{prefix}_{f.split(".ply")[0]}.json'), 'rb'))
         except:
             break
-        pcd_gt = res_dict['gt']
+        # o3dpcd_i = o3dh.nparray2o3dpcd(np.asarray(res_dict['0']['input']))
+        # o3d.visualization.draw_geometries([o3dpcd_i])
         cov_list_tmp = [res_dict['init_coverage']]
         max_tmp = [res_dict['init_coverage']]
         max = 0
+        max_cnt = 0
         for i in range(5):
             if str(i) in res_dict.keys():
                 print(prefix, i, res_dict[str(i)]['coverage'])
                 cov_list_tmp.append(res_dict[str(i)]['coverage'])
                 max = res_dict[str(i)]['coverage']
-                cnt_list[i] += 1
+                max_cnt = i
             max_tmp.append(max)
+        cnt_list[max_cnt] += 1
         max_list.append(max_tmp)
         cov_list.append(cov_list_tmp)
-    return cov_list, max_list, [cnt_list[0]] + cnt_list
+    return transpose(cov_list), transpose(max_list), [cnt_list[0]] + cnt_list
 
 
-def plot_box(ax, data, clr, positions):
-    box = ax.boxplot(data, positions=positions)
+def load_pts(path, cat, fo, cross_sec, prefix='pcn', toggledebug=False):
+    cd_list = []
+    hd_list = []
+
+    for f in os.listdir(os.path.join(path, cat, 'mesh')):
+        if int(f.split(".ply")[0]) > 10:
+            continue
+        print(f'-----------{f}------------')
+        try:
+            res_dict = json.load(open(os.path.join(path, cat, fo, f'{prefix}_{f.split(".ply")[0]}.json'), 'rb'))
+            objcm_gt = du.o3dmesh2cm(o3d.io.read_triangle_mesh(os.path.join(path, cat, 'mesh', f)))
+        except:
+            break
+        cd_tmp = []
+        hd_tmp = []
+        stop = False
+        for i in range(6):
+            if str(i) in res_dict.keys():
+                pts = np.asarray(res_dict[str(i)]['input'])
+            elif not stop:
+                pts = np.asarray(res_dict['final'])
+                stop = True
+            else:
+                cd_tmp.append(cd_tmp[-1])
+                hd_tmp.append(hd_tmp[-1])
+                continue
+
+            kpts, kpts_rotseq = pcdu.get_kpts_gmm(pts, rgba=(1, 1, 0, 1), n_components=16)
+            inp_pseq = kpts2bspl(kpts)
+            inp_rotseq = pcdu.get_rots_wkpts(pts, inp_pseq, show=True, rgba=(1, 0, 0, 1))
+            kpts = np.asarray(kpts)
+
+            if toggledebug:
+                fig = plt.figure(2)
+                ax = fig.add_subplot(111, projection='3d')
+                ax.scatter(pts[:, 0], pts[:, 1], pts[:, 2], c='gray', s=.01, alpha=.5)
+                ax.plot(kpts[:, 0], kpts[:, 1], kpts[:, 2])
+                ax.plot(inp_pseq[:, 0], inp_pseq[:, 1], inp_pseq[:, 2])
+                plt.show()
+
+            objcm = bu.gen_swap(inp_pseq, inp_rotseq, cross_sec, extend=.008)
+            cd = chamfer_distance(objcm.objtrm.vertices, objcm_gt.objtrm.vertices, metric='l2', direction='bi')
+            hd = hausdorff_distance(objcm.objtrm.vertices, objcm_gt.objtrm.vertices, metric='l2')
+            cd_tmp.append(cd * 1000)
+            hd_tmp.append(hd * 1000)
+        cd_list.append(cd_tmp)
+        hd_list.append(hd_tmp)
+        print(prefix, cd_list[-1], hd_list[-1])
+
+    return transpose(cd_list), transpose(hd_list)
+
+
+def plot_box(ax, data, clr, positions, showfliers=False):
+    box = ax.boxplot(data, positions=positions, notch=True, patch_artist=True, showfliers=showfliers)
     for item in ['boxes', 'whiskers', 'fliers', 'medians', 'caps']:
         plt.setp(box[item], color=clr)
-    # plt.setp(box["boxes"], facecolor=clr)
-    plt.setp(box["fliers"], markeredgecolor=clr)
-
-
-def cal_avg(cnt_list):
-    sum_v = 0
-    for i in range(len(cnt_list)):
-        try:
-            sum_v += i * (cnt_list[i] - cnt_list[i + 1])
-        except:
-            sum_v += i * cnt_list[i]
-    return sum_v / cnt_list[0]
+    # plt.setp(box["boxes"], facecolor=clr, alpha=.2)
+    plt.setp(box["fliers"], markeredgecolor=clr, marker='.')
 
 
 def kpts2bspl(kpts):
@@ -79,6 +131,13 @@ def kpts2bspl(kpts):
     inp_pseq = np.asarray(curve.evalpts)
 
     return inp_pseq
+
+
+def cal_avg(cnt_list):
+    sum_v = 0
+    for i in range(len(cnt_list)):
+        sum_v += (i + 2) * cnt_list[i]
+    return sum_v / sum(cnt_list)
 
 
 def chamfer_distance(x, y, metric='l2', direction='bi'):
@@ -133,59 +192,93 @@ def hausdorff_distance(x, y, metric='l2'):
     return hausdorff_distance
 
 
-def load_pts(path, cat, fo, cross_sec, prefix='pcn', toggledebug=False):
-    cd_list = []
-    hd_list = []
+def gen_partial_o3dpcd(o3dmesh, rot=np.eye(3), trans=np.zeros(3), rot_center=(0, 0, 0),
+                       visible_threshold=np.radians(75), othermesh=[], toggledebug=False):
+    vis = o3d.visualization.Visualizer()
+    vis.create_window('win', left=0, top=0)
+    o3dmesh = o3dmesh.filter_smooth_taubin(number_of_iterations=10)
+    o3dmesh.rotate(rot, center=rot_center)
+    o3dmesh.translate(trans)
+    for mesh in othermesh:
+        vis.add_geometry(mesh)
+    vis.add_geometry(o3dmesh)
+    vis.poll_events()
+    tmp_f_name = str(random.randint(0, 100))
+    vis.capture_depth_point_cloud(f'./{tmp_f_name}.pcd', do_render=False, convert_to_world_coordinate=True)
+    o3dpcd = o3d.io.read_point_cloud(f'./{tmp_f_name}.pcd')
+    o3dpcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.001, max_nn=10))
+    o3dpcd_nrml = np.asarray(o3dpcd.normals)
 
-    for f in os.listdir(os.path.join(path, cat, 'mesh')):
-        # if int(f.split(".ply")[0]) > 30:
-        #     continue
-        print(f'-----------{f}------------')
-        try:
-            res_dict = json.load(open(os.path.join(path, cat, fo, f'{prefix}_{f.split(".ply")[0]}.json'), 'rb'))
-            objcm_gt = du.o3dmesh2cm(o3d.io.read_triangle_mesh(os.path.join(path, cat, 'mesh', f)))
-        except:
-            break
-        cd_tmp = []
-        hd_tmp = []
-        stop = False
-        for i in range(5):
-            if str(i) in res_dict.keys():
-                pts = np.asarray(res_dict[str(i)]['input'])
-            elif not stop:
-                pts = np.asarray(res_dict['final'])
-                stop = True
-            else:
-                cd_tmp.append(cd_tmp[-1])
-                hd_tmp.append(hd_tmp[-1])
-                continue
+    vis_idx = np.argwhere(np.arccos(abs(o3dpcd_nrml.dot(np.asarray([0, 0, 1])))) < visible_threshold).flatten()
+    o3dpcd = o3dpcd.select_by_index(vis_idx)
+    if toggledebug:
+        o3d.visualization.draw_geometries([o3dpcd, o3dmesh], mesh_show_back_face=True)
+        # o3d.visualization.draw_geometries([o3dpcd], mesh_show_back_face=True)
 
-            kpts, kpts_rotseq = pcdu.get_kpts_gmm(pts, rgba=(1, 1, 0, 1), n_components=16)
-            inp_pseq = kpts2bspl(kpts)
-            inp_rotseq = pcdu.get_rots_wkpts(pts, inp_pseq, show=True, rgba=(1, 0, 0, 1))
-            kpts = np.asarray(kpts)
+    o3dpcd = o3dpcd.voxel_down_sample(voxel_size=.001)
+    o3dpcd.translate(-trans)
+    o3dpcd.rotate(np.linalg.inv(rot), center=rot_center)
+    vis.destroy_window()
+    os.remove(f'./{tmp_f_name}.pcd')
 
-            if toggledebug:
-                fig = plt.figure(2)
-                ax = fig.add_subplot(111, projection='3d')
-                ax.scatter(pts[:, 0], pts[:, 1], pts[:, 2], c='gray', s=.01, alpha=.5)
-                ax.plot(kpts[:, 0], kpts[:, 1], kpts[:, 2])
-                ax.plot(inp_pseq[:, 0], inp_pseq[:, 1], inp_pseq[:, 2])
-                plt.show()
-
-            objcm = bu.gen_swap(inp_pseq, inp_rotseq, cross_sec, extend=.008)
-            cd = chamfer_distance(objcm.objtrm.vertices, objcm_gt.objtrm.vertices, metric='l2', direction='bi')
-            hd = hausdorff_distance(objcm.objtrm.vertices, objcm_gt.objtrm.vertices, metric='l2')
-            cd_tmp.append(cd * 1000)
-            hd_tmp.append(hd * 1000)
-        cd_list.append(cd_tmp)
-        hd_list.append(hd_tmp)
-        print(prefix, cd_list[-1], hd_list[-1])
-
-    return cd_list, hd_list
+    return o3dpcd
 
 
-def gen_partial_o3dpcd(o3dmesh, rot=np.eye(3), trans=np.zeros(3), rot_center=(0, 0, 0)):
+def gen_partial_o3dpcd_occ(path, f, rot, rot_center, trans=np.zeros(3), resolusion=(1280, 720),
+                           rnd_occ_ratio_rng=(.2, .5), nrml_occ_ratio_rng=(.2, .6), visible_threshold=np.radians(75),
+                           occ_vt_ratio=1.0, noise_vt_ratio=1.0, noise_cnt=random.randint(0, 5),
+                           add_noise=False, add_vt_occ=False, add_rnd_occ=True, add_noise_pts=True, toggledebug=False):
+    o3dmesh = o3d.io.read_triangle_mesh(os.path.join(path, 'mesh', f + '.ply'))
+
+    vis = o3d.visualization.Visualizer()
+    vis.create_window('win', width=resolusion[0], height=resolusion[1], left=0, top=0)
+    o3dmesh.rotate(rot, center=rot_center)
+    o3dmesh.translate(trans)
+
+    vis.add_geometry(o3dmesh)
+    vis.poll_events()
+    vis.capture_depth_point_cloud(os.path.join(path, f'{f}_tmp.pcd'), do_render=False, convert_to_world_coordinate=True)
+    o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f'{f}_tmp.pcd'))
+
+    o3dpcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.001, max_nn=10))
+    o3dpcd_nrml = np.asarray(o3dpcd.normals)
+    vis_idx = np.argwhere(np.arccos(abs(o3dpcd_nrml.dot(np.asarray([0, 0, 1])))) < visible_threshold).flatten()
+    o3dpcd = o3dpcd.select_by_index(vis_idx)
+
+    if add_rnd_occ:
+        o3dpcd = du.add_random_occ(o3dpcd, occ_ratio_rng=rnd_occ_ratio_rng)
+    if add_vt_occ:
+        o3dpcd = du.add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=nrml_occ_ratio_rng)
+        o3dpcd = du.add_random_occ_by_vt(o3dpcd, np.asarray(o3dmesh.vertices),
+                                         edg_radius=5e-4, edg_sigma=5e-4, ratio=occ_vt_ratio)
+    if add_noise:
+        o3dpcd = du.add_guassian_noise_by_vt(o3dpcd, np.asarray(o3dmesh.vertices), np.asarray(o3dmesh.vertex_normals),
+                                             noise_mean=1e-3, noise_sigma=1e-4, ratio=noise_vt_ratio)
+    if add_noise_pts:
+        o3dpcd = du.add_noise_pts_by_vt(o3dpcd, noise_cnt=noise_cnt, size=.02)
+
+    # o3dpcd = du.resample(o3dpcd, smp_num=2048)
+    o3dpcd, _ = o3dpcd.remove_radius_outlier(nb_points=10, radius=0.05)
+    o3dpcd = o3dpcd.voxel_down_sample(voxel_size=.001)
+    vis.destroy_window()
+
+    if toggledebug:
+        o3dpcd_org = o3d.io.read_point_cloud(os.path.join(path, f'{f}_tmp.pcd'))
+        o3dpcd_org.paint_uniform_color([0, 0.7, 1])
+        o3dpcd.paint_uniform_color(COLOR[0])
+        o3d.visualization.draw_geometries([o3dmesh])
+        o3d.visualization.draw_geometries([o3dpcd_org])
+        o3d.visualization.draw_geometries([o3dpcd])
+    os.remove(os.path.join(path, f'{f}_tmp.pcd'))
+
+    o3dpcd.translate(-trans)
+    o3dpcd.rotate(np.linalg.inv(rot), center=rot_center)
+
+    return o3dpcd
+
+
+def gen_partial_o3dpcd_with_rbt(o3dmesh, rot=np.eye(3), trans=np.zeros(3), rot_center=(0, 0, 0),
+                                visible_threshold=np.radians(75)):
     vis = o3d.visualization.Visualizer()
     vis.create_window('win', left=0, top=0)
     o3dmesh = o3dmesh.filter_smooth_taubin(number_of_iterations=10)
@@ -199,8 +292,10 @@ def gen_partial_o3dpcd(o3dmesh, rot=np.eye(3), trans=np.zeros(3), rot_center=(0,
     o3dpcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.001, max_nn=10))
     o3dpcd_nrml = np.asarray(o3dpcd.normals)
 
-    vis_idx = np.argwhere(np.arccos(abs(o3dpcd_nrml.dot(np.asarray([0, 0, 1])))) < np.radians(75)).flatten()
+    vis_idx = np.argwhere(np.arccos(abs(o3dpcd_nrml.dot(np.asarray([0, 0, 1])))) < visible_threshold).flatten()
     o3dpcd = o3dpcd.select_by_index(vis_idx)
+    # o3d.visualization.draw_geometries([o3dpcd, o3dmesh], mesh_show_back_face=True)
+    # o3d.visualization.draw_geometries([o3dpcd], mesh_show_back_face=True)
 
     o3dpcd.translate(-trans)
     o3dpcd.rotate(np.linalg.inv(rot), center=rot_center)
@@ -208,7 +303,38 @@ def gen_partial_o3dpcd(o3dmesh, rot=np.eye(3), trans=np.zeros(3), rot_center=(0,
     return o3dpcd
 
 
-def gen_o3d_arrow(spos, epos):
+def show_pcn_res_pytorch(result_path, test_path):
+    res_f = h5py.File(result_path, 'r')
+    test_f = h5py.File(test_path, 'r')
+    for i in range(10, len(test_f['complete_pcds'])):
+        o3dpcd_gt = o3dh.nparray2o3dpcd(np.asarray(test_f['complete_pcds'][i]))
+        o3dpcd_i = o3dh.nparray2o3dpcd(np.asarray(test_f['incomplete_pcds'][i]))
+        o3dpcd_o = o3dh.nparray2o3dpcd(np.asarray(res_f['results'][i]))
+        o3dpcd_gt.paint_uniform_color(COLOR[1])
+        o3dpcd_i.paint_uniform_color(COLOR[0])
+        o3dpcd_o.paint_uniform_color(COLOR[2])
+        o3d.visualization.draw_geometries([o3dpcd_i, o3dpcd_o])
+        o3d.visualization.draw_geometries([o3dpcd_o, o3dpcd_gt])
+
+
+def read_pcn_res_pytorch(result_path, test_path, id, toggledebug=False):
+    res_f = h5py.File(result_path, 'r')
+    test_f = h5py.File(test_path, 'r')
+    if toggledebug:
+        o3dpcd_gt = o3dh.nparray2o3dpcd(np.asarray(test_f['complete_pcds'][id]))
+        o3dpcd_i = o3dh.nparray2o3dpcd(np.asarray(test_f['incomplete_pcds'][id]))
+        o3dpcd_o = o3dh.nparray2o3dpcd(np.asarray(res_f['results'][id]))
+        o3dpcd_gt.paint_uniform_color(COLOR[1])
+        o3dpcd_i.paint_uniform_color(COLOR[0])
+        o3dpcd_o.paint_uniform_color(COLOR[2])
+        o3d.visualization.draw_geometries([o3dpcd_i, o3dpcd_o])
+        o3d.visualization.draw_geometries([o3dpcd_o, o3dpcd_gt])
+    return np.asarray(test_f['complete_pcds'][id]), \
+           np.asarray(test_f['incomplete_pcds'][id]), \
+           np.asarray(res_f['results'][id])
+
+
+def gen_o3d_arrow(spos, epos, rgb=[0, 0, 1]):
     vec_len = np.linalg.norm(np.array(epos) - np.array(spos))
     o3d_arrow = o3d.geometry.TriangleMesh.create_arrow(
         cone_height=0.2 * vec_len,
@@ -216,7 +342,7 @@ def gen_o3d_arrow(spos, epos):
         cylinder_height=0.8 * vec_len,
         cylinder_radius=0.04 * vec_len
     )
-    o3d_arrow.paint_uniform_color([1, 0, 1])
+    o3d_arrow.paint_uniform_color(rgb)
     o3d_arrow.compute_vertex_normals()
 
     rot_mat = rm.rotmat_between_vectors((0, 0, 1), np.array(epos) - np.array(spos))
@@ -224,3 +350,36 @@ def gen_o3d_arrow(spos, epos):
     o3d_arrow.translate(np.array(spos))
 
     return o3d_arrow
+
+
+def gen_o3d_sphere(pos, radius=.01, rgb=[0, 0, 1]):
+    o3d_sphere = o3d.geometry.TriangleMesh.create_sphere(radius=radius)
+    o3d_sphere.paint_uniform_color(rgb)
+    o3d_sphere.translate(np.array(pos))
+
+    return o3d_sphere
+
+
+def is_complete(pts_pcn, pts, radius=.01, threshold=50):
+    def _normalize(l):
+        return [(v - min(l)) / (max(l) - min(l)) for v in l]
+
+    if len(pts_pcn) == 0:
+        return False
+    _, _, trans = o3dh.registration_icp_ptpt(pts_pcn, pts, maxcorrdist=.02, toggledebug=False)
+    pts_pcn = pcdu.trans_pcd(pts_pcn, trans)
+    # pcdu.show_pcd(pts_pcn, rgba=(.7, 0, 0, .5))
+    # pcdu.show_pcd(pts, rgba=(.7, .7, .7, .5))
+    o3d_pcn = du.nparray2o3dpcd(pts_pcn)
+    # kpts, kpts_rotseq = pcdu.get_kpts_gmm(pts_pcn, n_components=16, show=False)
+    o3d_kpts = o3d_pcn.voxel_down_sample(voxel_size=.002)
+    kpts = np.asarray(o3d_kpts.points)
+    confs = pcdu.cal_distribution(pts, kpts, radius=radius)
+    o3dpcd = o3dh.nparray2o3dpcd(pts)
+    print(np.asarray(confs).max(), np.asarray(confs).mean(), np.asarray(confs).min(), np.asarray(confs).std())
+    # o3d_kpts.paint_uniform_color(COLOR[2])
+    # o3dpcd.paint_uniform_color(COLOR[0])
+    # o3d.visualization.draw_geometries([o3dpcd, o3d_kpts])
+    if min(confs) > threshold:
+        return True
+    return False

@@ -19,13 +19,13 @@ warnings.filterwarnings("ignore")
 COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40], [255, 127, 14]]) / 255
 
 
-def inference_sgl(input_narry, model_name='pcn', load_model='pcn_emd_prim_mv/best_cd_p_network.pth', toggledebug=False):
+def inference_sgl(input_narry, model_name='pcn', load_model='pcn_emd_all/best_cd_p_network.pth', toggledebug=False):
     load_model = os.path.join(config.ROOT, model_name, 'trained_model', load_model)
     device = torch.device('cpu')
     args = munch.munchify({'num_points': 2048, 'loss': 'cd', 'eval_emd': False})
     input_narry = torch.from_numpy(input_narry)
     net = torch.nn.DataParallel(model_module.Model(args))
-    net.module.load_state_dict(torch.load(load_model, map_location=torch.device('cpu'))['net_state_dict'])
+    net.module.load_state_dict(torch.load(load_model, map_location=device)['net_state_dict'])
     net = net.module.to(device)
     logging.info("%s's previous weights loaded." % model_name)
     net.eval()
@@ -64,24 +64,24 @@ if __name__ == "__main__":
     f_name = 'test'
 
     model_name = 'pcn'
-    load_model = 'pcn_emd_all/best_emd_network.pth'
+    load_model = 'pcn_emd_rec/best_emd_network.pth'
 
     # o3dpcd_1 = o3d.io.read_point_cloud('D:/liu/MVP_Benchmark/completion/data_real/020.pcd')
     # o3dpcd_2 = o3d.io.read_point_cloud('D:/liu/MVP_Benchmark/completion/data_real/001.pcd')
     # o3dpcd_1 = o3d.io.read_point_cloud(config.ROOT + '/recons_data/nbc/plate_a_cubic/000.pcd')
     # path = os.path.join(config.ROOT, 'recons_data/nbc/plate_a_cubic')
     # path = 'D:/liu/MVP_Benchmark/completion/data_real/'
-    path = 'C:/Users/rsliu/Documents/GitHub/wrs/0002_rs/recons_data/seq/plate_a_cubic'
+    path = 'C:/Users/rsliu/Documents/GitHub/wrs/0002_rs/recons_data/nbc_pcn/plate_a_cubic'
 
     for i, f in enumerate(os.listdir(path)):
         o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f))
-        o3dpcd_2 = o3d.io.read_point_cloud(os.path.join(path, os.listdir(path)[i + 1]))
-        print(np.asarray(o3dpcd.points).shape)
-        o3dpcd = o3dpcd + o3dpcd_2
-        print(np.asarray(o3dpcd.points).shape)
-        if len(np.asarray(o3dpcd.points)) > 2048:
-            o3dpcd = o3dpcd.uniform_down_sample(int(len(np.asarray(o3dpcd.points)) / 2048))
-        print(np.asarray(o3dpcd.points).shape)
+        # o3dpcd_2 = o3d.io.read_point_cloud(os.path.join(path, os.listdir(path)[i + 1]))
+        # print(np.asarray(o3dpcd.points).shape)
+        # o3dpcd = o3dpcd + o3dpcd_2
+        # print(np.asarray(o3dpcd.points).shape)
+        # if len(np.asarray(o3dpcd.points)) > 2048:
+        #     o3dpcd = o3dpcd.uniform_down_sample(int(len(np.asarray(o3dpcd.points)) / 2048))
+        # print(np.asarray(o3dpcd.points).shape)
         result = inference_sgl(np.asarray(o3dpcd.points), model_name, load_model)
         o3dpcd_o = nparray2o3dpcd(result)
         o3dpcd.paint_uniform_color(COLOR[0])

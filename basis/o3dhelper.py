@@ -4,6 +4,9 @@ import copy
 import basis.trimesh as trimesh
 import sklearn.cluster as skc
 
+import basis.trimesh as trm
+import modeling.collision_model as cm
+
 
 # abbreviations
 # pnp panda nodepath
@@ -49,6 +52,20 @@ def o3dpcd2nparray(o3dpcd, return_normals=False):
             return [np.asarray(o3dpcd.points), np.asarray(o3dpcd.normals)]
     else:
         return np.asarray(o3dpcd.points)
+
+
+def o3dmesh2cm(o3dmesh):
+    objtrm = trm.Trimesh(vertices=o3dmesh.vertices, faces=o3dmesh.triangles)
+    objcm = cm.CollisionModel(objtrm)
+    return objcm
+
+
+def cm2o3dmesh(objcm, wnormal=False):
+    o3dmesh = o3d.geometry.TriangleMesh(vertices=o3d.utility.Vector3dVector(objcm.objtrm.vertices),
+                                        triangles=o3d.utility.Vector3iVector(objcm.objtrm.faces))
+    if wnormal:
+        o3dmesh.compute_vertex_normals()
+    return o3dmesh
 
 
 def cropnx3nparray(nx3nparray, xrng, yrng, zrng):

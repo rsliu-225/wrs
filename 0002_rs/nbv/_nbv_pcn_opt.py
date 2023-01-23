@@ -7,51 +7,67 @@ from scipy.optimize import minimize
 import json
 import os
 import open3d as o3d
-import motionplanner.robot_helper as rbt_helper
-import modeling.geometric_model as gm
-import basis.robot_math as rm
-import copy
+
 import utils.pcd_utils as pcdu
 import localenv.envloader as el
-import motionplanner.nbv_solver as nbv_solver
+import motionplanner.pcn_nbv_solver as nbv_solver
+import nbv_utils as nu
+import basis.o3dhelper as o3dh
+import basis.robot_math as rm
 
 if __name__ == '__main__':
     base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
     COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40]]) / 255
     cam_pos = [0, 0, .5]
 
-    rbt = el.loadXarm(showrbt=False)
+    rbt = el.loadXarm(showrbt=True)
 
     path = 'D:/nbv_mesh/'
-    cat = 'bspl'
+    cat = 'bspl_5'
     fo = 'res_75'
     coverage_pcn = []
     coverage_org = []
 
     coverage_tor = .001
     toggledebug = True
-    f = '0002.ply'
+    f = '0000.ply'
 
-    res_pcn = json.load(open(os.path.join(path, cat, fo, f'pcn_{f.split(".ply")[0]}.json'), 'rb'))
+    cov_list = []
+    cov_opt_list = []
 
-    pcd_i = np.asarray(res_pcn['0']['input'])
-    pcd_add = np.asarray(res_pcn['0']['add'])
-    pcd_o = np.asarray(res_pcn['0']['pcn_output'])
-    pcd_res = np.asarray(res_pcn['final'])
-    pcd_gt = np.asarray(res_pcn['gt'])
-    # pcd_i = np.asarray(o3d.io.read_point_cloud(os.path.join(os.getcwd(), 'tmp', f'0_i.pcd')).points)
-    # pcd_o = np.asarray(o3d.io.read_point_cloud(os.path.join(os.getcwd(), 'tmp', f'0_o.pcd')).points)
-    print(len(pcd_i))
-    seedjntagls = rbt.get_jnt_values('arm')
-    nbs_opt = nbv_solver.NBVOptimizer(rbt)
-    _, transmat4, _ = nbs_opt.solve(seedjntagls, pcd_i, cam_pos)
-    # transmat4 = np.asarray([[-0.52302792, 0.81827995, 0.23845274, 0.],
-    #                         [0.81827995, 0.56036126, -0.12811393, 0.],
-    #                         [-0.23845274, 0.12811393, -0.96266667, 0.],
-    #                         [0., 0., 0., 1., ]])
-    print(transmat4)
-    # pcdu.show_pcd(pcd_i)
-    # pcdu.show_pcd(pcd_o, rgba=(1, 1, 0, .5))
-    # pcdu.show_pcd(pcdu.trans_pcd(pcd_i, transmat4), rgba=(1, 0, 0, 1))
-    #
-    # base.run()
+    for f in os.listdir(os.path.join(path, cat, 'mesh')):
+        print(f'-----------------{f}-----------------')
+        res_pcn = json.load(open(os.path.join(path, cat, fo, f'pcn_{f.split(".ply")[0]}.json'), 'rb'))
+        o3dmesh = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'mesh', f))
+
+        pcd_i = np.asarray(res_pcn['0']['input'])
+        pcd_add = np.asarray(res_pcn['0']['add'])
+        pcd_o = np.asarray(res_pcn['0']['pcn_output'])
+        print('coverage:', round(res_pcn['0']['coverage'], 3))
+        cov_list.append(round(res_pcn['0']['coverage'], 3))
+        pcd_res = np.asarray(res_pcn['final'])
+        pcd_gt = np.asarray(res_pcn['gt'])
+
+        o3dpcd = o3dh.nparray2o3dpcd(pcd_i)
+        # pcd_i = np.asarray(o3d.io.read_point_cloud(os.path.join(os.getcwd(), 'tmp', f'0_i.pcd')).points)
+        # pcd_o = np.asarray(o3d.io.read_point_cloud(os.path.join(os.getcwd(), 'tmp', f'0_o.pcd')).points)
+        # print(len(pcd_i))
+        seedjntagls = rbt.get_jnt_values('arm')
+
+        nbv_opt = nbv_solver.NBVOptimizer(rbt, toggledebug=False)
+        trans, rot = nbv_opt.solve(seedjntagls, pcd_i, cam_pos, method='COBYLA')
+
+        o3dpcd_tmp = nu.gen_partial_o3dpcd(o3dmesh, rot=rot, trans=trans, rot_center=(0, 0, 0))
+        o3dpcd += o3dpcd_tmp
+
+        coverage = pcdu.cal_coverage(np.asarray(o3dpcd.points), pcd_gt, tor=coverage_tor)
+        print('coverage(opt):', round(coverage, 3))
+        cov_opt_list.append(round(coverage, 3))
+
+        # pcdu.show_pcd(pcd_i)
+        # pcdu.show_pcd(pcd_o, rgba=(1, 1, 0, .5))
+        # pcdu.show_pcd(pcdu.trans_pcd(pcd_i, transmat4), rgba=(1, 0, 0, 1))
+        # base.run()
+
+    print(cov_list)
+    print(cov_opt_list)
