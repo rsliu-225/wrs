@@ -123,7 +123,7 @@ if __name__ == '__main__':
         # init_gen('rlen_4', num_kpts=4, max=random.choice([.02, .03, .04]), i=i, rand_prim=True, toggledebug=False)
         # init_gen('rlen_5', num_kpts=5, max=random.choice([.02, .03, .04]), i=i, rand_prim=True, toggledebug=False)
         # init_gen_deform('plat', num_kpts=random.choice([3, 4, 5]), i=i)
-        init_gen_deform('tmpl', num_kpts=random.choice([3]), i=i, toggledebug=False)
+        init_gen_deform('tmpl', num_kpts=random.choice([3, 4, 5]), i=i, toggledebug=False)
     # show_mesh('tmpl', path=PATH)
     # icomats = rm.gen_icorotmats(rotation_interval=math.radians(360 / 6))
     # icomats = [x for row in icomats for x in row]

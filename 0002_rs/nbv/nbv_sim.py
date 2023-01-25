@@ -359,10 +359,10 @@ if __name__ == '__main__':
 
     # path = 'E:/liu/nbv_mesh/'
     path = 'D:/nbv_mesh/'
-    # cat_list = ['bspl_3', 'bspl_4', 'bspl_5']
-    cat_list = ['plat', 'tmpl']
+    cat_list = ['bspl_3', 'bspl_4', 'bspl_5']
+    # cat_list = ['plat', 'tmpl']
     # cat_list = ['rlen_3', 'rlen_4', 'rlen_5']
-    coverage_tor = .0018
+    coverage_tor = .001
     goal = .95
     visible_threshold = np.radians(60)
     for cat in cat_list:
@@ -381,7 +381,7 @@ if __name__ == '__main__':
                                           rnd_occ_ratio_rng=(.2, .4), nrml_occ_ratio_rng=(.2, .6),
                                           visible_threshold=visible_threshold, toggledebug=False,
                                           occ_vt_ratio=random.uniform(.08, .1), noise_vt_ratio=random.uniform(.2, .5),
-                                          noise_cnt=random.randint(2, 5),
+                                          noise_cnt=random.randint(1, 5),
                                           add_vt_occ=True, add_noise=False, add_rnd_occ=False, add_noise_pts=True)
             # o3dpcd_init, ind = o3dpcd_init.remove_radius_outlier(nb_points=50, radius=0.005)
 

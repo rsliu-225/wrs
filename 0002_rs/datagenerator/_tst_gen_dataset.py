@@ -36,31 +36,35 @@ def show_ico():
 
 
 if __name__ == '__main__':
-    cam_pos = np.asarray([0, 0, .5])
-    base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
+    # cam_pos = np.asarray([0, 0, .5])
+    # base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
+    base = wd.World(cam_pos=[0, .25, .25], lookat_pos=[0, 0, 0])
 
-    show_ico()
-
-    icomats = rm.gen_icorotmats(rotation_interval=math.radians(360 / 60))
+    # show_ico()
+    # icomats = rm.gen_icorotmats(rotation_interval=math.radians(360 / 60))
     # icos = trm.creation.icosphere(1)
     # icos_cm = cm.CollisionModel(icos)
     # icos_cm.attach_to(base)
 
-    width = .005
+    width = .008
     thickness = .0015
     fo = './tst'
     cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
-
+    # pseq = np.asarray([[0, 0, 0], [.16, 0, 0]])
+    # rotseq = np.asarray([np.eye(3), np.eye(3)])
     # pseq = utl.poly_inp(pseq=np.asarray([[0, 0, 0], [.018, .02, .02], [.06, .04, 0], [.12, 0, 0]]))
     pseq = utl.spl_inp(pseq=np.asarray([[0, 0, 0], [0.02, -0.00411336, -0.01327048], [0.04, -0.01863003, 0.0190177],
-                                        [0.06, 0.00720252, 0.01764031], [0.08, -0.0065916, -0.00725867]]),toggledebug=True)
-    # pseq = utl.uni_length(pseq, goal_len=1.6)
+                                        [0.06, 0.00720252, 0.01764031], [0.08, -0.0065916, -0.00725867]]),
+                       toggledebug=False)
     pseq = utl.uni_length(pseq, goal_len=.2)
     pseq, rotseq = utl.get_rotseq_by_pseq(pseq)
 
-    objcm = utl.gen_swap(pseq, rotseq, cross_sec)
-    objcm.set_rgba((1, 1, 0, 1))
+    objcm = cm.gen_box(extent=[.16, .008, .0015])
+
+    # objcm = utl.gen_swap(pseq, rotseq, cross_sec)
+    objcm.set_rgba((.7, .7, .7, 1))
     objcm.attach_to(base)
+    base.run()
 
     # for matlist in icomats:
     #     np.random.shuffle(matlist)

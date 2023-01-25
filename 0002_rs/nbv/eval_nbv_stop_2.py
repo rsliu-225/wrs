@@ -18,7 +18,6 @@ import visualization.panda.world as wd
 import motionplanner.pcn_nbv_solver as nbv_solver
 import nbv_utils as nu
 
-RES_FO_NAME = 'res_75_rlen'
 
 if __name__ == '__main__':
     model_name = 'pcn'
@@ -34,22 +33,21 @@ if __name__ == '__main__':
 
     # path = 'E:/liu/nbv_mesh/'
     path = 'D:/nbv_mesh/'
-    cat_list = ['tmpl']
-    # cat_list = ['plat']
-    coverage_tor = .001
+    res_fo = 'res_60_rlen'
+    cat_list = ['plat']
+    # cat_list = ['bspl_4']
     goal = .95
-    visible_threshold = np.radians(75)
     prefix = 'pcn'
     for cat in cat_list:
         TP = []
         TN = []
         FP = []
         FN = []
-        if not os.path.exists(os.path.join(path, cat, RES_FO_NAME)):
-            os.makedirs(os.path.join(path, cat, RES_FO_NAME))
+        if not os.path.exists(os.path.join(path, cat, res_fo)):
+            os.makedirs(os.path.join(path, cat, res_fo))
         for f in os.listdir(os.path.join(path, cat, 'mesh')):
             print(f'-----------{f}------------')
-            res_dict = json.load(open(os.path.join(path, cat, RES_FO_NAME,
+            res_dict = json.load(open(os.path.join(path, cat, res_fo,
                                                    f'{prefix}_{f.split(".ply")[0]}.json'), 'rb'))
 
             for i in range(5):
@@ -74,10 +72,10 @@ if __name__ == '__main__':
                     elif gt >= goal and not complete:
                         FN.append(gt)
         print(f'-----------{cat}------------')
-        print(len(TP), np.asarray(TP).mean(), TP)
-        print(len(TN), np.asarray(TN).mean(), TN)
-        print(len(FP), np.asarray(FP).mean(), FP)
-        print(len(FN), np.asarray(FN).mean(), FN)
+        print('TP', len(TP), np.asarray(TP).mean(), TP)
+        print('TF', len(TN), np.asarray(TN).mean(), TN)
+        print('FP', len(FP), np.asarray(FP).mean(), FP)
+        print('FN', len(FN), np.asarray(FN).mean(), FN)
         precision = (len(TP) + len(TN)) / (len(TP) + len(TN) + len(FP) + len(FN))
         acc = len(TP) / (len(TP) + len(FP))
         recall = len(TP) / (len(TP) + len(FN))

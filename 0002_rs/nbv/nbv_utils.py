@@ -48,6 +48,10 @@ def load_cov(path, cat, fo, prefix='pcn'):
         max_tmp = [res_dict['init_coverage']]
         max = 0
         max_cnt = 0
+        if res_dict['init_coverage'] > .94:
+            print('remove')
+        print(prefix, '0', res_dict['init_coverage'])
+
         for i in range(5):
             if str(i) in res_dict.keys():
                 print(prefix, i, res_dict[str(i)]['coverage'])
@@ -61,7 +65,7 @@ def load_cov(path, cat, fo, prefix='pcn'):
     return transpose(cov_list), transpose(max_list), [cnt_list[0]] + cnt_list
 
 
-def load_pts(path, cat, fo, cross_sec, prefix='pcn', toggledebug=False):
+def fit(path, cat, fo, cross_sec, prefix='pcn', toggledebug=False):
     cd_list = []
     hd_list = []
 
@@ -111,6 +115,59 @@ def load_pts(path, cat, fo, cross_sec, prefix='pcn', toggledebug=False):
         print(prefix, cd_list[-1], hd_list[-1])
 
     return transpose(cd_list), transpose(hd_list)
+
+
+def fit_dist_cov(path, cat, fo, cross_sec, prefix='pcn', toggledebug=False):
+    cd_list = []
+    hd_list = []
+    cov_list = []
+
+    for f in os.listdir(os.path.join(path, cat, 'mesh')):
+        if int(f.split(".ply")[0]) > 2:
+            continue
+        print(f'-----------{f}------------')
+        try:
+            res_dict = json.load(open(os.path.join(path, cat, fo, f'{prefix}_{f.split(".ply")[0]}.json'), 'rb'))
+            objcm_gt = du.o3dmesh2cm(o3d.io.read_triangle_mesh(os.path.join(path, cat, 'mesh', f)))
+        except:
+            break
+
+        stop = False
+        for i in range(6):
+            if str(i) in res_dict.keys() and not stop:
+                pts = np.asarray(res_dict[str(i)]['input'])
+                if i == 0:
+                    cov_list.append(res_dict['init_coverage'])
+                else:
+                    cov_list.append(res_dict[str(i - 1)]['coverage'])
+            elif not stop:
+                pts = np.asarray(res_dict['final'])
+                cov_list.append(res_dict[str(i - 1)]['coverage'])
+                stop = True
+            else:
+                break
+
+            kpts, kpts_rotseq = pcdu.get_kpts_gmm(pts, rgba=(1, 1, 0, 1), n_components=16)
+            inp_pseq = kpts2bspl(kpts)
+            inp_rotseq = pcdu.get_rots_wkpts(pts, inp_pseq, show=True, rgba=(1, 0, 0, 1))
+            kpts = np.asarray(kpts)
+
+            if toggledebug:
+                fig = plt.figure(2)
+                ax = fig.add_subplot(111, projection='3d')
+                ax.scatter(pts[:, 0], pts[:, 1], pts[:, 2], c='gray', s=.01, alpha=.5)
+                ax.plot(kpts[:, 0], kpts[:, 1], kpts[:, 2])
+                ax.plot(inp_pseq[:, 0], inp_pseq[:, 1], inp_pseq[:, 2])
+                plt.show()
+
+            objcm = bu.gen_swap(inp_pseq, inp_rotseq, cross_sec, extend=.008)
+            cd = chamfer_distance(objcm.objtrm.vertices, objcm_gt.objtrm.vertices, metric='l2', direction='bi')
+            hd = hausdorff_distance(objcm.objtrm.vertices, objcm_gt.objtrm.vertices, metric='l2')
+            cd_list.append(cd * 1000)
+            hd_list.append(hd * 1000)
+        print(prefix, cd_list[-1], hd_list[-1], cov_list[-1])
+
+    return cd_list, hd_list, cov_list
 
 
 def plot_box(ax, data, clr, positions, showfliers=False):

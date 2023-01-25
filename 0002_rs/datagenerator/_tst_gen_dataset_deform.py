@@ -29,19 +29,20 @@ def save_stl(objcm, path):
 
 
 if __name__ == '__main__':
-    base = wd.World(cam_pos=[.1, .2, .4], lookat_pos=[0, 0, 0])
+    base = wd.World(cam_pos=[.1, .25, .25], lookat_pos=[.1, 0, 0])
     # base = wd.World(cam_pos=[.1, .4, 0], lookat_pos=[.1, 0, 0])
-    gm.gen_frame(thickness=.002, length=.05).attach_to(base)
+    # gm.gen_frame(thickness=.002, length=.05).attach_to(base)
 
     width = .008
     thickness = 0
     cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
 
     objcm = cm.CollisionModel('../obstacles/template.stl')
+
     fo = 'tst_plate'
     # objcm.attach_to(base)
-    # objcm.set_rgba((.7, .7, .7, .7))
-
+    # objcm.set_rgba((.7, .7, .7, 1))
+    # base.run()
     vs = objcm.objtrm.vertices
 
     # goal_pseq = np.asarray([[0, 0, 0],

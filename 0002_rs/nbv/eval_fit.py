@@ -16,10 +16,10 @@ if __name__ == '__main__':
     width = .008
     thickness = .0015
     cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
-    cd_rnd, hd_rnd = nbv_utl.load_pts(path, cat, fo, cross_sec, prefix='random', toggledebug=False)
-    cd_org, hd_org = nbv_utl.load_pts(path, cat, fo, cross_sec, prefix='org')
-    cd_pcn, hd_pcn = nbv_utl.load_pts(path, cat, fo, cross_sec, prefix='pcn')
-    cd_opt, hd_opt = nbv_utl.load_pts(path, cat, fo, cross_sec, prefix='pcn_opt')
+    cd_rnd, hd_rnd = nbv_utl.fit(path, cat, fo, cross_sec, prefix='random', toggledebug=False)
+    cd_org, hd_org = nbv_utl.fit(path, cat, fo, cross_sec, prefix='org')
+    cd_pcn, hd_pcn = nbv_utl.fit(path, cat, fo, cross_sec, prefix='pcn')
+    cd_opt, hd_opt = nbv_utl.fit(path, cat, fo, cross_sec, prefix='pcn_opt')
 
     x = [1, 2, 3, 4, 5, 6]
     plt.rcParams["font.family"] = "Times New Roman"
@@ -40,10 +40,10 @@ if __name__ == '__main__':
     ax1.grid(which='major', linestyle='-', linewidth='0.5', color='black', alpha=.8)
     ax1.grid(which='minor', linestyle=':', linewidth='0.5', color='gray', alpha=.5)
 
-    nbv_utl.plot_box(ax2, hd_rnd, 'tab:blue', positions=[4 * v + .3 for v in x])
-    nbv_utl.plot_box(ax2, hd_org, 'tab:orange', positions=[4 * v + 1 + .05 for v in x])
-    nbv_utl.plot_box(ax2, hd_pcn, 'tab:green', positions=[4 * v + 2 - .05 for v in x])
-    nbv_utl.plot_box(ax2, hd_opt, 'tab:red', positions=[4 * v + 3 - .3 for v in x])
+    nbv_utl.plot_box(ax2, hd_rnd, 'tab:blue', positions=[4 * v + .3 for v in x], showfliers=True)
+    nbv_utl.plot_box(ax2, hd_org, 'tab:orange', positions=[4 * v + 1 + .05 for v in x], showfliers=True)
+    nbv_utl.plot_box(ax2, hd_pcn, 'tab:green', positions=[4 * v + 2 - .05 for v in x], showfliers=True)
+    nbv_utl.plot_box(ax2, hd_opt, 'tab:red', positions=[4 * v + 3 - .3 for v in x], showfliers=True)
 
     ax2.set_xticks([4 * v + 1 for v in x])
     ax2.set_xticklabels(x)

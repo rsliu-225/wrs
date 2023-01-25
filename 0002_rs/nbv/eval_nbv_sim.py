@@ -8,8 +8,8 @@ import nbv_utils as nbv_utl
 if __name__ == '__main__':
     # path = 'E:/liu/nbv_mesh/'
     path = 'D:/nbv_mesh/'
-    cat = 'rlen_3'
-    fo = 'res_75_rlen'
+    cat = 'plat'
+    fo = 'res_60_rlen'
     coverage_rnd, max_rnd, cnt_rnd = nbv_utl.load_cov(path, cat, fo, prefix='random')
     coverage_org, max_org, cnt_org = nbv_utl.load_cov(path, cat, fo, prefix='org')
     coverage_pcn, max_pcn, cnt_pcn = nbv_utl.load_cov(path, cat, fo, prefix='pcn')
