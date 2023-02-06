@@ -29,10 +29,10 @@ if __name__ == '__main__':
     bs = b_sim.BendSim(show=True)
     mp = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
 
-    result, _, _, _, bendset = pickle.load(open(f'{config.ROOT}/bendplanner/bendresseq/180/4_1.pkl', 'rb'))
-    bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
-    _,seqs = result[-1]
-    print(seqs)
+    result, _, _, _, bendset = pickle.load(open(f'{config.ROOT}/bendplanner/bendresseq/final_90/5_1.pkl', 'rb'))
+
+    bs.reset([(0, 0, 0), (0, bendset[0][3], 0)], [np.eye(3), np.eye(3)])
+    seqs = result[0]
     bendseq = [bendset[i] for i in seqs]
     for b in bendseq:
         print(b)

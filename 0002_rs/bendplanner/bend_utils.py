@@ -89,6 +89,30 @@ def gen_ramdom_curve(kp_num=5, length=.5, step=.005, z_max=False, do_inp=True, t
     return pseq
 
 
+def gen_bspline(kp_num=5, length=.5, step=.005, z_max=False, do_inp=True, toggledebug=False):
+    pseq = np.asarray([[0, 0, 0]])
+    for i in range(kp_num - 1):
+        a = random.uniform(-np.pi / 3, np.pi / 3)
+        tmp_p = pseq[-1] + np.asarray((np.cos(a) * length / kp_num,
+                                       np.sin(a) * length / kp_num,
+                                       random.uniform(-z_max, z_max) if z_max else 0))
+        pseq = np.vstack([pseq, tmp_p])
+    inp = interpolate.interp1d(pseq[:, 0], pseq[:, 1], kind='cubic')
+    inp_z = interpolate.interp1d(pseq[:, 0], pseq[:, 2], kind='cubic')
+    x = np.linspace(0, pseq[-1][0], int(length / step))
+    y = inp(x)
+    z = inp_z(x)
+    if toggledebug:
+        ax = plt.axes(projection='3d')
+        ax.plot3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], color='red')
+        ax.scatter3D(x, y, z, color='green')
+        plt.show()
+    if do_inp:
+        pseq = linear_inp3d_by_step(np.asarray(list(zip(x, y, z))))
+
+    return pseq
+
+
 def gen_sgl_curve(pseq, step=.001, do_inp=True, toggledebug=False):
     length = cal_length(pseq)
     inp = interpolate.interp1d(pseq[:, 0], pseq[:, 1], kind='cubic')
@@ -412,12 +436,11 @@ def decimate_pseq(pseq, tor=.001, toggledebug=False):
             plot_pseq(ax, pseq[res_pids])
             plt.show()
     print(f'Num. of fitting result:{len(res_pids)}/{len(pseq)}')
-    return np.asarray(pseq[res_pids]), get_rotseq_by_pseq(pseq[res_pids])
+    return np.asarray(pseq[res_pids]), get_rotseq_by_pseq(pseq[res_pids]), res_pids
 
 
 def decimate_pseq_by_cnt(pseq, cnt=10, toggledebug=False):
     pseq = np.asarray(pseq)
-    rotseq = []
     res_pids = [0, len(pseq) - 1]
     while len(res_pids) < cnt:
         max_err = 0
@@ -437,7 +460,43 @@ def decimate_pseq_by_cnt(pseq, cnt=10, toggledebug=False):
             plot_pseq(ax, pseq[res_pids])
             plt.show()
     print(f'Num. of fitting result:{len(res_pids)}/{len(pseq)}')
-    return np.asarray(pseq[res_pids]), get_rotseq_by_pseq(pseq[res_pids])
+    return np.asarray(pseq[res_pids]), get_rotseq_by_pseq(pseq[res_pids]), res_pids
+
+
+def decimate_pseq_by_cnt_curvature(pseq, thresh_r=bconfig.R_BEND, cnt=10, toggledebug=False):
+    pseq = np.asarray(pseq)
+    curvature_list, r_list, torsion_list = cal_curvature(pseq)
+    inx_real = [i for i in range(len(r_list)) if r_list[i] >= thresh_r]
+    pseq_tmp = np.asarray([pseq[i + 1] for i in range(len(r_list) - 2) if r_list[i] >= thresh_r])
+    res_pids = [0, len(pseq_tmp) - 1]
+
+    while len(res_pids) < cnt:
+        max_err = 0
+        max_inx = -1
+        for i in range(len(res_pids) - 1):
+            max_err_tmp, max_inx_tmp = __ps2seg_max_dist(pseq_tmp[res_pids[i]], pseq_tmp[res_pids[i + 1]],
+                                                         pseq_tmp[res_pids[i]:res_pids[i + 1]])
+            if max_err_tmp > max_err:
+                max_err = max_err_tmp
+                max_inx = res_pids[i] + max_inx_tmp
+        res_pids.append(max_inx)
+        res_pids = sorted(res_pids)
+        if toggledebug:
+            ax = plt.axes(projection='3d')
+            plot_pseq(ax, pseq)
+            plot_pseq(ax, pseq_tmp[res_pids])
+            plt.show()
+    res_pids = [inx_real[i] for i in res_pids]
+    print(f'Num. of fitting result:{len(res_pids)}/{len(pseq)}')
+    return np.asarray(pseq[res_pids]), get_rotseq_by_pseq(pseq[res_pids]), res_pids
+
+
+def decimate_pseq_by_cnt_uni(pseq, cnt=10, toggledebug=False):
+    pseq = np.asarray(pseq)
+    res_pids = [int(v) for v in np.linspace(0, len(pseq) - 1, cnt)]
+
+    print(f'Num. of fitting result:{len(res_pids)}/{len(pseq)}')
+    return np.asarray(pseq[res_pids]), get_rotseq_by_pseq(pseq[res_pids]), res_pids
 
 
 def decimate_rotpseq(pseq, rotseq, tor=.001, toggledebug=False):
@@ -471,7 +530,7 @@ def get_rotseq_by_pseq(pseq):
         v1 = pseq[i - 1] - pseq[i]
         v2 = pseq[i] - pseq[i + 1]
         n = np.cross(rm.unit_vector(v1), rm.unit_vector(v2))
-        if pre_n is not None:
+        if pre_n is not None and rm.angle_between_vectors(n, pre_n) is not None:
             if rm.angle_between_vectors(n, pre_n) > np.pi / 2:
                 n = -n
         x = np.cross(v1, n)
@@ -743,3 +802,47 @@ def rotpseq2bendset(pseq, rotseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, 
         plt.show()
 
     return bendseq
+
+
+def cal_curvature(pseq, show=False):
+    def _center(A, B, C):
+        (x1, y1), (x2, y2), (x3, y3) = A, B, C
+        a = x1 * (y2 - y3) - y1 * (x2 - x3) + x2 * y3 - x3 * y2
+        b = (x1 ** 2 + y1 ** 2) * (y3 - y2) + (x2 ** 2 + y2 ** 2) * (y1 - y3) + (x3 ** 2 + y3 ** 2) * (y2 - y1)
+        c = (x1 ** 2 + y1 ** 2) * (x2 - x3) + (x2 ** 2 + y2 ** 2) * (x3 - x1) + (x3 ** 2 + y3 ** 2) * (x1 - x2)
+        center = np.asarray([-b / a / 2, -c / a / 2])
+        r = np.linalg.norm(np.asarray(A) - center)
+        return center, r
+
+    curture_list = []
+    torsion_list = []
+    r_list = []
+    nrml_pre = None
+    dir_pre = np.asarray([1, 0, 0])
+    for i in range(1, len(pseq) - 1):
+        nrml = np.cross(pseq[i + 1] - pseq[i], pseq[i] - pseq[i - 1])
+        rot = rm.rotmat_between_vectors(nrml, np.asarray([0, 0, 1]))
+        A = rot.dot(pseq[i - 1])
+        B = rot.dot(pseq[i])
+        C = rot.dot(pseq[i + 1])
+        center, r = _center(A[:2], B[:2], C[:2])
+        # circle = np.asarray([np.linalg.inv(rot).dot(np.asarray([center[0] + r * np.cos(a),
+        #                                                         center[1] + r * np.sin(a), A[2]]))
+        #                      for a in np.linspace(-np.pi, np.pi, 60)])
+        # plt.plot(circle[:, 0], circle[:, 1], circle[:, 2], color='r')
+        # print(r, 1 / r)
+        curture_list.append(1 / r)
+        r_list.append(r)
+        if nrml_pre is None:
+            nrml_pre = nrml
+            continue
+        if rm.angle_between_vectors(dir_pre, np.cross(nrml, nrml_pre)) > np.pi / 2:
+            torsion_list.append(-rm.angle_between_vectors(nrml, nrml_pre))
+        else:
+            torsion_list.append(rm.angle_between_vectors(nrml, nrml_pre))
+        dir_pre = np.cross(nrml, nrml_pre)
+        nrml_pre = nrml
+    if show:
+        plt.plot(range(len(pseq))[1:-1], curture_list)
+        plt.show()
+    return curture_list, r_list, [sum(torsion_list[:i]) for i in range(len(torsion_list))]

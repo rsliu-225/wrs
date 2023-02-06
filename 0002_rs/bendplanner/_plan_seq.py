@@ -123,6 +123,7 @@ def inf_bend_check(bs, bendset):
 if __name__ == '__main__':
     import os
     import localenv.envloader as el
+    import BendRbtPlanner as br_planner
 
     '''
     set up env and param
@@ -135,7 +136,7 @@ if __name__ == '__main__':
     '''
     mp_lft = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
 
-    base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
+    # base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
     bs = b_sim.BendSim(show=False)
     f_name = 'penta'
     goal_pseq = pickle.load(open(os.path.join(config.ROOT, 'bendplanner/goal/pseq', f'{f_name}.pkl'), 'rb'))
@@ -145,8 +146,8 @@ if __name__ == '__main__':
     init_pseq = [(0, 0, 0), (0, .1 + bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
     brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp_lft)
-    fit_pseq = bu.iter_fit(goal_pseq, tor=.002, toggledebug=False)
-    bendset = brp.pseq2bendset(fit_pseq, pos=.1, toggledebug=False)
+    fit_pseq, _, _ = bu.decimate_pseq(goal_pseq, tor=.002, toggledebug=False)
+    bendset = bu.pseq2bendset(fit_pseq, init_l=.1, toggledebug=False)
 
     # bs.show(rgba=(.7, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
     # bs.show(rgba=(.7, .7, .7, .7), show_frame=True)

@@ -17,7 +17,7 @@ class BendEnv(object):
         self._granularity = granularity
         self._cm_type = cm_type
 
-        fit_pseq, fit_rotseq = bu.decimate_pseq(self._goal_pseq, tor=.0002, toggledebug=False)
+        fit_pseq, fit_rotseq, _ = bu.decimate_pseq(self._goal_pseq, tor=.0002, toggledebug=False)
         self._bendset = bu.pseq2bendset(fit_pseq, toggledebug=False)
         self._res_action = list(range(len(self._bendset)))
 

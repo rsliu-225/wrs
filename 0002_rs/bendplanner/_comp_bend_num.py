@@ -28,7 +28,8 @@ def get_fit_err(bs, goal_pseq, goal_rotseq, bend_num_range):
 
     for i in range(bend_num_range[0], bend_num_range[1]):
         bs.reset(init_pseq, init_rotseq)
-        fit_pseq, fit_rotseq = bu.decimate_pseq_by_cnt(goal_pseq, cnt=i, toggledebug=False)
+        # fit_pseq, fit_rotseq, _ = bu.decimate_pseq_by_cnt(goal_pseq, cnt=i, toggledebug=False)
+        fit_pseq, fit_rotseq, res_id = bu.decimate_pseq_by_cnt_uni(goal_pseq, cnt=i, toggledebug=False)
         init_rot = bu.get_init_rot(fit_pseq)
         init_bendset = bu.pseq2bendset(fit_pseq, bend_r=bs.bend_r, toggledebug=False)
         m_list.append(len(init_bendset))
@@ -79,7 +80,7 @@ if __name__ == '__main__':
     init_pseq = [(0, 0, 0), (0, .05 + bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
 
-    bend_num_range = (5, 50)
+    bend_num_range = (5, 51)
 
     # r = .02 / 2
     # bs.set_r_center(r)
@@ -88,31 +89,42 @@ if __name__ == '__main__':
 
     x = range(bend_num_range[0], bend_num_range[1])
 
-    fig = plt.figure(figsize=(18, 5))
+    fig = plt.figure(figsize=(3.5, 20))
     plt.rcParams["font.family"] = "Times New Roman"
-    plt.rcParams["font.size"] = 24
-    ax1 = fig.add_subplot(1, 3, 1)
+    plt.rcParams["font.size"] = 20
+    ax1 = fig.add_subplot(3, 1, 1)
     grid_on(ax1)
     ax1.plot(x, fit_max_err_list, color='darkorange', linestyle="dashed")
     ax1.plot(x, bend_max_err_list, color='darkorange')
     best_n, min_err = find_best_n(bend_max_err_list, threshold=1)
+    ax1.set_ylim(0, 6)
+    ax1.set_yticks(np.arange(0, 7, 2))
+    ax1.set_yticks(np.arange(0, 7, .4), minor=True)
+
     print(x[best_n], min_err)
     # ax1.set_xlabel('Num. of key point')
     # ax1.set_ylabel('Max. point to point error(mm)')
 
-    ax2 = fig.add_subplot(1, 3, 2)
+    ax2 = fig.add_subplot(3, 1, 2)
     grid_on(ax2)
     ax2.plot(x, fit_avg_err_list, color='darkorange', linestyle="dashed")
     ax2.plot(x, bend_avg_err_list, color='darkorange')
+    ax2.set_ylim(0, 3)
+    ax2.set_yticks(np.arange(0, 3, 1))
+    ax2.set_yticks(np.arange(0, 3, .2), minor=True)
+
     best_n, min_err = find_best_n(bend_avg_err_list, threshold=.5)
     print(x[best_n], min_err)
 
     # ax2.set_xlabel('Num. of key point')
     # ax2.set_ylabel('Avg. point to point error(mm)')
 
-    ax3 = fig.add_subplot(1, 3, 3)
+    ax3 = fig.add_subplot(3, 1, 3)
     grid_on(ax3)
     ax3.plot(x, m_list, color='black')
+    ax3.set_ylim(0, 51)
+    ax3.set_yticks(np.arange(0, 51, 20))
+    ax3.set_yticks(np.arange(0, 51, 4), minor=True)
 
     ax1.axvline(x=x[best_n], color='r', linestyle="dashed")
     ax2.axvline(x=x[best_n], color='r', linestyle="dashed")

@@ -518,11 +518,11 @@ class BendSim(object):
             self.show(rgba=(.7, .7, 0, .7), show_frame=True, show_pseq=True)
 
     def get_updown_primitive(self):
-        rot = rm.rotmat_from_axangle((0, 0, 1), np.pi/18)
+        rot = rm.rotmat_from_axangle((0, 0, 1), np.pi / 18)
         pseq = self._rot_new_orgin(self.pseq, np.asarray((-self.bend_r, 0, 0)), rot)
         rotseq = np.asarray([rot.dot(r) for r in self.rotseq])
 
-        vertices, faces = self.gen_stick(pseq, rotseq, r=self.thickness/2, section=30)
+        vertices, faces = self.gen_stick(pseq, rotseq, r=self.thickness / 2, section=30)
         tmp_cm = cm.CollisionModel(initor=trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces)),
                                    btwosided=True, name='obj')
         tmp_cm.attach_to(base)
@@ -783,15 +783,15 @@ class BendSim(object):
         bendset = []
         for i in range(n):
             if i > 0:
-                bendset.append([random.uniform(.1, .98) * max_bend * random.choice([-1, 1]),
+                bendset.append([random.uniform(.2, .98) * max_bend,
                                 0,
-                                random.uniform(0, 1) * np.pi,
+                                random.uniform(0, 1) * np.pi * random.choice([-1, 1]),
                                 bendset[-1][-1] + self.bend_r * abs(bendset[-1][0] / np.cos(bendset[-1][1]))
                                 + random.uniform(self.bend_r * 2, self.bend_r * max_bend)])
             else:
-                bendset.append([random.uniform(.1, .98) * max_bend * random.choice([-1, 1]),
+                bendset.append([random.uniform(.2, .98) * max_bend,
                                 0,
-                                random.uniform(0, 1) * np.pi,
+                                random.uniform(0, 1) * np.pi * random.choice([-1, 1]),
                                 self.bend_r * np.pi + .1])
         return bendset
 
@@ -828,7 +828,7 @@ if __name__ == '__main__':
     # bendseq = pickle.load(open('./penta_bendseq.pkl', 'rb'))
     # bendset = bs.gen_random_bendset(5)
     # print(bendset)
-    bs.reset([(0, 0, 0), (0, max(np.asarray(bendset)[:, 3])-.01, 0)], [np.eye(3), np.eye(3)])
+    bs.reset([(0, 0, 0), (0, max(np.asarray(bendset)[:, 3]) - .01, 0)], [np.eye(3), np.eye(3)])
 
     is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, toggledebug=False)
     # bs.show(rgba=(.7, .7, 0, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))

@@ -110,29 +110,35 @@ def show_sgl_method(f_name):
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams["font.size"] = 24
 
-    ax1 = fig.add_subplot(1, 3, 1)
+    ax1 = fig.add_subplot(1, 2, 1)
     grid_on(ax1)
     ax1.plot(x, init_max_err_list, color='darkorange')
     ax1.plot(x, opt_max_err_list, color='g')
     ax1.axvline(x=12, c='r', linestyle='dashed')
     # ax1.set_xlabel('Num. of key point')
     # ax1.set_ylabel('Max. point to point error(mm)')
+    ax1.set_ylim(0, 6)
+    ax1.set_yticks(np.arange(0, 7, 2))
+    ax1.set_yticks(np.arange(0, 7, .2), minor=True)
 
-    ax2 = fig.add_subplot(1, 3, 2)
+    ax2 = fig.add_subplot(1, 2, 2)
     grid_on(ax2)
     ax2.plot(x, init_avg_err_list, color='darkorange')
     ax2.plot(x, opt_avg_err_list, color='g')
     ax2.axvline(x=12, c='r', linestyle='dashed')
     # ax2.set_xlabel('Num. of key point')
     # ax2.set_ylabel('Avg. point to point error(mm)')
+    ax2.set_ylim(0, 3)
+    ax2.set_yticks(np.arange(0, 3, 1))
+    ax2.set_yticks(np.arange(0, 3, .2), minor=True)
 
-    ax3 = fig.add_subplot(1, 3, 3)
-    ax4 = ax3.twinx()
-    grid_on(ax3)
-    ax3.plot(x, time_cost_list, color='black')
-    print(len(time_cost_list), len(bend_num_list))
-    print(np.asarray(bend_num_list)+2)
-    ax4.plot(x, np.asarray(bend_num_list)+2)
+    # ax3 = fig.add_subplot(1, 3, 3)
+    # ax4 = ax3.twinx()
+    # grid_on(ax3)
+    # ax3.plot(x, time_cost_list, color='black')
+    # print(len(time_cost_list), len(bend_num_list))
+    # print(np.asarray(bend_num_list)+2)
+    # ax4.plot(x, np.asarray(bend_num_list)+2)
     # ax3.set_xlabel('Num. of key point')
     # ax3.set_ylabel('Time cost(s)')
 
@@ -149,32 +155,38 @@ def compare(f_name_1, f_name_2):
     x, init_max_err_list_2, opt_max_err_list_2, init_avg_err_list_2, opt_avg_err_list_2, \
     init_sum_err_list_2, opt_sum_err_list_2, time_cost_list_2, bend_num_list_2 = _load_result_dict(opt_res_dict_2)
 
-    fig = plt.figure(figsize=(18, 5))
+    fig = plt.figure(figsize=(16, 5))
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams["font.size"] = 12
 
-    ax1 = fig.add_subplot(1, 3, 1)
+    ax1 = fig.add_subplot(1, 2, 1)
     ax1.grid()
     ax1.plot(x, init_max_err_list_1, color='r')
     ax1.plot(x, opt_max_err_list_1, color='g')
     ax1.plot(x, opt_max_err_list_2, color='dodgerblue')
     ax1.set_xlabel('Num. of key point')
     ax1.set_ylabel('Max. point to point error(mm)')
+    ax1.set_ylim(0, 6)
+    ax1.set_yticks(np.arange(0, 7, 2))
+    ax1.set_yticks(np.arange(0, 7, .2), minor=True)
 
-    ax2 = fig.add_subplot(1, 3, 2)
+    ax2 = fig.add_subplot(1, 2, 2)
     ax2.grid()
     ax2.plot(x, init_avg_err_list_1, color='r')
     ax2.plot(x, opt_avg_err_list_1, color='g')
     ax2.plot(x, opt_avg_err_list_2, color='dodgerblue')
     ax2.set_xlabel('Num. of key point')
     ax2.set_ylabel('Avg. point to point error(mm)')
+    ax2.set_ylim(0, 3)
+    ax2.set_yticks(np.arange(0, 3, 1))
+    ax2.set_yticks(np.arange(0, 3, .2), minor=True)
 
-    ax3 = fig.add_subplot(1, 3, 3)
-    ax3.grid()
-    ax3.plot(x, time_cost_list_1, color='g')
-    ax3.plot(x, time_cost_list_2, color='dodgerblue')
-    ax3.set_xlabel('Num. of key point')
-    ax3.set_ylabel('Time cost(s)')
+    # ax3 = fig.add_subplot(1, 3, 3)
+    # ax3.grid()
+    # ax3.plot(x, time_cost_list_1, color='g')
+    # ax3.plot(x, time_cost_list_2, color='dodgerblue')
+    # ax3.set_xlabel('Num. of key point')
+    # ax3.set_ylabel('Time cost(s)')
 
     plt.show()
 
@@ -188,7 +200,7 @@ if __name__ == '__main__':
     '''
     load files
     '''
-    f_name = f'{goal_f_name}_{method}_{obj_type}_15.pkl'
+    f_name = f'{goal_f_name}_{method}_{obj_type}_10.pkl'
     show_sgl_method(f_name)
 
     # compare(f'{goal_f_name}_{method}_max_10.pkl', f'{goal_f_name}_{method}_avg_10.pkl')

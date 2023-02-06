@@ -27,12 +27,10 @@ def run_parallel(fn, args):
 def opt_process(i, bs, opt, f_name='', tor=None, obj_type='avg', method='SLSQP', n_trials=2000, n_startup_trials=10,
                 sigma0=None):
     if method == 'cmaes':
-        res_bendseq, cost, time_cost = opt.solve(tor=tor, cnt=i,
-                                                 n_trials=n_trials, sigma0=sigma0,
+        res_bendseq, cost, time_cost = opt.solve(tor=tor, cnt=i, n_trials=n_trials, sigma0=sigma0,
                                                  n_startup_trials=n_startup_trials)
     else:
-        res_bendseq, cost, time_cost = opt.solve(tor=tor, cnt=i,
-                                                 method=method)
+        res_bendseq, cost, time_cost = opt.solve(tor=tor, cnt=i, method=method)
     bs.reset(opt.init_pseq, opt.init_rotseq, extend=False)
     bs.gen_by_bendseq(opt.init_bendset, cc=False)
     goal_pseq_aligned, goal_rotseq_aligned = bu.align_with_init(bs, opt.goal_pseq, opt.init_rot, opt.goal_rotseq)
@@ -93,7 +91,7 @@ if __name__ == '__main__':
     n_startup_trials = 10
     sigma0 = None
 
-    f_name = f'{goal_f_name}_{method}_{obj_type}_15.pkl'
+    f_name = f'{goal_f_name}_{method}_{obj_type}.pkl'
 
     '''
     opt

@@ -49,7 +49,7 @@ if __name__ == '__main__':
     '''
     plan
     '''
-    fit_pseq, _ = bu.decimate_pseq(goal_pseq, tor=.01, toggledebug=False)
+    fit_pseq, _, _ = bu.decimate_pseq(goal_pseq, tor=.01, toggledebug=False)
     # fit_pseq, _ = bu.decimate_pseq_by_cnt(goal_pseq, cnt=13, toggledebug=False)
     bendset = bu.pseq2bendset(fit_pseq, init_l=.1, toggledebug=False)
     init_rot = bu.get_init_rot(fit_pseq)

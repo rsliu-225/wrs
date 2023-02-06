@@ -634,7 +634,7 @@ if __name__ == '__main__':
     grasp_list = mp.load_all_grasp('stick')
     grasp_list = grasp_list
 
-    fit_pseq, _ = bu.decimate_pseq(goal_pseq, tor=.001, toggledebug=False)
+    fit_pseq, _, _ = bu.decimate_pseq(goal_pseq, tor=.001, toggledebug=False)
     bendset = bu.pseq2bendset(fit_pseq, toggledebug=False)[::-1]
     init_rot = bu.get_init_rot(fit_pseq)
     # pickle.dump(bendset, open(f'planres/{f_name}_bendset.pkl', 'wb'))

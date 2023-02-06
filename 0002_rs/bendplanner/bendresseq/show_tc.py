@@ -10,18 +10,41 @@ import bendplanner.BendSim as b_sim
 import visualization.panda.world as wd
 
 
+def pnp_cnt(l):
+    def _intersec(lst1, lst2):
+        lst3 = [value for value in lst1 if value in lst2]
+        return lst3
+
+    cnt = 0
+    for i in range(len(l) - 1):
+        if l[i + 1] < l[i]:
+            cnt += 1
+        elif len(_intersec(l[:i], range(l[i], l[i + 1]))) > 0:
+            cnt += 1
+    return cnt
+
+
 def load_res(num, fo='180'):
     success_tc_list = []
     success_cnt_list = []
     success_first_tc_list = []
     fail_tc_list = []
     total_cnt_list = []
+    pnp_cnt_list = []
     success_cnt = 0
     for f in os.listdir(f'./{fo}'):
         if f[-3:] == 'pkl' and f[0] == str(num):
             result, tc_list, attemp_cnt_list, total_tc, bendset = pickle.load(open(f'./{fo}/{f}', 'rb'))
             # print(f, total_tc)
             if len(result) != 0:
+                pnp_cnt_tmp = []
+                for l in result:
+                    try:
+                        pnp_cnt_tmp.append(pnp_cnt(l))
+                    except:
+                        pnp_cnt_tmp.append(pnp_cnt(l[-1]))
+
+                pnp_cnt_list.append(pnp_cnt_tmp)
                 success_cnt += 1
                 success_cnt_list.append(len(result))
                 success_tc_list.append(total_tc)
@@ -41,7 +64,8 @@ def load_res(num, fo='180'):
     # print('Num. of solution:', np.average(success_cnt_list), success_cnt_list)
     # print('Num. of attempts:', np.average(total_cnt_list))
 
-    return success_cnt, fail_tc_list, success_tc_list[:10], success_first_tc_list[:10], total_cnt_list[:10]
+    return success_cnt, fail_tc_list, success_tc_list[:10], success_first_tc_list[:10], total_cnt_list[:10], \
+           pnp_cnt_list[:10]
 
 
 def show_shape(bs, num, fo='180'):
@@ -55,27 +79,36 @@ def show_shape(bs, num, fo='180'):
         if f[-3:] == 'pkl' and f[0] == str(num):
             print(f'=========={f}==========')
             result, tc_list, attemp_cnt_list, total_tc, bendset = pickle.load(open(f'./{fo}/{f}', 'rb'))
-            bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
+            bs.reset([(0, 0, 0), (0, max([v[3] for v in bendset]), 0)], [np.eye(3), np.eye(3)])
             print(tc_list)
-            print(attemp_cnt_list)
-            print(total_tc)
+            # print(attemp_cnt_list)
+            # print(total_tc)
             if len(result) != 0:
                 success_cnt += 1
                 success_cnt_list.append(len(result))
                 success_tc_list.append(total_tc)
                 success_first_tc_list.append(tc_list[0])
                 try:
-                    bendresseq, seqs = result[1]
+                    bendresseq, seqs = result[0]
                 except:
-                    seqs = result[1]
-                print(seqs)
+                    seqs = result[0]
+                # print(seqs)
                 bendseq = [bendset[i] for i in seqs]
                 is_success, bendresseq, _ = bs.gen_by_bendseq(bendseq, cc=False, prune=True, toggledebug=False)
                 _, _, _, _, _, pseq, _ = bendresseq[-1]
-                pseq = np.asarray(pseq)
-                pseq[0] = pseq[0] - (pseq[0] - pseq[1]) * .5
                 pseq = np.asarray(pseq) * 1000
+                pseq[0] = pseq[0] - (pseq[0] - pseq[1]) * .8
+                pseq[-1] = pseq[-1] - (pseq[-1] - pseq[-2]) * .8
+                curture_list, r_list, torsion_list = bu.cal_curvature(pseq, show=False)
+                print(sum(curture_list), sum(torsion_list))
+
                 ax = plt.axes(projection='3d')
+                center = pseq.mean(axis=0)
+                eps = 40
+                ax.axes.set_xlim3d(left=center[0] - eps, right=center[0] + eps)
+                ax.axes.set_ylim3d(bottom=center[1] - eps, top=center[1] + eps)
+                ax.axes.set_zlim3d(bottom=center[2] - eps, top=center[2] + eps)
+
                 bu.plot_pseq(ax, pseq, c='k')
                 bu.scatter_pseq(ax, pseq[1:-2], c='r')
                 bu.scatter_pseq(ax, pseq[:1], c='g')
@@ -84,11 +117,21 @@ def show_shape(bs, num, fo='180'):
                 # base.run()
             else:
                 fail_tc_list.append(total_tc)
-                bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
+                bs.reset([(0, 0, 0), (0, max([v[3] for v in bendset]), 0)], [np.eye(3), np.eye(3)])
                 bs.gen_by_bendseq(bendset, cc=False)
+                pseq = np.asarray(bs.pseq) * 1000
+                pseq[0] = pseq[0] - (pseq[0] - pseq[1]) * .5
+                pseq[-1] = pseq[-1] - (pseq[-1] - pseq[-2]) * .8
+
                 ax = plt.axes(projection='3d')
-                bu.plot_pseq(ax, bs.pseq, c='k')
-                bu.scatter_pseq(ax, bs.pseq[1:-2], c='grey')
+                center = pseq.mean(axis=0)
+                eps = 40
+                ax.axes.set_xlim3d(left=center[0] - eps, right=center[0] + eps)
+                ax.axes.set_ylim3d(bottom=center[1] - eps, top=center[1] + eps)
+                ax.axes.set_zlim3d(bottom=center[2] - eps, top=center[2] + eps)
+
+                bu.plot_pseq(ax, pseq, c='k')
+                bu.scatter_pseq(ax, pseq[1:-2], c='grey')
                 plt.show()
             if type(attemp_cnt_list) == type([]):
                 total_cnt_list.append(attemp_cnt_list[-1])
@@ -101,6 +144,40 @@ def show_shape(bs, num, fo='180'):
     print('First time cost:', np.average(success_first_tc_list), success_first_tc_list)
     print('Num. of solution:', np.average(success_cnt_list), success_cnt_list)
     print('Num. of attempts:', np.average(total_cnt_list))
+
+
+def plot_curveture_tc(bs, num=8, fo_list=['45', '90', '180']):
+    plt.grid()
+    for fo in fo_list:
+        success_tc_list = []
+        success_first_tc_list = []
+        curveture_sum_list = []
+        torsion_sum_list = []
+        for f in os.listdir(f'./{fo}'):
+            if f[-3:] == 'pkl' and f[0] == str(num):
+                print(f'=========={f}==========')
+                result, tc_list, attemp_cnt_list, total_tc, bendset = pickle.load(open(f'./{fo}/{f}', 'rb'))
+                bs.reset([(0, 0, 0), (0, max([v[3] for v in bendset]), 0)], [np.eye(3), np.eye(3)])
+                if len(result) != 0:
+                    print('time cost:', tc_list)
+                    is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, prune=True, toggledebug=False)
+                    _, _, _, _, _, pseq, _ = bendresseq[-1]
+                    pseq = np.asarray(pseq) * 1000
+                    pseq[0] = pseq[0] - (pseq[0] - pseq[1]) * .5
+                    try:
+                        curture_list, r_list, torsion_list = bu.cal_curvature(pseq, show=False)
+                    except:
+                        continue
+                    print(sum(curture_list), sum(torsion_list))
+                    if sum(curture_list) < 200:
+                        curveture_sum_list.append(sum(curture_list))
+                        torsion_sum_list.append(sum(torsion_list))
+                        success_tc_list.append(total_tc)
+                        success_first_tc_list.append(tc_list[0])
+
+        plt.scatter(curveture_sum_list, success_first_tc_list)
+    # plt.scatter(success_first_tc_list, torsion_sum_list)
+    plt.show()
 
 
 def gen_img(bs, num, fo='180', show=False):
@@ -118,7 +195,7 @@ def gen_img(bs, num, fo='180', show=False):
         if f[-3:] == 'pkl' and f[0] == str(num):
             print(f'=========={f}==========')
             result, tc_list, attemp_cnt_list, total_tc, bendset = pickle.load(open(f'./{fo}/{f}', 'rb'))
-            bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
+            bs.reset([(0, 0, 0), (0, max([v[3] for v in bendset]), 0)], [np.eye(3), np.eye(3)])
             print(tc_list)
             print(attemp_cnt_list)
             print(total_tc)
@@ -135,9 +212,9 @@ def gen_img(bs, num, fo='180', show=False):
                 bendseq = [bendset[i] for i in seqs]
                 is_success, bendresseq, _ = bs.gen_by_bendseq(bendseq, cc=False, prune=True, toggledebug=False)
                 _, _, _, _, _, pseq, _ = bendresseq[-1]
-                pseq = np.asarray(pseq)
-                pseq[0] = pseq[0] - (pseq[0] - pseq[1]) * .5
                 pseq = np.asarray(pseq) * 1000
+                pseq[0] = pseq[0] - (pseq[0] - pseq[1]) * .8
+                pseq[-1] = pseq[-1] - (pseq[-1] - pseq[-2]) * .8
                 kpts = []
                 for i in range(len(pseq) - 1):
                     dist = np.linalg.norm(pseq[i + 1] - pseq[i])
@@ -145,7 +222,7 @@ def gen_img(bs, num, fo='180', show=False):
                         kpts.append(pseq[i + 1])
                 ax = plt.axes(projection='3d')
                 center = pseq.mean(axis=0)
-                eps = 90
+                eps = 40
                 ax.axes.set_xlim3d(left=center[0] - eps, right=center[0] + eps)
                 ax.axes.set_ylim3d(bottom=center[1] - eps, top=center[1] + eps)
                 ax.axes.set_zlim3d(bottom=center[2] - eps, top=center[2] + eps)
@@ -160,7 +237,7 @@ def gen_img(bs, num, fo='180', show=False):
                 bu.scatter_pseq(ax, pseq[1:-2], c='r')
                 bu.scatter_pseq(ax, pseq[:1], c='g', s=10)
                 plt.savefig('success.png', dpi=200)
-                img_tmp = cv2.imread('success.png')
+                img_tmp = cv2.imread('img/success.png')
 
                 # cv2.putText(img_tmp,
                 #             text=f'Find First Solution: {str(round(tc_list[0], 2))} s',
@@ -192,10 +269,12 @@ def gen_img(bs, num, fo='180', show=False):
                 # base.run()
             else:
                 fail_tc_list.append(total_tc)
-                bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
+                bs.reset([(0, 0, 0), (0, max([v[3] for v in bendset]), 0)], [np.eye(3), np.eye(3)])
                 bs.gen_by_bendseq(bendset, cc=False)
                 pseq = np.asarray(bs.pseq) * 1000
-                pseq[0] = pseq[0] - (pseq[0] - pseq[1]) * .5
+                pseq[0] = pseq[0] - (pseq[0] - pseq[1]) * .8
+                pseq[-1] = pseq[-1] - (pseq[-1] - pseq[-2]) * .8
+
                 ax = plt.axes(projection='3d')
                 center = pseq.mean(axis=0)
                 eps = 90
@@ -205,7 +284,7 @@ def gen_img(bs, num, fo='180', show=False):
                 bu.plot_pseq(ax, pseq, c='k')
                 bu.scatter_pseq(ax, pseq[1:-2], c='grey')
                 plt.savefig('failed.png', dpi=200)
-                img_tmp = cv2.imread('failed.png')
+                img_tmp = cv2.imread('img/failed.png')
                 print(img_tmp.shape)
                 img_tmp = img_tmp[160:900, 260:1100]
                 if img_failed is None:
@@ -233,7 +312,7 @@ def gen_img(bs, num, fo='180', show=False):
     print('Num. of attempts:', np.average(total_cnt_list))
 
 
-def plot_success(ax, x_range, fo, clr, d, marker='+'):
+def plot_success(ax, x_range, fo, clr, d, alpha=1., marker='+'):
     avg_first_tc_list = []
     avg_top10_tc_list = []
     avg_attempt_list = []
@@ -241,10 +320,12 @@ def plot_success(ax, x_range, fo, clr, d, marker='+'):
     top10_tc_box = []
     for num in x_range:
         print(f'---------{fo}, {num}---------')
-        success_cnt, fail_tc, top10_tc, first_tc, attemps = load_res(num, fo=fo)
+        success_cnt, fail_tc, top10_tc, first_tc, attemps, pnp_cnts = load_res(num, fo=fo)
         print(success_cnt, top10_tc, first_tc)
         print('first:', ' & '.join([str(round(t, 2)) for t in first_tc + [np.asarray(first_tc).mean()]]))
         print('top10:', ' & '.join([str(round(t, 2)) for t in top10_tc + [np.asarray(top10_tc).mean()]]))
+        print('pnp times:', ' & '.join([str(round(np.asarray(l).mean(), 2)) for l in pnp_cnts]))
+        print('Num. of sol:', ' & '.join([str(len(l)) for l in pnp_cnts]))
         first_tc_box.append(first_tc)
         top10_tc_box.append(top10_tc)
         avg_first_tc_list.append(np.average(first_tc))
@@ -254,16 +335,19 @@ def plot_success(ax, x_range, fo, clr, d, marker='+'):
         # ax.scatter([num] * len(first_tc), first_tc, color=clr, marker=marker, s=150)
         # ax.scatter([num] * len(top10_tc), top10_tc, color=clr, marker=marker, s=150)
     # box1 = ax.boxplot(first_tc_box, positions=x_range, patch_artist=True)
-    box1 = ax.boxplot(top10_tc_box, positions=x_range, patch_artist=True)
-    # if d == 1:
-    #     box1 = ax.boxplot(first_tc_box, positions=[d + 3 * (x - 1) + .25 for x in x_range], patch_artist=True)
-    # elif d == 2:
-    #     box1 = ax.boxplot(first_tc_box, positions=[d + 3 * (x - 1) for x in x_range], patch_artist=True)
-    # else:
-    #     box1 = ax.boxplot(first_tc_box, positions=[d + 3 * (x - 1) - .25 for x in x_range], patch_artist=True)
+    # box1 = ax.boxplot(top10_tc_box, positions=x_range, patch_artist=True)
+    if d == 1:
+        box1 = ax.boxplot(first_tc_box, positions=[d + 3 * (x - 1) + .25 for x in x_range], patch_artist=True)
+        # box1 = ax.boxplot(top10_tc_box, positions=[d + 3 * (x - 1) + .25 for x in x_range], patch_artist=True)
+    elif d == 2:
+        box1 = ax.boxplot(first_tc_box, positions=[d + 3 * (x - 1) for x in x_range], patch_artist=True)
+        # box1 = ax.boxplot(top10_tc_box, positions=[d + 3 * (x - 1) for x in x_range], patch_artist=True)
+    else:
+        box1 = ax.boxplot(first_tc_box, positions=[d + 3 * (x - 1) - .25 for x in x_range], patch_artist=True)
+        # box1 = ax.boxplot(top10_tc_box, positions=[d + 3 * (x - 1) - .25 for x in x_range], patch_artist=True)
 
     for item in ['boxes', 'whiskers', 'fliers', 'medians', 'caps']:
-        plt.setp(box1[item], color=clr)
+        plt.setp(box1[item], color=clr, alpha=alpha)
     plt.setp(box1["boxes"], facecolor=clr)
     plt.setp(box1["fliers"], markeredgecolor=clr)
     # ax.plot(x_range, avg_first_tc_list, color=clr)
@@ -276,7 +360,7 @@ def plot_failed(ax, x_range, fo, clr):
 
     for num in x_range:
         print(f'---------{num}---------')
-        success_cnt, fail_tc, top10_tc, first_tc, attemps = load_res(num, fo=fo)
+        success_cnt, fail_tc, top10_tc, first_tc, attemps, pnp_cnts = load_res(num, fo=fo)
         print(success_cnt, fail_tc)
         avg_fail_tc_list.append(np.average(fail_tc))
         avg_attempt_list.append(np.average(attemps))
@@ -292,20 +376,25 @@ def grid_on(ax):
 if __name__ == '__main__':
     base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
     bs = b_sim.BendSim(show=True)
-    # fo = '90'
+    fo = 'final_45'
     # for i in range(5, 9):
     #     gen_img(bs, i, fo=fo)
+    # show_shape(bs, 7, fo=fo)
+    plot_curveture_tc(bs, num=8, fo_list=['final_45', 'final_90', 'final_180'])
 
     x_range = range(3, 9)
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams["font.size"] = 24
     ax = plt.axes()
     grid_on(ax)
-    # plot_success(ax, x_range, '45', d=1, clr='tab:green', marker='1')
-    # plot_success(ax, x_range, '90', d=2, clr='tab:blue', marker='2')
-    plot_success(ax, x_range, '180', d=3, clr='tab:orange', marker='4')
-    # plt.xticks([2 + 3 * (x - 1) for x in x_range], x_range)
-    plt.xticks(x_range, x_range)
+    plot_success(ax, x_range, '45', d=1, clr='tab:gray', marker='1', alpha=.2)
+    plot_success(ax, x_range, 'final_45', d=1, clr='tab:green', marker='1')
+    plot_success(ax, x_range, '90', d=2, clr='tab:gray', marker='2', alpha=.2)
+    plot_success(ax, x_range, 'final_90', d=2, clr='tab:blue', marker='2')
+    plot_success(ax, x_range, '180', d=3, clr='tab:gray', marker='3', alpha=.2)
+    plot_success(ax, x_range, 'final_180', d=3, clr='tab:orange', marker='3')
+    plt.xticks([2 + 3 * (x - 1) for x in x_range], x_range)
+    # plt.xticks(x_range, x_range)
     plt.show()
 
     # grid_on(ax)
