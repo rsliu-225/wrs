@@ -191,8 +191,13 @@ def gen_img(bs, num, fo='180', show=False):
     img_failed = None
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams["font.size"] = 16
+    eps = 50
+    cnt = 0
+
     for f in os.listdir(f'./{fo}'):
         if f[-3:] == 'pkl' and f[0] == str(num):
+            if cnt >= 10:
+                continue
             print(f'=========={f}==========')
             result, tc_list, attemp_cnt_list, total_tc, bendset = pickle.load(open(f'./{fo}/{f}', 'rb'))
             bs.reset([(0, 0, 0), (0, max([v[3] for v in bendset]), 0)], [np.eye(3), np.eye(3)])
@@ -205,10 +210,11 @@ def gen_img(bs, num, fo='180', show=False):
                 success_tc_list.append(total_tc)
                 success_first_tc_list.append(tc_list[0])
                 try:
-                    bendresseq, seqs = result[1]
+                    bendresseq, seqs = result[0]
                 except:
-                    seqs = result[-1]
-                print(seqs)
+                    seqs = result[0]
+
+                print(seqs, attemp_cnt_list[0])
                 bendseq = [bendset[i] for i in seqs]
                 is_success, bendresseq, _ = bs.gen_by_bendseq(bendseq, cc=False, prune=True, toggledebug=False)
                 _, _, _, _, _, pseq, _ = bendresseq[-1]
@@ -222,13 +228,13 @@ def gen_img(bs, num, fo='180', show=False):
                         kpts.append(pseq[i + 1])
                 ax = plt.axes(projection='3d')
                 center = pseq.mean(axis=0)
-                eps = 40
                 ax.axes.set_xlim3d(left=center[0] - eps, right=center[0] + eps)
                 ax.axes.set_ylim3d(bottom=center[1] - eps, top=center[1] + eps)
                 ax.axes.set_zlim3d(bottom=center[2] - eps, top=center[2] + eps)
-                ax.text2D(0, 0.85, f'{str(round(tc_list[0], 2))} s', transform=ax.transAxes, fontsize=16)
+                ax.text2D(0, 0.85, f'{str(round(tc_list[0], 2))} s, {attemp_cnt_list[0]} times',
+                          transform=ax.transAxes, fontsize=16)
                 # ax.text2D(0, 0.78, f'{str(round(tc_list[-1], 2))} s', transform=ax.transAxes, fontsize=16)
-                ax.text2D(0, 0.78, f'{str(seqs)}', transform=ax.transAxes, fontsize=16)
+                ax.text2D(0, 0.78, f'{str([len(seqs) - 1 - v for v in seqs])}', transform=ax.transAxes, fontsize=16)
                 # for i, v in enumerate(seqs):
                 #     print(v)
                 #     ax.text(kpts[v][0], kpts[v][1], kpts[v][2], str(i), color='red')
@@ -236,8 +242,8 @@ def gen_img(bs, num, fo='180', show=False):
                 bu.plot_pseq(ax, pseq, c='k')
                 bu.scatter_pseq(ax, pseq[1:-2], c='r')
                 bu.scatter_pseq(ax, pseq[:1], c='g', s=10)
-                plt.savefig('success.png', dpi=200)
-                img_tmp = cv2.imread('img/success.png')
+                plt.savefig('img/final/success.png', dpi=200)
+                img_tmp = cv2.imread('img/final/success.png')
 
                 # cv2.putText(img_tmp,
                 #             text=f'Find First Solution: {str(round(tc_list[0], 2))} s',
@@ -254,7 +260,6 @@ def gen_img(bs, num, fo='180', show=False):
                 #             org=(250, 300), thickness=2,
                 #             fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                 #             fontScale=1.2, color=(0, 0, 0))
-                print(img_tmp.shape)
                 img_tmp = img_tmp[160:900, 200:1100]
                 if img_success is None:
                     img_success = img_tmp
@@ -264,7 +269,7 @@ def gen_img(bs, num, fo='180', show=False):
                     cv2.imshow('', img_success)
                     cv2.waitKey(0)
                 plt.clf()
-                # plt.show()
+                cnt += 1
                 # bs.show_bendresseq(bendresseq, [True] * len(seqs))
                 # base.run()
             else:
@@ -277,14 +282,13 @@ def gen_img(bs, num, fo='180', show=False):
 
                 ax = plt.axes(projection='3d')
                 center = pseq.mean(axis=0)
-                eps = 90
                 ax.axes.set_xlim3d(left=center[0] - eps, right=center[0] + eps)
                 ax.axes.set_ylim3d(bottom=center[1] - eps, top=center[1] + eps)
                 ax.axes.set_zlim3d(bottom=center[2] - eps, top=center[2] + eps)
                 bu.plot_pseq(ax, pseq, c='k')
                 bu.scatter_pseq(ax, pseq[1:-2], c='grey')
-                plt.savefig('failed.png', dpi=200)
-                img_tmp = cv2.imread('img/failed.png')
+                plt.savefig('img/final/failed.png', dpi=200)
+                img_tmp = cv2.imread('img/final/failed.png')
                 print(img_tmp.shape)
                 img_tmp = img_tmp[160:900, 260:1100]
                 if img_failed is None:
@@ -300,9 +304,9 @@ def gen_img(bs, num, fo='180', show=False):
             else:
                 total_cnt_list.append(attemp_cnt_list)
 
-    cv2.imwrite(f'{fo}_{str(num)}_success.png', img_success)
+    cv2.imwrite(f'img/final/{fo}_{str(num)}_success.png', img_success)
     if img_failed is not None:
-        cv2.imwrite(f'{fo}_{str(num)}_failed.png', img_failed)
+        cv2.imwrite(f'img/final/{fo}_{str(num)}_failed.png', img_failed)
 
     print('Success Cnt:', success_cnt)
     print('Fail time cost:', np.average(fail_tc_list))
@@ -337,14 +341,14 @@ def plot_success(ax, x_range, fo, clr, d, alpha=1., marker='+'):
     # box1 = ax.boxplot(first_tc_box, positions=x_range, patch_artist=True)
     # box1 = ax.boxplot(top10_tc_box, positions=x_range, patch_artist=True)
     if d == 1:
-        box1 = ax.boxplot(first_tc_box, positions=[d + 3 * (x - 1) + .25 for x in x_range], patch_artist=True)
-        # box1 = ax.boxplot(top10_tc_box, positions=[d + 3 * (x - 1) + .25 for x in x_range], patch_artist=True)
+        # box1 = ax.boxplot(first_tc_box, positions=[d + 3 * (x - 1) + .25 for x in x_range], patch_artist=True)
+        box1 = ax.boxplot(top10_tc_box, positions=[d + 3 * (x - 1) + .25 for x in x_range], patch_artist=True)
     elif d == 2:
-        box1 = ax.boxplot(first_tc_box, positions=[d + 3 * (x - 1) for x in x_range], patch_artist=True)
-        # box1 = ax.boxplot(top10_tc_box, positions=[d + 3 * (x - 1) for x in x_range], patch_artist=True)
+        # box1 = ax.boxplot(first_tc_box, positions=[d + 3 * (x - 1) for x in x_range], patch_artist=True)
+        box1 = ax.boxplot(top10_tc_box, positions=[d + 3 * (x - 1) for x in x_range], patch_artist=True)
     else:
-        box1 = ax.boxplot(first_tc_box, positions=[d + 3 * (x - 1) - .25 for x in x_range], patch_artist=True)
-        # box1 = ax.boxplot(top10_tc_box, positions=[d + 3 * (x - 1) - .25 for x in x_range], patch_artist=True)
+        # box1 = ax.boxplot(first_tc_box, positions=[d + 3 * (x - 1) - .25 for x in x_range], patch_artist=True)
+        box1 = ax.boxplot(top10_tc_box, positions=[d + 3 * (x - 1) - .25 for x in x_range], patch_artist=True)
 
     for item in ['boxes', 'whiskers', 'fliers', 'medians', 'caps']:
         plt.setp(box1[item], color=clr, alpha=alpha)
@@ -376,11 +380,12 @@ def grid_on(ax):
 if __name__ == '__main__':
     base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
     bs = b_sim.BendSim(show=True)
-    fo = 'final_45'
-    # for i in range(5, 9):
-    #     gen_img(bs, i, fo=fo)
+    # fo_list = ['final_45', 'final_90', 'final_180']
+    # for fo in fo_list:
+    #     for i in range(7, 8):
+    #         gen_img(bs, i, fo=fo, show=False)
     # show_shape(bs, 7, fo=fo)
-    plot_curveture_tc(bs, num=8, fo_list=['final_45', 'final_90', 'final_180'])
+    # plot_curveture_tc(bs, num=7, fo_list=[ 'final_90', 'final_180'])
 
     x_range = range(3, 9)
     plt.rcParams["font.family"] = "Times New Roman"
@@ -388,11 +393,11 @@ if __name__ == '__main__':
     ax = plt.axes()
     grid_on(ax)
     plot_success(ax, x_range, '45', d=1, clr='tab:gray', marker='1', alpha=.2)
-    plot_success(ax, x_range, 'final_45', d=1, clr='tab:green', marker='1')
+    plot_success(ax, x_range, 'new_45', d=1, clr='tab:green', marker='1')
     plot_success(ax, x_range, '90', d=2, clr='tab:gray', marker='2', alpha=.2)
-    plot_success(ax, x_range, 'final_90', d=2, clr='tab:blue', marker='2')
+    plot_success(ax, x_range, 'new_90', d=2, clr='tab:blue', marker='2')
     plot_success(ax, x_range, '180', d=3, clr='tab:gray', marker='3', alpha=.2)
-    plot_success(ax, x_range, 'final_180', d=3, clr='tab:orange', marker='3')
+    plot_success(ax, x_range, 'new_180', d=3, clr='tab:orange', marker='3')
     plt.xticks([2 + 3 * (x - 1) for x in x_range], x_range)
     # plt.xticks(x_range, x_range)
     plt.show()

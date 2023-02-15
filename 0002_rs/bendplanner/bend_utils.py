@@ -31,9 +31,9 @@ def plot_frameseq(ax, pseq, rotseq, skip=5):
             plot_frame(ax, pseq[i], rotseq[i])
 
 
-def plot_pseq(ax3d, pseq, c=None):
+def plot_pseq(ax3d, pseq, c=None, linestyle='-'):
     pseq = np.asarray(pseq)
-    ax3d.plot3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], c=c)
+    ax3d.plot3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], c=c, linestyle=linestyle)
     ax3d.grid()
 
 
@@ -89,28 +89,19 @@ def gen_ramdom_curve(kp_num=5, length=.5, step=.005, z_max=False, do_inp=True, t
     return pseq
 
 
-def gen_bspline(kp_num=5, length=.5, step=.005, z_max=False, do_inp=True, toggledebug=False):
-    pseq = np.asarray([[0, 0, 0]])
-    for i in range(kp_num - 1):
-        a = random.uniform(-np.pi / 3, np.pi / 3)
-        tmp_p = pseq[-1] + np.asarray((np.cos(a) * length / kp_num,
-                                       np.sin(a) * length / kp_num,
-                                       random.uniform(-z_max, z_max) if z_max else 0))
-        pseq = np.vstack([pseq, tmp_p])
-    inp = interpolate.interp1d(pseq[:, 0], pseq[:, 1], kind='cubic')
-    inp_z = interpolate.interp1d(pseq[:, 0], pseq[:, 2], kind='cubic')
-    x = np.linspace(0, pseq[-1][0], int(length / step))
-    y = inp(x)
-    z = inp_z(x)
-    if toggledebug:
-        ax = plt.axes(projection='3d')
-        ax.plot3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], color='red')
-        ax.scatter3D(x, y, z, color='green')
-        plt.show()
-    if do_inp:
-        pseq = linear_inp3d_by_step(np.asarray(list(zip(x, y, z))))
+def gen_bspline(kp_num=5, length=.5, y_max=.02, toggledebug=False):
+    kpts = [(0, 0, 0)]
+    for j in range(kp_num - 1):
+        kpts.append(((j + 1) * .02, random.uniform(-y_max, y_max), random.uniform(-y_max, y_max)))
 
-    return pseq
+    kpts = np.asarray(kpts).transpose()
+    inp_pseq = np.asarray(
+        interpolate.splev(np.linspace(0, 1, 200),
+                          interpolate.splprep(kpts, k=min([kpts.shape[1] - 1, 5]))[0], der=0)
+    ).transpose()
+    inp_pseq = np.asarray(inp_pseq) - inp_pseq[0]
+    org_len = np.linalg.norm(np.diff(inp_pseq, axis=0), axis=1).sum()
+    return length * np.asarray(inp_pseq) / org_len
 
 
 def gen_sgl_curve(pseq, step=.001, do_inp=True, toggledebug=False):
@@ -729,6 +720,73 @@ def pseq2bendset(pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggledebug
     return bendseq
 
 
+# def pseq2bendset(pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggledebug=False):
+#     ax = plt.axes(projection='3d')
+#     ax.set_box_aspect((1, 1, 1))
+#     tangent_pts = []
+#     bendseq = []
+#     n_seq = []
+#     rot_a = 0
+#     lift_a = 0
+#     pos = 0
+#     l_pos = 0
+#     for i in range(1, len(pseq) - 1):
+#         v1 = pseq[i - 1] - pseq[i]
+#         v2 = pseq[i] - pseq[i + 1]
+#         pos += np.linalg.norm(v1)
+#         n = np.cross(rm.unit_vector(v1), rm.unit_vector(v2))
+#         bend_a = rm.angle_between_vectors(v1, v2)
+#         if round(bend_a, 8) == 0:
+#             continue
+#
+#         if len(n_seq) != 0:
+#             a = rm.angle_between_vectors(n_seq[-1], n)
+#             tmp_a = rm.angle_between_vectors(v1, np.cross(n_seq[-1], n))
+#             if tmp_a is not None and tmp_a > np.pi / 2:
+#                 rot_a += a
+#             else:
+#                 rot_a -= a
+#
+#         n_seq.append(n)
+#         l = (bend_r * np.tan(abs(bend_a) / 2)) / np.cos(abs(lift_a))
+#         ratio_1 = l / np.linalg.norm(pseq[i] - pseq[i - 1])
+#         ratio_2 = l / np.linalg.norm(pseq[i] - pseq[i + 1])
+#         p_tan1 = pseq[i] + (pseq[i - 1] - pseq[i]) * ratio_1
+#         p_tan2 = pseq[i] + (pseq[i + 1] - pseq[i]) * ratio_2
+#
+#         if i > 1 and is_collinearity(p_tan1, [pseq[i - 1], tangent_pts[-1]]):
+#             scatter_pseq(ax, [p_tan1], s=20, c='gray')
+#             bendseq[-1][0] += bend_a
+#             # bendseq[-1][2] = rot_a
+#
+#         else:
+#             if i == 1:
+#                 l_pos += np.linalg.norm(p_tan1 - pseq[i - 1])
+#             else:
+#                 l_pos += np.linalg.norm(p_tan1 - tangent_pts[-1])
+#                 l_pos += abs(bendseq[-1][0]) * bend_r / np.cos(abs(bendseq[-1][1]))
+#             bendseq.append([bend_a, lift_a, rot_a, l_pos + init_l])
+#         tangent_pts.extend([p_tan1, p_tan2])
+#
+#         x = np.cross(v1, n)
+#         rot = np.asarray([rm.unit_vector(x), rm.unit_vector(v1), rm.unit_vector(n)]).T
+#         if toggledebug:
+#             plot_frame(ax, pseq[i - 1], rot)
+#     if toggledebug:
+#         center = np.mean(pseq, axis=0)
+#         ax.set_xlim([center[0] - 0.05, center[0] + 0.05])
+#         ax.set_ylim([center[1] - 0.05, center[1] + 0.05])
+#         ax.set_zlim([center[2] - 0.05, center[2] + 0.05])
+#         # goal_pseq = pickle.load(open('../run_plan/randomc.pkl', 'rb'))
+#         plot_pseq(ax, pseq)
+#         # plot_pseq(ax, goal_pseq)
+#         scatter_pseq(ax, [pseq[0]], s=10, c='y')
+#         scatter_pseq(ax, pseq[1:], s=10, c='g')
+#         scatter_pseq(ax, tangent_pts, s=10, c='r')
+#         plt.show()
+#
+#     return bendseq
+
 def rotpseq2bendset(pseq, rotseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggledebug=False):
     ax = plt.axes(projection='3d')
     ax.set_box_aspect((1, 1, 1))
@@ -818,7 +876,7 @@ def cal_curvature(pseq, show=False):
     torsion_list = []
     r_list = []
     nrml_pre = None
-    dir_pre = np.asarray([1, 0, 0])
+    # dir_pre = np.asarray([1, 0, 0])
     for i in range(1, len(pseq) - 1):
         nrml = np.cross(pseq[i + 1] - pseq[i], pseq[i] - pseq[i - 1])
         rot = rm.rotmat_between_vectors(nrml, np.asarray([0, 0, 1]))
@@ -836,13 +894,61 @@ def cal_curvature(pseq, show=False):
         if nrml_pre is None:
             nrml_pre = nrml
             continue
-        if rm.angle_between_vectors(dir_pre, np.cross(nrml, nrml_pre)) > np.pi / 2:
+        if rm.angle_between_vectors(np.asarray(pseq[-1] - pseq[0]), np.cross(nrml, nrml_pre)) > np.pi / 2:
             torsion_list.append(-rm.angle_between_vectors(nrml, nrml_pre))
         else:
             torsion_list.append(rm.angle_between_vectors(nrml, nrml_pre))
-        dir_pre = np.cross(nrml, nrml_pre)
+        # dir_pre = np.cross(nrml, nrml_pre)
         nrml_pre = nrml
     if show:
         plt.plot(range(len(pseq))[1:-1], curture_list)
         plt.show()
     return curture_list, r_list, [sum(torsion_list[:i]) for i in range(len(torsion_list))]
+
+
+'''
+seq planning
+'''
+
+
+def pnp_cnt(l):
+    def _intersec(lst1, lst2):
+        lst3 = [value for value in lst1 if value in lst2]
+        return lst3
+
+    cnt = 0
+    for i in range(len(l) - 1):
+        if l[i + 1] < l[i]:
+            cnt += 1
+        elif len(_intersec(l[:i], range(l[i], l[i + 1]))) > 0:
+            cnt += 1
+    return cnt
+
+
+def unstable_cnt(l):
+    cnt = 0
+    for i in range(1, len(l)):
+        if l[i] < max(l[:i]):
+            cnt += 1
+    return cnt
+
+
+def rank_combs(combs):
+    pnp_cnt_list = []
+    unstable_cnt_list = []
+    for l in combs:
+        pnp_cnt_list.append(pnp_cnt(l))
+        unstable_cnt_list.append(unstable_cnt(l))
+    _, _, combs = zip(*sorted(zip(pnp_cnt_list, unstable_cnt_list, combs)))
+    # for l in combs:
+    #     print(l, pnp_cnt(l), unstable_cnt(l))
+    return list(combs)
+
+
+def remove_combs(rmv_l, combs):
+    new_combs = []
+    for i, comb in enumerate(combs):
+        if set(comb[:len(rmv_l) - 1]) == set(rmv_l[:len(rmv_l) - 1]) and comb[len(rmv_l) - 1] == rmv_l[-1]:
+            continue
+        new_combs.append(comb)
+    return list(new_combs)

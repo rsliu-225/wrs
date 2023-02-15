@@ -132,19 +132,12 @@ class BendOptimizer(object):
     def addconstraint(self, constraint, condition="ineq"):
         self.cons.append({'type': condition, 'fun': constraint})
 
-    def equal_init(self, goal_pseq, goal_rotseq, cnt):
-
-        init = []
-        for i in range(self.bend_times):
-            init.append(i * self.total_len / self.bend_times)
-            init.append(random.uniform(self.la_b[0], self.la_b[1]))
-            init.append(random.uniform(self.ra_b[0], self.ra_b[1]))
-            init.append(np.radians(360 / self.bend_times))
-        init_pseq = self.bend_x(init)
-        bu.show_pseq(bu.linear_inp3d_by_step(init_pseq), rgba=(0, 0, 1, 1))
-        # self.bs.show(rgba=(0, 0, 1, .5))
-
-        return np.asarray(init)
+    def equal_init(self, goal_pseq, cnt):
+        fit_pseq, fit_rotseq = bu.decimate_pseq_by_cnt_uni(goal_pseq, cnt, toggledebug=False)
+        self.init_bendset = bu.rotpseq2bendset(fit_pseq, fit_rotseq, bend_r=self._bs.bend_r, toggledebug=False)
+        self.init_rot = bu.get_init_rot(fit_pseq)
+        self.bend_times = len(self.init_bendset)
+        return np.asarray(self.init_bendset).flatten()
 
     def fit_init(self, goal_pseq, goal_rotseq, tor=None, cnt=None):
         if goal_rotseq is not None:
@@ -184,8 +177,7 @@ class BendOptimizer(object):
         # self.addconstraint(self.con_end, condition="ineq")
         # self.addconstraint(self.con_avgdist, condition="ineq")
         if init is None:
-            # init = self.random_init()
-            init = self.equal_init(self.goal_pseq, self.goal_rotseq, cnt=cnt)
+            # init = self.equal_init(self.goal_pseq, cnt=cnt)
             init = self.fit_init(self.goal_pseq, self.goal_rotseq, tor=tor, cnt=cnt)
         init = self.update_bnds(init)
         # var_num = len(init) / self.bend_times

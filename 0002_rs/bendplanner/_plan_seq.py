@@ -1,6 +1,7 @@
 import copy
 import pickle
 import time
+import itertools
 
 import numpy as np
 import motionplanner.motion_planner as m_planner
@@ -9,6 +10,7 @@ import bendplanner.BendSim as b_sim
 import bendplanner.InvalidPermutationTree as ip_tree
 import bendplanner.PremutationTree as p_tree
 import config
+import matplotlib.pyplot as plt
 import visualization.panda.world as wd
 
 
@@ -27,10 +29,54 @@ def plan_pt(bendset):
             pickle.dump(bendresseq, open('./penta_bendresseq.pkl', 'wb'))
             bs.show_bendresseq(bendresseq, is_success)
             base.run()
-        bs.reset([(0, 0, 0), (0, bendseq[-1][3], 0)], [np.eye(3), np.eye(3)])
+        bs.reset([(0, 0, 0), (0, max([b[-1] for b in bendset]) + .05, 0)], [np.eye(3), np.eye(3)])
         dummy_ptree.prune(seqs[0][:is_success.index(False) + 1])
         ptree.prune(seqs[0][:is_success.index(False) + 1])
         seqs = dummy_ptree.output()
+
+
+def plan_premutation(bs, bendset, snum=None, fo='180', f_name=''):
+    ts = time.time()
+    combs = list(itertools.permutations(range(len(bendset)), len(bendset)))
+
+    result = []
+    tc_list = []
+    attemp_cnt_list = []
+    cnt = 0
+    success_cnt = 0
+    combs = bu.rank_combs(combs)
+    while combs:
+        seqs = combs[0]
+        print('Candidate seqs:', seqs, 'out of', len(combs))
+        bendseq = [bendset[i] for i in seqs]
+        bs.reset([(0, 0, 0), (0, max([b[-1] for b in bendset]) + .05, 0)], [np.eye(3), np.eye(3)])
+        is_success, bendresseq, _ = bs.gen_by_bendseq(bendseq, cc=True, prune=True, toggledebug=False)
+        print(is_success)
+        cnt += 1
+        # bs.show_bendresseq(bendresseq, is_success)
+        # base.run()
+        if all(is_success):
+            result.append(seqs)
+            tc_list.append(time.time() - ts)
+            attemp_cnt_list.append(cnt)
+            success_cnt += 1
+            if snum is None or success_cnt < snum:
+                # combs = remove_combs(seqs, combs)
+                combs = list(combs)
+                combs.remove(seqs)
+                continue
+            else:
+                # pickle.dump([result, tc_list, attemp_cnt_list, time.time() - ts, bendset],
+                #             open(f'{config.ROOT}/bendplanner/bendresseq/{fo}/{f_name}.pkl', 'wb'))
+                return result, tc_list, attemp_cnt_list, time.time() - ts
+
+        print(seqs[:is_success.index(False) + 1])
+        combs = bu.remove_combs(seqs[:is_success.index(False) + 1], combs)
+        print(seqs)
+    attemp_cnt_list.append(cnt)
+    # pickle.dump([result, tc_list, attemp_cnt_list, time.time() - ts, bendset],
+    #             open(f'{config.ROOT}/bendplanner/bendresseq/{fo}/{f_name}.pkl', 'wb'))
+    return result, tc_list, attemp_cnt_list, time.time() - ts
 
 
 def plan_ipt(bs, bendset, snum=None, fo='180', f_name=''):
@@ -59,7 +105,7 @@ def plan_ipt(bs, bendset, snum=None, fo='180', f_name=''):
             bendresseq = catch_tmp[::-1] + bendresseq
             is_success = [True] * (cnt_inx + 1) + is_success
         else:
-            bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
+            bs.reset([(0, 0, 0), (0, max([b[-1] for b in bendset]) + .05, 0)], [np.eye(3), np.eye(3)])
             is_success, bendresseq, _ = bs.gen_by_bendseq(bendseq, cc=True, prune=True, toggledebug=False)
         print(is_success)
         cnt += 1
@@ -78,8 +124,8 @@ def plan_ipt(bs, bendset, snum=None, fo='180', f_name=''):
                 seqs, catch = iptree.get_potential_valid()
                 continue
             else:
-                pickle.dump([result, tc_list, attemp_cnt_list, time.time() - ts, bendset],
-                            open(f'{config.ROOT}/bendplanner/bendresseq/{fo}/{f_name}.pkl', 'wb'))
+                # pickle.dump([result, tc_list, attemp_cnt_list, time.time() - ts, bendset],
+                #             open(f'{config.ROOT}/bendplanner/bendresseq/{fo}/{f_name}.pkl', 'wb'))
                 return result, tc_list, attemp_cnt_list, time.time() - ts
 
         cache_data = [bendresseq[a][5:] for a in range(bendresseq.index([None]))]
@@ -92,8 +138,8 @@ def plan_ipt(bs, bendset, snum=None, fo='180', f_name=''):
         print(seqs)
     attemp_cnt_list.append(cnt)
     valid_tree.show()
-    pickle.dump([result, tc_list, attemp_cnt_list, time.time() - ts, bendset],
-                open(f'{config.ROOT}/bendplanner/bendresseq/{fo}/{f_name}.pkl', 'wb'))
+    # pickle.dump([result, tc_list, attemp_cnt_list, time.time() - ts, bendset],
+    #             open(f'{config.ROOT}/bendplanner/bendresseq/{fo}/{f_name}.pkl', 'wb'))
     return result, tc_list, attemp_cnt_list, time.time() - ts
 
 
@@ -102,14 +148,14 @@ def inf_bend_check(bs, bendset):
     flag = True
 
     for i in range(len(bendset) - 1):
-        bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
+        bs.reset([(0, 0, 0), (0, max([b[-1] for b in bendset]), 0)], [np.eye(3), np.eye(3)])
         is_success, bendresseq, fail_reason_list = bs.gen_by_bendseq([bendset[i], bendset[i + 1]], cc=True, prune=True,
                                                                      toggledebug=False)
         print(is_success)
         if 'unbendable' in fail_reason_list:
             flag = False
             break
-        bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
+        bs.reset([(0, 0, 0), (0, max([b[-1] for b in bendset]), 0)], [np.eye(3), np.eye(3)])
         is_success, bendresseq, fail_reason_list = bs.gen_by_bendseq([bendset[i + 1], bendset[i]], cc=True, prune=True,
                                                                      toggledebug=False)
         if 'unbendable' in fail_reason_list:
@@ -137,30 +183,38 @@ if __name__ == '__main__':
     mp_lft = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
 
     # base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
-    bs = b_sim.BendSim(show=False)
-    f_name = 'penta'
+    bs = b_sim.BendSim(show=True)
+    f_name = 'randomc'
     goal_pseq = pickle.load(open(os.path.join(config.ROOT, 'bendplanner/goal/pseq', f'{f_name}.pkl'), 'rb'))
     # goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
     #                         [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1],
     #                         [.1, .1, .1], [.1, .1, .2]]) / 2
-    init_pseq = [(0, 0, 0), (0, .1 + bu.cal_length(goal_pseq), 0)]
-    init_rotseq = [np.eye(3), np.eye(3)]
-    brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp_lft)
-    fit_pseq, _, _ = bu.decimate_pseq(goal_pseq, tor=.002, toggledebug=False)
-    bendset = bu.pseq2bendset(fit_pseq, init_l=.1, toggledebug=False)
 
+    fit_pseq, _, _ = bu.decimate_pseq(goal_pseq, tor=.002, toggledebug=False)
+    bendset = bu.pseq2bendset(fit_pseq, toggledebug=False)[::-1]
+    for b in bendset:
+        print(b)
+
+    init_pseq = [(0, 0, 0), (0, max([b[-1] for b in bendset]) + .05, 0)]
+    init_rotseq = [np.eye(3), np.eye(3)]
+
+    brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp_lft)
     # bs.show(rgba=(.7, .7, .7, .7), objmat4=rm.homomat_from_posrot((0, 0, .1), np.eye(3)))
     # bs.show(rgba=(.7, .7, .7, .7), show_frame=True)
+    bs.reset(init_pseq, init_rotseq)
 
-    bs.reset([(0, 0, 0), (0, bendset[-1][3], 0)], [np.eye(3), np.eye(3)])
-    # is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, prune=False, toggledebug=False)
+    # res, tc, attemp_cnt_list, total_tc = plan_ipt(bs, bendset, snum=1)
+    res, tc, attemp_cnt_list, total_tc = plan_premutation(bs, bendset, snum=1)
+    print(tc, attemp_cnt_list)
+    print(total_tc)
+
+    bs.reset(init_pseq, init_rotseq)
+    is_success, bendresseq, _ = bs.gen_by_bendseq([bendset[i] for i in res[0]], cc=False, prune=False,
+                                                  toggledebug=False)
     # ax = plt.axes(projection='3d')
     # bu.plot_pseq(ax, bs.pseq, c='k')
     # bu.scatter_pseq(ax, bs.pseq, c='r')
     # plt.show()
-    flag = inf_bend_check(bs, bendset)
-    res, tc, attemp_cnt_list, total_tc = plan_ipt(bs, bendset, snum=10, fo='90', f_name=f'{str(f_name)}')
-    print(tc, attemp_cnt_list)
-    print(total_tc)
+    bs.show_bendresseq(bendresseq, is_success)
 
-    # base.run()
+    base.run()

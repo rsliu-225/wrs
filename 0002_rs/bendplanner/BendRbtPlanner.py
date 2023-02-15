@@ -2,6 +2,7 @@ import copy
 import math
 import pickle
 import time
+import itertools
 
 import numpy as np
 
@@ -343,6 +344,56 @@ class BendRbtPlanner(object):
             break
         print(f'Fail! Number of attempt: {attempt} times; time cost: {time.time() - start_time}')
 
+    def run_premutation(self, f_name='tmp', grasp_l=0.0, h=0.0, fo='stick'):
+        start_time = time.time()
+        combs = list(itertools.permutations(range(len(bendset)), len(bendset)))
+
+        attempt = 0
+        combs = bu.rank_combs(combs)
+        while combs:
+            seq = combs[0]
+            print(seq)
+            attempt += 1
+            bendseq = [self.bendset[i] for i in seq]
+            self._iptree.show()
+            self.reset_bs(self.init_pseq, self.init_rotseq)
+            is_success, bendresseq, _ = self._bs.gen_by_bendseq(bendseq, cc=True, prune=True, toggledebug=False)
+            # self.show_bendresseq(bendresseq, self.transmat4)
+            # base.run()
+            if not all(is_success):
+                combs = bu.remove_combs(seq[:is_success.index(False) + 1], combs)
+                continue
+            time_seq = time.time() - start_time
+            pickle.dump([seq, is_success, bendresseq],
+                        open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendresseq.pkl', 'wb'))
+            seq, _, bendresseq = pickle.load(
+                open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendresseq.pkl', 'rb'))
+
+            fail_index, armjntsseq_list = self.check_ik(bendresseq, grasp_l=grasp_l)
+            if fail_index != -1:
+                combs = bu.remove_combs(seq[:fail_index + 1], combs)
+                continue
+            min_f_list, f_list = self.check_force(bendresseq, armjntsseq_list, show_step=None)
+            armjntsseq_list = np.asarray(armjntsseq_list)[np.argsort(min_f_list)[::-1]]
+            time_gr = time.time() - start_time
+            pickle.dump(armjntsseq_list, open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_armjntsseq.pkl', 'wb'))
+            # self.show_bendresseq_withrbt(bendresseq, armjntsseq_list[0][1])
+            # base.run()
+            seq, _, bendresseq = pickle.load(
+                open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendresseq.pkl', 'rb'))
+            armjntsseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_armjntsseq.pkl', 'rb'))
+            fail_index, pathseq_list = self.check_motion(seq, bendresseq, armjntsseq_list)
+            # fail_index, pathseq_list = self.check_pull_motion(bendresseq, armjntsseq_list)
+            if fail_index != -1:
+                combs = bu.remove_combs(seq[:fail_index + 1], combs)
+                continue
+            pickle.dump(pathseq_list, open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_pathseq.pkl', 'wb'))
+            print(f'Grasp Reasoning time cost: {time_gr - time_seq}')
+            print(f'Sequence Planning time cost: {time_seq}')
+            print(f'Success {seq}')
+            break
+        print(f'Fail! Number of attempt: {attempt} times; time cost: {time.time() - start_time}')
+
     def fine_tune(self, seq, f_name='tmp', grasp_l=0.0, h=0.0, fo='stick'):
         self.set_bs_stick_sec(30)
         bendseq = [self.bendset[i] for i in seq]
@@ -506,7 +557,7 @@ class BendRbtPlanner(object):
     def _update(self, motioncounter, bendresseq, transmat4, task):
         self.set_bs_stick_sec(180)
         if base.inputmgr.keymap['space']:
-            p3u.clearobj_by_name(['obj'])
+            p3u.clearobj_by_name(['obj', 'auto'])
             self._bs.move_posrot(transmat4)
             if motioncounter[0] < len(bendresseq):
                 print('-------------')

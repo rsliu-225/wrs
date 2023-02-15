@@ -6,6 +6,7 @@ import os
 
 import numpy as np
 
+import bendplanner.bend_utils as bu
 import bendplanner.BendSim as b_sim
 import bendplanner.InvalidPermutationTree as ip_tree
 import bendplanner.PremutationTree as p_tree
@@ -130,12 +131,12 @@ def plan_premutation(bs, bendset, snum=None, fo='180', f_name=''):
     attemp_cnt_list = []
     cnt = 0
     success_cnt = 0
-    combs = rank_combs(combs)
+    combs = bu.rank_combs(combs)
     while combs:
         seqs = combs[0]
         print('Candidate seqs:', seqs, 'out of', len(combs))
         bendseq = [bendset[i] for i in seqs]
-        bs.reset([(0, 0, 0), (0, bendset[0][3], 0)], [np.eye(3), np.eye(3)])
+        bs.reset([(0, 0, 0), (0, max([b[-1] for b in bendset]) + .1, 0)], [np.eye(3), np.eye(3)])
         is_success, bendresseq, _ = bs.gen_by_bendseq(bendseq, cc=True, prune=True, toggledebug=False)
         print(is_success)
         cnt += 1
@@ -157,55 +158,12 @@ def plan_premutation(bs, bendset, snum=None, fo='180', f_name=''):
                 return result, tc_list, attemp_cnt_list, time.time() - ts
 
         print(seqs[:is_success.index(False) + 1])
-        combs = remove_combs(seqs[:is_success.index(False) + 1], combs)
+        combs = bu.remove_combs(seqs[:is_success.index(False) + 1], combs)
         print(seqs)
     attemp_cnt_list.append(cnt)
     pickle.dump([result, tc_list, attemp_cnt_list, time.time() - ts, bendset],
                 open(f'{config.ROOT}/bendplanner/bendresseq/{fo}/{f_name}.pkl', 'wb'))
     return result, tc_list, attemp_cnt_list, time.time() - ts
-
-
-def pnp_cnt(l):
-    def _intersec(lst1, lst2):
-        lst3 = [value for value in lst1 if value in lst2]
-        return lst3
-
-    cnt = 0
-    for i in range(len(l) - 1):
-        if l[i + 1] < l[i]:
-            cnt += 1
-        elif len(_intersec(l[:i], range(l[i], l[i + 1]))) > 0:
-            cnt += 1
-    return cnt
-
-
-def unstable_cnt(l):
-    cnt = 0
-    for i in range(1, len(l)):
-        if l[i] < max(l[:i]):
-            cnt += 1
-    return cnt
-
-
-def rank_combs(combs):
-    pnp_cnt_list = []
-    unstable_cnt_list = []
-    for l in combs:
-        pnp_cnt_list.append(pnp_cnt(l))
-        unstable_cnt_list.append(unstable_cnt(l))
-    _, _, combs = zip(*sorted(zip(pnp_cnt_list, unstable_cnt_list, combs)))
-    # for l in combs:
-    #     print(l, pnp_cnt(l), unstable_cnt(l))
-    return list(combs)
-
-
-def remove_combs(rmv_l, combs):
-    new_combs = []
-    for i, comb in enumerate(combs):
-        if set(comb[:len(rmv_l) - 1]) == set(rmv_l[:len(rmv_l) - 1]) and comb[len(rmv_l) - 1] == rmv_l[-1]:
-            continue
-        new_combs.append(comb)
-    return list(new_combs)
 
 
 if __name__ == '__main__':
@@ -223,45 +181,45 @@ if __name__ == '__main__':
     base = wd.World(cam_pos=[0, 0, .2], lookat_pos=[0, 0, 0])
     bs = b_sim.BendSim(show=False)
 
-    bendset = None
-    fo = 'final_180'
-    for random_cnt in range(8, 9):
-        for i in range(13, 15):
-            f_name = f'{str(random_cnt)}_{str(i)}'
-            print(f'--------------{str(i)}--------------')
-            flag = False
-            while not flag:
-                # print('The seq is not feasible!')
-                bendset = bs.gen_random_bendset(random_cnt, np.pi)[::-1]
-                print('benset:', bendset)
-                bs.reset([(0, 0, 0), (0, bendset[0][3], 0)], [np.eye(3), np.eye(3)])
-                # is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, prune=False, toggledebug=False)
-                # ax = plt.axes(projection='3d')
-                # bu.plot_pseq(ax, bs.pseq, c='k')
-                # bu.scatter_pseq(ax, bs.pseq, c='r')
-                # plt.show()
-                flag = inf_bend_check(bs, bendset)
-            # res, tc, attemp_cnt_list, total_tc = plan_ipt(bs, bendset, snum=10, fo='45', f_name=f_name)
-            res, tc, attemp_cnt_list, total_tc = plan_premutation(bs, bendset, snum=10, fo=fo, f_name=f_name)
-            print(tc, attemp_cnt_list)
-            print(total_tc)
-
-    # fo = 'new_90'
-    # org_fo = '90'
-    # for random_cnt in range(3, 9):
-    #     for i in range(0, 15):
+    # bendset = None
+    # fo = 'final_180'
+    # for random_cnt in range(7, 8):
+    #     for i in range(10, 11):
     #         f_name = f'{str(random_cnt)}_{str(i)}'
     #         print(f'--------------{str(i)}--------------')
-    #         try:
-    #             file = pickle.load(
-    #                 open(f'{config.ROOT}/bendplanner/bendresseq/{org_fo}/{f_name}.pkl', 'rb'))
-    #         except:
-    #             continue
-    #         bendset = file[4][::-1]
-    #         print('benset:', bendset)
-    #         bs.reset([(0, 0, 0), (0, bendset[0][3], 0)], [np.eye(3), np.eye(3)])
-    #         if os.path.exists(f'{config.ROOT}/bendplanner/bendresseq/{fo}/{f_name}.pkl'):
-    #             print('Exists!')
-    #             continue
-    #         res, tc, attemp_cnt_list, total_tc = plan_premutation(bs, bendset, snum=10, fo=fo, f_name=f'{f_name}')
+    #         flag = False
+    #         while not flag:
+    #             # print('The seq is not feasible!')
+    #             bendset = bs.gen_random_bendset(random_cnt, np.pi)[::-1]
+    #             print('benset:', bendset)
+    #             bs.reset([(0, 0, 0), (0, bendset[0][3], 0)], [np.eye(3), np.eye(3)])
+    #             # is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, prune=False, toggledebug=False)
+    #             # ax = plt.axes(projection='3d')
+    #             # bu.plot_pseq(ax, bs.pseq, c='k')
+    #             # bu.scatter_pseq(ax, bs.pseq, c='r')
+    #             # plt.show()
+    #             flag = inf_bend_check(bs, bendset)
+    #         # res, tc, attemp_cnt_list, total_tc = plan_ipt(bs, bendset, snum=10, fo='45', f_name=f_name)
+    #         res, tc, attemp_cnt_list, total_tc = plan_premutation(bs, bendset, snum=10, fo=fo, f_name=f_name)
     #         print(tc, attemp_cnt_list)
+    #         print(total_tc)
+
+    fo = 'new_180'
+    org_fo = '180'
+    for random_cnt in range(3, 9):
+        for i in range(0, 15):
+            f_name = f'{str(random_cnt)}_{str(i)}'
+            print(f'--------------{str(i)}--------------')
+            try:
+                file = pickle.load(
+                    open(f'{config.ROOT}/bendplanner/bendresseq/{org_fo}/{f_name}.pkl', 'rb'))
+            except:
+                continue
+            bendset = file[4][::-1]
+            print('benset:', bendset)
+            bs.reset([(0, 0, 0), (0, bendset[0][3], 0)], [np.eye(3), np.eye(3)])
+            if os.path.exists(f'{config.ROOT}/bendplanner/bendresseq/{fo}/{f_name}.pkl'):
+                print('Exists!')
+                continue
+            res, tc, attemp_cnt_list, total_tc = plan_premutation(bs, bendset, snum=10, fo=fo, f_name=f'{f_name}')
+            print(tc, attemp_cnt_list)
