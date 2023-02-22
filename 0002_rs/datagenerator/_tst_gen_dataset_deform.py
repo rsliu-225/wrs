@@ -29,6 +29,8 @@ def save_stl(objcm, path):
 
 
 if __name__ == '__main__':
+    import basis.o3dhelper as o3dh
+
     base = wd.World(cam_pos=[.1, .25, .25], lookat_pos=[.1, 0, 0])
     # base = wd.World(cam_pos=[.1, .4, 0], lookat_pos=[.1, 0, 0])
     # gm.gen_frame(thickness=.002, length=.05).attach_to(base)
@@ -37,13 +39,19 @@ if __name__ == '__main__':
     thickness = 0
     cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
 
-    objcm = cm.CollisionModel('../obstacles/template.stl')
+    objcm = cm.CollisionModel('../obstacles/plate.stl')
+    # objcm = cm.gen_box(np.asarray([.2, .01, .002]))
 
     fo = 'tst_plate'
     # objcm.attach_to(base)
     # objcm.set_rgba((.7, .7, .7, 1))
     # base.run()
-    vs = objcm.objtrm.vertices
+    # vs = objcm.objtrm.vertices
+    # o3dcm = o3dh.cm2o3dmesh(objcm)
+    # o3dcm.compute_vertex_normals()
+    # r = rm.rotmat_from_axangle(axis=(1, 0, 0), angle=-np.radians(50))
+    # o3dcm.rotate(r)
+    # o3d.visualization.draw_geometries([o3dcm])
 
     # goal_pseq = np.asarray([[0, 0, 0],
     #                         [.04 + random.uniform(-.02, .01), 0, random.uniform(-.01, .01)],
@@ -85,7 +93,7 @@ if __name__ == '__main__':
     # rot_axial, rot_radial = [-0.25, 0.2, 0.1, -0.2], [0, 0.01, 0.017, 0.012]
 
     goal_pseq = np.asarray([[0, 0, 0], [0.09, 0, 0.04], [0.16, 0, .01]])
-    rot_axial, rot_radial = [-0.6, 0.2,  -0.2], [0, 0,  0]
+    rot_axial, rot_radial = [-0.6, 0.2, -0.2], [0, 0, 0]
 
     deformed_objcm, objcm_gt, _, _ = utl.deform_cm(objcm, goal_pseq, rot_axial, rot_radial, show=True)
     base.run()
@@ -93,7 +101,7 @@ if __name__ == '__main__':
     gen data
     '''
     rot_center = (0, 0, 0)
-    icomats = rm.gen_icorotmats(rotation_interval=np.radians(360/60))
+    icomats = rm.gen_icorotmats(rotation_interval=np.radians(360 / 60))
     cnt = 0
     obj_id = 0
     # rot = np.eye(3)

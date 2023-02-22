@@ -56,7 +56,8 @@ def gen_random_homomat4(trans_diff=(.01, .01, .01), rot_diff=np.radians((10, 10,
 
 
 def poly_inp(pseq, step=.001, toggledebug=False, kind="cubic"):
-    length = np.sum(np.linalg.norm(np.diff(np.asarray(pseq), axis=0), axis=1))
+    pseq = np.asarray(pseq)
+    length = np.sum(np.linalg.norm(np.diff(pseq, axis=0), axis=1))
     inp = interpolate.interp1d(pseq[:, 0], pseq[:, 1], kind=kind)
     inp_z = interpolate.interp1d(pseq[:, 0], pseq[:, 2], kind=kind)
     x = np.linspace(0, pseq[-1][0], int(length / step))

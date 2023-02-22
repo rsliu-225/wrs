@@ -51,7 +51,7 @@ if __name__ == '__main__':
     #     interpolate.splev(np.linspace(0, 1, 100), interpolate.splprep(kpts.transpose(), k=5)[0], der=0)
     # ).transpose()
 
-    inp_pseq = nbv_utl.kpts2bspl(kpts)
+    inp_pseq = nbv_utl.nurbs_inp(kpts)
     # inp_pseq, inp_rotseq = du.get_rotseq_by_pseq(inp_pseq)
     inp_rotseq = pcdu.get_rots_wkpts(pts, inp_pseq, show=True, rgba=(1, 0, 0, 1))
     kpts = np.asarray(kpts)

@@ -15,14 +15,12 @@ import pcn.inference as pcn
 # import motionplanner.motion_planner as mp
 import utils.pcd_utils as pcdu
 import visualization.panda.world as wd
-import motionplanner.pcn_nbv_solver as nbv_solver
+import motionplanner.nbv_pcn_opt_solver as nbv_solver
 import nbv_utils as nu
 
-RES_FO_NAME = 'res_60_rlen'
 
-
-def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_model, coverage_tor=.001, goal=.05,
-            visible_threshold=np.radians(75), toggledebug=False):
+def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_model, cov_tor=.001, goal=.05,
+            vis_threshold=np.radians(75), toggledebug=False):
     coverage = 0
     cnt = 0
     exp_dict = {}
@@ -32,7 +30,7 @@ def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_mode
     pcd_i = np.asarray(o3dpcd_init.points)
     pcd_gt = np.asarray(o3dpcd_gt.points)
 
-    init_coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=coverage_tor)
+    init_coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=cov_tor)
     print('init coverage:', init_coverage)
 
     exp_dict['gt'] = pcd_gt.tolist()
@@ -43,7 +41,7 @@ def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_mode
         cnt += 1
         pcd_o = pcn.inference_sgl(pcd_i, model_name, load_model, toggledebug=False)
         exp_dict[cnt - 1] = {'input': pcd_i.tolist(), 'pcn_output': pcd_o.tolist()}
-        o3dpcd_o = du.nparray2o3dpcd(pcd_o)
+        o3dpcd_o = o3dh.nparray2o3dpcd(pcd_o)
         if toggledebug:
             o3dmesh = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'mesh', f))
             o3dmesh.compute_vertex_normals()
@@ -59,15 +57,15 @@ def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_mode
             o3d.io.write_point_cloud(os.path.join(os.getcwd(), 'tmp', f'{cnt}_i.pcd'), o3dpcd)
             o3d.io.write_point_cloud(os.path.join(os.getcwd(), 'tmp', f'{cnt}_o.pcd'), o3dpcd_o)
 
-        pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_pcn(pcd_i, pcd_o, cam_pos=cam_pos, theta=None, toggledebug=True)
+        pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd_i, pcd_o, cam_pos=cam_pos, theta=None, toggledebug=True)
 
         rot = rm.rotmat_between_vectors(np.asarray(cam_pos), nrmls_nbv[0])
         rot = np.linalg.inv(rot)
         trans = pts_nbv[0]
         o3dpcd_tmp = \
             nu.gen_partial_o3dpcd_occ(os.path.join(path, cat), f.split('.ply')[0], rot, rot_center, trans,
-                                      visible_threshold=visible_threshold, toggledebug=False,
-                                      add_noise=False, add_vt_occ=False, add_rnd_occ=False, add_noise_pts=False)
+                                      vis_threshold=vis_threshold, toggledebug=False,
+                                      add_noise_vt=False, add_occ_vt=False, add_occ_rnd=False, add_noise_pts=False)
         exp_dict[cnt - 1]['add'] = np.asarray(o3dpcd_tmp.points).tolist()
         if toggledebug:
             nbv_mesh_list = []
@@ -100,7 +98,7 @@ def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_mode
             o3d.visualization.draw_geometries([o3dpcd, coord])
             o3d.visualization.draw_geometries([o3dpcd, o3dpcd_o, coord])
         pcd_i = np.asarray(o3dpcd.points)
-        coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=coverage_tor)
+        coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=cov_tor)
         exp_dict[cnt - 1]['coverage'] = coverage
         print('coverage:', coverage)
     exp_dict['final'] = pcd_i.tolist()
@@ -108,13 +106,9 @@ def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_mode
         json.dump(exp_dict, open(os.path.join(path, cat, RES_FO_NAME, f'pcn_{f.split(".ply")[0]}.json'), 'w'))
 
 
-def run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_model, coverage_tor=.001, goal=.05,
-                visible_threshold=np.radians(75), toggledebug=False):
-    import localenv.envloader as el
-
-    rbt = el.loadXarm(showrbt=True)
-    seedjntagls = rbt.get_jnt_values('arm')
-    nbv_opt = nbv_solver.NBVOptimizer(rbt, model_name=model_name, load_model=load_model, toggledebug=False)
+def run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_model, cov_tor=.001, goal=.05,
+                vis_threshold=np.radians(75), toggledebug=False):
+    # nbv_opt = nbv_solver.NBVOptimizer(model_name=model_name, load_model=load_model, toggledebug=False)
     coverage = 0
     cnt = 0
     exp_dict = {}
@@ -124,7 +118,7 @@ def run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_
     pcd_i = np.asarray(o3dpcd_init.points)
     pcd_gt = np.asarray(o3dpcd_gt.points)
 
-    init_coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=coverage_tor)
+    init_coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=cov_tor)
     print('init coverage:', init_coverage)
 
     exp_dict['gt'] = pcd_gt.tolist()
@@ -151,11 +145,12 @@ def run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_
             o3d.io.write_point_cloud(os.path.join(os.getcwd(), 'tmp', f'{cnt}_i.pcd'), o3dpcd)
             o3d.io.write_point_cloud(os.path.join(os.getcwd(), 'tmp', f'{cnt}_o.pcd'), o3dpcd_o)
 
-        trans, rot = nbv_opt.solve(seedjntagls, pcd_i, cam_pos, method='COBYLA')
+        # trans, rot = nbv_opt.solve(pcd_i, cam_pos, method='COBYLA')
+        trans, rot, time_cost = pcdu.opt_nbv_pcn(pcd_i, model_name, load_model, cam_pos=cam_pos)
         o3dpcd_tmp = \
             nu.gen_partial_o3dpcd_occ(os.path.join(path, cat), f.split('.ply')[0], rot, rot_center, trans,
-                                      visible_threshold=visible_threshold, toggledebug=False,
-                                      add_noise=False, add_vt_occ=False, add_rnd_occ=False, add_noise_pts=False)
+                                      vis_threshold=vis_threshold, toggledebug=False,
+                                      add_noise_vt=False, add_occ_vt=False, add_occ_rnd=False, add_noise_pts=False)
         exp_dict[cnt - 1]['add'] = np.asarray(o3dpcd_tmp.points).tolist()
         if toggledebug:
             o3dmesh = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'mesh', f))
@@ -165,7 +160,7 @@ def run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_
             # o3dpcd_gt.paint_uniform_color(nu.COLOR[1])
             o3dpcd_tmp_vis = copy.deepcopy(o3dpcd_tmp)
             o3dpcd_tmp_vis.rotate(rot, center=(0, 0, 0))
-            o3dpcd_tmp_vis.paint_uniform_color(nu.COLOR[0])
+            o3dpcd_tmp_vis.paint_uniform_color(nu.COLOR[4])
             coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.02)
             o3d.visualization.draw_geometries([o3dpcd_tmp_vis, coord])
             o3d.visualization.draw_geometries([o3dmesh, coord])
@@ -180,7 +175,7 @@ def run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_
             o3d.visualization.draw_geometries([o3dpcd, coord])
             o3d.visualization.draw_geometries([o3dpcd, o3dpcd_o, coord])
         pcd_i = np.asarray(o3dpcd.points)
-        coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=coverage_tor)
+        coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=cov_tor)
         exp_dict[cnt - 1]['coverage'] = coverage
         print('coverage:', coverage)
     exp_dict['final'] = pcd_i.tolist()
@@ -188,66 +183,8 @@ def run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_
         json.dump(exp_dict, open(os.path.join(path, cat, RES_FO_NAME, f'pcn_opt_{f.split(".ply")[0]}.json'), 'w'))
 
 
-def run_pcn_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, coverage_tor=.001, goal=.05,
-                visible_threshold=np.radians(75), toggledebug=False):
-    coverage = 0
-    cnt = 0
-    exp_dict = {}
-    print(f'-----------pcn+nbv------------')
-    rot_center = [0, 0, 0]
-
-    pcd_i = np.asarray(o3dpcd_init.points)
-    pcd_gt = np.asarray(o3dpcd_gt.points)
-
-    init_coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=coverage_tor)
-    print('init coverage:', init_coverage)
-
-    exp_dict['gt'] = pcd_gt.tolist()
-    exp_dict['init_coverage'] = init_coverage
-    o3dpcd = copy.deepcopy(o3dpcd_init)
-
-    while coverage < goal and cnt < 5:
-        cnt += 1
-        pcd_o = pcn.inference_sgl(pcd_i, model_name, load_model, toggledebug=False)
-        exp_dict[cnt - 1] = {'input': pcd_i.tolist(), 'pcn_output': pcd_o.tolist()}
-        if toggledebug:
-            o3dmesh = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'mesh', f))
-            o3dpcd_o = du.nparray2o3dpcd(pcd_o)
-            o3dpcd.paint_uniform_color(nu.COLOR[0])
-            o3dpcd_gt.paint_uniform_color(nu.COLOR[1])
-            o3dpcd_o.paint_uniform_color(nu.COLOR[2])
-            coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.01)
-            o3d.visualization.draw_geometries([o3dpcd, o3dpcd_o, o3dmesh, coord])
-            o3d.visualization.draw_geometries([o3dpcd, o3dpcd_o, o3dpcd_gt, coord])
-
-        pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd_i, pcd_o, cam_pos=cam_pos, theta=None, toggledebug=True)
-        rot = rm.rotmat_between_vectors(np.asarray(cam_pos), nrmls_nbv[0])
-        rot = np.linalg.inv(rot)
-        trans = pts_nbv[0]
-        o3dpcd_tmp = \
-            nu.gen_partial_o3dpcd_occ(os.path.join(path, cat), f.split('.ply')[0], rot, rot_center, trans,
-                                      visible_threshold=visible_threshold, toggledebug=False,
-                                      add_noise=False, add_vt_occ=False, add_rnd_occ=False, add_noise_pts=False)
-        exp_dict[cnt - 1]['add'] = np.asarray(o3dpcd_tmp.points).tolist()
-        if toggledebug:
-            o3dmesh = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'mesh', f))
-            o3dpcd.paint_uniform_color(nu.COLOR[0])
-            o3dpcd_gt.paint_uniform_color(nu.COLOR[1])
-            o3dpcd_tmp.paint_uniform_color(nu.COLOR[2])
-            coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.01)
-            o3d.visualization.draw_geometries([o3dpcd, o3dpcd_tmp, o3dmesh, coord])
-        o3dpcd += o3dpcd_tmp
-        pcd_i = np.asarray(o3dpcd.points)
-        coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=coverage_tor)
-        exp_dict[cnt - 1]['coverage'] = coverage
-        print('coverage:', coverage)
-    exp_dict['final'] = pcd_i.tolist()
-    if not toggledebug:
-        json.dump(exp_dict, open(os.path.join(path, cat, RES_FO_NAME, f'nbvpcn_{f.split(".ply")[0]}.json'), 'w'))
-
-
-def run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, coverage_tor=.001, goal=.05,
-            visible_threshold=np.radians(75), toggledebug=False):
+def run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, cov_tor=.001, goal=.05,
+            vis_threshold=np.radians(75), toggledebug=False):
     coverage = 0
     cnt = 0
     exp_dict = {}
@@ -257,7 +194,7 @@ def run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, coverage_tor=.001, go
     pcd_i = np.asarray(o3dpcd_init.points)
     pcd_gt = np.asarray(o3dpcd_gt.points)
 
-    init_coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=coverage_tor)
+    init_coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=cov_tor)
     print('init coverage:', init_coverage)
     exp_dict['gt'] = pcd_gt.tolist()
     exp_dict['init_coverage'] = init_coverage
@@ -274,8 +211,8 @@ def run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, coverage_tor=.001, go
         trans = pts_nbv[0]
         o3dpcd_tmp = \
             nu.gen_partial_o3dpcd_occ(os.path.join(path, cat), f.split('.ply')[0], rot, rot_center, trans,
-                                      visible_threshold=visible_threshold, toggledebug=False,
-                                      add_noise=False, add_vt_occ=False, add_rnd_occ=False, add_noise_pts=False)
+                                      vis_threshold=vis_threshold, toggledebug=False,
+                                      add_noise_vt=False, add_occ_vt=False, add_occ_rnd=False, add_noise_pts=False)
         exp_dict[cnt - 1]['add'] = np.asarray(o3dpcd_tmp.points).tolist()
         if toggledebug:
             nbv_mesh_list = []
@@ -293,7 +230,7 @@ def run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, coverage_tor=.001, go
             o3d.visualization.draw_geometries([o3dpcd, o3dpcd_tmp, coord])
         o3dpcd += o3dpcd_tmp
         pcd_i = np.asarray(o3dpcd.points)
-        coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=coverage_tor)
+        coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=cov_tor)
         exp_dict[cnt - 1]['coverage'] = coverage
         print('coverage:', coverage)
     exp_dict['final'] = pcd_i.tolist()
@@ -301,8 +238,8 @@ def run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, coverage_tor=.001, go
         json.dump(exp_dict, open(os.path.join(path, cat, RES_FO_NAME, f'org_{f.split(".ply")[0]}.json'), 'w'))
 
 
-def run_random(path, cat, f, o3dpcd_init, o3dpcd_gt, coverage_tor=.001, goal=.05,
-               visible_threshold=np.radians(75), toggledebug=False):
+def run_random(path, cat, f, o3dpcd_init, o3dpcd_gt, cov_tor=.001, goal=.05,
+               vis_threshold=np.radians(75), toggledebug=False):
     coverage = 0
     cnt = 0
     exp_dict = {}
@@ -312,7 +249,7 @@ def run_random(path, cat, f, o3dpcd_init, o3dpcd_gt, coverage_tor=.001, goal=.05
     pcd_i = np.asarray(o3dpcd_init.points)
     pcd_gt = np.asarray(o3dpcd_gt.points)
 
-    init_coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=coverage_tor)
+    init_coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=cov_tor)
     print('init coverage:', init_coverage)
     exp_dict['gt'] = pcd_gt.tolist()
     exp_dict['init_coverage'] = init_coverage
@@ -326,8 +263,8 @@ def run_random(path, cat, f, o3dpcd_init, o3dpcd_gt, coverage_tor=.001, goal=.05
         rot = random.choice(icomats)
         o3dpcd_tmp = \
             nu.gen_partial_o3dpcd_occ(os.path.join(path, cat), f.split('.ply')[0], rot, rot_center,
-                                      visible_threshold=visible_threshold, toggledebug=False,
-                                      add_noise=False, add_vt_occ=False, add_rnd_occ=False, add_noise_pts=False)
+                                      vis_threshold=vis_threshold, toggledebug=False,
+                                      add_noise_vt=False, add_occ_vt=False, add_occ_rnd=False, add_noise_pts=False)
         exp_dict[cnt - 1]['add'] = np.asarray(o3dpcd_tmp.points).tolist()
         if toggledebug:
             o3dmesh = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'mesh', f))
@@ -338,7 +275,7 @@ def run_random(path, cat, f, o3dpcd_init, o3dpcd_gt, coverage_tor=.001, goal=.05
             o3d.visualization.draw_geometries([o3dpcd, o3dpcd_tmp, o3dmesh, coord])
         o3dpcd += o3dpcd_tmp
         pcd_i = np.asarray(o3dpcd.points)
-        coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=coverage_tor)
+        coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=cov_tor)
         exp_dict[cnt - 1]['coverage'] = coverage
         print('coverage:', coverage)
     exp_dict['final'] = pcd_i.tolist()
@@ -347,8 +284,10 @@ def run_random(path, cat, f, o3dpcd_init, o3dpcd_gt, coverage_tor=.001, goal=.05
 
 
 if __name__ == '__main__':
+    RES_FO_NAME = 'res_60_all'
+
     model_name = 'pcn'
-    load_model = 'pcn_emd_rlen/best_emd_network.pth'
+    load_model = 'pcn_emd_all/best_emd_network.pth'
     cam_pos = [0, 0, .5]
 
     base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
@@ -357,14 +296,14 @@ if __name__ == '__main__':
     #
     # seedjntagls = m_planner.get_armjnts()
 
-    # path = 'E:/liu/nbv_mesh/'
-    path = 'D:/nbv_mesh/'
-    cat_list = ['bspl_3', 'bspl_4', 'bspl_5']
-    # cat_list = ['plat', 'tmpl']
+    path = 'E:/liu/nbv_mesh/'
+    # path = 'D:/nbv_mesh/'
+    # cat_list = ['plat']
+    cat_list = ['plat', 'tmpl']
     # cat_list = ['rlen_3', 'rlen_4', 'rlen_5']
-    coverage_tor = .001
+    cov_tor = .0018
     goal = .95
-    visible_threshold = np.radians(60)
+    vis_threshold = np.radians(60)
     for cat in cat_list:
         if not os.path.exists(os.path.join(path, cat, RES_FO_NAME)):
             os.makedirs(os.path.join(path, cat, RES_FO_NAME))
@@ -379,20 +318,19 @@ if __name__ == '__main__':
             o3dpcd_init = \
                 nu.gen_partial_o3dpcd_occ(os.path.join(path, cat), f.split('.ply')[0], np.eye(3), [0, 0, 0],
                                           rnd_occ_ratio_rng=(.2, .4), nrml_occ_ratio_rng=(.2, .6),
-                                          visible_threshold=visible_threshold, toggledebug=False,
+                                          vis_threshold=vis_threshold, toggledebug=False,
                                           occ_vt_ratio=random.uniform(.08, .1), noise_vt_ratio=random.uniform(.2, .5),
                                           noise_cnt=random.randint(1, 5),
-                                          add_vt_occ=True, add_noise=False, add_rnd_occ=False, add_noise_pts=True)
-            # o3dpcd_init, ind = o3dpcd_init.remove_radius_outlier(nb_points=50, radius=0.005)
+                                          add_occ_vt=True, add_noise_vt=False, add_occ_rnd=False, add_noise_pts=True)
 
             o3dmesh_gt = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'prim', f))
             o3dpcd_gt = du.get_objpcd_full_sample_o3d(o3dmesh_gt, smp_num=2048, method='possion')
 
             run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_model,
-                    goal=goal, coverage_tor=coverage_tor, visible_threshold=visible_threshold, toggledebug=False)
+                    goal=goal, cov_tor=cov_tor, vis_threshold=vis_threshold, toggledebug=False)
             run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_model,
-                        goal=goal, coverage_tor=coverage_tor, visible_threshold=visible_threshold, toggledebug=False)
-            run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, goal=goal, coverage_tor=coverage_tor,
-                    visible_threshold=visible_threshold, toggledebug=False)
-            run_random(path, cat, f, o3dpcd_init, o3dpcd_gt, goal=goal, coverage_tor=coverage_tor,
-                       visible_threshold=visible_threshold, toggledebug=False)
+                        goal=goal, cov_tor=cov_tor, vis_threshold=vis_threshold, toggledebug=False)
+            run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, goal=goal, cov_tor=cov_tor,
+                    vis_threshold=vis_threshold, toggledebug=False)
+            run_random(path, cat, f, o3dpcd_init, o3dpcd_gt, goal=goal, cov_tor=cov_tor,
+                       vis_threshold=vis_threshold, toggledebug=False)

@@ -5,12 +5,13 @@ import os
 import random
 import time
 
+import cv2
 import numpy as np
 import open3d as o3d
 from matplotlib import pyplot as plt
-from sklearn.mixture import GaussianMixture
 from sklearn import linear_model
 from sklearn.cluster import DBSCAN
+from sklearn.mixture import GaussianMixture
 from sklearn.neighbors import KDTree
 
 import basis.o3dhelper as o3d_helper
@@ -20,9 +21,9 @@ import basis.trimesh.sample as ts
 import config
 import modeling.collision_model as cm
 import modeling.geometric_model as gm
+import motionplanner.nbv_pcn_opt_solver as nbv_solver
 import utils.math_utils as mu
 from basis import trimesh
-import cv2
 
 COLOR = np.asarray([[31, 119, 180, 255], [44, 160, 44, 255], [214, 39, 40, 255], [255, 127, 14, 255]]) / 255
 
@@ -144,7 +145,7 @@ def crop_pcd(pcd, x_range, y_range, z_range, zeros=False):
 
 
 def trans_pcd(pcd, transmat):
-    pcd = np.asarray(pcd)
+    pcd = copy.deepcopy(np.asarray(pcd))
     homopcd = np.ones((4, len(pcd)))
     homopcd[:3, :] = pcd.T
     realpcd = np.dot(transmat, homopcd).T
@@ -574,7 +575,7 @@ def get_plane(pcd, dist_threshold=0.0002, toggledebug=False):
     return plane[:3], plane[3]
 
 
-def surface_interp(p, v, kdt_d3, inp=0.0005, max_nn=100):
+def surface_inp(p, v, kdt_d3, inp=0.0005, max_nn=100):
     pseq = []
     rotseq = []
     times = int(np.linalg.norm(v) / inp)
@@ -736,9 +737,9 @@ def cal_conf(pts, voxel_size=.01, cam_pos=(0, 0, 0), theta=None, toggledebug=Fal
         conf_list.append(c)
         if toggledebug:
             gm.gen_sphere(p_list[i], radius=.001, rgba=rgba).attach_to(base)
-            # if c < .5:
-            #     gm.gen_arrow(spos=p_list[i], epos=p_list[i] + nrml_list[i] * .05, thickness=.002,
-            #                  rgba=rgba).attach_to(base)
+            if c < .5:
+                gm.gen_arrow(spos=p_list[i], epos=p_list[i] + nrmls[i] * .05, thickness=.002,
+                             rgba=rgba).attach_to(base)
 
     if theta is not None:
         res_inx_list = []
@@ -799,9 +800,9 @@ def sort_kpts(kpts, seed):
     return kpts[sort_ids]
 
 
-def get_kpts_gmm(objpcd, n_components=20, show=True, rgba=(1, 0, 0, 1)):
+def get_kpts_gmm(objpcd, n_components=20, means_init=None, show=True, rgba=(1, 0, 0, 1)):
     X = np.array(objpcd)
-    gmix = GaussianMixture(n_components=n_components, random_state=0).fit(X)
+    gmix = GaussianMixture(n_components=n_components, random_state=0, means_init=means_init).fit(X)
     kpts = sort_kpts(gmix.means_, seed=np.asarray([0, 0, 0]))
 
     if show:
@@ -879,60 +880,12 @@ def cal_nbv(pts, nrmls, confs, toggledebug=False):
     nrmls = np.asarray(nrmls)[inx]
     show_pcd(pts, rgba=COLOR[0])
     pts, nrmls, confs = extract_main_vec(pts, nrmls, confs, threshold=np.radians(30), toggledebug=toggledebug)
-
     return np.asarray(pts)[np.argsort(confs)], \
            np.asarray(nrmls)[np.argsort(confs)], \
            np.asarray(confs)[np.argsort(confs)]
 
 
-def cal_nbv_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, toggledebug=False):
-    def _normalize(l):
-        return [(v - min(l)) / (max(l) - min(l)) for v in l]
-
-    _, _, trans = o3dh.registration_icp_ptpt(pts_pcn, pts, maxcorrdist=.02, toggledebug=False)
-    pts_pcn = trans_pcd(pts_pcn, trans)
-    show_pcd(pts_pcn, rgba=COLOR[1])
-    show_pcd(pts, rgba=COLOR[0])
-    # base.run()
-    pts, nrmls, confs = \
-        cal_conf(np.asarray(pts), voxel_size=.005, theta=None, cam_pos=cam_pos, toggledebug=False)
-    pts_pcn, nrmls_pcn, confs_pcn = \
-        cal_conf(np.asarray(pts_pcn), voxel_size=.005, theta=theta, cam_pos=cam_pos, toggledebug=False)
-    kdt, _ = get_kdt(pts)
-    confs_pcn_res = []
-    dist_list = []
-    for i, p in enumerate(pts_pcn):
-        knn_inx = get_knn_indices(p, kdt, k=1)[0]
-        # gm.gen_stick(spos=pts[knn_inx], epos=p, rgba=(confs[knn_inx], 0, 1 - confs[knn_inx], .5),
-        #              thickness=.0005).attach_to(base)
-        dist_list.append(np.linalg.norm(p - pts[knn_inx]) / (.1 - np.linalg.norm(p - pts[knn_inx])))
-        confs_pcn_res.append(confs[knn_inx])
-    dist_list = _normalize(dist_list)
-    for i, dist in enumerate(dist_list):
-        confs_pcn_res[i] = confs_pcn_res[i] * (1 - dist)
-    confs_pcn_res = _normalize(confs_pcn_res)
-
-    if toggledebug:
-        for i in range(len(confs_pcn_res)):
-            gm.gen_sphere(pts_pcn[i], radius=.001, rgba=(confs_pcn_res[i], 0, 1 - confs_pcn_res[i], 1)).attach_to(base)
-            # gm.gen_arrow(pts_pcn[i], pts_pcn[i] + nrmls_pcn[i] * .05,
-            #              rgba=(1 - confs_pcn_res[i], 0, confs_pcn_res[i], 1), thickness=.002).attach_to(base)
-
-    pts_nbv, nrmls_nbv, confs_nbv = extract_main_vec(pts_pcn, nrmls_pcn, confs_pcn_res)
-    if toggledebug:
-        for i in range(len(confs_nbv)):
-            # if confs_nbv[i] > .3:
-            gm.gen_sphere(pts_nbv[i], radius=.001, rgba=(confs_nbv[i], 0, 1 - confs_nbv[i], .3)).attach_to(
-                base)
-            gm.gen_arrow(pts_nbv[i], pts_nbv[i] + nrmls_nbv[i] * .03,
-                         rgba=(confs_nbv[i], 0, 1 - confs_nbv[i], .3), thickness=.001).attach_to(base)
-
-    return np.asarray(pts_nbv)[np.argsort(confs_nbv)], \
-           np.asarray(nrmls_nbv)[np.argsort(confs_nbv)], \
-           np.asarray(confs_nbv)[np.argsort(confs_nbv)]
-
-
-def cal_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, radius=.01, toggledebug=False):
+def cal_nbv_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, radius=.01, toggledebug=False):
     def _normalize(l):
         return [(v - min(l)) / (max(l) - min(l)) for v in l]
 
@@ -974,14 +927,20 @@ def cal_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, radius=.01, toggledebug
             # gm.gen_arrow(kpts[i], kpts[i] + nrmls[i] * .02, rgba=[confs[i], 0, 1 - confs[i], .1],
             #              thickness=.001).attach_to(base)
     # kpts, nrmls, confs = extract_main_vec(kpts, nrmls, confs)
-    # pts, nrmls, confs = extract_main_vec(pts, nrmls, confs, threshold=np.radians(30), toggledebug=toggledebug)
+    # pts, nrmls, confs = extract_main_vec(pts, nrmls, confs, threshold=np.radians(10), toggledebug=toggledebug)
 
     return np.asarray(kpts)[np.argsort(confs)], \
            np.asarray(nrmls)[np.argsort(confs)], \
            np.asarray(confs)[np.argsort(confs)]
 
 
-def cal_pcn_kpts(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, toggledebug=False):
+def opt_nbv_pcn(pts, model_name, load_model, cam_pos=(0, 0, 0), method='COBYLA'):
+    nbv_opt = nbv_solver.NBVOptimizer(model_name=model_name, load_model=load_model, toggledebug=False)
+    trans, rot, time_cost = nbv_opt.solve(pts, cam_pos, method=method)
+    return trans, rot, time_cost
+
+
+def cal_nbv_pcn_kpts(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, toggledebug=False):
     def _normalize(l):
         return [(v - min(l)) / (max(l) - min(l)) for v in l]
 

@@ -69,7 +69,8 @@ if __name__ == '__main__':
     nbv_pts, nbv_nrmls, jnts = \
         rcu.cal_nbc(pcd_roi, gripperframe, rbt, seedjntagls=seedjntagls, gl_transmat4=gl_transmat4,
                     theta=theta, max_a=max_a, show_cam=True, toggledebug=True)
-    m_planner.ah.show_armjnts(armjnts=seedjntagls, rgba=(1, 0, 0, .5))
+
+    m_planner.ah.show_armjnts(armjnts=seedjntagls)
     m_planner.ah.show_armjnts(armjnts=jnts, rgba=(0, 1, 0, .5))
     # path = m_planner.plan_start2end(start=seedjntagls, end=jnts)
     # m_planner.ah.show_ani(path)

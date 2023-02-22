@@ -19,18 +19,14 @@ import bendplanner.bend_utils as bu
 import open3d as o3d
 import pcn.inference as pcn
 from scipy.spatial import KDTree
-import basis.o3dhelper as o3dh
 
 TB = True
-COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40], [255, 127, 14]]) / 255
 
 
-class NBVOptimizer(object):
-    def __init__(self, rbt, max_a=np.pi / 6, max_dist=1, env=None, armname="arm", releemat4=np.eye(4),
-                 model_name='pcn', load_model='pcn_emd_rec/best_emd_network.pth', toggledebug=TB):
+class PCNNBCOptimizer(object):
+    def __init__(self, rbt, max_a=np.pi / 6, max_dist=1, env=None, armname="arm", releemat4=np.eye(4), toggledebug=TB):
         self.rbt = rbt
         self.armname = armname
-        self.model_name, self.load_model = model_name, load_model
         self.env = env
         self.armname = armname
         self.releemat4 = releemat4
@@ -39,9 +35,8 @@ class NBVOptimizer(object):
         self.rot_center = (0, 0, 0)
         self.result = None
         self.cons = []
-        b = (-np.pi, -np.pi)
-        tb = (-.1, .1)
-        self.bnds = (tb, tb, tb, b, b, b)
+        b = (-np.pi, np.pi)
+        self.bnds = (b, b, b, b, b, b, b)
 
         self.seedjntagls = None
         self.tgtpos = None
@@ -61,72 +56,78 @@ class NBVOptimizer(object):
 
         self.nbv_pts, self.nbv_nrmls, self.nbv_conf = [], [], []
         self.init_eepos, self.init_eerot, self.init_eemat4 = None, None, None
+        self.o3dpcd_o, self.o3dmesh, self.o3dpcd_nbv = None, None, None
         self.campos = None
 
     def objctive(self, x):
-        # self.jnts.append(x)
-        # self.rbth.goto_armjnts(x)
+        self.jnts.append(x)
+        self.rbth.goto_armjnts(x)
+        rbt_o3dmesh = nu.rbt2o3dmesh(self.rbt, link_num=10)
+        # rbt_o3dmesh.compute_vertex_normals()
         conf_sum = 0
-        rot = rm.rotmat_from_euler(x[0], x[1], x[2])
-        o3dpcd_tmp = nu.gen_partial_o3dpcd(self.o3dmesh, trans=x[3:], rot=rot, rot_center=self.rot_center)
-        o3dpcd_tmp = o3dpcd_tmp.voxel_down_sample(voxel_size=0.005)
-        o3dpcd_tmp.paint_uniform_color((0, 1, 0))
+        coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.1)
+
+        eepos, eerot = self.rbt.get_gl_tcp()
+        eemat4 = rm.homomat_from_posrot(eepos, eerot)
+        transmat4 = np.linalg.inv(self.init_eemat4).dot(eemat4)
+        coord_tmp = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.1)
+        coord_tmp.transform(transmat4)
+
+        rbt_o3dmesh.transform(np.linalg.inv(self.init_eemat4))
+        o3dpcd_nxt_origin = \
+            nu.gen_partial_o3dpcd(self.o3dmesh, toggledebug=self.toggledebug, othermesh=[rbt_o3dmesh],
+                                  trans=transmat4[:3, 3], rot=transmat4[:3, :3], rot_center=self.rot_center,
+                                  fov=True, campos=self.campos)
+        o3dpcd_nxt_origin.paint_uniform_color(nu.COLOR[5])
         kdt_nbv = o3d.geometry.KDTreeFlann(self.o3dpcd_nbv)
 
-        # o3d.visualization.draw_geometries([self.o3dpcd_o, self.o3dpcd_i, self.o3dmesh, self.mesh_cylinder],
-        #                                   mesh_show_back_face=True)
-        # o3d.visualization.draw_geometries([o3dpcd_tmp, self.o3dpcd_nbv], mesh_show_back_face=True)
-        pcd_tmp = np.asarray(o3dpcd_tmp.points)
-        _, _, trans = o3dh.registration_icp_ptpt(pcd_tmp, np.asarray(self.o3dpcd_nbv.points),
-                                                 maxcorrdist=.02, toggledebug=False)
-        pcd_tmp = pcdu.trans_pcd(pcd_tmp, trans)
+        if self.toggledebug:
+            cam_mesh = o3d.geometry.TriangleMesh.create_sphere(radius=.01)
+            cam_mesh.translate(self.campos)
+            rbt_o3dmesh_all = nu.rbt2o3dmesh(self.rbt, link_num=3)
+            rbt_o3dmesh_all.transform(np.linalg.inv(self.init_eemat4))
+            o3dmesh_tmp = copy.deepcopy(self.o3dmesh)
+            o3dmesh_tmp.transform(transmat4)
+            o3dpcd_nxt = copy.deepcopy(o3dpcd_nxt_origin)
+            o3dpcd_nxt.transform(transmat4)
+            o3d.visualization.draw_geometries([rbt_o3dmesh_all, o3dpcd_nxt, o3dmesh_tmp, coord, coord_tmp, cam_mesh])
+            o3d.visualization.draw_geometries([o3dpcd_nxt_origin, self.o3dpcd_nbv, coord])
 
-        for p in pcd_tmp:
+        for p in np.asarray(o3dpcd_nxt_origin.points):
             _, idx, _ = kdt_nbv.search_knn_vector_3d(p, 1)
-            if np.linalg.norm(p - self.nbv_pts[idx]) < .01 and self.nbv_conf[idx] < .2:
+            if np.linalg.norm(p - self.nbv_pts[idx]) < .01 and self.nbv_conf[idx] < .5:
                 conf_sum += 1 - (self.nbv_conf[idx])
         self.obj_list.append(conf_sum)
-        # print(x, conf_sum)
-
+        if self.toggledebug:
+            print(x, conf_sum)
         return -conf_sum
 
     def update_known(self, seedjntagls, pcd_i, campos):
-        def _sigmoid(x):
-            s = 1 / (1 + np.exp(1 - 2 * x))
-            return s
+        model_name = 'pcn'
+        load_model = 'pcn_emd_all/best_cd_p_network.pth'
 
         width = .008
-        thickness = .0015
+        thickness = .002
         cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
-
+        pcd_i = pcdu.trans_pcd(pcd_i, np.linalg.inv(self.releemat4))
         self.campos = campos
         self.seedjntagls = seedjntagls
         self.init_eepos, self.init_eerot = self.rbt.get_gl_tcp()
         self.init_eemat4 = rm.homomat_from_posrot(self.init_eepos, self.init_eerot)
 
-        pcd_o = pcn.inference_sgl(pcd_i, self.model_name, self.load_model, toggledebug=False)
+        pcd_o = pcn.inference_sgl(pcd_i, model_name, load_model, toggledebug=False)
+        pcd_i_inhnd = pcdu.trans_pcd(pcd_i, self.releemat4)
+        pcd_o_inhnd = pcdu.trans_pcd(pcd_o, self.releemat4)
         self.nbv_pts, self.nbv_nrmls, self.nbv_conf = \
-            pcdu.cal_pcn(pcd_i, pcd_o, cam_pos=campos, theta=None, toggledebug=True)
-        # print(self.nbv_conf)
-        # self.nbv_conf = _sigmoid(self.nbv_conf)
-        # print(self.nbv_conf)
-        self.o3dpcd_o = du.nparray2o3dpcd(pcd_o)
-        self.o3dpcd_i = du.nparray2o3dpcd(pcd_i)
+            pcdu.cal_nbv_pcn(pcd_i_inhnd, pcd_o_inhnd, cam_pos=campos, theta=None, toggledebug=True)
+        self.o3dpcd_o = du.nparray2o3dpcd(pcd_o_inhnd)
         self.o3dpcd_nbv = du.nparray2o3dpcd(np.asarray(self.nbv_pts))
-        self.o3dpcd_o.paint_uniform_color(COLOR[2])
-        self.o3dpcd_i.paint_uniform_color(COLOR[0])
         self.o3dpcd_nbv.colors = o3d.utility.Vector3dVector([[c, 0, 1 - c] for c in self.nbv_conf])
-
-        kpts, kpts_rotseq = pcdu.get_kpts_gmm(pcd_o, rgba=(1, 1, 0, 1), n_components=10)
-        inp_pseq = nu.kpts2bspl(kpts)
-        inp_rotseq = pcdu.get_rots_wkpts(pcd_o, inp_pseq, k=250, show=True, rgba=(1, 0, 0, 1))
+        kpts, kpts_rotseq = pcdu.get_kpts_gmm(pcd_o_inhnd, rgba=(1, 1, 0, 1), n_components=16)
+        inp_pseq = nu.nurbs_inp(kpts)
+        inp_rotseq = pcdu.get_rots_wkpts(pcd_o_inhnd, inp_pseq, k=200, show=True, rgba=(1, 0, 0, 1))
         self.o3dmesh = du.cm2o3dmesh(bu.gen_swap(inp_pseq, inp_rotseq, cross_sec, extend=.008))
-        self.o3dmesh.compute_vertex_normals()
-        # o3d.visualization.draw_geometries([self.o3dpcd_o, self.o3dpcd_i, self.o3dmesh], mesh_show_back_face=True)
-        # print(self.nbv_conf)
-        # mesh_cylinder = o3d.geometry.TriangleMesh.create_cylinder(radius=0.02, height=.05)
-        # mesh_cylinder.translate(self.nbv_pts[0])
-        # mesh_cylinder.rotate(rm.rotmat_between_vectors(np.asarray(self.campos) - x[3:], self.nbv_nrmls[0]))
+        # self.o3dmesh.compute_vertex_normals()
 
     def con_rot(self, x):
         self.rbth.goto_armjnts(x)
@@ -176,23 +177,23 @@ class NBVOptimizer(object):
         """
         time_start = time.time()
         self.update_known(seedjntagls, pcd_i, campos)
-        init_rot = rm.rotmat_between_vectors(np.asarray(self.campos) - self.nbv_pts[0], self.nbv_nrmls[0])
-        sol = minimize(self.objctive, np.asarray(list(rm.rotmat_to_euler(init_rot)) + list(self.nbv_pts[0])),
-                       method=method, bounds=self.bnds, constraints=self.cons)
-
-        # print("time cost", time.time() - time_start, sol.success)
+        # self.addconstraint(self.con_rot, condition="ineq")
+        # self.addconstraint(self.con_dist, condition="ineq")
+        self.addconstraint(self.con_diff_x, condition="ineq")
+        self.addconstraint(self.con_diff_y, condition="ineq")
+        self.addconstraint(self.con_diff_z, condition="ineq")
+        sol = minimize(self.objctive, seedjntagls, method=method, bounds=self.bnds, constraints=self.cons)
+        time_cost = time.time() - time_start
+        print("time cost", time_cost, sol.success)
 
         if self.toggledebug:
             # print(sol)
             self.__debug()
 
         if sol.success:
-            rot = rm.rotmat_from_euler(sol.x[0], sol.x[1], sol.x[2])
-            trans = sol.x[3:]
+            return sol.x, time_cost
         else:
-            rot = rm.rotmat_between_vectors(np.asarray(self.campos) - self.nbv_pts[0], self.nbv_nrmls[0])
-            rot = np.linalg.inv(rot)
-            trans = self.nbv_pts[0]
+            return None, time_cost
 
         # self.rbth.goto_armjnts(sol.x)
         # eepos, eerot = self.rbt.get_gl_tcp()
@@ -200,8 +201,6 @@ class NBVOptimizer(object):
         # transmat4 = eemat4.dot(np.linalg.inv(self.init_eemat4))
         # gm.gen_frame(eepos, eerot).attach_to(base)
         # gm.gen_frame(self.init_eepos, self.init_eerot).attach_to(base)
-
-        return trans, rot
 
     def __debug(self):
         plt.figure(figsize=(12, 12))
@@ -220,14 +219,3 @@ class NBVOptimizer(object):
         # ax6 = plt.subplot(326)
         # self.rbth.plot_armjnts(ax6, self.jnts, show=False)
         plt.show()
-
-
-if __name__ == '__main__':
-    import visualization.panda.world as wd
-    import robot_sim.robots.xarm_shuidi.xarm_shuidi as xarm_shuidi
-
-    base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
-
-    rbt = el.loadXarm(showrbt=True)
-    nbs_opt = NBVOptimizer(rbt)
-    base.run()

@@ -10,19 +10,20 @@ import open3d as o3d
 
 import utils.pcd_utils as pcdu
 import localenv.envloader as el
-import motionplanner.pcn_nbv_solver as nbv_solver
+import motionplanner.nbv_pcn_opt_solver as nbv_solver
 import nbv_utils as nu
 import basis.o3dhelper as o3dh
 import basis.robot_math as rm
 
 if __name__ == '__main__':
     base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
-    COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40]]) / 255
     cam_pos = [0, 0, .5]
 
     rbt = el.loadXarm(showrbt=True)
 
     path = 'D:/nbv_mesh/'
+    if not os.path.exists(path):
+        path = 'E:/liu/nbv_mesh/'
     cat = 'bspl_5'
     fo = 'res_75'
     coverage_pcn = []
@@ -52,10 +53,9 @@ if __name__ == '__main__':
         # pcd_i = np.asarray(o3d.io.read_point_cloud(os.path.join(os.getcwd(), 'tmp', f'0_i.pcd')).points)
         # pcd_o = np.asarray(o3d.io.read_point_cloud(os.path.join(os.getcwd(), 'tmp', f'0_o.pcd')).points)
         # print(len(pcd_i))
-        seedjntagls = rbt.get_jnt_values('arm')
 
-        nbv_opt = nbv_solver.NBVOptimizer(rbt, toggledebug=False)
-        trans, rot = nbv_opt.solve(seedjntagls, pcd_i, cam_pos, method='COBYLA')
+        nbv_opt = nbv_solver.NBVOptimizer(toggledebug=False)
+        trans, rot, time_cost = nbv_opt.solve(pcd_i, cam_pos, method='COBYLA')
 
         o3dpcd_tmp = nu.gen_partial_o3dpcd(o3dmesh, rot=rot, trans=trans, rot_center=(0, 0, 0))
         o3dpcd += o3dpcd_tmp

@@ -15,7 +15,7 @@ import pcn.inference as pcn
 # import motionplanner.motion_planner as mp
 import utils.pcd_utils as pcdu
 import visualization.panda.world as wd
-import motionplanner.pcn_nbv_solver as nbv_solver
+import motionplanner.nbv_pcn_opt_solver as nbv_solver
 import nbv_utils as nu
 
 

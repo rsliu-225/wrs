@@ -11,12 +11,14 @@ if __name__ == '__main__':
 
     base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
 
-    # path = 'E:/liu/nbv_mesh/'
-    path = 'D:/nbv_mesh/'
+    # path = 'D:/nbv_mesh/'
+    # if not os.path.exists(path):
+    #     path = 'E:/liu/nbv_mesh/'
+    path = 'E:/liu/nbv_mesh/'
     cat = 'bspl_4'
-    coverage_tor = .0018
+    coverage_tor = .001
     goal = .95
-    visible_threshold = np.radians(75)
+    vis_threshold = np.radians(75)
 
     if not os.path.exists(os.path.join(path, cat, RES_FO_NAME)):
         os.makedirs(os.path.join(path, cat, RES_FO_NAME))
@@ -28,10 +30,10 @@ if __name__ == '__main__':
         o3dpcd_init = nu.gen_partial_o3dpcd_occ(os.path.join(path, cat), f.split('.ply')[0], np.eye(3), [0, 0, 0],
                                                 rnd_occ_ratio_rng=(.2, .5),
                                                 nrml_occ_ratio_rng=(.2, .6),
-                                                visible_threshold=visible_threshold,
+                                                vis_threshold=vis_threshold,
                                                 occ_vt_ratio=random.uniform(.08, .1),
                                                 noise_vt_ratio=random.uniform(.2, .5),
-                                                add_vt_occ=False, add_noise=False, add_rnd_occ=False,
+                                                add_occ_vt=False, add_noise_vt=False, add_occ_rnd=False,
                                                 add_noise_pts=True,
                                                 toggledebug=False)
         # o3dpcd_init, ind = o3dpcd_init.remove_radius_outlier(nb_points=50, radius=0.005)
@@ -39,8 +41,10 @@ if __name__ == '__main__':
         o3dmesh_gt = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'prim', f))
         o3dpcd_gt = du.get_objpcd_full_sample_o3d(o3dmesh_gt, smp_num=2048, method='possion')
 
-        run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_model,
-                goal=goal, coverage_tor=coverage_tor, visible_threshold=visible_threshold, toggledebug=True)
+        # run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_model,
+        #         goal=goal, coverage_tor=coverage_tor, visible_threshold=visible_threshold, toggledebug=True)
+        run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_model,
+                    goal=goal, coverage_tor=coverage_tor, vis_threshold=vis_threshold, toggledebug=True)
         # run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, goal=goal, coverage_tor=coverage_tor,
         #         visible_threshold=visible_threshold, toggledebug=True)
         # run_random(path, cat, f, o3dpcd_init, o3dpcd_gt, goal=goal, coverage_tor=coverage_tor,

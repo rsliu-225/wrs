@@ -106,7 +106,7 @@ if __name__ == '__main__':
     # pcdu.show_pcd(pcd_o, rgba=(COLOR[2][0], COLOR[2][1], COLOR[2][2], 1))
 
     kpts, kpts_rotseq = pcdu.get_kpts_gmm(pcd_o, rgba=(1, 1, 0, 1), n_components=15, show=False)
-    inp_pseq = nu.kpts2bspl(kpts)
+    inp_pseq = nu.nurbs_inp(kpts)
     inp_rotseq = pcdu.get_rots_wkpts(pcd_o, inp_pseq, k=250, show=False, rgba=(1, 0, 0, 1))
     objcm = bu.gen_swap(inp_pseq, inp_rotseq, cross_sec, extend=.008)
     o3dmesh = du.cm2o3dmesh(objcm)
@@ -120,8 +120,8 @@ if __name__ == '__main__':
     # pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv(pts, nrmls, confs, toggledebug=True)
     # pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_pcn_kpts(pcd_i, pcd_o, cam_pos=cam_pos, theta=None, toggledebug=True)
     # pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd_i, pcd_o, cam_pos=cam_pos, theta=None, toggledebug=True)
-    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_pcn(pcd_i, pcd_o, radius=.01, cam_pos=cam_pos, theta=None,
-                                                 toggledebug=True)
+    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd_i, pcd_o, radius=.01, cam_pos=cam_pos, theta=None,
+                                                     toggledebug=True)
     objcm.attach_to(base)
     rot = rm.rotmat_between_vectors(np.asarray(cam_pos), nrmls_nbv[0])
     rot = np.linalg.inv(rot)

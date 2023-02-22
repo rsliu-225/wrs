@@ -41,8 +41,9 @@ PENPOSE_REL_PATH = ROOT + "/log/penpose/"
 
 MOTOR_STATE_PATH = ROOT + "/motorcontrol/motor_state.pkl"
 
-CAM_ROT = np.dot(rm.rotmat_from_axangle((0, 0, 1), np.pi / 2),
-                 rm.rotmat_from_axangle((1, 0, 0), -np.radians(55)))
+# CAM_ROT = np.dot(rm.rotmat_from_axangle((0, 0, 1), np.pi / 2),
+#                  rm.rotmat_from_axangle((1, 0, 0), -np.radians(55)))
+CAM_ROT = rm.rotmat_from_axangle((0, 0, 1), np.pi / 2)
 CAM_LS = CAM_ROT[:, 1]
 
 token = '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'
