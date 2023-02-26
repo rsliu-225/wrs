@@ -66,6 +66,7 @@ class NBCOptimizerVec(object):
         # obj = -(w_e * w_m * (-w_sr) * w_wo)
         # obj = w_e + (-w_m) + w_sr
         obj = w_e
+
         self.jd_list.append(w_e)
         self.mp_list.append(w_m)
         self.sr_list.append(w_sr)
@@ -88,6 +89,7 @@ class NBCOptimizerVec(object):
         n_new = pcdu.trans_pcd([self.nbv_nrml], transmat4)[0]
         p_new = pcdu.trans_pcd([self.nbv_pt], transmat4)[0]
         err = rm.angle_between_vectors(n_new, self.campos - p_new)
+        err = min([err, np.pi - err])
         self.rot_err.append(np.degrees(err))
         return self.max_a - err
 
@@ -224,7 +226,7 @@ class NBCOptimizerMat4(object):
 
         # obj = -(w_e * w_m * (-w_sr) * w_wo)
         # obj = w_e + (-w_m) + w_sr
-        obj = w_e
+        obj = w_e + w_wo + w_sr
         self.jd_list.append(w_e)
         self.mp_list.append(w_m)
         self.sr_list.append(np.degrees(w_sr))

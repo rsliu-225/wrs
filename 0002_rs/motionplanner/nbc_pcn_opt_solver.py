@@ -95,7 +95,7 @@ class PCNNBCOptimizer(object):
 
         for p in np.asarray(o3dpcd_nxt_origin.points):
             _, idx, _ = kdt_nbv.search_knn_vector_3d(p, 1)
-            if np.linalg.norm(p - self.nbv_pts[idx]) < .01 and self.nbv_conf[idx] < .5:
+            if np.linalg.norm(p - self.nbv_pts[idx]) < .01 and self.nbv_conf[idx] < .2:
                 conf_sum += 1 - (self.nbv_conf[idx])
         self.obj_list.append(conf_sum)
         if self.toggledebug:
@@ -191,16 +191,15 @@ class PCNNBCOptimizer(object):
             self.__debug()
 
         if sol.success:
-            return sol.x, time_cost
+            self.rbth.goto_armjnts(sol.x)
+            eepos, eerot = self.rbt.get_gl_tcp()
+            eemat4 = rm.homomat_from_posrot(eepos, eerot).dot(self.releemat4)
+            transmat4 = np.linalg.inv(self.init_eemat4).dot(eemat4)
+            # gm.gen_frame(eepos, eerot).attach_to(base)
+            # gm.gen_frame(self.init_eepos, self.init_eerot).attach_to(base)
+            return sol.x, transmat4, sol.fun, time_cost
         else:
-            return None, time_cost
-
-        # self.rbth.goto_armjnts(sol.x)
-        # eepos, eerot = self.rbt.get_gl_tcp()
-        # eemat4 = rm.homomat_from_posrot(eepos, eerot)
-        # transmat4 = eemat4.dot(np.linalg.inv(self.init_eemat4))
-        # gm.gen_frame(eepos, eerot).attach_to(base)
-        # gm.gen_frame(self.init_eepos, self.init_eerot).attach_to(base)
+            return None, None, None, time_cost
 
     def __debug(self):
         plt.figure(figsize=(12, 12))

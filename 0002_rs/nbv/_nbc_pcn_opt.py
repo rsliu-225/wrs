@@ -74,15 +74,15 @@ if __name__ == '__main__':
             init_eemat4 = rm.homomat_from_posrot(init_eepos, init_eerot).dot(relmat4)
 
             nbc_opt = nbc_solver.PCNNBCOptimizer(rbt, releemat4=relmat4, toggledebug=False)
-            # jnts, time_cost = nbc_opt.solve(seedjntagls, pcd_i, campos, method='COBYLA')
-            # print(jnts)
-            jnts = np.asarray([0.29210199, -0.9822004, -0.22015057, 0.25273244, -0.05857504, -0.07970981, -0.05283248])
+            jnts, transmat4, _, time_cost = nbc_opt.solve(seedjntagls, pcd_i, campos, method='COBYLA')
+            print(jnts)
+            # jnts = np.asarray([0.29210199, -0.9822004, -0.22015057, 0.25273244, -0.05857504, -0.07970981, -0.05283248])
 
             rbt.fk('arm', jnts)
             rbt.gen_meshmodel().attach_to(base)
-            eepos, eerot = rbt.get_gl_tcp()
-            eemat4 = rm.homomat_from_posrot(eepos, eerot).dot(relmat4)
-            transmat4 = np.linalg.inv(init_eemat4).dot(eemat4)
+            # eepos, eerot = rbt.get_gl_tcp()
+            # eemat4 = rm.homomat_from_posrot(eepos, eerot).dot(relmat4)
+            # transmat4 = np.linalg.inv(init_eemat4).dot(eemat4)
 
             rbt_o3dmesh = nu.rbt2o3dmesh(rbt, link_num=10)
             rbt_o3dmesh.transform(np.linalg.inv(init_eemat4))

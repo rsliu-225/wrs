@@ -24,8 +24,8 @@ COLOR = np.asarray(
     [[31, 119, 180], [44, 160, 44], [214, 39, 40], [255, 127, 14], [148, 103, 189], [23, 190, 207]]) / 255
 
 
-def transpose(data):
-    mat = [[], [], [], [], [], []]
+def transpose(data, len=6):
+    mat = [[] for _ in range(len)]
     for i, r in enumerate(data):
         for j, v in enumerate(r):
             # if len(mat) > j:
@@ -35,10 +35,10 @@ def transpose(data):
     return mat
 
 
-def load_cov(path, cat, fo, prefix='pcn'):
+def load_cov(path, cat, fo, max_times=5, prefix='pcn'):
     cov_list = []
     max_list = []
-    cnt_list = [0] * 5
+    cnt_list = [0] * max_times
 
     for f in os.listdir(os.path.join(path, cat, 'mesh')):
         print(f'-----------{f}------------')
@@ -56,17 +56,60 @@ def load_cov(path, cat, fo, prefix='pcn'):
             print('remove')
         print(prefix, 'init', res_dict['init_coverage'])
 
-        for i in range(5):
+        for i in range(max_times):
             if str(i) in res_dict.keys():
+                # try:
                 print(prefix, i + 1, res_dict[str(i)]['coverage'])
                 cov_list_tmp.append(res_dict[str(i)]['coverage'])
                 max = res_dict[str(i)]['coverage']
+                # except:
+                #     max_tmp.append(max)
+                #     continue
                 max_cnt = i
             max_tmp.append(max)
         cnt_list[max_cnt] += 1
         max_list.append(max_tmp)
         cov_list.append(cov_list_tmp)
-    return transpose(cov_list), transpose(max_list), [cnt_list[0]] + cnt_list
+    return transpose(cov_list, max_times + 1), transpose(max_list, max_times + 1), [cnt_list[0]] + cnt_list
+
+
+def load_cov_w_fail(path, cat, fo, max_times=5, prefix='pcn'):
+    cov_list = []
+    max_list = []
+    cnt_list = [0] * max_times
+
+    for f in os.listdir(os.path.join(path, cat, 'mesh')):
+        print(f'-----------{f}------------')
+        try:
+            res_dict = json.load(open(os.path.join(path, cat, fo, f'{prefix}_{f.split(".ply")[0]}.json'), 'rb'))
+        except:
+            break
+        # o3dpcd_i = o3dh.nparray2o3dpcd(np.asarray(res_dict['0']['input']))
+        # o3d.visualization.draw_geometries([o3dpcd_i])
+        cov_list_tmp = [res_dict['init_coverage']]
+        max_tmp = [res_dict['init_coverage']]
+        max = 0
+        max_cnt = 0
+        if res_dict['init_coverage'] > .94:
+            print('remove')
+        print(prefix, 'init', res_dict['init_coverage'])
+
+        for i in range(max_times):
+            if str(i) in res_dict.keys():
+                if 'coverage' in res_dict[str(i)].keys():
+                    print(prefix, i + 1, res_dict[str(i)]['coverage'])
+                    cov_list_tmp.append(res_dict[str(i)]['coverage'])
+                    max = res_dict[str(i)]['coverage']
+                else:
+                    max_tmp.append(max)
+                    continue
+                max_cnt = i
+            max_tmp.append(max)
+        cnt_list[max_cnt] += 1
+        max_list.append(max_tmp)
+        cov_list.append(cov_list_tmp)
+    print(cnt_list)
+    return transpose(cov_list, max_times + 1), transpose(max_list, max_times + 1), [cnt_list[0]] + cnt_list
 
 
 def fit(path, cat, fo, cross_sec, prefix='pcn', toggledebug=False):

@@ -6,23 +6,23 @@ import matplotlib.ticker as mticker
 import numpy as np
 
 import nbv_utils as nbv_utl
-from collections import Counter
 
 if __name__ == '__main__':
     path = 'E:/liu/nbv_mesh/'
     if not os.path.exists(path):
         path = 'D:/nbv_mesh/'
-    cat = 'bspl_5'
-    fo = 'res_75_rlen'
-    coverage_rnd, max_rnd, cnt_rnd = nbv_utl.load_cov(path, cat, fo, prefix='random')
-    coverage_org, max_org, cnt_org = nbv_utl.load_cov(path, cat, fo, prefix='org')
-    coverage_pcn, max_pcn, cnt_pcn = nbv_utl.load_cov(path, cat, fo, prefix='pcn')
-    coverage_opt, max_opt, cnt_opt = nbv_utl.load_cov(path, cat, fo, prefix='pcn_opt')
+    cat = 'bspl_3'
+    fo = 'res_75_rbt'
 
-    x = np.asarray([1, 2, 3, 4, 5, 6])
+    coverage_rnd, max_rnd, cnt_rnd = nbv_utl.load_cov_w_fail(path, cat, fo, max_times=9, prefix='random')
+    coverage_org, max_org, cnt_org = nbv_utl.load_cov_w_fail(path, cat, fo, max_times=9, prefix='org')
+    coverage_pcn, max_pcn, cnt_pcn = nbv_utl.load_cov_w_fail(path, cat, fo, max_times=9, prefix='pcn')
+    coverage_opt, max_opt, cnt_opt = nbv_utl.load_cov_w_fail(path, cat, fo, max_times=9, prefix='pcn_opt')
+
+    x = np.asarray([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams["font.size"] = 20
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(6, 22))
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 22))
     # ax1.set_title('Coverage')
     ax1.axhline(y=.95, color='r', linewidth='0.5', linestyle=':')
     ax1.set_ylim(.1, 1.05)
@@ -55,7 +55,7 @@ if __name__ == '__main__':
 
     ax2.set_xticks(x[1:])
     # ax2.set_ylim(0, 92)
-    ax2.set_ylim(0, 69)
+    ax2.set_ylim(0, 50)
 
     # ax2.set_yticks(np.linspace(0, 100, 10))
     ax2.minorticks_on()
@@ -68,11 +68,6 @@ if __name__ == '__main__':
     print(nbv_utl.cal_avg(cnt_org[1:]))
     print(nbv_utl.cal_avg(cnt_pcn[1:]))
     print(nbv_utl.cal_avg(cnt_opt[1:]))
-
-    print(Counter(np.where(np.asarray(max_rnd[-1]) > .95, 1, 0)))
-    print(Counter(np.where(np.asarray(max_org[-1]) > .95, 1, 0)))
-    print( Counter(np.where(np.asarray(max_pcn[-1]) > .95, 1, 0)))
-    print(Counter(np.where(np.asarray(max_opt[-1]) > .95, 1, 0)))
 
     plt.show()
     # base.run()
