@@ -57,12 +57,12 @@ class PCNNBCOptimizer(object):
         self.nbv_pts, self.nbv_nrmls, self.nbv_conf = [], [], []
         self.init_eepos, self.init_eerot, self.init_eemat4 = None, None, None
         self.o3dpcd_o, self.o3dmesh, self.o3dpcd_nbv = None, None, None
-        self.campos = None
+        self.cam_pos = None
 
     def objctive(self, x):
         self.jnts.append(x)
         self.rbth.goto_armjnts(x)
-        rbt_o3dmesh = nu.rbt2o3dmesh(self.rbt, link_num=10)
+        rbt_o3dmesh = nu.rbt2o3dmesh(self.rbt, link_num=10, show_nrml=False)
         # rbt_o3dmesh.compute_vertex_normals()
         conf_sum = 0
         coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.1)
@@ -77,14 +77,14 @@ class PCNNBCOptimizer(object):
         o3dpcd_nxt_origin = \
             nu.gen_partial_o3dpcd(self.o3dmesh, toggledebug=self.toggledebug, othermesh=[rbt_o3dmesh],
                                   trans=transmat4[:3, 3], rot=transmat4[:3, :3], rot_center=self.rot_center,
-                                  fov=True, campos=self.campos)
+                                  fov=True, cam_pos=self.cam_pos)
         o3dpcd_nxt_origin.paint_uniform_color(nu.COLOR[5])
         kdt_nbv = o3d.geometry.KDTreeFlann(self.o3dpcd_nbv)
 
         if self.toggledebug:
             cam_mesh = o3d.geometry.TriangleMesh.create_sphere(radius=.01)
-            cam_mesh.translate(self.campos)
-            rbt_o3dmesh_all = nu.rbt2o3dmesh(self.rbt, link_num=3)
+            cam_mesh.translate(self.cam_pos)
+            rbt_o3dmesh_all = nu.rbt2o3dmesh(self.rbt, link_num=3, show_nrml=True)
             rbt_o3dmesh_all.transform(np.linalg.inv(self.init_eemat4))
             o3dmesh_tmp = copy.deepcopy(self.o3dmesh)
             o3dmesh_tmp.transform(transmat4)
@@ -102,7 +102,7 @@ class PCNNBCOptimizer(object):
             print(x, conf_sum)
         return -conf_sum
 
-    def update_known(self, seedjntagls, pcd_i, campos):
+    def update_known(self, seedjntagls, pcd_i, cam_pos):
         model_name = 'pcn'
         load_model = 'pcn_emd_all/best_cd_p_network.pth'
 
@@ -110,7 +110,7 @@ class PCNNBCOptimizer(object):
         thickness = .002
         cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
         pcd_i = pcdu.trans_pcd(pcd_i, np.linalg.inv(self.releemat4))
-        self.campos = campos
+        self.cam_pos = cam_pos
         self.seedjntagls = seedjntagls
         self.init_eepos, self.init_eerot = self.rbt.get_gl_tcp()
         self.init_eemat4 = rm.homomat_from_posrot(self.init_eepos, self.init_eerot)
@@ -119,7 +119,7 @@ class PCNNBCOptimizer(object):
         pcd_i_inhnd = pcdu.trans_pcd(pcd_i, self.releemat4)
         pcd_o_inhnd = pcdu.trans_pcd(pcd_o, self.releemat4)
         self.nbv_pts, self.nbv_nrmls, self.nbv_conf = \
-            pcdu.cal_nbv_pcn(pcd_i_inhnd, pcd_o_inhnd, campos=campos, theta=None, toggledebug=True)
+            pcdu.cal_nbv_pcn(pcd_i_inhnd, pcd_o_inhnd, cam_pos=cam_pos, theta=None, toggledebug=True)
         self.o3dpcd_o = du.nparray2o3dpcd(pcd_o_inhnd)
         self.o3dpcd_nbv = du.nparray2o3dpcd(np.asarray(self.nbv_pts))
         self.o3dpcd_nbv.colors = o3d.utility.Vector3dVector([[c, 0, 1 - c] for c in self.nbv_conf])
@@ -136,14 +136,14 @@ class PCNNBCOptimizer(object):
         transmat4 = eemat4.dot(np.linalg.inv(self.init_eemat4))
         n_new = pcdu.trans_pcd([self.nbv_nrmls[0]], transmat4)[0]
         p_new = pcdu.trans_pcd([self.nbv_pts[0]], transmat4)[0]
-        err = rm.angle_between_vectors(n_new, self.campos - p_new)
+        err = rm.angle_between_vectors(n_new, self.cam_pos - p_new)
         self.rot_err.append(err)
         return self.max_a - err
 
     def con_dist(self, x):
         self.rbth.goto_armjnts(x)
         eepos, eerot = self.rbt.get_gl_tcp()
-        err = np.linalg.norm(np.asarray(eepos) - self.campos)
+        err = np.linalg.norm(np.asarray(eepos) - self.cam_pos)
         self.pos_err.append(err)
         return self.max_dist - err
 
@@ -168,7 +168,7 @@ class PCNNBCOptimizer(object):
     def addconstraint(self, constraint, condition="ineq"):
         self.cons.append({'type': condition, 'fun': constraint})
 
-    def solve(self, seedjntagls, pcd_i, campos, method='SLSQP'):
+    def solve(self, seedjntagls, pcd_i, cam_pos, method='SLSQP'):
         """
 
         :param seedjntagls:
@@ -176,7 +176,7 @@ class PCNNBCOptimizer(object):
         :return:
         """
         time_start = time.time()
-        self.update_known(seedjntagls, pcd_i, campos)
+        self.update_known(seedjntagls, pcd_i, cam_pos)
         # self.addconstraint(self.con_rot, condition="ineq")
         # self.addconstraint(self.con_dist, condition="ineq")
         self.addconstraint(self.con_diff_x, condition="ineq")

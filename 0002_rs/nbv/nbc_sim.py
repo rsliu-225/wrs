@@ -1,9 +1,9 @@
 import copy
-import math
+import json
 import os
 import random
-import json
-import h5py
+from multiprocessing import Process
+
 import numpy as np
 import open3d as o3d
 
@@ -11,17 +11,15 @@ import basis.o3dhelper as o3dh
 import basis.robot_math as rm
 import config
 import datagenerator.data_utils as du
+import modeling.geometric_model as gm
+import motionplanner.nbc_pcn_opt_solver as nbcs_conf
+import motionplanner.nbc_solver as nbcs
+import nbv_utils as nu
 import pcn.inference as pcn
 # import localenv.envloader as el
 # import motionplanner.motion_planner as mp
 import utils.pcd_utils as pcdu
 import visualization.panda.world as wd
-import motionplanner.nbc_solver as nbcs
-import motionplanner.nbc_pcn_opt_solver as nbcs_conf
-
-import nbv_utils as nu
-import modeling.geometric_model as gm
-from multiprocessing import Process
 
 
 def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_model, cov_tor=.001, goal=.5,
@@ -78,7 +76,7 @@ def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_mode
 
         exp_dict[cnt]['pts_nbv'] = pts_nbv_inhnd.tolist()
         exp_dict[cnt]['nrmls_nbv'] = nrmls_nbv_inhnd.tolist()
-        rbt_o3dmesh = nu.rbt2o3dmesh(rbt, link_num=10)
+        rbt_o3dmesh = nu.rbt2o3dmesh(rbt, link_num=10, show_nrml=toggledebug)
 
         if toggledebug:
             coord_inhnd = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.1)
@@ -101,7 +99,7 @@ def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_mode
             break
 
         rbt.fk('arm', jnts)
-        rbt_o3dmesh_nxt = nu.rbt2o3dmesh(rbt, link_num=10)
+        rbt_o3dmesh_nxt = nu.rbt2o3dmesh(rbt, link_num=10, show_nrml=toggledebug)
         eepos, eerot = rbt.get_gl_tcp()
         eemat4 = rm.homomat_from_posrot(eepos, eerot).dot(relmat4)
 
@@ -211,7 +209,7 @@ def run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_
 
         exp_dict[cnt]['pts_nbv'] = pts_nbv_inhnd.tolist()
         exp_dict[cnt]['nrmls_nbv'] = nrmls_nbv_inhnd.tolist()
-        rbt_o3dmesh = nu.rbt2o3dmesh(rbt, link_num=10)
+        rbt_o3dmesh = nu.rbt2o3dmesh(rbt, link_num=10, show_nrml=toggledebug)
 
         if toggledebug:
             coord_inhnd = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.1)
@@ -234,7 +232,7 @@ def run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_
             break
 
         rbt.fk('arm', jnts)
-        rbt_o3dmesh_nxt = nu.rbt2o3dmesh(rbt, link_num=10)
+        rbt_o3dmesh_nxt = nu.rbt2o3dmesh(rbt, link_num=10, show_nrml=toggledebug)
         eepos, eerot = rbt.get_gl_tcp()
         eemat4 = rm.homomat_from_posrot(eepos, eerot).dot(relmat4)
 
@@ -339,7 +337,7 @@ def run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, cov_tor=.001
         pts_nbv_inhnd, nrmls_nbv_inhnd, confs_nbv = pcdu.cal_nbv(pts, nrmls, confs)
         exp_dict[cnt]['pts_nbv'] = pts_nbv_inhnd.tolist()
         exp_dict[cnt]['nrmls_nbv'] = nrmls_nbv_inhnd.tolist()
-        rbt_o3dmesh = nu.rbt2o3dmesh(rbt, link_num=10)
+        rbt_o3dmesh = nu.rbt2o3dmesh(rbt, link_num=10, show_nrml=toggledebug)
 
         if toggledebug:
             coord_inhnd = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.1)
@@ -362,7 +360,7 @@ def run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, cov_tor=.001
             break
 
         rbt.fk('arm', jnts)
-        rbt_o3dmesh_nxt = nu.rbt2o3dmesh(rbt, link_num=10)
+        rbt_o3dmesh_nxt = nu.rbt2o3dmesh(rbt, link_num=10, show_nrml=toggledebug)
         eepos, eerot = rbt.get_gl_tcp()
         eemat4 = rm.homomat_from_posrot(eepos, eerot).dot(relmat4)
 
@@ -468,11 +466,11 @@ def run_random(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, cov_tor=.
         pts_nbv, nrmls_nbv, confs_nbv = gen_random_vec(pcd_inhnd, threshold=np.pi / 1800)
         # if len(nrmls_nbv) == 0:
         #     pts_nbv, nrmls_nbv, confs_nbv = gen_random_vec(pcd_inhnd, threshold=np.pi / 180)
-        random.shuffle(nrmls_nbv)
+        random.shuffle(list(nrmls_nbv))
 
         exp_dict[cnt]['pts_nbv'] = pts_nbv.tolist()
         exp_dict[cnt]['nrmls_nbv'] = nrmls_nbv.tolist()
-        rbt_o3dmesh = nu.rbt2o3dmesh(rbt, link_num=10)
+        rbt_o3dmesh = nu.rbt2o3dmesh(rbt, link_num=10, show_nrml=toggledebug)
 
         if toggledebug:
             coord_inhnd = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.1)
@@ -494,7 +492,7 @@ def run_random(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, cov_tor=.
             break
 
         rbt.fk('arm', jnts)
-        rbt_o3dmesh_nxt = nu.rbt2o3dmesh(rbt, link_num=10)
+        rbt_o3dmesh_nxt = nu.rbt2o3dmesh(rbt, link_num=10, show_nrml=toggledebug)
         eepos, eerot = rbt.get_gl_tcp()
         eemat4 = rm.homomat_from_posrot(eepos, eerot).dot(relmat4)
 

@@ -71,7 +71,7 @@ if __name__ == '__main__':
 
     print(Counter(np.where(np.asarray(max_rnd[-1]) > .95, 1, 0)))
     print(Counter(np.where(np.asarray(max_org[-1]) > .95, 1, 0)))
-    print( Counter(np.where(np.asarray(max_pcn[-1]) > .95, 1, 0)))
+    print(Counter(np.where(np.asarray(max_pcn[-1]) > .95, 1, 0)))
     print(Counter(np.where(np.asarray(max_opt[-1]) > .95, 1, 0)))
 
     plt.show()

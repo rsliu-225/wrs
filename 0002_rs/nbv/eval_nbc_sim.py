@@ -6,6 +6,7 @@ import matplotlib.ticker as mticker
 import numpy as np
 
 import nbv_utils as nbv_utl
+from collections import Counter
 
 if __name__ == '__main__':
     path = 'E:/liu/nbv_mesh/'
@@ -68,6 +69,11 @@ if __name__ == '__main__':
     print(nbv_utl.cal_avg(cnt_org[1:]))
     print(nbv_utl.cal_avg(cnt_pcn[1:]))
     print(nbv_utl.cal_avg(cnt_opt[1:]))
+
+    print(Counter(np.where(np.asarray(max_rnd[-1]) > .95, 1, 0)))
+    print(Counter(np.where(np.asarray(max_org[-1]) > .95, 1, 0)))
+    print(Counter(np.where(np.asarray(max_pcn[-1]) > .95, 1, 0)))
+    print(Counter(np.where(np.asarray(max_opt[-1]) > .95, 1, 0)))
 
     plt.show()
     # base.run()

@@ -19,7 +19,7 @@ import basis.robot_math as rm
 
 if __name__ == '__main__':
     base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
-    campos = [0, 0, .4]
+    cam_pos = [0, 0, .4]
 
     rbt = el.loadXarm(showrbt=False)
     rbt.jaw_to('hnd', 0)
@@ -74,7 +74,7 @@ if __name__ == '__main__':
             init_eemat4 = rm.homomat_from_posrot(init_eepos, init_eerot).dot(relmat4)
 
             nbc_opt = nbc_solver.PCNNBCOptimizer(rbt, releemat4=relmat4, toggledebug=False)
-            jnts, transmat4, _, time_cost = nbc_opt.solve(seedjntagls, pcd_i, campos, method='COBYLA')
+            jnts, transmat4, _, time_cost = nbc_opt.solve(seedjntagls, pcd_i, cam_pos, method='COBYLA')
             print(jnts)
             # jnts = np.asarray([0.29210199, -0.9822004, -0.22015057, 0.25273244, -0.05857504, -0.07970981, -0.05283248])
 
@@ -88,7 +88,7 @@ if __name__ == '__main__':
             rbt_o3dmesh.transform(np.linalg.inv(init_eemat4))
             o3dpcd_nxt = nu.gen_partial_o3dpcd(o3dmesh, othermesh=[rbt_o3dmesh], toggledebug=toggledebug,
                                                trans=transmat4[:3, 3], rot=transmat4[:3, :3], rot_center=[0, 0, 0],
-                                               fov=True, campos=campos)
+                                               fov=True, cam_pos=cam_pos)
 
             o3d.visualization.draw_geometries([coord, o3dpcd_gt, o3dpcd_nxt])
             o3dpcd_i += o3dpcd_nxt
