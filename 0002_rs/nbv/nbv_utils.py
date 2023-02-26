@@ -337,7 +337,7 @@ def hausdorff_distance(x, y, metric='l2'):
     return hausdorff_distance
 
 
-def gen_partial_o3dpcd(o3dmesh, rot=np.eye(3), trans=np.zeros(3), rot_center=(0, 0, 0), campos=(0, 0, 0),
+def gen_partial_o3dpcd(o3dmesh, rot=np.eye(3), trans=np.zeros(3), rot_center=(0, 0, 0), cam_pos=(0, 0, 0),
                        vis_threshold=np.radians(75), fov=False, othermesh=[], w_otherpcd=False, toggledebug=False):
     vis = o3d.visualization.Visualizer()
     vis.create_window('win', left=0, top=0)
@@ -373,7 +373,7 @@ def gen_partial_o3dpcd(o3dmesh, rot=np.eye(3), trans=np.zeros(3), rot_center=(0,
         o3dpcd = o3dpcd.select_by_index(selected_idx)
 
     if fov:
-        o3dpcd = filer_pcd_by_campos(o3dpcd, campos, dist=1.5, angle=np.pi / 6)
+        o3dpcd = filer_pcd_by_cam_pos(o3dpcd, cam_pos, dist=1.5, angle=np.pi / 6)
 
     o3dpcd.translate(-trans)
     o3dpcd.rotate(np.linalg.inv(rot), center=rot_center)
@@ -388,7 +388,7 @@ def gen_partial_o3dpcd(o3dmesh, rot=np.eye(3), trans=np.zeros(3), rot_center=(0,
     return o3dpcd
 
 
-def gen_partial_o3dpcd_occ(path, f, rot, rot_center, trans=np.zeros(3), resolusion=(1280, 720), campos=(0, 0, 0),
+def gen_partial_o3dpcd_occ(path, f, rot, rot_center, trans=np.zeros(3), resolusion=(1280, 720), cam_pos=(0, 0, 0),
                            rnd_occ_ratio_rng=(.2, .5), nrml_occ_ratio_rng=(.2, .6), vis_threshold=np.radians(75),
                            occ_vt_ratio=1.0, noise_vt_ratio=1.0, noise_cnt=random.randint(0, 5),
                            add_noise_vt=False, add_occ_vt=False, add_occ_rnd=True, add_noise_pts=True,
@@ -435,7 +435,7 @@ def gen_partial_o3dpcd_occ(path, f, rot, rot_center, trans=np.zeros(3), resolusi
         o3dpcd = o3dpcd.select_by_index(selected_idx)
 
     if fov:
-        o3dpcd = filer_pcd_by_campos(o3dpcd, campos, dist=.8, angle=np.pi / 9)
+        o3dpcd = filer_pcd_by_cam_pos(o3dpcd, cam_pos, dist=.8, angle=np.pi / 9)
 
     if toggledebug:
         o3dpcd_org = o3d.io.read_point_cloud(os.path.join(path, f'{f}_tmp.pcd'))
@@ -453,12 +453,14 @@ def gen_partial_o3dpcd_occ(path, f, rot, rot_center, trans=np.zeros(3), resolusi
     return o3dpcd
 
 
-def filer_pcd_by_campos(o3dpcd, campos, dist=.8, angle=np.pi / 9):
+def filer_pcd_by_cam_pos(o3dpcd, cam_pos, dist=.8, angle=np.pi / 9):
+    if len(np.asarray(o3dpcd.points)) == 0:
+        return o3dpcd
     o3dpcd_kdt = o3d.geometry.KDTreeFlann(o3dpcd)
-    _, radius_vis_idx, _ = o3dpcd_kdt.search_radius_vector_3d(campos, dist)
+    _, radius_vis_idx, _ = o3dpcd_kdt.search_radius_vector_3d(cam_pos, dist)
     o3dpcd = o3dpcd.select_by_index(radius_vis_idx)
     pcd_fov = np.asarray([p for p in np.asarray(o3dpcd.points)
-                          if rm.angle_between_vectors(campos - p, campos) < angle])
+                          if rm.angle_between_vectors(cam_pos - p, cam_pos) < angle])
     if len(pcd_fov) == 0:
         return o3d.geometry.PointCloud()
     o3dpcd = o3dh.nparray2o3dpcd(pcd_fov)

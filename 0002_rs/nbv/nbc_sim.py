@@ -393,7 +393,6 @@ def run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, cov_tor=.001
                                       rot_center=rot_center, vis_threshold=vis_threshold,
                                       toggledebug=toggledebug,
                                       add_noise_vt=False, add_occ_vt=False, add_occ_rnd=False, add_noise_pts=False)
-        o3dpcd_nxt = nu.filer_pcd_by_campos(o3dpcd_nxt, cam_pos_origin)
 
         exp_dict[cnt]['add'] = np.asarray(o3dpcd_nxt.points).tolist()
         exp_dict[cnt]['jnts'] = np.asarray(jnts).tolist()
@@ -526,7 +525,6 @@ def run_random(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, cov_tor=.
                                       rot_center=rot_center, vis_threshold=vis_threshold,
                                       toggledebug=toggledebug,
                                       add_noise_vt=False, add_occ_vt=False, add_occ_rnd=False, add_noise_pts=False)
-        o3dpcd_nxt = nu.filer_pcd_by_campos(o3dpcd_nxt, cam_pos_origin)
 
         exp_dict[cnt]['add'] = np.asarray(o3dpcd_nxt.points).tolist()
         exp_dict[cnt]['jnts'] = np.asarray(jnts).tolist()

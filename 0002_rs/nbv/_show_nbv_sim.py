@@ -120,7 +120,7 @@ if __name__ == '__main__':
     # pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv(pts, nrmls, confs, toggledebug=True)
     # pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_pcn_kpts(pcd_i, pcd_o, cam_pos=cam_pos, theta=None, toggledebug=True)
     # pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd_i, pcd_o, cam_pos=cam_pos, theta=None, toggledebug=True)
-    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd_i, pcd_o, radius=.01, cam_pos=cam_pos, theta=None,
+    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd_i, pcd_o, radius=.01, campos=cam_pos, theta=None,
                                                      toggledebug=True)
     objcm.attach_to(base)
     rot = rm.rotmat_between_vectors(np.asarray(cam_pos), nrmls_nbv[0])

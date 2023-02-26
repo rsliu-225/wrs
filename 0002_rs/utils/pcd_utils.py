@@ -486,7 +486,7 @@ def get_objpcd_partial(objcm, objmat4=np.eye(4), sample_num=100000, toggledebug=
     return objpcd_partial
 
 
-def get_objpcd_partial_bycampos(objcm, objmat4=np.eye(4), smp_num=100000, cam_pos=np.array([.86, .08, 1.78]),
+def get_objpcd_partial_bycam_pos(objcm, objmat4=np.eye(4), smp_num=100000, cam_pos=np.array([.86, .08, 1.78]),
                                 toggledebug=False):
     def __sigmoid(angle):
         angle = np.degrees(angle)
@@ -1099,7 +1099,7 @@ if __name__ == '__main__':
     # for i, p in enumerate(pcd):
     #     base.pggen.plotArrow(base.render, spos=p, epos=p + 10 * pcd_normals[i])
     # base.run()
-    get_objpcd_partial_bycampos(objcm, smp_num=10000, toggledebug=True)
+    get_objpcd_partial_bycam_pos(objcm, smp_num=10000, toggledebug=True)
     # get_objpcd_partial(objcm, objmat4=np.eye(4), sample_num=10000, toggledebug=True)
 
     # pcd = pickle.load(open(el.root + "/dataset/pcd/a_lft_0.pkl", "rb"))

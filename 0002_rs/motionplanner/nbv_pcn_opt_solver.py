@@ -89,7 +89,7 @@ class NBVOptimizer(object):
 
         pcd_o = pcn.inference_sgl(pcd_i, self.model_name, self.load_model, toggledebug=False)
         self.nbv_pts, self.nbv_nrmls, self.nbv_conf = \
-            pcdu.cal_nbv_pcn(pcd_i, pcd_o, cam_pos=campos, theta=None, toggledebug=True)
+            pcdu.cal_nbv_pcn(pcd_i, pcd_o, campos=campos, theta=None, toggledebug=True)
         # print(self.nbv_conf)
         # self.nbv_conf = _sigmoid(self.nbv_conf)
         # print(self.nbv_conf)

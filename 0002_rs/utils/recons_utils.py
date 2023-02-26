@@ -409,7 +409,7 @@ def cal_nbc(pcd, gripperframe, rbt, seedjntagls, gl_transmat4=np.eye(4),
     arrow_len = .04
     cam_pos = np.linalg.inv(gripperframe)[:3, 3]
 
-    pts, nrmls, confs = pcdu.cal_conf(pcd, voxel_size=.005, cam_pos=cam_pos, theta=theta)
+    pts, nrmls, confs = pcdu.cal_conf(pcd, voxel_size=.005, campos=cam_pos, theta=theta)
     pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv(pts, nrmls, confs, toggledebug=toggledebug)
 
     print('Num. of NBV:', len(pts_nbv))

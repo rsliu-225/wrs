@@ -59,7 +59,7 @@ def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_mode
             o3d.io.write_point_cloud(os.path.join(os.getcwd(), 'tmp', f'{cnt}_i.pcd'), o3dpcd)
             o3d.io.write_point_cloud(os.path.join(os.getcwd(), 'tmp', f'{cnt}_o.pcd'), o3dpcd_o)
 
-        pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd_i, pcd_o, cam_pos=cam_pos, theta=None, toggledebug=True)
+        pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd_i, pcd_o, campos=cam_pos, theta=None, toggledebug=True)
 
         rot = rm.rotmat_between_vectors(np.asarray(cam_pos), nrmls_nbv[0])
         rot = np.linalg.inv(rot)

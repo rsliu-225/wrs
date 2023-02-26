@@ -37,7 +37,7 @@ def show_res(result_path, test_path, label=1):
             o3dmesh = o3dh.cm2o3dmesh(objcm)
 
             pts_nbv, nrmls_nbv, confs_nbv = \
-                pcdu.cal_nbv_pcn(np.asarray(o3dpcd_i.points), np.asarray(o3dpcd_o.points), cam_pos=cam_pos, theta=None,
+                pcdu.cal_nbv_pcn(np.asarray(o3dpcd_i.points), np.asarray(o3dpcd_o.points), campos=cam_pos, theta=None,
                                  toggledebug=True)
             base.run()
 

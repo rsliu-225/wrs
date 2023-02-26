@@ -119,7 +119,7 @@ class PCNNBCOptimizer(object):
         pcd_i_inhnd = pcdu.trans_pcd(pcd_i, self.releemat4)
         pcd_o_inhnd = pcdu.trans_pcd(pcd_o, self.releemat4)
         self.nbv_pts, self.nbv_nrmls, self.nbv_conf = \
-            pcdu.cal_nbv_pcn(pcd_i_inhnd, pcd_o_inhnd, cam_pos=campos, theta=None, toggledebug=True)
+            pcdu.cal_nbv_pcn(pcd_i_inhnd, pcd_o_inhnd, campos=campos, theta=None, toggledebug=True)
         self.o3dpcd_o = du.nparray2o3dpcd(pcd_o_inhnd)
         self.o3dpcd_nbv = du.nparray2o3dpcd(np.asarray(self.nbv_pts))
         self.o3dpcd_nbv.colors = o3d.utility.Vector3dVector([[c, 0, 1 - c] for c in self.nbv_conf])
