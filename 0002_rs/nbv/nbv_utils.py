@@ -77,6 +77,7 @@ def load_cov_w_fail(path, cat, fo, max_times=5, prefix='pcn'):
     cov_list = []
     max_list = []
     cnt_list = [0] * max_times
+    plan_fail_cnt = 0
 
     for f in os.listdir(os.path.join(path, cat, 'mesh')):
         print(f'-----------{f}------------')
@@ -101,15 +102,20 @@ def load_cov_w_fail(path, cat, fo, max_times=5, prefix='pcn'):
                     cov_list_tmp.append(res_dict[str(i)]['coverage'])
                     max = res_dict[str(i)]['coverage']
                 else:
+                    plan_fail_cnt += 1
+                    print(prefix, i + 1, 'Planning failed')
                     max_tmp.append(max)
+                    max_cnt = -1
                     continue
                 max_cnt = i
             max_tmp.append(max)
-        cnt_list[max_cnt] += 1
+        if max_cnt != -1:
+            cnt_list[max_cnt] += 1
         max_list.append(max_tmp)
         cov_list.append(cov_list_tmp)
     print(cnt_list)
-    return transpose(cov_list, max_times + 1), transpose(max_list, max_times + 1), [cnt_list[0]] + cnt_list
+    return transpose(cov_list, max_times + 1), transpose(max_list, max_times + 1), \
+           [cnt_list[0]] + cnt_list, plan_fail_cnt
 
 
 def fit(path, cat, fo, cross_sec, prefix='pcn', toggledebug=False):
@@ -390,8 +396,9 @@ def gen_partial_o3dpcd(o3dmesh, rot=np.eye(3), trans=np.zeros(3), rot_center=(0,
 
 def gen_partial_o3dpcd_occ(path, f, rot, rot_center, trans=np.zeros(3), resolusion=(1280, 720), cam_pos=(0, 0, 0),
                            rnd_occ_ratio_rng=(.2, .5), nrml_occ_ratio_rng=(.2, .6), vis_threshold=np.radians(75),
-                           occ_vt_ratio=1.0, noise_vt_ratio=1.0, noise_cnt=random.randint(0, 5),
-                           add_noise_vt=False, add_occ_vt=False, add_occ_rnd=True, add_noise_pts=True,
+                           occ_vt_ratio=1.0, noise_vt_ratio=1.0,
+                           add_noise_vt=False, add_occ_nrml=False, add_occ_vt=False, add_occ_rnd=True,
+                           add_noise_pts=True, noise_cnt=random.randint(0, 5),
                            othermesh=[], fov=False, w_otherpcd=False, toggledebug=False):
     o3dmesh = o3d.io.read_triangle_mesh(os.path.join(path, 'mesh', f + '.ply'))
 
@@ -413,11 +420,13 @@ def gen_partial_o3dpcd_occ(path, f, rot, rot_center, trans=np.zeros(3), resolusi
 
     if add_occ_rnd:
         o3dpcd = du.add_random_occ(o3dpcd, occ_ratio_rng=rnd_occ_ratio_rng)
-    if add_occ_vt:
+    if add_occ_nrml:
         o3dpcd = du.add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=nrml_occ_ratio_rng)
+    if add_occ_vt:
         o3dpcd = du.add_random_occ_by_vt(o3dpcd, np.asarray(o3dmesh.vertices),
                                          edg_radius=5e-4, edg_sigma=5e-4, ratio=occ_vt_ratio)
     if add_noise_vt:
+        o3dmesh.compute_vertex_normals()
         o3dpcd = du.add_guassian_noise_by_vt(o3dpcd, np.asarray(o3dmesh.vertices), np.asarray(o3dmesh.vertex_normals),
                                              noise_mean=1e-3, noise_sigma=1e-4, ratio=noise_vt_ratio)
     if add_noise_pts:

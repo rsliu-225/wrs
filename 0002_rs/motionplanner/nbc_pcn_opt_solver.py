@@ -63,40 +63,54 @@ class PCNNBCOptimizer(object):
         self.jnts.append(x)
         self.rbth.goto_armjnts(x)
         rbt_o3dmesh = nu.rbt2o3dmesh(self.rbt, link_num=10, show_nrml=False)
-        # rbt_o3dmesh.compute_vertex_normals()
+        if self.toggledebug:
+            rbt_o3dmesh.compute_vertex_normals()
         conf_sum = 0
-        coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.1)
 
         eepos, eerot = self.rbt.get_gl_tcp()
         eemat4 = rm.homomat_from_posrot(eepos, eerot)
         transmat4 = np.linalg.inv(self.init_eemat4).dot(eemat4)
-        coord_tmp = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.1)
-        coord_tmp.transform(transmat4)
 
         rbt_o3dmesh.transform(np.linalg.inv(self.init_eemat4))
-        o3dpcd_nxt_origin = \
-            nu.gen_partial_o3dpcd(self.o3dmesh, toggledebug=self.toggledebug, othermesh=[rbt_o3dmesh],
+        o3dpcd_tmp_origin = \
+            nu.gen_partial_o3dpcd(self.o3dmesh, toggledebug=False, othermesh=[rbt_o3dmesh],
                                   trans=transmat4[:3, 3], rot=transmat4[:3, :3], rot_center=self.rot_center,
-                                  fov=True, cam_pos=self.cam_pos)
-        o3dpcd_nxt_origin.paint_uniform_color(nu.COLOR[5])
-        kdt_nbv = o3d.geometry.KDTreeFlann(self.o3dpcd_nbv)
+                                  fov=True, vis_threshold=np.radians(75), cam_pos=self.cam_pos)
+        o3dpcd_tmp_origin.paint_uniform_color(nu.COLOR[5])
 
-        if self.toggledebug:
-            cam_mesh = o3d.geometry.TriangleMesh.create_sphere(radius=.01)
-            cam_mesh.translate(self.cam_pos)
-            rbt_o3dmesh_all = nu.rbt2o3dmesh(self.rbt, link_num=3, show_nrml=True)
-            rbt_o3dmesh_all.transform(np.linalg.inv(self.init_eemat4))
-            o3dmesh_tmp = copy.deepcopy(self.o3dmesh)
-            o3dmesh_tmp.transform(transmat4)
-            o3dpcd_nxt = copy.deepcopy(o3dpcd_nxt_origin)
-            o3dpcd_nxt.transform(transmat4)
-            o3d.visualization.draw_geometries([rbt_o3dmesh_all, o3dpcd_nxt, o3dmesh_tmp, coord, coord_tmp, cam_mesh])
-            o3d.visualization.draw_geometries([o3dpcd_nxt_origin, self.o3dpcd_nbv, coord])
+        # if self.toggledebug:
+        #     coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
+        #     coord_tmp = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
+        #     coord_tmp.transform(transmat4)
+        #     cam_mesh = o3d.geometry.TriangleMesh.create_sphere(radius=.005)
+        #     cam_mesh.translate(self.cam_pos)
+        #     rbt_o3dmesh_all = nu.rbt2o3dmesh(self.rbt, link_num=3, show_nrml=True)
+        #     rbt_o3dmesh_all.transform(np.linalg.inv(self.init_eemat4))
+        #     o3dmesh_tmp = copy.deepcopy(self.o3dmesh)
+        #     o3dmesh_tmp.transform(transmat4)
+        #     o3dpcd_nxt = copy.deepcopy(o3dpcd_tmp_origin)
+        #     o3dpcd_nxt.transform(transmat4)
+        #     o3d.visualization.draw_geometries([rbt_o3dmesh_all, o3dpcd_nxt, o3dmesh_tmp, coord, coord_tmp, cam_mesh])
+        #     o3d.visualization.draw_geometries([o3dpcd_tmp_origin, self.o3dpcd_nbv, coord])
 
-        for p in np.asarray(o3dpcd_nxt_origin.points):
-            _, idx, _ = kdt_nbv.search_knn_vector_3d(p, 1)
-            if np.linalg.norm(p - self.nbv_pts[idx]) < .01 and self.nbv_conf[idx] < .2:
-                conf_sum += 1 - (self.nbv_conf[idx])
+        # kdt_nbv = o3d.geometry.KDTreeFlann(self.o3dpcd_nbv)
+        # for p in np.asarray(o3dpcd_tmp_origin.points):
+        #     _, idx, _ = kdt_nbv.search_knn_vector_3d(p, 1)
+        #     if np.linalg.norm(p - self.nbv_pts[idx]) < .01 and self.nbv_conf[idx] < .2:
+        #         conf_sum += 1 - (self.nbv_conf[idx])
+
+        if len(np.asarray(o3dpcd_tmp_origin.points)) == 0:
+            self.obj_list.append(conf_sum)
+            return 0
+
+        kdt_tmp = o3d.geometry.KDTreeFlann(o3dpcd_tmp_origin)
+        for i in range(len(self.nbv_pts)):
+            if self.nbv_conf[i] > .2:
+                continue
+            _, idx, _ = kdt_tmp.search_radius_vector_3d(self.nbv_pts[i], .01)
+            conf_sum += (1 - (self.nbv_conf[i])) * len(idx) / 10
+            # if len(idx) > 50:
+            #     conf_sum += 1 - (self.nbv_conf[i])
         self.obj_list.append(conf_sum)
         if self.toggledebug:
             print(x, conf_sum)
@@ -151,19 +165,27 @@ class PCNNBCOptimizer(object):
         self.rbth.goto_armjnts(x)
         eepos, eerot = self.rbt.get_gl_tcp()
         err = abs(np.asarray(eepos)[0] - self.init_eepos[0])
-        return .1 - err
+        return .2 - err
 
     def con_diff_y(self, x):
         self.rbth.goto_armjnts(x)
         eepos, eerot = self.rbt.get_gl_tcp()
         err = abs(np.asarray(eepos)[1] - self.init_eepos[1])
-        return .1 - err
+        return .2 - err
 
     def con_diff_z(self, x):
         self.rbth.goto_armjnts(x)
         eepos, eerot = self.rbt.get_gl_tcp()
         err = abs(np.asarray(eepos)[2] - self.init_eepos[2])
-        return .1 - err
+        return .2 - err
+
+    def con_cost(self, x):
+        w_e = np.linalg.norm(x - self.seedjntagls)
+        return 1 - w_e
+
+    def con_manipulability(self, x):
+        self.rbth.goto_armjnts(x)
+        return 100 - self.rbt.manipulability(component_name='arm')
 
     def addconstraint(self, constraint, condition="ineq"):
         self.cons.append({'type': condition, 'fun': constraint})

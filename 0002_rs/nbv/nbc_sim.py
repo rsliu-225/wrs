@@ -464,8 +464,6 @@ def run_random(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, cov_tor=.
         o3dpcd_inhnd = o3dh.nparray2o3dpcd(pcd_inhnd)
         o3dpcd_inhnd.paint_uniform_color(nu.COLOR[0])
         pts_nbv, nrmls_nbv, confs_nbv = gen_random_vec(pcd_inhnd, threshold=np.pi / 1800)
-        # if len(nrmls_nbv) == 0:
-        #     pts_nbv, nrmls_nbv, confs_nbv = gen_random_vec(pcd_inhnd, threshold=np.pi / 180)
         random.shuffle(list(nrmls_nbv))
 
         exp_dict[cnt]['pts_nbv'] = pts_nbv.tolist()
@@ -632,11 +630,12 @@ if __name__ == '__main__':
                 continue
             o3dpcd_init = \
                 nu.gen_partial_o3dpcd_occ(os.path.join(path, cat), f.split('.ply')[0], np.eye(3), [0, 0, 0],
-                                          rnd_occ_ratio_rng=(.2, .4), nrml_occ_ratio_rng=(.2, .6),
+                                          rnd_occ_ratio_rng=(.2, .4),
                                           vis_threshold=vis_threshold, toggledebug=False,
-                                          occ_vt_ratio=random.uniform(.08, .1), noise_vt_ratio=random.uniform(.2, .5),
-                                          noise_cnt=random.randint(1, 5),
-                                          add_occ_vt=True, add_noise_vt=False, add_occ_rnd=False, add_noise_pts=True)
+                                          occ_vt_ratio=random.uniform(.02, .1), nrml_occ_ratio_rng=(.2, .6),
+                                          noise_cnt=random.randint(2, 5), noise_vt_ratio=random.uniform(.2, .5),
+                                          add_occ_nrml=True, add_occ_vt=False, add_noise_vt=True, add_occ_rnd=False,
+                                          add_noise_pts=True)
             # o3d.io.write_point_cloud('./tmp/nbc/init.pcd', o3dpcd_init)
             # o3dpcd_init = o3d.io.read_point_cloud('./tmp/nbc/init.pcd')
             o3dmesh_gt = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'prim', f))

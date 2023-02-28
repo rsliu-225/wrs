@@ -38,7 +38,7 @@ if __name__ == '__main__':
     cov_list = []
     cov_opt_list = []
     relmat4 = rm.homomat_from_posrot([.02, 0, 0], np.eye(3))
-    coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.1)
+    coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
     seedjntagls = rbt.get_jnt_values('arm')
 
     for f in os.listdir(os.path.join(path, cat, 'mesh'))[0:]:
@@ -73,10 +73,9 @@ if __name__ == '__main__':
             init_eepos, init_eerot = rbt.get_gl_tcp()
             init_eemat4 = rm.homomat_from_posrot(init_eepos, init_eerot).dot(relmat4)
 
-            nbc_opt = nbc_solver.PCNNBCOptimizer(rbt, releemat4=relmat4, toggledebug=False)
+            nbc_opt = nbc_solver.PCNNBCOptimizer(rbt, releemat4=relmat4, toggledebug=True)
             jnts, transmat4, _, time_cost = nbc_opt.solve(seedjntagls, pcd_i, cam_pos, method='COBYLA')
             print(jnts)
-            # jnts = np.asarray([0.29210199, -0.9822004, -0.22015057, 0.25273244, -0.05857504, -0.07970981, -0.05283248])
 
             rbt.fk('arm', jnts)
             rbt.gen_meshmodel().attach_to(base)

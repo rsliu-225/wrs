@@ -12,13 +12,17 @@ if __name__ == '__main__':
     path = 'E:/liu/nbv_mesh/'
     if not os.path.exists(path):
         path = 'D:/nbv_mesh/'
-    cat = 'bspl_3'
+    cat = 'bspl_4'
     fo = 'res_75_rbt'
 
-    coverage_rnd, max_rnd, cnt_rnd = nbv_utl.load_cov_w_fail(path, cat, fo, max_times=9, prefix='random')
-    coverage_org, max_org, cnt_org = nbv_utl.load_cov_w_fail(path, cat, fo, max_times=9, prefix='org')
-    coverage_pcn, max_pcn, cnt_pcn = nbv_utl.load_cov_w_fail(path, cat, fo, max_times=9, prefix='pcn')
-    coverage_opt, max_opt, cnt_opt = nbv_utl.load_cov_w_fail(path, cat, fo, max_times=9, prefix='pcn_opt')
+    coverage_rnd, max_rnd, cnt_rnd, plan_fail_cnt_rnd = \
+        nbv_utl.load_cov_w_fail(path, cat, fo, max_times=9, prefix='random')
+    coverage_org, max_org, cnt_org, plan_fail_cnt_org = \
+        nbv_utl.load_cov_w_fail(path, cat, fo, max_times=9, prefix='org')
+    coverage_pcn, max_pcn, cnt_pcn, plan_fail_cnt_pcn = \
+        nbv_utl.load_cov_w_fail(path, cat, fo, max_times=9, prefix='pcn')
+    coverage_opt, max_opt, cnt_opt, plan_fail_cnt_opt = \
+        nbv_utl.load_cov_w_fail(path, cat, fo, max_times=9, prefix='pcn_opt')
 
     x = np.asarray([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
     plt.rcParams["font.family"] = "Times New Roman"
@@ -56,7 +60,7 @@ if __name__ == '__main__':
 
     ax2.set_xticks(x[1:])
     # ax2.set_ylim(0, 92)
-    ax2.set_ylim(0, 50)
+    ax2.set_ylim(0, 65)
 
     # ax2.set_yticks(np.linspace(0, 100, 10))
     ax2.minorticks_on()
@@ -70,10 +74,10 @@ if __name__ == '__main__':
     print(nbv_utl.cal_avg(cnt_pcn[1:]))
     print(nbv_utl.cal_avg(cnt_opt[1:]))
 
-    print(Counter(np.where(np.asarray(max_rnd[-1]) > .95, 1, 0)))
-    print(Counter(np.where(np.asarray(max_org[-1]) > .95, 1, 0)))
-    print(Counter(np.where(np.asarray(max_pcn[-1]) > .95, 1, 0)))
-    print(Counter(np.where(np.asarray(max_opt[-1]) > .95, 1, 0)))
+    print(Counter(np.where(np.asarray(max_rnd[-1]) > .95, 1, 0)), plan_fail_cnt_rnd)
+    print(Counter(np.where(np.asarray(max_org[-1]) > .95, 1, 0)), plan_fail_cnt_org)
+    print(Counter(np.where(np.asarray(max_pcn[-1]) > .95, 1, 0)), plan_fail_cnt_pcn)
+    print(Counter(np.where(np.asarray(max_opt[-1]) > .95, 1, 0)), plan_fail_cnt_opt)
 
     plt.show()
     # base.run()

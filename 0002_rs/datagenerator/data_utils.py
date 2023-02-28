@@ -641,6 +641,7 @@ def get_objpcd_partial_o3d(objcm, objcm_gt, rot, rot_center, pseq=None, rotseq=N
                                       edg_radius=5e-4, edg_sigma=5e-4, ratio=occ_vt_ratio)
         o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
     if add_noise:
+        o3dmesh.compute_vertex_normals()
         o3dpcd = add_guassian_noise_by_vt(o3dpcd, np.asarray(o3dmesh.vertices), np.asarray(o3dmesh.vertex_normals),
                                           noise_mean=1e-3, noise_sigma=1e-4, ratio=noise_vt_ratio)
         o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
@@ -762,7 +763,8 @@ def add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=(.3, .6)):
     del_indices = []
     for i, v in enumerate(nrmls):
         a = rm.angle_between_vectors(v, nrml_0)
-        if a < np.random.normal(np.pi / 2, np.pi / 18):
+        # if a < np.random.normal(np.pi / 2, np.pi / 18):
+        if a < np.random.normal(np.pi / 4):
             del_indices.append(indices[0][i])
     pcd = np.delete(np.asarray(o3dpcd.points), del_indices, axis=0)
 
@@ -797,12 +799,14 @@ def add_guassian_noise_by_vt(o3dpcd, vts, nrmls, noise_mean=1e-4, noise_sigma=1e
     inx_seeds = random.choices(range(len(vts)), k=random.choice(range(int(len(vts) * ratio))))
     diff = np.zeros(pcd.shape)
     for inx in inx_seeds:
-        if len(pcd) > 100:
-            dists, indices = kdt.query(np.asarray([vts[inx]]), k=random.randint(100, min(len(pcd), 500)),
-                                       return_distance=True)
-        else:
-            dists, indices = kdt.query(np.asarray([vts[inx]]), k=random.randint(1, len(pcd)),
-                                       return_distance=True)
+        # if len(pcd) > 100:
+        #     dists, indices = kdt.query(np.asarray([vts[inx]]), k=random.randint(100, min(len(pcd), 500)),
+        #                                return_distance=True)
+        # else:
+        #     dists, indices = kdt.query(np.asarray([vts[inx]]), k=random.randint(1, len(pcd)),
+        #                                return_distance=True)
+        dists, indices = kdt.query(np.asarray([vts[inx]]), k=random.randint(1, min(len(pcd), 500)),
+                                   return_distance=True)
         if len(indices[0]) == 0:
             continue
         dist_inv = (1 / dists[0]) / np.linalg.norm((1 / dists[0]))
@@ -822,7 +826,7 @@ def add_noise_pts_by_vt(o3dpcd, noise_cnt=3, size=.01):
         vts_n = [
             p,
             p + np.asarray([random.uniform(-size, size), random.uniform(-size, size), random.uniform(-size, size)]),
-            p + np.asarray([random.uniform(-size, size), random.uniform(-size, size), random.uniform(-size, size)])/5]
+            p + np.asarray([random.uniform(-size, size), random.uniform(-size, size), random.uniform(-size, size)]) / 5]
         tmp_gm = gm.GeometricModel(initor=trm.Trimesh(vertices=np.asarray(vts_n),
                                                       faces=np.asarray([[0, 1, 2]])), btwosided=False)
         o3dpcd += nparray2o3dpcd(tmp_gm.sample_surface(radius=random.uniform(.001, .002))[0])
