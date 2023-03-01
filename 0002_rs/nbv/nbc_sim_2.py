@@ -20,13 +20,12 @@ import pcn.inference as pcn
 # import motionplanner.motion_planner as mp
 import utils.pcd_utils as pcdu
 import visualization.panda.world as wd
-import localenv.envloader as el
 
 
-def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_name, load_model, cov_tor=.001, goal=.5,
+def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_model, cov_tor=.001, goal=.5,
             vis_threshold=np.radians(75), toggledebug=False, toggledebug_p3d=False):
     flag = True
-    coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
+    coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.1)
     o3dpcd_init.paint_uniform_color(nu.COLOR[0])
     o3dpcd_gt.paint_uniform_color(nu.COLOR[1])
 
@@ -55,6 +54,7 @@ def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_name, 
     rbt.fk('arm', seedjntagls)
     init_eepos, init_eerot = rbt.get_gl_tcp()
     init_eemat4 = rm.homomat_from_posrot(init_eepos, init_eerot).dot(relmat4)
+    cam_pos_origin = pcdu.trans_pcd([cam_pos], np.linalg.inv(init_eemat4))[0]
     pcdu.show_cam(rm.homomat_from_posrot(cam_pos, rot=config.CAM_ROT))
 
     while coverage < goal and cnt < 9:
@@ -76,19 +76,20 @@ def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_name, 
 
         exp_dict[cnt]['pts_nbv'] = pts_nbv_inhnd.tolist()
         exp_dict[cnt]['nrmls_nbv'] = nrmls_nbv_inhnd.tolist()
+        exp_dict[cnt]['confs_nbv'] = confs_nbv.tolist()
         rbt_o3dmesh = nu.rbt2o3dmesh(rbt, link_num=10, show_nrml=toggledebug)
 
         if toggledebug:
-            coord_inhnd = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
+            coord_inhnd = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.1)
             coord_inhnd.transform(init_eemat4)
             o3d.visualization.draw_geometries([rbt_o3dmesh, coord_inhnd, o3dpcd_inhnd])
-            nu.show_nbv_o3d(pts_nbv_inhnd, nrmls_nbv_inhnd, confs_nbv, o3dpcd_inhnd, coord_inhnd, o3dpcd_o_inhnd)
+            nu.show_nbv_o3d(pts_nbv_inhnd, nrmls_nbv_inhnd, confs_nbv, o3dpcd_inhnd, coord_inhnd)
         if toggledebug_p3d:
             gm.gen_frame().attach_to(base)
             pcdu.show_pcd(pcd_inhnd)
             rbt.gen_meshmodel().attach_to(base)
             rbt.gen_meshmodel(rgba=(1, 1, 0, .4)).attach_to(base)
-            nu.attach_nbv_gm(pts_nbv_inhnd, nrmls_nbv_inhnd, confs_nbv, cam_pos, .05)
+            nu.attach_nbv_gm(pts_nbv_inhnd, nrmls_nbv_inhnd, confs_nbv, cam_pos, .04)
 
         nbc_solver = nbcs.NBCOptimizerVec(rbt, max_a=max_a, max_dist=max_dist, toggledebug=False)
         jnts, transmat4, _, time_cost = nbc_solver.solve(seedjntagls, pts_nbv_inhnd[0], nrmls_nbv_inhnd[0], cam_pos)
@@ -109,7 +110,7 @@ def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_name, 
             nrmls_nbv_inhnd = pcdu.trans_pcd(nrmls_nbv_inhnd, transmat4)
             pcdu.show_pcd(pcd_next, rgba=(0, 1, 0, 1))
             rbt.gen_meshmodel(rgba=(0, 1, 0, .5)).attach_to(base)
-            nu.attach_nbv_gm(pts_nbv_inhnd, nrmls_nbv_inhnd, confs_nbv, cam_pos, .05)
+            nu.attach_nbv_gm(pts_nbv_inhnd, nrmls_nbv_inhnd, confs_nbv, cam_pos, .04)
             base.run()
 
         '''
@@ -118,7 +119,7 @@ def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_name, 
         rbt_o3dmesh.transform(np.linalg.inv(init_eemat4))
         rbt_o3dmesh_nxt.transform(np.linalg.inv(init_eemat4))
         transmat4_origin = np.linalg.inv(init_eemat4).dot(eemat4)
-        coord_nxt = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
+        coord_nxt = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.1)
         coord_nxt.transform(transmat4_origin)
         if toggledebug:
             o3d.visualization.draw_geometries([rbt_o3dmesh, coord, o3dpcd])
@@ -135,7 +136,6 @@ def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_name, 
         exp_dict[cnt]['time_cost'] = time_cost
 
         if toggledebug:
-            o3dpcd_nxt.normals = o3d.utility.Vector3dVector([])
             o3dpcd_nxt.paint_uniform_color(nu.COLOR[5])
             o3d.visualization.draw_geometries([o3dpcd, o3dpcd_nxt, coord])
 
@@ -151,15 +151,15 @@ def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_name, 
         seedjntagls = jnts
 
     exp_dict['final'] = pcd_i.tolist()
-    if not toggledebug and not toggledebug_p3d:
+    if not toggledebug:
         json.dump(exp_dict, open(os.path.join(path, cat, RES_FO_NAME, f'pcn_{f.split(".ply")[0]}.json'), 'w'))
     return flag
 
 
-def run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_name, load_model, cov_tor=.001, goal=.5,
+def run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_model, cov_tor=.001, goal=.5,
                 vis_threshold=np.radians(75), toggledebug=False, toggledebug_p3d=False):
     flag = True
-    coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
+    coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.1)
     o3dpcd_init.paint_uniform_color(nu.COLOR[0])
     o3dpcd_gt.paint_uniform_color(nu.COLOR[1])
 
@@ -208,20 +208,20 @@ def run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_na
 
         exp_dict[cnt]['pts_nbv'] = pts_nbv_inhnd.tolist()
         exp_dict[cnt]['nrmls_nbv'] = nrmls_nbv_inhnd.tolist()
+        exp_dict[cnt]['confs_nbv'] = confs_nbv.tolist()
         rbt_o3dmesh = nu.rbt2o3dmesh(rbt, link_num=10, show_nrml=toggledebug)
 
         if toggledebug:
-            coord_inhnd = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
+            coord_inhnd = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.1)
             coord_inhnd.transform(init_eemat4)
             o3d.visualization.draw_geometries([rbt_o3dmesh, coord_inhnd, o3dpcd_inhnd])
-            nu.show_nbv_o3d(pts_nbv_inhnd, nrmls_nbv_inhnd, confs_nbv, o3dpcd_inhnd, coord_inhnd, o3dpcd_o_inhnd)
-
+            nu.show_nbv_o3d(pts_nbv_inhnd, nrmls_nbv_inhnd, confs_nbv, o3dpcd_inhnd, coord_inhnd)
         if toggledebug_p3d:
             gm.gen_frame().attach_to(base)
             pcdu.show_pcd(pcd_inhnd)
             rbt.gen_meshmodel().attach_to(base)
             rbt.gen_meshmodel(rgba=(1, 1, 0, .4)).attach_to(base)
-            nu.attach_nbv_gm(pts_nbv_inhnd, nrmls_nbv_inhnd, confs_nbv, cam_pos, .05)
+            nu.attach_nbv_gm(pts_nbv_inhnd, nrmls_nbv_inhnd, confs_nbv, cam_pos, .04)
 
         nbc_opt = nbcs_conf.PCNNBCOptimizer(rbt, releemat4=relmat4, toggledebug=False)
         jnts, transmat4, _, time_cost = nbc_opt.solve(seedjntagls, pcd_i, cam_pos, method='COBYLA')
@@ -242,7 +242,7 @@ def run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_na
             nrmls_nbv_inhnd = pcdu.trans_pcd(nrmls_nbv_inhnd, transmat4)
             pcdu.show_pcd(pcd_next, rgba=(0, 1, 0, 1))
             rbt.gen_meshmodel(rgba=(0, 1, 0, .5)).attach_to(base)
-            nu.attach_nbv_gm(pts_nbv_inhnd, nrmls_nbv_inhnd, confs_nbv, cam_pos, .05)
+            nu.attach_nbv_gm(pts_nbv_inhnd, nrmls_nbv_inhnd, confs_nbv, cam_pos, .04)
             base.run()
 
         '''
@@ -251,7 +251,7 @@ def run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_na
         rbt_o3dmesh.transform(np.linalg.inv(init_eemat4))
         rbt_o3dmesh_nxt.transform(np.linalg.inv(init_eemat4))
         transmat4_origin = np.linalg.inv(init_eemat4).dot(eemat4)
-        coord_nxt = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
+        coord_nxt = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.1)
         coord_nxt.transform(transmat4_origin)
         if toggledebug:
             o3d.visualization.draw_geometries([rbt_o3dmesh, coord, o3dpcd])
@@ -283,7 +283,7 @@ def run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_na
         seedjntagls = jnts
 
     exp_dict['final'] = pcd_i.tolist()
-    if not toggledebug and not toggledebug_p3d:
+    if not toggledebug:
         json.dump(exp_dict, open(os.path.join(path, cat, RES_FO_NAME, f'pcn_opt_{f.split(".ply")[0]}.json'), 'w'))
     return flag
 
@@ -291,7 +291,7 @@ def run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_na
 def run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, cov_tor=.001, goal=.5,
             vis_threshold=np.radians(75), toggledebug=True, toggledebug_p3d=False):
     flag = True
-    coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
+    coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.1)
     o3dpcd_init.paint_uniform_color(nu.COLOR[0])
     o3dpcd_gt.paint_uniform_color(nu.COLOR[1])
 
@@ -337,10 +337,11 @@ def run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, cov_tor=.001
         pts_nbv_inhnd, nrmls_nbv_inhnd, confs_nbv = pcdu.cal_nbv(pts, nrmls, confs)
         exp_dict[cnt]['pts_nbv'] = pts_nbv_inhnd.tolist()
         exp_dict[cnt]['nrmls_nbv'] = nrmls_nbv_inhnd.tolist()
+        exp_dict[cnt]['confs_nbv'] = confs_nbv.tolist()
         rbt_o3dmesh = nu.rbt2o3dmesh(rbt, link_num=10, show_nrml=toggledebug)
 
         if toggledebug:
-            coord_inhnd = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
+            coord_inhnd = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.1)
             coord_inhnd.transform(init_eemat4)
             o3d.visualization.draw_geometries([rbt_o3dmesh, coord_inhnd, o3dpcd_inhnd])
             nu.show_nbv_o3d(pts_nbv_inhnd, nrmls_nbv_inhnd, confs_nbv, o3dpcd_inhnd, coord_inhnd)
@@ -349,7 +350,7 @@ def run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, cov_tor=.001
             pcdu.show_pcd(pcd_inhnd)
             rbt.gen_meshmodel().attach_to(base)
             rbt.gen_meshmodel(rgba=(1, 1, 0, .4)).attach_to(base)
-            nu.attach_nbv_gm(pts_nbv_inhnd, nrmls_nbv_inhnd, confs_nbv, cam_pos, .05)
+            nu.attach_nbv_gm(pts_nbv_inhnd, nrmls_nbv_inhnd, confs_nbv, cam_pos, .04)
 
         nbc_solver = nbcs.NBCOptimizerVec(rbt, max_a=max_a, max_dist=max_dist, toggledebug=False)
         jnts, transmat4, _, time_cost = nbc_solver.solve(seedjntagls, pts_nbv_inhnd[0], nrmls_nbv_inhnd[0], cam_pos)
@@ -370,7 +371,7 @@ def run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, cov_tor=.001
             nrmls_nbv_inhnd = pcdu.trans_pcd(nrmls_nbv_inhnd, transmat4)
             pcdu.show_pcd(pcd_next, rgba=(0, 1, 0, 1))
             rbt.gen_meshmodel(rgba=(0, 1, 0, .5)).attach_to(base)
-            nu.attach_nbv_gm(pts_nbv_inhnd, nrmls_nbv_inhnd, confs_nbv, cam_pos, .05)
+            nu.attach_nbv_gm(pts_nbv_inhnd, nrmls_nbv_inhnd, confs_nbv, cam_pos, .04)
             base.run()
 
         '''
@@ -379,7 +380,7 @@ def run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, cov_tor=.001
         rbt_o3dmesh.transform(np.linalg.inv(init_eemat4))
         rbt_o3dmesh_nxt.transform(np.linalg.inv(init_eemat4))
         transmat4_origin = np.linalg.inv(init_eemat4).dot(eemat4)
-        coord_nxt = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
+        coord_nxt = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.1)
         coord_nxt.transform(transmat4_origin)
         if toggledebug:
             o3d.visualization.draw_geometries([rbt_o3dmesh, coord, o3dpcd])
@@ -397,7 +398,6 @@ def run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, cov_tor=.001
         exp_dict[cnt]['time_cost'] = time_cost
 
         if toggledebug:
-            o3dpcd_nxt.normals = o3d.utility.Vector3dVector([])
             o3dpcd_nxt.paint_uniform_color(nu.COLOR[5])
             o3d.visualization.draw_geometries([o3dpcd, o3dpcd_nxt, coord])
 
@@ -413,7 +413,7 @@ def run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, cov_tor=.001
         seedjntagls = jnts
 
     exp_dict['final'] = pcd_i.tolist()
-    if not toggledebug and not toggledebug_p3d:
+    if not toggledebug:
         json.dump(exp_dict, open(os.path.join(path, cat, RES_FO_NAME, f'org_{f.split(".ply")[0]}.json'), 'w'))
     return flag
 
@@ -421,12 +421,12 @@ def run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, cov_tor=.001
 def run_random(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, cov_tor=.001, goal=.05,
                vis_threshold=np.radians(75), toggledebug=False, toggledebug_p3d=False):
     flag = True
-    coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
+    coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.1)
     o3dpcd_init.paint_uniform_color(nu.COLOR[0])
     o3dpcd_gt.paint_uniform_color(nu.COLOR[1])
 
     rot_center = [0, 0, 0]
-    max_a = np.pi / 18
+    max_a = np.pi / 45
     max_dist = 1.5
     coverage = 0
     cnt = 0
@@ -471,12 +471,12 @@ def run_random(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, cov_tor=.
         rbt_o3dmesh = nu.rbt2o3dmesh(rbt, link_num=10, show_nrml=toggledebug)
 
         if toggledebug:
-            coord_inhnd = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
+            coord_inhnd = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.1)
             coord_inhnd.transform(init_eemat4)
             o3d.visualization.draw_geometries([rbt_o3dmesh, coord_inhnd, o3dpcd_inhnd])
         if toggledebug_p3d:
             gm.gen_frame().attach_to(base)
-            nu.attach_nbv_gm(pts_nbv, nrmls_nbv, confs_nbv, cam_pos, .05)
+            nu.attach_nbv_gm(pts_nbv, nrmls_nbv, confs_nbv, cam_pos, .04)
             pcdu.show_pcd(pcd_inhnd)
             rbt.gen_meshmodel().attach_to(base)
             rbt.gen_meshmodel(rgba=(1, 1, 0, .4)).attach_to(base)
@@ -498,7 +498,7 @@ def run_random(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, cov_tor=.
             pcd_next = pcdu.trans_pcd(pcd_i, eemat4)
             pts_nbv = pcdu.trans_pcd(pts_nbv, transmat4)
             nrmls_nbv = pcdu.trans_pcd(nrmls_nbv, transmat4)
-            nu.attach_nbv_gm(pts_nbv, nrmls_nbv, confs_nbv, cam_pos, .05)
+            nu.attach_nbv_gm(pts_nbv, nrmls_nbv, confs_nbv, cam_pos, .04)
             pcdu.show_pcd(pcd_next, rgba=(0, 1, 0, 1))
             rbt.gen_meshmodel(rgba=(0, 1, 0, .5)).attach_to(base)
             base.run()
@@ -509,7 +509,7 @@ def run_random(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, cov_tor=.
         rbt_o3dmesh.transform(np.linalg.inv(init_eemat4))
         rbt_o3dmesh_nxt.transform(np.linalg.inv(init_eemat4))
         transmat4_origin = np.linalg.inv(init_eemat4).dot(eemat4)
-        coord_nxt = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
+        coord_nxt = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.1)
         coord_nxt.transform(transmat4_origin)
         if toggledebug:
             o3d.visualization.draw_geometries([rbt_o3dmesh, coord, o3dpcd])
@@ -542,7 +542,7 @@ def run_random(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, cov_tor=.
         seedjntagls = jnts
 
     exp_dict['final'] = pcd_i.tolist()
-    if not toggledebug and not toggledebug_p3d:
+    if not toggledebug:
         json.dump(exp_dict, open(os.path.join(path, cat, RES_FO_NAME, f'random_{f.split(".ply")[0]}.json'), 'w'))
     return flag
 
@@ -602,11 +602,12 @@ if __name__ == '__main__':
     if not os.path.exists(path):
         path = 'E:/liu/nbv_mesh/'
 
-    cat_list = ['bspl_4', 'bspl_5']
-    # cat_list = ['plat', 'tmpl']
+    # cat_list = ['bspl_3', 'bspl_4', 'bspl_5']
+    # cat_list = ['bspl_5']
+    cat_list = ['plat', 'tmpl']
     # cat_list = ['rlen_3', 'rlen_4', 'rlen_5']
-    cam_pos = [0, 0, .8]
-    cov_tor = .001
+    cam_pos = [0, 0, .4]
+    cov_tor = .0018
     goal = .95
     vis_threshold = np.radians(75)
     relmat4 = rm.homomat_from_posrot([.02, 0, 0], np.eye(3))
@@ -629,25 +630,24 @@ if __name__ == '__main__':
                     os.path.exists(os.path.join(path, cat, RES_FO_NAME, f'org_{f.split(".ply")[0]}.json')) and \
                     os.path.exists(os.path.join(path, cat, RES_FO_NAME, f'random_{f.split(".ply")[0]}.json')):
                 continue
-
             o3dpcd_init = \
                 nu.gen_partial_o3dpcd_occ(os.path.join(path, cat), f.split('.ply')[0], np.eye(3), [0, 0, 0],
-                                          rnd_occ_ratio_rng=(.1, .4), nrml_occ_ratio_rng=(.2, .6),
+                                          rnd_occ_ratio_rng=(.1, .4),
                                           vis_threshold=vis_threshold, toggledebug=False,
-                                          occ_vt_ratio=random.uniform(.08, .1), noise_vt_ratio=random.uniform(.3, .5),
-                                          noise_cnt=random.randint(2, 5), add_occ_nrml=True,
-                                          add_occ_vt=True, add_noise_vt=True, add_occ_rnd=False, add_noise_pts=True)
-            # o3d.io.write_point_cloud('./tmp/nbc_vis/init.pcd', o3dpcd_init)
-            # o3dpcd_init = o3d.io.read_point_cloud('./tmp/nbc_vis/init.pcd')
-
+                                          occ_vt_ratio=random.uniform(.01, .05), nrml_occ_ratio_rng=(.5, .8),
+                                          noise_cnt=random.randint(3, 5), noise_vt_ratio=random.uniform(.2, .5),
+                                          add_occ_nrml=True, add_occ_vt=True, add_noise_vt=True, add_occ_rnd=False,
+                                          add_noise_pts=True)
+            # o3d.io.write_point_cloud('./tmp/nbc/init.pcd', o3dpcd_init)
+            # o3dpcd_init = o3d.io.read_point_cloud('./tmp/nbc/init.pcd')
             o3dmesh_gt = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'prim', f))
             o3dpcd_gt = du.get_objpcd_full_sample_o3d(o3dmesh_gt, smp_num=2048, method='possion')
-
             run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, goal=goal, cov_tor=cov_tor,
                     vis_threshold=vis_threshold, toggledebug=False, toggledebug_p3d=False)
             run_random(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, goal=goal, cov_tor=cov_tor,
                        vis_threshold=vis_threshold, toggledebug=False, toggledebug_p3d=False)
-            run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_name, load_model, goal=goal,
+            run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_model, goal=goal,
                     cov_tor=cov_tor, vis_threshold=vis_threshold, toggledebug=False, toggledebug_p3d=False)
-            run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_name, load_model, goal=goal,
-                        cov_tor=cov_tor, vis_threshold=vis_threshold, toggledebug=False, toggledebug_p3d=False)
+            run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_model, goal=goal,
+                        cov_tor=cov_tor, vis_threshold=vis_threshold, toggledebug=False,
+                        toggledebug_p3d=False)

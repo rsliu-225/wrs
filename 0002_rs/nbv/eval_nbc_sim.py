@@ -12,22 +12,26 @@ if __name__ == '__main__':
     path = 'E:/liu/nbv_mesh/'
     if not os.path.exists(path):
         path = 'D:/nbv_mesh/'
-    cat = 'bspl_4'
+    # cat_list = ['bspl_3', 'bspl_4', 'bspl_5']
+    # cat_cnt_list = [67, 67, 66]
+    cat_list = ['plat', 'tmpl']
+    cat_cnt_list = [100, 100]
+
     fo = 'res_75_rbt'
 
     coverage_rnd, max_rnd, cnt_rnd, plan_fail_cnt_rnd = \
-        nbv_utl.load_cov_w_fail(path, cat, fo, max_times=9, prefix='random')
+        nbv_utl.load_cov_w_fail(path, cat_list, fo, cat_cnt_list, max_times=9, prefix='random')
     coverage_org, max_org, cnt_org, plan_fail_cnt_org = \
-        nbv_utl.load_cov_w_fail(path, cat, fo, max_times=9, prefix='org')
+        nbv_utl.load_cov_w_fail(path, cat_list, fo, cat_cnt_list, max_times=9, prefix='org')
     coverage_pcn, max_pcn, cnt_pcn, plan_fail_cnt_pcn = \
-        nbv_utl.load_cov_w_fail(path, cat, fo, max_times=9, prefix='pcn')
+        nbv_utl.load_cov_w_fail(path, cat_list, fo, cat_cnt_list, max_times=9, prefix='pcn')
     coverage_opt, max_opt, cnt_opt, plan_fail_cnt_opt = \
-        nbv_utl.load_cov_w_fail(path, cat, fo, max_times=9, prefix='pcn_opt')
+        nbv_utl.load_cov_w_fail(path, cat_list, fo, cat_cnt_list, max_times=9, prefix='pcn_opt')
 
     x = np.asarray([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
     plt.rcParams["font.family"] = "Times New Roman"
-    plt.rcParams["font.size"] = 20
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 22))
+    plt.rcParams["font.size"] = 28
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(9, 22))
     # ax1.set_title('Coverage')
     ax1.axhline(y=.95, color='r', linewidth='0.5', linestyle=':')
     ax1.set_ylim(.1, 1.05)
@@ -60,19 +64,19 @@ if __name__ == '__main__':
 
     ax2.set_xticks(x[1:])
     # ax2.set_ylim(0, 92)
-    ax2.set_ylim(0, 65)
+    ax2.set_ylim(0, 140)
 
     # ax2.set_yticks(np.linspace(0, 100, 10))
     ax2.minorticks_on()
-    ax2.yaxis.set_major_locator(mticker.MultipleLocator(base=100 / 10))
-    ax2.yaxis.set_minor_locator(mticker.MultipleLocator(base=100 / 50))
+    ax2.yaxis.set_major_locator(mticker.MultipleLocator(base=100 / 4))
+    ax2.yaxis.set_minor_locator(mticker.MultipleLocator(base=100 / 20))
     ax2.grid(which='major', linestyle='-', linewidth='0.5', color='black', alpha=.8)
     ax2.grid(which='minor', linestyle=':', linewidth='0.5', color='gray', alpha=.5)
 
-    print(nbv_utl.cal_avg(cnt_rnd[1:]))
-    print(nbv_utl.cal_avg(cnt_org[1:]))
-    print(nbv_utl.cal_avg(cnt_pcn[1:]))
-    print(nbv_utl.cal_avg(cnt_opt[1:]))
+    print(nbv_utl.cal_avg(cnt_rnd[1:]), cnt_rnd)
+    print(nbv_utl.cal_avg(cnt_org[1:]), cnt_org)
+    print(nbv_utl.cal_avg(cnt_pcn[1:]), cnt_pcn)
+    print(nbv_utl.cal_avg(cnt_opt[1:]), cnt_opt)
 
     print(Counter(np.where(np.asarray(max_rnd[-1]) > .95, 1, 0)), plan_fail_cnt_rnd)
     print(Counter(np.where(np.asarray(max_org[-1]) > .95, 1, 0)), plan_fail_cnt_org)

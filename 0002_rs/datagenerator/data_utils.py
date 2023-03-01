@@ -763,8 +763,8 @@ def add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=(.3, .6)):
     del_indices = []
     for i, v in enumerate(nrmls):
         a = rm.angle_between_vectors(v, nrml_0)
-        # if a < np.random.normal(np.pi / 2, np.pi / 18):
-        if a < np.random.normal(np.pi / 4):
+        if a < np.random.normal(np.pi / 2, np.pi / 18):
+        # if a < np.random.normal(np.pi / 4):
             del_indices.append(indices[0][i])
     pcd = np.delete(np.asarray(o3dpcd.points), del_indices, axis=0)
 

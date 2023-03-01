@@ -104,19 +104,19 @@ class NBCOptimizerVec(object):
         self.rbth.goto_armjnts(x)
         eepos, eerot = self.rbt.get_gl_tcp()
         err = abs(np.asarray(eepos)[0] - self.init_eepos[0])
-        return .1 - err
+        return .2 - err
 
     def con_diff_y(self, x):
         self.rbth.goto_armjnts(x)
         eepos, eerot = self.rbt.get_gl_tcp()
         err = abs(np.asarray(eepos)[1] - self.init_eepos[1])
-        return .1 - err
+        return .2 - err
 
     def con_diff_z(self, x):
         self.rbth.goto_armjnts(x)
         eepos, eerot = self.rbt.get_gl_tcp()
         err = abs(np.asarray(eepos)[2] - self.init_eepos[2])
-        return .1 - err
+        return .2 - err
 
     def addconstraint(self, constraint, condition="ineq"):
         self.cons.append({'type': condition, 'fun': constraint})

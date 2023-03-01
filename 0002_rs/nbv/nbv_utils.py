@@ -35,85 +35,88 @@ def transpose(data, len=6):
     return mat
 
 
-def load_cov(path, cat, fo, max_times=5, prefix='pcn'):
+def load_cov(path, cat_list, fo, cat_cnt_list, max_times=5, prefix='pcn'):
     cov_list = []
     max_list = []
     cnt_list = [0] * max_times
+    for inx, cat in enumerate(cat_list):
+        for f in os.listdir(os.path.join(path, cat, 'mesh')):
+            print(f'-----------{f}------------')
+            if int(f.split(".ply")[0]) >= cat_cnt_list[inx]:
+                continue
+            try:
+                res_dict = json.load(open(os.path.join(path, cat, fo, f'{prefix}_{f.split(".ply")[0]}.json'), 'rb'))
+            except:
+                break
+            # o3dpcd_i = o3dh.nparray2o3dpcd(np.asarray(res_dict['0']['input']))
+            # o3d.visualization.draw_geometries([o3dpcd_i])
+            cov_list_tmp = [res_dict['init_coverage']]
+            max_tmp = [res_dict['init_coverage']]
+            max = 0
+            max_cnt = 0
+            if res_dict['init_coverage'] > .94:
+                print('remove')
+            print(prefix, 'init', res_dict['init_coverage'])
 
-    for f in os.listdir(os.path.join(path, cat, 'mesh')):
-        print(f'-----------{f}------------')
-        try:
-            res_dict = json.load(open(os.path.join(path, cat, fo, f'{prefix}_{f.split(".ply")[0]}.json'), 'rb'))
-        except:
-            break
-        # o3dpcd_i = o3dh.nparray2o3dpcd(np.asarray(res_dict['0']['input']))
-        # o3d.visualization.draw_geometries([o3dpcd_i])
-        cov_list_tmp = [res_dict['init_coverage']]
-        max_tmp = [res_dict['init_coverage']]
-        max = 0
-        max_cnt = 0
-        if res_dict['init_coverage'] > .94:
-            print('remove')
-        print(prefix, 'init', res_dict['init_coverage'])
-
-        for i in range(max_times):
-            if str(i) in res_dict.keys():
-                # try:
-                print(prefix, i + 1, res_dict[str(i)]['coverage'])
-                cov_list_tmp.append(res_dict[str(i)]['coverage'])
-                max = res_dict[str(i)]['coverage']
-                # except:
-                #     max_tmp.append(max)
-                #     continue
-                max_cnt = i
-            max_tmp.append(max)
-        cnt_list[max_cnt] += 1
-        max_list.append(max_tmp)
-        cov_list.append(cov_list_tmp)
+            for i in range(max_times):
+                if str(i) in res_dict.keys():
+                    # try:
+                    print(prefix, i + 1, res_dict[str(i)]['coverage'])
+                    cov_list_tmp.append(res_dict[str(i)]['coverage'])
+                    max = res_dict[str(i)]['coverage']
+                    # except:
+                    #     max_tmp.append(max)
+                    #     continue
+                    max_cnt = i
+                max_tmp.append(max)
+            cnt_list[max_cnt] += 1
+            max_list.append(max_tmp)
+            cov_list.append(cov_list_tmp)
     return transpose(cov_list, max_times + 1), transpose(max_list, max_times + 1), [cnt_list[0]] + cnt_list
 
 
-def load_cov_w_fail(path, cat, fo, max_times=5, prefix='pcn'):
+def load_cov_w_fail(path, cat_list, fo, cat_cnt_list, max_times=5, prefix='pcn'):
     cov_list = []
     max_list = []
     cnt_list = [0] * max_times
     plan_fail_cnt = 0
+    for inx, cat in enumerate(cat_list):
+        for f in os.listdir(os.path.join(path, cat, 'mesh')):
+            print(f'-----------{f}------------')
+            if int(f.split(".ply")[0]) >= cat_cnt_list[inx]:
+                continue
+            try:
+                res_dict = json.load(open(os.path.join(path, cat, fo, f'{prefix}_{f.split(".ply")[0]}.json'), 'rb'))
+            except:
+                break
+            # o3dpcd_i = o3dh.nparray2o3dpcd(np.asarray(res_dict['0']['input']))
+            # o3d.visualization.draw_geometries([o3dpcd_i])
+            cov_list_tmp = [res_dict['init_coverage']]
+            max_tmp = [res_dict['init_coverage']]
+            max = 0
+            max_cnt = 0
+            if res_dict['init_coverage'] > .94:
+                print('remove')
+            print(prefix, 'init', res_dict['init_coverage'])
 
-    for f in os.listdir(os.path.join(path, cat, 'mesh')):
-        print(f'-----------{f}------------')
-        try:
-            res_dict = json.load(open(os.path.join(path, cat, fo, f'{prefix}_{f.split(".ply")[0]}.json'), 'rb'))
-        except:
-            break
-        # o3dpcd_i = o3dh.nparray2o3dpcd(np.asarray(res_dict['0']['input']))
-        # o3d.visualization.draw_geometries([o3dpcd_i])
-        cov_list_tmp = [res_dict['init_coverage']]
-        max_tmp = [res_dict['init_coverage']]
-        max = 0
-        max_cnt = 0
-        if res_dict['init_coverage'] > .94:
-            print('remove')
-        print(prefix, 'init', res_dict['init_coverage'])
-
-        for i in range(max_times):
-            if str(i) in res_dict.keys():
-                if 'coverage' in res_dict[str(i)].keys():
-                    print(prefix, i + 1, res_dict[str(i)]['coverage'])
-                    cov_list_tmp.append(res_dict[str(i)]['coverage'])
-                    max = res_dict[str(i)]['coverage']
-                else:
-                    plan_fail_cnt += 1
-                    print(prefix, i + 1, 'Planning failed')
-                    max_tmp.append(max)
-                    max_cnt = -1
-                    continue
-                max_cnt = i
-            max_tmp.append(max)
-        if max_cnt != -1:
-            cnt_list[max_cnt] += 1
-        max_list.append(max_tmp)
-        cov_list.append(cov_list_tmp)
-    print(cnt_list)
+            for i in range(max_times):
+                if str(i) in res_dict.keys():
+                    if 'coverage' in res_dict[str(i)].keys():
+                        print(prefix, i + 1, res_dict[str(i)]['coverage'])
+                        cov_list_tmp.append(res_dict[str(i)]['coverage'])
+                        max = res_dict[str(i)]['coverage']
+                    else:
+                        plan_fail_cnt += 1
+                        print(prefix, i + 1, 'Planning failed')
+                        max_tmp.append(max)
+                        max_cnt = -1
+                        continue
+                    max_cnt = i
+                max_tmp.append(max)
+            if max_cnt != -1:
+                cnt_list[max_cnt] += 1
+            max_list.append(max_tmp)
+            cov_list.append(cov_list_tmp)
     return transpose(cov_list, max_times + 1), transpose(max_list, max_times + 1), \
            [cnt_list[0]] + cnt_list, plan_fail_cnt
 
@@ -428,9 +431,9 @@ def gen_partial_o3dpcd_occ(path, f, rot, rot_center, trans=np.zeros(3), resolusi
     if add_noise_vt:
         o3dmesh.compute_vertex_normals()
         o3dpcd = du.add_guassian_noise_by_vt(o3dpcd, np.asarray(o3dmesh.vertices), np.asarray(o3dmesh.vertex_normals),
-                                             noise_mean=1e-3, noise_sigma=1e-4, ratio=noise_vt_ratio)
+                                             noise_mean=1e-3, noise_sigma=2e-4, ratio=noise_vt_ratio)
     if add_noise_pts:
-        o3dpcd = du.add_noise_pts_by_vt(o3dpcd, noise_cnt=noise_cnt, size=.02)
+        o3dpcd = du.add_noise_pts_by_vt(o3dpcd, noise_cnt=noise_cnt, size=.03)
 
     # o3dpcd = du.resample(o3dpcd, smp_num=2048)
     o3dpcd, _ = o3dpcd.remove_radius_outlier(nb_points=10, radius=0.05)
@@ -450,7 +453,7 @@ def gen_partial_o3dpcd_occ(path, f, rot, rot_center, trans=np.zeros(3), resolusi
         o3dpcd_org = o3d.io.read_point_cloud(os.path.join(path, f'{f}_tmp.pcd'))
         o3dpcd_org.paint_uniform_color([0, 0.7, 1])
         o3dpcd.paint_uniform_color(COLOR[0])
-        o3d.visualization.draw_geometries([o3dmesh, o3dpcd] + othermesh)
+        o3d.visualization.draw_geometries([o3dpcd] + othermesh)
         # o3d.visualization.draw_geometries([o3dpcd_org])
 
     o3dpcd.translate(-trans)
