@@ -64,7 +64,7 @@ if __name__ == '__main__':
 
     width = .008
     thickness = .0015
-    cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
+    cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]][::-1]
 
     base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
     # gm.gen_cone(epos=[0, 0, .1], radius=.05, sections=60).attach_to(base)
@@ -75,8 +75,10 @@ if __name__ == '__main__':
     # seedjntagls = m_planner.get_armjnts()
     icomats = rm.gen_icorotmats(rotation_interval=math.radians(360))
 
-    # path = 'E:/liu/nbv_mesh/'
     path = 'D:/nbv_mesh/'
+    if not os.path.exists(path):
+        path = 'E:/liu/nbv_mesh/'
+
     cat = 'bspl_4'
     fo = 'res_75'
     coverage_pcn = []
@@ -84,7 +86,7 @@ if __name__ == '__main__':
 
     coverage_tor = .001
     toggledebug = True
-    f = '0001.ply'
+    f = '0000.ply'
 
     res_pcn = json.load(open(os.path.join(path, cat, fo, f'pcn_{f.split(".ply")[0]}.json'), 'rb'))
 
@@ -120,7 +122,7 @@ if __name__ == '__main__':
     # pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv(pts, nrmls, confs, toggledebug=True)
     # pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_pcn_kpts(pcd_i, pcd_o, cam_pos=cam_pos, theta=None, toggledebug=True)
     # pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd_i, pcd_o, cam_pos=cam_pos, theta=None, toggledebug=True)
-    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd_i, pcd_o, radius=.01, campos=cam_pos, theta=None,
+    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd_i, pcd_o, radius=.01, cam_pos=cam_pos, theta=None,
                                                      toggledebug=True)
     objcm.attach_to(base)
     rot = rm.rotmat_between_vectors(np.asarray(cam_pos), nrmls_nbv[0])

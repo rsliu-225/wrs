@@ -1,3 +1,4 @@
+import os
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 
@@ -9,8 +10,10 @@ if __name__ == '__main__':
     cam_pos = [0, 0, .5]
     base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
 
-    path = 'D:/nbv_mesh'
-    cat = 'bspl_3'
+    path = 'D:/nbv_mesh/'
+    if not os.path.exists(path):
+        path = 'E:/liu/nbv_mesh/'
+    cat = 'bspl_5'
     fo = 'res_75_rlen'
 
     width = .008

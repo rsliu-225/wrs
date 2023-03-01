@@ -19,6 +19,57 @@ import motionplanner.nbv_pcn_opt_solver as nbv_solver
 import nbv_utils as nu
 
 
+def _o3d_debug(pts_nbv, nrmls_nbv, confs_nbv, o3dmesh, o3dpcd, o3dpcd_tmp, rot, o3dpcd_o=None):
+    coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.02)
+    coord_tmp = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.02)
+    coord_tmp.rotate(rot, center=(0, 0, 0))
+    o3dpcd_tmp.paint_uniform_color(nu.COLOR[5])
+    o3dpcd_tmp.normals = o3d.utility.Vector3dVector([])
+
+    o3d.visualization.draw_geometries([o3dpcd, coord])
+    o3d.visualization.draw_geometries([o3dmesh, coord])
+    o3d.visualization.draw_geometries([o3dpcd, o3dmesh, coord])
+    if o3dpcd_o is not None:
+        o3d.visualization.draw_geometries([o3dpcd, o3dpcd_o, coord])
+    nu.show_nbv_o3d(pts_nbv, nrmls_nbv, confs_nbv, o3dpcd, coord, o3dpcd_o)
+    o3dmesh.compute_vertex_normals()
+    o3dmesh.rotate(rot, center=(0, 0, 0))
+    # o3dpcd.paint_uniform_color(nu.COLOR[0])
+    o3dpcd_tmp_vis = copy.deepcopy(o3dpcd_tmp)
+    o3dpcd_tmp_vis.rotate(rot, center=(0, 0, 0))
+
+    o3d.visualization.draw_geometries([o3dpcd_tmp_vis, coord_tmp])
+    o3d.visualization.draw_geometries([o3dmesh, coord_tmp])
+    o3d.visualization.draw_geometries([o3dpcd_tmp_vis, o3dmesh, coord_tmp])
+    o3d.visualization.draw_geometries([o3dpcd_tmp, o3dpcd, coord])
+
+
+def _o3d_debug_opt(o3dmesh, o3dpcd, o3dpcd_tmp, rot, trans, o3dpcd_o):
+    coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.02)
+    coord_tmp = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.02)
+    coord_tmp.rotate(rot, center=(0, 0, 0))
+    coord_tmp.translate(trans)
+    o3dpcd_tmp.paint_uniform_color(nu.COLOR[5])
+    o3dpcd_tmp.normals = o3d.utility.Vector3dVector([])
+
+    o3d.visualization.draw_geometries([o3dpcd, coord])
+    o3d.visualization.draw_geometries([o3dmesh, coord])
+    o3d.visualization.draw_geometries([o3dpcd, o3dmesh, coord])
+    o3d.visualization.draw_geometries([o3dpcd, o3dpcd_o, coord])
+
+    o3dmesh.compute_vertex_normals()
+    o3dmesh.rotate(rot, center=(0, 0, 0))
+    o3dmesh.translate(trans)
+    o3dpcd_tmp_vis = copy.deepcopy(o3dpcd_tmp)
+    o3dpcd_tmp_vis.rotate(rot, center=(0, 0, 0))
+    o3dpcd_tmp_vis.translate(trans)
+
+    o3d.visualization.draw_geometries([o3dpcd_tmp_vis, coord_tmp])
+    o3d.visualization.draw_geometries([o3dmesh, coord_tmp])
+    o3d.visualization.draw_geometries([o3dpcd_tmp_vis, o3dmesh, coord_tmp])
+    o3d.visualization.draw_geometries([o3dpcd_tmp, o3dpcd, coord])
+
+
 def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_model, cov_tor=.001, goal=.05,
             vis_threshold=np.radians(75), toggledebug=False):
     coverage = 0
@@ -43,22 +94,13 @@ def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_mode
         exp_dict[cnt - 1] = {'input': pcd_i.tolist(), 'pcn_output': pcd_o.tolist()}
         o3dpcd_o = o3dh.nparray2o3dpcd(pcd_o)
         if toggledebug:
-            o3dmesh = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'mesh', f))
-            o3dmesh.compute_vertex_normals()
             o3dpcd.paint_uniform_color(nu.COLOR[0])
             o3dpcd_gt.paint_uniform_color(nu.COLOR[1])
             o3dpcd_o.paint_uniform_color(nu.COLOR[2])
-            coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.02)
-            # o3d.visualization.draw_geometries([o3dpcd, o3dpcd_o, o3dmesh, coord])
-            o3d.visualization.draw_geometries([o3dpcd, coord])
-            o3d.visualization.draw_geometries([o3dmesh, coord])
-            o3d.visualization.draw_geometries([o3dpcd, o3dmesh, coord])
-            o3d.visualization.draw_geometries([o3dpcd, o3dpcd_o, coord])
             o3d.io.write_point_cloud(os.path.join(os.getcwd(), 'tmp', f'{cnt}_i.pcd'), o3dpcd)
             o3d.io.write_point_cloud(os.path.join(os.getcwd(), 'tmp', f'{cnt}_o.pcd'), o3dpcd_o)
 
         pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd_i, pcd_o, cam_pos=cam_pos, theta=None, toggledebug=True)
-
         rot = rm.rotmat_between_vectors(np.asarray(cam_pos), nrmls_nbv[0])
         rot = np.linalg.inv(rot)
         trans = pts_nbv[0]
@@ -68,26 +110,9 @@ def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_mode
                                       add_noise_vt=False, add_occ_vt=False, add_occ_rnd=False, add_noise_pts=False)
         exp_dict[cnt - 1]['add'] = np.asarray(o3dpcd_tmp.points).tolist()
         if toggledebug:
-            nbv_mesh_list = []
-            for i in range(len(pts_nbv)):
-                nbv_mesh_list.append(nu.gen_o3d_arrow(pts_nbv[i], pts_nbv[i] + rm.unit_vector(nrmls_nbv[i]) * .02,
-                                                      rgb=[confs_nbv[i], 0, 1 - confs_nbv[i]]))
-            circle_mesh = nu.gen_o3d_sphere(pts_nbv[0], radius=.005, rgb=[0, 0, 1])
             o3dmesh = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'mesh', f))
             o3dmesh.compute_vertex_normals()
-            o3dmesh.rotate(rot, center=(0, 0, 0))
-            # o3dpcd.paint_uniform_color(nu.COLOR[0])
-            # o3dpcd_gt.paint_uniform_color(nu.COLOR[1])
-            o3dpcd_tmp_vis = copy.deepcopy(o3dpcd_tmp)
-            o3dpcd_tmp_vis.rotate(rot, center=(0, 0, 0))
-            o3dpcd_tmp_vis.paint_uniform_color(nu.COLOR[4])
-            o3dpcd_tmp.paint_uniform_color(nu.COLOR[4])
-            coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.02)
-            o3d.visualization.draw_geometries([o3dpcd, o3dpcd_o, coord, circle_mesh] + nbv_mesh_list)
-            o3d.visualization.draw_geometries([o3dpcd_tmp_vis, coord])
-            o3d.visualization.draw_geometries([o3dmesh, coord])
-            o3d.visualization.draw_geometries([o3dpcd_tmp_vis, o3dmesh, coord])
-            o3d.visualization.draw_geometries([o3dpcd_tmp, o3dpcd, coord])
+            _o3d_debug(pts_nbv, nrmls_nbv, confs_nbv, o3dmesh, o3dpcd, o3dpcd_tmp, rot, o3dpcd_o)
         o3dpcd += o3dpcd_tmp
         if toggledebug:
             pcd_o = pcn.inference_sgl(pcd_i, model_name, load_model, toggledebug=False)
@@ -128,11 +153,11 @@ def run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_
     while coverage < goal and cnt < 5:
         cnt += 1
         pcd_o = pcn.inference_sgl(pcd_i, model_name, load_model, toggledebug=False)
+        o3dpcd_o = du.nparray2o3dpcd(pcd_o)
         exp_dict[cnt - 1] = {'input': pcd_i.tolist(), 'pcn_output': pcd_o.tolist()}
         if toggledebug:
             o3dmesh = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'mesh', f))
             o3dmesh.compute_vertex_normals()
-            o3dpcd_o = du.nparray2o3dpcd(pcd_o)
             o3dpcd.paint_uniform_color(nu.COLOR[0])
             o3dpcd_gt.paint_uniform_color(nu.COLOR[1])
             o3dpcd_o.paint_uniform_color(nu.COLOR[2])
@@ -153,18 +178,26 @@ def run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_
                                       add_noise_vt=False, add_occ_vt=False, add_occ_rnd=False, add_noise_pts=False)
         exp_dict[cnt - 1]['add'] = np.asarray(o3dpcd_tmp.points).tolist()
         if toggledebug:
+            # coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.02)
+            # coord_tmp = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.02)
+            # coord_tmp.rotate(rot, center=(0, 0, 0))
+            #
             o3dmesh = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'mesh', f))
             o3dmesh.compute_vertex_normals()
-            o3dmesh.rotate(rot, center=(0, 0, 0))
-            # o3dpcd.paint_uniform_color(nu.COLOR[0])
-            # o3dpcd_gt.paint_uniform_color(nu.COLOR[1])
-            o3dpcd_tmp_vis = copy.deepcopy(o3dpcd_tmp)
-            o3dpcd_tmp_vis.rotate(rot, center=(0, 0, 0))
-            o3dpcd_tmp_vis.paint_uniform_color(nu.COLOR[4])
-            coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.02)
-            o3d.visualization.draw_geometries([o3dpcd_tmp_vis, coord])
-            o3d.visualization.draw_geometries([o3dmesh, coord])
-            o3d.visualization.draw_geometries([o3dpcd_tmp_vis, o3dmesh, coord])
+            # o3dmesh.rotate(rot, center=(0, 0, 0))
+            # # o3dpcd.paint_uniform_color(nu.COLOR[0])
+            # # o3dpcd_gt.paint_uniform_color(nu.COLOR[1])
+            # o3dpcd_tmp_vis = copy.deepcopy(o3dpcd_tmp)
+            # o3dpcd_tmp_vis.rotate(rot, center=(0, 0, 0))
+            # o3dpcd_tmp_vis.paint_uniform_color(nu.COLOR[5])
+            # o3dpcd_tmp.paint_uniform_color(nu.COLOR[5])
+            #
+            # o3d.visualization.draw_geometries([o3dpcd, o3dpcd_o, coord])
+            # o3d.visualization.draw_geometries([o3dpcd_tmp_vis, coord_tmp])
+            # o3d.visualization.draw_geometries([o3dmesh, coord_tmp])
+            # o3d.visualization.draw_geometries([o3dpcd_tmp_vis, o3dmesh, coord_tmp])
+            # o3d.visualization.draw_geometries([o3dpcd_tmp, o3dpcd, coord])
+            _o3d_debug_opt(o3dmesh, o3dpcd, o3dpcd_tmp, rot, trans, o3dpcd_o)
         o3dpcd += o3dpcd_tmp
         if toggledebug:
             pcd_o = pcn.inference_sgl(pcd_i, model_name, load_model, toggledebug=False)
@@ -199,6 +232,7 @@ def run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, cov_tor=.001, goal=.0
     exp_dict['gt'] = pcd_gt.tolist()
     exp_dict['init_coverage'] = init_coverage
     o3dpcd = copy.deepcopy(o3dpcd_init)
+    o3dpcd.paint_uniform_color(nu.COLOR[0])
 
     while coverage < goal and cnt < 5:
         cnt += 1
@@ -215,19 +249,9 @@ def run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, cov_tor=.001, goal=.0
                                       add_noise_vt=False, add_occ_vt=False, add_occ_rnd=False, add_noise_pts=False)
         exp_dict[cnt - 1]['add'] = np.asarray(o3dpcd_tmp.points).tolist()
         if toggledebug:
-            nbv_mesh_list = []
-            for i in range(len(pts_nbv)):
-                nbv_mesh_list.append(nu.gen_o3d_arrow(pts_nbv[i], pts_nbv[i] + nrmls_nbv[i] * .02,
-                                                      rgb=[confs_nbv[i], 0, 1 - confs_nbv[i]]))
-            circle_mesh = nu.gen_o3d_sphere(pts_nbv[0], radius=.005, rgb=[.7, .7, .7])
-            # o3dmesh = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'mesh', f))
-            o3dpcd.paint_uniform_color(nu.COLOR[0])
-            o3dpcd_gt.paint_uniform_color(nu.COLOR[1])
-            o3dpcd_tmp.paint_uniform_color(nu.COLOR[2])
-            coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.01)
-            # o3d.visualization.draw_geometries([o3dpcd, o3dpcd_tmp, o3dmesh, coord])
-            o3d.visualization.draw_geometries([o3dpcd, coord, circle_mesh] + nbv_mesh_list)
-            o3d.visualization.draw_geometries([o3dpcd, o3dpcd_tmp, coord])
+            o3dmesh = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'mesh', f))
+            o3dmesh.compute_vertex_normals()
+            _o3d_debug(pts_nbv, nrmls_nbv, confs_nbv, o3dmesh, o3dpcd, o3dpcd_tmp, rot)
         o3dpcd += o3dpcd_tmp
         pcd_i = np.asarray(o3dpcd.points)
         coverage = pcdu.cal_coverage(pcd_i, pcd_gt, tor=cov_tor)
@@ -296,8 +320,9 @@ if __name__ == '__main__':
     #
     # seedjntagls = m_planner.get_armjnts()
 
-    path = 'E:/liu/nbv_mesh/'
-    # path = 'D:/nbv_mesh/'
+    path = 'D:/nbv_mesh/'
+    if not os.path.exists(path):
+        path = 'E:/liu/nbv_mesh/'
     # cat_list = ['plat']
     cat_list = ['plat', 'tmpl']
     # cat_list = ['rlen_3', 'rlen_4', 'rlen_5']

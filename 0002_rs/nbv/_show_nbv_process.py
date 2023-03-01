@@ -11,12 +11,11 @@ if __name__ == '__main__':
 
     base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
 
-    # path = 'D:/nbv_mesh/'
-    # if not os.path.exists(path):
-    #     path = 'E:/liu/nbv_mesh/'
-    path = 'E:/liu/nbv_mesh/'
+    path = 'D:/nbv_mesh/'
+    if not os.path.exists(path):
+        path = 'E:/liu/nbv_mesh/'
     cat = 'bspl_4'
-    coverage_tor = .001
+    cov_tor = .001
     goal = .95
     vis_threshold = np.radians(75)
 
@@ -24,30 +23,27 @@ if __name__ == '__main__':
         os.makedirs(os.path.join(path, cat, RES_FO_NAME))
     for f in os.listdir(os.path.join(path, cat, 'mesh'))[1:]:
         print(f'-----------{f}------------')
-        # if os.path.exists(os.path.join(path, cat, RES_FO_NAME, f'pcn_{f.split(".ply")[0]}.json')) and \
-        #         os.path.exists(os.path.join(path, cat, RES_FO_NAME, f'org_{f.split(".ply")[0]}.json')):
-        #     continue
-        o3dpcd_init = nu.gen_partial_o3dpcd_occ(os.path.join(path, cat), f.split('.ply')[0], np.eye(3), [0, 0, 0],
-                                                rnd_occ_ratio_rng=(.2, .5),
-                                                nrml_occ_ratio_rng=(.2, .6),
-                                                vis_threshold=vis_threshold,
-                                                occ_vt_ratio=random.uniform(.08, .1),
-                                                noise_vt_ratio=random.uniform(.2, .5),
-                                                add_occ_vt=False, add_noise_vt=False, add_occ_rnd=False,
-                                                add_noise_pts=True,
-                                                toggledebug=False)
-        # o3dpcd_init, ind = o3dpcd_init.remove_radius_outlier(nb_points=50, radius=0.005)
+        # o3dpcd_init = \
+        #     nu.gen_partial_o3dpcd_occ(os.path.join(path, cat), f.split('.ply')[0], np.eye(3), [0, 0, 0],
+        #                               rnd_occ_ratio_rng=(.2, .5),
+        #                               nrml_occ_ratio_rng=(.2, .6),
+        #                               vis_threshold=vis_threshold,
+        #                               occ_vt_ratio=random.uniform(.08, .1),
+        #                               noise_vt_ratio=random.uniform(.2, .5),
+        #                               add_occ_vt=False, add_noise_vt=False, add_occ_rnd=False,
+        #                               add_noise_pts=True, noise_cnt=random.randint(2, 5),
+        #                               toggledebug=False)
+        # o3d.io.write_point_cloud('./tmp/nbv_vis/init.pcd', o3dpcd_init)
+        o3dpcd_init = o3d.io.read_point_cloud('./tmp/nbv_vis/init.pcd')
 
         o3dmesh_gt = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'prim', f))
         o3dpcd_gt = du.get_objpcd_full_sample_o3d(o3dmesh_gt, smp_num=2048, method='possion')
 
-        # run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_model,
-        #         goal=goal, coverage_tor=coverage_tor, visible_threshold=visible_threshold, toggledebug=True)
-        run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_model,
-                    goal=goal, coverage_tor=coverage_tor, vis_threshold=vis_threshold, toggledebug=True)
-        # run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, goal=goal, coverage_tor=coverage_tor,
-        #         visible_threshold=visible_threshold, toggledebug=True)
-        # run_random(path, cat, f, o3dpcd_init, o3dpcd_gt, goal=goal, coverage_tor=coverage_tor,
-        #            visible_threshold=visible_threshold, toggledebug=False)
-        # run_pcn_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, goal=goal, coverage_tor=coverage_tor,
-        #             visible_threshold=visible_threshold, toggledebug=False)
+        run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_model,
+                goal=goal, cov_tor=cov_tor, vis_threshold=vis_threshold, toggledebug=True)
+        # run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_model,
+        #             goal=goal, cov_tor=cov_tor, vis_threshold=vis_threshold, toggledebug=True)
+        # run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, goal=goal, cov_tor=cov_tor,
+        #         vis_threshold=vis_threshold, toggledebug=True)
+        # run_random(path, cat, f, o3dpcd_init, o3dpcd_gt, goal=goal, cov_tor=cov_tor,
+        #            vis_threshold=vis_threshold, toggledebug=False)

@@ -571,14 +571,18 @@ def rbt2o3dmesh(rbt, link_num=10, show_nrml=True):
     return rbt_o3d
 
 
-def show_nbv_o3d(pts_nbv, nrmls_nbv, confs_nbv, o3dpcd, coord):
+def show_nbv_o3d(pts_nbv, nrmls_nbv, confs_nbv, o3dpcd, coord, o3dpcd_o=None):
     nbv_mesh_list = []
     for i in range(len(pts_nbv)):
-        nbv_mesh_list.append(gen_o3d_arrow(pts_nbv[i], pts_nbv[i] + rm.unit_vector(nrmls_nbv[i]) * .04,
+        nbv_mesh_list.append(gen_o3d_arrow(pts_nbv[i], pts_nbv[i] + rm.unit_vector(nrmls_nbv[i]) * .02,
                                            rgb=[confs_nbv[i], 0, 1 - confs_nbv[i]]))
-    circle_mesh = gen_o3d_sphere(pts_nbv[0], radius=.004, rgb=[0, 0, 1])
+    circle_mesh = gen_o3d_sphere(pts_nbv[0], radius=.002, rgb=[0, 0, 1])
     o3dpcd.paint_uniform_color(COLOR[0])
-    o3d.visualization.draw_geometries([o3dpcd, circle_mesh, coord] + nbv_mesh_list)
+    if o3dpcd_o is not None:
+        o3dpcd_o.paint_uniform_color(COLOR[2])
+        o3d.visualization.draw_geometries([o3dpcd, o3dpcd_o, circle_mesh, coord] + nbv_mesh_list)
+    else:
+        o3d.visualization.draw_geometries([o3dpcd, circle_mesh, coord] + nbv_mesh_list)
 
 
 def show_pcn_res_pytorch(result_path, test_path):
@@ -603,8 +607,18 @@ panda3d related
 def attach_nbv_gm(pts, nrml, conf, cam_pos, arrow_len):
     for i in range(len(pts)):
         gm.gen_arrow(pts[i], pts[i] + nrml[i] * arrow_len / np.linalg.norm(nrml[i]),
-                     rgba=(conf[i], 0, 1 - conf[i], 1)).attach_to(base)
-    gm.gen_dashstick(cam_pos, pts[0], rgba=(.7, .7, 0, .5)).attach_to(base)
+                     rgba=(conf[i], 0, 1 - conf[i], 1), thickness=.002).attach_to(base)
+    gm.gen_dashstick(cam_pos, pts[0], rgba=(.7, .7, 0, .5), thickness=.002).attach_to(base)
+
+
+def attach_nbv_conf_gm(pts, nrml, conf, cam_pos, arrow_len):
+    for i in range(len(pts)):
+        if conf[i] > .2:
+            continue
+        gm.gen_arrow(pts[i], pts[i] + nrml[i] * arrow_len / np.linalg.norm(nrml[i]),
+                     rgba=(conf[i], 0, 1 - conf[i], 1), thickness=.002).attach_to(base)
+        # gm.gen_sphere(pts[i], radius=.01, rgba=(conf[i], 0, 1 - conf[i], .2)).attach_to(base)
+        gm.gen_dashstick(cam_pos, pts[i], rgba=(.7, .7, 0, .5), thickness=.002).attach_to(base)
 
 
 if __name__ == '__main__':

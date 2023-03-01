@@ -71,7 +71,8 @@ if __name__ == "__main__":
     # o3dpcd_1 = o3d.io.read_point_cloud(config.ROOT + '/recons_data/nbc/plate_a_cubic/000.pcd')
     # path = os.path.join(config.ROOT, 'recons_data/nbc/plate_a_cubic')
     # path = 'D:/liu/MVP_Benchmark/completion/data_real/'
-    path = 'C:/Users/rsliu/Documents/GitHub/wrs/0002_rs/recons_data/nbc_pcn/plate_a_cubic'
+    # path = 'C:/Users/rsliu/Documents/GitHub/wrs/0002_rs/recons_data/nbc_pcn/plate_a_cubic'
+    path = 'C:/Users/rsliu/Documents/GitHub/wrs/0002_rs/recons_data/seq/plate_a_cubic'
 
     for i, f in enumerate(os.listdir(path)):
         o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f))
@@ -86,4 +87,5 @@ if __name__ == "__main__":
         o3dpcd_o = nparray2o3dpcd(result)
         o3dpcd.paint_uniform_color(COLOR[0])
         o3dpcd_o.paint_uniform_color(COLOR[2])
+        o3d.visualization.draw_geometries([o3dpcd])
         o3d.visualization.draw_geometries([o3dpcd, o3dpcd_o])

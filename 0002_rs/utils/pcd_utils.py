@@ -487,7 +487,7 @@ def get_objpcd_partial(objcm, objmat4=np.eye(4), sample_num=100000, toggledebug=
 
 
 def get_objpcd_partial_bycam_pos(objcm, objmat4=np.eye(4), smp_num=100000, cam_pos=np.array([.86, .08, 1.78]),
-                                toggledebug=False):
+                                 toggledebug=False):
     def __sigmoid(angle):
         angle = np.degrees(angle)
         return 1 / (1 + np.exp((angle - 90) / 90)) - 0.5
@@ -831,10 +831,6 @@ def get_kpts_gmm(objpcd, n_components=20, means_init=None, show=True, rgba=(1, 0
 
 
 def get_rots_wkpts(objpcd, kpts, k=None, show=True, rgba=(1, 0, 0, 1)):
-    if show:
-        for i, p in enumerate(kpts[1:]):
-            gm.gen_sphere(p, radius=.001, rgba=rgba).attach_to(base)
-
     kdt, _ = get_kdt(objpcd)
     kpts_rotseq = []
     for i, p in enumerate(kpts[:-1]):
@@ -852,7 +848,10 @@ def get_rots_wkpts(objpcd, kpts, k=None, show=True, rgba=(1, 0, 0, 1)):
         rot = np.asarray([rm.unit_vector(x_v), rm.unit_vector(y_v), rm.unit_vector(z_v)]).T
         kpts_rotseq.append(rot)
     kpts_rotseq.append(kpts_rotseq[-1])
-
+    if show:
+        for i, p in enumerate(kpts[1:]):
+            gm.gen_sphere(p, radius=.001, rgba=rgba).attach_to(base)
+            gm.gen_frame(p, kpts_rotseq[i], thickness=.001, length=.01).attach_to(base)
     return np.asarray(kpts_rotseq)
 
 
@@ -891,9 +890,9 @@ def cal_nbv_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, radius=.01, toggled
 
     # _, _, trans = o3dh.registration_icp_ptpt(pts_pcn, pts, maxcorrdist=.02, toggledebug=False)
     # pts_pcn = trans_pcd(pts_pcn, trans)
-    # show_pcd(pts_pcn, rgba=COLOR[1])
-    # show_pcd(pts, rgba=COLOR[0])
-    # base.run()
+    # if toggledebug:
+    #     show_pcd(pts_pcn, rgba=COLOR[2])
+        # show_pcd(pts, rgba=COLOR[0])
     o3d_pcn = o3dh.nparray2o3dpcd(pts_pcn)
     o3d_pts = o3dh.nparray2o3dpcd(pts)
     o3d_pcn.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=radius, max_nn=100))
@@ -924,8 +923,8 @@ def cal_nbv_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, radius=.01, toggled
         for i in range(len(confs)):
             # if confs[i] < .3:
             gm.gen_sphere(kpts[i], radius=radius, rgba=[confs[i], 0, 1 - confs[i], .1]).attach_to(base)
-            # gm.gen_arrow(kpts[i], kpts[i] + nrmls[i] * .02, rgba=[confs[i], 0, 1 - confs[i], .1],
-            #              thickness=.001).attach_to(base)
+    #         # gm.gen_arrow(kpts[i], kpts[i] + nrmls[i] * .02, rgba=[confs[i], 0, 1 - confs[i], 1],
+    #         #              thickness=.001).attach_to(base)
     # kpts, nrmls, confs = extract_main_vec(kpts, nrmls, confs)
     # pts, nrmls, confs = extract_main_vec(pts, nrmls, confs, threshold=np.radians(10), toggledebug=toggledebug)
 
