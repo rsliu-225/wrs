@@ -210,6 +210,72 @@ def make_dual_marker(marker_dict=aruco.DICT_4X4_250,
     im.save(savepath + name + ".pdf", "PDF", resolution=dpi)
 
 
+def make_multi_marker(marker_dict=aruco.DICT_4X4_250,
+                      id_list=[0, 1, 2, 3, 4, 5],
+                      marker_pos_list=((-80, 30), (-80,0), (-80,-30), (80,30), (80,0), (80,-30)),
+                      marker_size=25,
+                      savepath='./',
+                      name='test',
+                      frame_size=(190, 130),
+                      paper_width=210,
+                      paper_height=297,
+                      dpi=600):
+    """
+    create aruco board
+    the paper is in portrait orientation, nrow means the number of markers in the vertical direction
+    0,0 is the center of a paper, x point to the right, y points to the up direction
+    :param nrow:
+    :param ncolumn:
+    :param start_id: the starting id of the marker
+    :param marker_dict:
+    :param marker_size:
+    :param savepath:
+    :param name: the name of the saved pdf file
+    :param frame_size: (width, height) the 1pt frame for easy cut, nothing is drawn by default
+    :param paper_width: mm
+    :param paper_height: mm
+    :param dpi:
+    :return:
+    author: weiwei
+    date: 20190420
+    """
+    if len(id_list)!=len(marker_pos_list):
+        print("Error: The number of ids must be the same as the number of marker positions!")
+        exit(1)
+    aruco_dict = aruco.Dictionary_get(marker_dict)
+    a4npxrow = int(paper_height * _MM_TO_INCH * dpi)
+    a4npxcolumn = int(paper_width * _MM_TO_INCH * dpi)
+    bgimg = np.ones((a4npxrow, a4npxcolumn), dtype='uint8') * 255
+    markersizepx = int(marker_size * _MM_TO_INCH * dpi)
+    # markerdist = int((frame_size[0] - (frame_size[1] - marker_size) - marker_size * 2) * _MM_TO_INCH * dpi)
+    if frame_size is not None:
+        frame_size_mm = [0.0, 0.0]
+        frame_size_mm[0] = int(frame_size[0] * _MM_TO_INCH * dpi)
+        frame_size_mm[1] = int(frame_size[1] * _MM_TO_INCH * dpi)
+        if a4npxcolumn < frame_size_mm[0] + 2:
+            print("Frame width must be smaller than the #pt in each row.")
+        if a4npxrow < frame_size_mm[1] + 2:
+            print("Frame height must be smaller than the #pt in each column.")
+        framelft = int((a4npxcolumn - frame_size_mm[0]) / 2 - 1)
+        framergt = int(framelft + 1 + frame_size_mm[0])
+        frametop = int((a4npxrow - frame_size_mm[1]) / 2 - 1)
+        framedown = int(frametop + 1 + frame_size_mm[1])
+        bgimg[frametop:framedown + 1, framelft:framelft + 1] = 0
+        bgimg[frametop:framedown + 1, framergt:framergt + 1] = 0
+        bgimg[frametop:frametop + 1, framelft:framergt + 1] = 0
+        bgimg[framedown:framedown + 1, framelft:framergt + 1] = 0
+    for id_marker, pos_marker in zip(id_list, marker_pos_list):
+        pos_marker_px = (a4npxrow/2-pos_marker[1] * _MM_TO_INCH * dpi, a4npxcolumn/2+pos_marker[0] * _MM_TO_INCH * dpi)
+        start_row = int(pos_marker_px[0]-markersizepx/2)
+        end_row = int(pos_marker_px[0]+markersizepx/2)
+        start_column = int(pos_marker_px[1]-markersizepx/2)
+        end_column = int(pos_marker_px[1]+markersizepx/2)
+        img = aruco.drawMarker(aruco_dict, id_marker, markersizepx)
+        bgimg[start_row:end_row, start_column:end_column] = img
+    im = Image.fromarray(bgimg).convert("L")
+    im.save(savepath + name + ".pdf", "PDF", resolution=dpi)
+
+
 def make_chess_board(nrow,
                      ncolumn,
                      square_size=25,
@@ -377,3 +443,15 @@ if __name__ == '__main__':
     # print(type(result))
     # make_dual_marker(marker_dict=aruco.DICT_4X4_250, marker_size=45, dpi=600)
     make_aruco_board(2, 1, marker_size=40, marker_dict=aruco.DICT_4X4_250, start_id=1, frame_size=[50, 100])
+    # makechessboard(1, 1, square_size=35, frame_size = [100,150])
+
+    make_multi_marker(marker_dict=aruco.DICT_4X4_250,
+                      id_list=[0, 1, 2, 3, 4, 5, 6, 7],
+                      marker_pos_list=((-77.5, 37.5), (-77.5, 12.5), (-77.5, -12.5), (-77.5, -37.5), (77.5, 37.5), (77.5, 12.5), (77.5, -12.5), (77.5, -37.5)),
+                      marker_size=20,
+                      savepath='./',
+                      name='test',
+                      frame_size=(180, 130),
+                      paper_width=210,
+                      paper_height=297,
+                      dpi=600)
