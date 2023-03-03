@@ -12,10 +12,10 @@ if __name__ == '__main__':
     path = 'E:/liu/nbv_mesh/'
     if not os.path.exists(path):
         path = 'D:/nbv_mesh/'
-    # cat_list = ['bspl_3', 'bspl_4', 'bspl_5']
-    # cat_cnt_list = [67, 67, 66]
-    cat_list = ['plat', 'tmpl']
-    cat_cnt_list = [100, 100]
+    cat_list = ['bspl_3', 'bspl_4', 'bspl_5']
+    cat_cnt_list = [67, 67, 66]
+    # cat_list = ['plat', 'tmpl']
+    # cat_cnt_list = [100, 100]
 
     fo = 'res_75_rlen'
     coverage_rnd, max_rnd, cnt_rnd = nbv_utl.load_cov(path, cat_list, fo, cat_cnt_list, prefix='random')
@@ -26,7 +26,7 @@ if __name__ == '__main__':
     x = np.asarray([1, 2, 3, 4, 5, 6])
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams["font.size"] = 28
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(9, 22))
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(6, 22))
     # ax1.set_title('Coverage')
     ax1.axhline(y=.95, color='r', linewidth='0.5', linestyle=':')
     ax1.set_ylim(.1, 1.05)

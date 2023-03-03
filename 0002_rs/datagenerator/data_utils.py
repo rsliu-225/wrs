@@ -829,7 +829,7 @@ def add_noise_pts_by_vt(o3dpcd, noise_cnt=3, size=.01):
             p + np.asarray([random.uniform(-size, size), random.uniform(-size, size), random.uniform(-size, size)]) / 5]
         tmp_gm = gm.GeometricModel(initor=trm.Trimesh(vertices=np.asarray(vts_n),
                                                       faces=np.asarray([[0, 1, 2]])), btwosided=False)
-        o3dpcd += nparray2o3dpcd(tmp_gm.sample_surface(radius=random.uniform(.001, .002))[0])
+        o3dpcd += nparray2o3dpcd(tmp_gm.sample_surface(radius=random.uniform(.0005, .002))[0])
 
     return o3dpcd
 

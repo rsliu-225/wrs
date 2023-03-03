@@ -126,7 +126,7 @@ def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_name, 
 
         o3dpcd_nxt = \
             nu.gen_partial_o3dpcd_occ(os.path.join(path, cat), f.split('.ply')[0], othermesh=[rbt_o3dmesh_nxt],
-                                      trans=transmat4_origin[:3, 3], rot=transmat4_origin[:3, :3],
+                                      trans=transmat4_origin[:3, 3], rot=transmat4_origin[:3, :3], cam_pos=cam_pos,
                                       rot_center=rot_center, vis_threshold=vis_threshold, toggledebug=toggledebug,
                                       add_noise_vt=False, add_occ_vt=False, add_occ_rnd=False, add_noise_pts=False)
 
@@ -259,7 +259,7 @@ def run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_na
 
         o3dpcd_nxt = \
             nu.gen_partial_o3dpcd_occ(os.path.join(path, cat), f.split('.ply')[0], othermesh=[rbt_o3dmesh_nxt],
-                                      trans=transmat4_origin[:3, 3], rot=transmat4_origin[:3, :3],
+                                      trans=transmat4_origin[:3, 3], rot=transmat4_origin[:3, :3], cam_pos=cam_pos,
                                       rot_center=rot_center, vis_threshold=vis_threshold, toggledebug=toggledebug,
                                       add_noise_vt=False, add_occ_vt=False, add_occ_rnd=False, add_noise_pts=False)
 
@@ -387,9 +387,8 @@ def run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, cov_tor=.001
 
         o3dpcd_nxt = \
             nu.gen_partial_o3dpcd_occ(os.path.join(path, cat), f.split('.ply')[0], othermesh=[rbt_o3dmesh_nxt],
-                                      trans=transmat4_origin[:3, 3], rot=transmat4_origin[:3, :3],
-                                      rot_center=rot_center, vis_threshold=vis_threshold,
-                                      toggledebug=toggledebug,
+                                      trans=transmat4_origin[:3, 3], rot=transmat4_origin[:3, :3], cam_pos=cam_pos,
+                                      rot_center=rot_center, vis_threshold=vis_threshold, toggledebug=toggledebug,
                                       add_noise_vt=False, add_occ_vt=False, add_occ_rnd=False, add_noise_pts=False)
 
         exp_dict[cnt]['add'] = np.asarray(o3dpcd_nxt.points).tolist()
@@ -517,9 +516,8 @@ def run_random(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, cov_tor=.
 
         o3dpcd_nxt = \
             nu.gen_partial_o3dpcd_occ(os.path.join(path, cat), f.split('.ply')[0], othermesh=[rbt_o3dmesh_nxt],
-                                      trans=transmat4_origin[:3, 3], rot=transmat4_origin[:3, :3],
-                                      rot_center=rot_center, vis_threshold=vis_threshold,
-                                      toggledebug=toggledebug,
+                                      trans=transmat4_origin[:3, 3], rot=transmat4_origin[:3, :3], cam_pos=cam_pos,
+                                      rot_center=rot_center, vis_threshold=vis_threshold, toggledebug=toggledebug,
                                       add_noise_vt=False, add_occ_vt=False, add_occ_rnd=False, add_noise_pts=False)
 
         exp_dict[cnt]['add'] = np.asarray(o3dpcd_nxt.points).tolist()
@@ -602,10 +600,10 @@ if __name__ == '__main__':
     if not os.path.exists(path):
         path = 'E:/liu/nbv_mesh/'
 
-    cat_list = ['bspl_4', 'bspl_5']
+    cat_list = ['bspl_3', 'bspl_4', 'bspl_5']
     # cat_list = ['plat', 'tmpl']
     # cat_list = ['rlen_3', 'rlen_4', 'rlen_5']
-    cam_pos = [0, 0, .8]
+    cam_pos = [0, 0, .4]
     cov_tor = .001
     goal = .95
     vis_threshold = np.radians(75)
@@ -632,11 +630,11 @@ if __name__ == '__main__':
 
             o3dpcd_init = \
                 nu.gen_partial_o3dpcd_occ(os.path.join(path, cat), f.split('.ply')[0], np.eye(3), [0, 0, 0],
-                                          rnd_occ_ratio_rng=(.1, .4), nrml_occ_ratio_rng=(.2, .6),
+                                          rnd_occ_ratio_rng=(.1, .2), nrml_occ_ratio_rng=(.2, .6), cam_pos=cam_pos,
                                           vis_threshold=vis_threshold, toggledebug=False,
-                                          occ_vt_ratio=random.uniform(.08, .1), noise_vt_ratio=random.uniform(.3, .5),
+                                          occ_vt_ratio=random.uniform(.08, .1), noise_vt_ratio=random.uniform(.3, .6),
                                           noise_cnt=random.randint(2, 5), add_occ_nrml=True,
-                                          add_occ_vt=True, add_noise_vt=True, add_occ_rnd=False, add_noise_pts=True)
+                                          add_occ_vt=False, add_noise_vt=True, add_occ_rnd=False, add_noise_pts=True)
             # o3d.io.write_point_cloud('./tmp/nbc_vis/init.pcd', o3dpcd_init)
             # o3dpcd_init = o3d.io.read_point_cloud('./tmp/nbc_vis/init.pcd')
 

@@ -13,10 +13,9 @@ import modeling.geometric_model as gm
 import utils.pcd_utils as pcdu
 import visualization.panda.world as wd
 
-PATH = 'D:/nbv_mesh'
+# PATH = 'D:/nbv_mesh'
 
-
-# PATH = 'E:/liu/nbv_mesh'
+PATH = 'E:/liu/nbv_mesh'
 
 
 def init_gen(cat, num_kpts, max, i, length=.2, path=PATH, rand_prim=False, toggledebug=False):

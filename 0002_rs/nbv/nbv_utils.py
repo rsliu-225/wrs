@@ -82,7 +82,7 @@ def load_cov_w_fail(path, cat_list, fo, cat_cnt_list, max_times=5, prefix='pcn')
     plan_fail_cnt = 0
     for inx, cat in enumerate(cat_list):
         for f in os.listdir(os.path.join(path, cat, 'mesh')):
-            print(f'-----------{f}------------')
+            print(f'-----------{cat} {f}------------')
             if int(f.split(".ply")[0]) >= cat_cnt_list[inx]:
                 continue
             try:
@@ -402,7 +402,7 @@ def gen_partial_o3dpcd_occ(path, f, rot, rot_center, trans=np.zeros(3), resolusi
                            occ_vt_ratio=1.0, noise_vt_ratio=1.0,
                            add_noise_vt=False, add_occ_nrml=False, add_occ_vt=False, add_occ_rnd=True,
                            add_noise_pts=True, noise_cnt=random.randint(0, 5),
-                           othermesh=[], fov=False, w_otherpcd=False, toggledebug=False):
+                           othermesh=[], fov=True, w_otherpcd=False, toggledebug=False):
     o3dmesh = o3d.io.read_triangle_mesh(os.path.join(path, 'mesh', f + '.ply'))
 
     vis = o3d.visualization.Visualizer()
@@ -447,7 +447,7 @@ def gen_partial_o3dpcd_occ(path, f, rot, rot_center, trans=np.zeros(3), resolusi
         o3dpcd = o3dpcd.select_by_index(selected_idx)
 
     if fov:
-        o3dpcd = filer_pcd_by_cam_pos(o3dpcd, cam_pos, dist=.8, angle=np.pi / 9)
+        o3dpcd = filer_pcd_by_cam_pos(o3dpcd, cam_pos, dist=1.5, angle=np.pi / 6)
 
     if toggledebug:
         o3dpcd_org = o3d.io.read_point_cloud(os.path.join(path, f'{f}_tmp.pcd'))

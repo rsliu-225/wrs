@@ -59,7 +59,7 @@ class PCNNBCOptimizer(object):
         self.o3dpcd_o, self.o3dmesh, self.o3dpcd_nbv = None, None, None
         self.cam_pos = None
 
-    def objctive(self, x):
+    def objective(self, x):
         self.jnts.append(x)
         self.rbth.goto_armjnts(x)
         rbt_o3dmesh = nu.rbt2o3dmesh(self.rbt, link_num=10, show_nrml=False)
@@ -105,7 +105,7 @@ class PCNNBCOptimizer(object):
 
         kdt_tmp = o3d.geometry.KDTreeFlann(o3dpcd_tmp_origin)
         for i in range(len(self.nbv_pts)):
-            if self.nbv_conf[i] > .2:
+            if self.nbv_conf[i] > .4:
                 continue
             _, idx, _ = kdt_tmp.search_radius_vector_3d(self.nbv_pts[i], .01)
             conf_sum += (1 - (self.nbv_conf[i])) * len(idx) / 10
@@ -199,17 +199,16 @@ class PCNNBCOptimizer(object):
         """
         time_start = time.time()
         self.update_known(seedjntagls, pcd_i, cam_pos)
-        # self.addconstraint(self.con_rot, condition="ineq")
         # self.addconstraint(self.con_dist, condition="ineq")
         self.addconstraint(self.con_diff_x, condition="ineq")
         self.addconstraint(self.con_diff_y, condition="ineq")
         self.addconstraint(self.con_diff_z, condition="ineq")
-        sol = minimize(self.objctive, seedjntagls, method=method, bounds=self.bnds, constraints=self.cons)
+        sol = minimize(self.objective, seedjntagls, method=method, bounds=self.bnds, constraints=self.cons)
         time_cost = time.time() - time_start
         print("time cost", time_cost, sol.success)
 
         if self.toggledebug:
-            # print(sol)
+            print(sol)
             self.__debug()
 
         if sol.success:
@@ -219,6 +218,7 @@ class PCNNBCOptimizer(object):
             transmat4 = np.linalg.inv(self.init_eemat4).dot(eemat4)
             # gm.gen_frame(eepos, eerot).attach_to(base)
             # gm.gen_frame(self.init_eepos, self.init_eerot).attach_to(base)
+            print(self.obj_list[0], self.obj_list[-1])
             return sol.x, transmat4, sol.fun, time_cost
         else:
             return None, None, None, time_cost
