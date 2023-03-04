@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 import open3d as o3d
 from cv2 import aruco as aruco
+from sklearn.mixture import GaussianMixture
 
 import basis.o3dhelper as o3dh
 import basis.robot_math as rm
@@ -14,7 +15,6 @@ import modeling.geometric_model as gm
 import motionplanner.nbc_solver as nbcs
 import utils.pcd_utils as pcdu
 import utils.vision_utils as vu
-from sklearn.mixture import GaussianMixture
 
 
 def load_frame_seq(fo=None, root_path=os.path.join(config.ROOT, 'img/phoxi/'), path=None):
@@ -38,10 +38,33 @@ def load_frame_seq(fo=None, root_path=os.path.join(config.ROOT, 'img/phoxi/'), p
     return [depthimg_list, rgbimg_list, pcd_list]
 
 
-def load_frame_seq_withf(fo=None, root_path=os.path.join(config.ROOT, 'img/phoxi/'), path=None):
+#
+# def load_frame_seq_withf(fo=None, root_path=os.path.join(config.ROOT, 'img/zivid/'), path=None):
+#     if path is None:
+#         path = os.path.join(root_path, fo)
+#     depthimg_list = []
+#     textureimg_list = []
+#     pcd_list = []
+#     fname_list = []
+#     for f in sorted(os.listdir(path)):
+#         if f[-3:] != 'pkl' or '_' in f:
+#             continue
+#         fname_list.append(f[:-4])
+#         tmp = pickle.load(open(os.path.join(path, f), 'rb'))
+#         if tmp[0].shape[-1] == 3:
+#             depthimg_list.append(tmp[1])
+#             textureimg_list.append(tmp[0])
+#         else:
+#             depthimg_list.append(tmp[0])
+#             textureimg_list.append(tmp[1])
+#         if len(tmp) == 3:
+#             pcd_list.append(np.asarray(tmp[2]) / 1000)
+#     return [fname_list, depthimg_list, textureimg_list, pcd_list]
+
+
+def load_frame_seq_withf(fo=None, root_path=os.path.join(config.ROOT, 'img/zivid/'), path=None):
     if path is None:
         path = os.path.join(root_path, fo)
-    depthimg_list = []
     textureimg_list = []
     pcd_list = []
     fname_list = []
@@ -50,15 +73,10 @@ def load_frame_seq_withf(fo=None, root_path=os.path.join(config.ROOT, 'img/phoxi
             continue
         fname_list.append(f[:-4])
         tmp = pickle.load(open(os.path.join(path, f), 'rb'))
-        if tmp[0].shape[-1] == 3:
-            depthimg_list.append(tmp[1])
-            textureimg_list.append(tmp[0])
-        else:
-            depthimg_list.append(tmp[0])
-            textureimg_list.append(tmp[1])
+        textureimg_list.append(tmp[-1])
         if len(tmp) == 3:
-            pcd_list.append(np.asarray(tmp[2]) / 1000)
-    return [fname_list, depthimg_list, textureimg_list, pcd_list]
+            pcd_list.append(np.asarray(tmp[0]))
+    return [fname_list, textureimg_list, pcd_list]
 
 
 def load_frame(folder_name, f_name, root_path=os.path.join(config.ROOT, 'img/phoxi/'), path=None):
@@ -109,27 +127,27 @@ def get_center_frame(corners, id, img, pcd, colors=None, show_frame=False):
     if id == 1:
         seq = [1, 0, 0, 3]
         relpos = np.asarray([0, -.025, -.05124])
-        relrot = np.eye(3)
+        relrot = rm.rotmat_from_axangle((1, 0, 0), np.pi)
     elif id == 2:
         seq = [1, 0, 0, 3]
         relpos = np.asarray([0, .025, -.05124])
-        relrot = np.eye(3)
+        relrot = rm.rotmat_from_axangle((1, 0, 0), np.pi)
     elif id == 3:
         seq = [2, 3, 0, 3]
         relpos = np.asarray([0, -.025, -.03776])
-        relrot = rm.rotmat_from_axangle((1, 0, 0), np.pi)
+        relrot = np.eye(3)
     elif id == 4:
         seq = [2, 3, 0, 3]
         relpos = np.asarray([0, .025, -.03776])
-        relrot = rm.rotmat_from_axangle((1, 0, 0), np.pi)
+        relrot = np.eye(3)
     elif id == 5:
         seq = [0, 3, 3, 2]
         relpos = np.asarray([0, 0, -.072])
-        relrot = rm.rotmat_from_axangle((1, 0, 0), -np.pi / 2)
+        relrot = rm.rotmat_from_axangle((1, 0, 0), np.pi / 2).dot(rm.rotmat_from_axangle((0, 0, 1), np.pi))
     else:
         seq = [1, 2, 3, 2]
         relpos = np.asarray([0, 0, -.072])
-        relrot = rm.rotmat_from_axangle((1, 0, 0), np.pi / 2)
+        relrot = rm.rotmat_from_axangle((1, 0, 0), -np.pi / 2).dot(rm.rotmat_from_axangle((0, 0, 1), np.pi))
 
     ps = _map_corners_in_pcd(img, pcd, corners)
     if ps is None:
@@ -148,7 +166,8 @@ def get_center_frame(corners, id, img, pcd, colors=None, show_frame=False):
         if colors is not None:
             gm.gen_sphere(np.linalg.inv(relmat4)[:3, 3], rgba=colors[id], radius=.007).attach_to(base)
         # gm.gen_frame(origin_mat4[:3, 3], origin_mat4[:3, :3]).attach_to(base)
-        # gm.gen_frame(marker_mat4[:3, 3], marker_mat4[:3, :3]).attach_to(base)
+        # gm.gen_frame(marker_mat4[:3, 3], marker_mat4[:3, :3], length=.05,
+        #              rgbmatrix=np.asarray([[1, 1, 0], [1, 0, 1], [0, 1, 1]])).attach_to(base)
     return origin_mat4
 
 
@@ -221,24 +240,24 @@ def reg_armarker(fo, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False, t
                  x_range=(.05, .215), y_range=(-.4, .4), z_range=(-.2, -.0155), toggledebug=False):
     if not os.path.exists(os.path.join(config.ROOT, 'recons_data', fo)):
         os.mkdir(os.path.join(config.ROOT, 'recons_data', fo))
-    fnlist, grayimg_list, depthimg_list, pcd_list = load_frame_seq_withf(fo=fo)
+    fnlist, rgb_list, pcd_list = load_frame_seq_withf(fo=fo)
     pcd_cropped_list = []
     inx_list = []
     trans = np.eye(4)
     if toggledebug:
         gm.gen_frame(center, np.eye(3)).attach_to(base)
-    for i in range(len(grayimg_list)):
+    for i in range(len(rgb_list)):
         # cv2.imshow('', grayimg_list[i])
         # cv2.waitKey(0)
         pcd = np.asarray(pcd_list[i])
         inx, gripperframe, pcd, pcd_cropped, = \
-            trans_by_armaker(grayimg_list[i], pcd, x_range=x_range, y_range=y_range, z_range=z_range,
-                             show_frame=toggledebug)
+            trans_by_armaker(cv2.cvtColor(rgb_list[i], cv2.COLOR_BGR2GRAY), pcd,
+                             x_range=x_range, y_range=y_range, z_range=z_range, show_frame=toggledebug)
         if pcd_cropped is not None:
             # pcdu.show_pcd(pcd)
             # pcd_cropped, _ = pcdu.get_nearest_cluster(pcd_cropped, seed=seed, eps=.02, min_samples=200)
             # seed = np.mean(pcd_cropped, axis=0)
-            # pcd_cropped = pcdu.remove_outliers(pcd_cropped, nb_points=16, toggledebug=True)
+            # pcd_cropped = pcdu.remove_outliers(pcd_cropped, nb_points=40, radius=0.01, toggledebug=True)
             gm.gen_sphere(seed, rgba=(1, 1, 0, 1)).attach_to(base)
             print('Num. of points in cropped pcd:', len(pcd_cropped))
             if len(pcd_cropped) > 0:
@@ -409,7 +428,7 @@ def cal_nbc(pcd, gripperframe, rbt, seedjntagls, gl_transmat4=np.eye(4),
     arrow_len = .04
     cam_pos = np.linalg.inv(gripperframe)[:3, 3]
 
-    pts, nrmls, confs = pcdu.cal_conf(pcd, voxel_size=.005, campos=cam_pos, theta=theta)
+    pts, nrmls, confs = pcdu.cal_conf(pcd, voxel_size=.005, cam_pos=cam_pos, theta=theta)
     pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv(pts, nrmls, confs, toggledebug=toggledebug)
 
     print('Num. of NBV:', len(pts_nbv))
@@ -428,7 +447,7 @@ def cal_nbc(pcd, gripperframe, rbt, seedjntagls, gl_transmat4=np.eye(4),
         gm.gen_stick(cam_pos, pts_nbv[0], rgba=(1, 1, 0, 1)).attach_to(base)
 
     nbc_solver = nbcs.NBCOptimizerVec(rbt, max_a=max_a, max_dist=max_dist)
-    jnts, transmat4, _ = nbc_solver.solve(seedjntagls, pts_nbv[0], nrmls_nbv[0], cam_pos)
+    jnts, transmat4, _, time_cost = nbc_solver.solve(seedjntagls, pts_nbv[0], nrmls_nbv[0], cam_pos)
     pcd_cropped_new = pcdu.trans_pcd(pcd, transmat4)
     n_new = pcdu.trans_pcd(nrmls_nbv, transmat4)[0]
     p_new = pcdu.trans_pcd(pts_nbv, transmat4)[0]
@@ -467,7 +486,7 @@ def cal_nbc_pcn(pcd, pcd_pcn, gripperframe, rbt, seedjntagls, gl_transmat4=np.ey
     # base.run()
 
     nbc_solver = nbcs.NBCOptimizerVec(rbt, max_a=max_a, max_dist=max_dist)
-    jnts, transmat4, _ = nbc_solver.solve(seedjntagls, pts_nbv[0], nrmls_nbv[0], cam_pos)
+    jnts, transmat4, _, time_cost = nbc_solver.solve(seedjntagls, pts_nbv[0], nrmls_nbv[0], cam_pos)
     pcd_cropped_new = pcdu.trans_pcd(pcd, transmat4)
     n_new = pcdu.trans_pcd([nrmls_nbv[0]], transmat4)[0]
     p_new = pcdu.trans_pcd([pts_nbv[0]], transmat4)[0]

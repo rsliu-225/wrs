@@ -60,25 +60,25 @@ def nparray2o3dpcd(nx3nparray_pnts, nx3nparray_nrmls=None, estimate_normals=Fals
 
 
 if __name__ == "__main__":
-
+    import config
     f_name = 'test'
 
     model_name = 'pcn'
-    load_model = 'pcn_emd_rec/best_emd_network.pth'
+    load_model = 'pcn_emd_rlen/best_emd_network.pth'
 
     # o3dpcd_1 = o3d.io.read_point_cloud('D:/liu/MVP_Benchmark/completion/data_real/020.pcd')
     # o3dpcd_2 = o3d.io.read_point_cloud('D:/liu/MVP_Benchmark/completion/data_real/001.pcd')
     # o3dpcd_1 = o3d.io.read_point_cloud(config.ROOT + '/recons_data/nbc/plate_a_cubic/000.pcd')
     # path = os.path.join(config.ROOT, 'recons_data/nbc/plate_a_cubic')
     # path = 'D:/liu/MVP_Benchmark/completion/data_real/'
-    # path = 'C:/Users/rsliu/Documents/GitHub/wrs/0002_rs/recons_data/nbc_pcn/plate_a_cubic'
-    path = 'C:/Users/rsliu/Documents/GitHub/wrs/0002_rs/recons_data/seq/plate_a_cubic'
+    # path = f'{config.ROOT}/recons_data/nbc_pcn/plate_a_cubic'
+    path = f'{config.ROOT}/recons_data/nbc/extrude_1'
 
     for i, f in enumerate(os.listdir(path)):
         o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f))
-        # o3dpcd_2 = o3d.io.read_point_cloud(os.path.join(path, os.listdir(path)[i + 1]))
+        o3dpcd_2 = o3d.io.read_point_cloud(os.path.join(path, os.listdir(path)[i + 1]))
         # print(np.asarray(o3dpcd.points).shape)
-        # o3dpcd = o3dpcd + o3dpcd_2
+        o3dpcd = o3dpcd + o3dpcd_2
         # print(np.asarray(o3dpcd.points).shape)
         # if len(np.asarray(o3dpcd.points)) > 2048:
         #     o3dpcd = o3dpcd.uniform_down_sample(int(len(np.asarray(o3dpcd.points)) / 2048))

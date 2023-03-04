@@ -16,7 +16,7 @@ import zivid
 class Zivid(object):
     @staticmethod
     def default_3d_settings() -> zivid.Settings:
-        print("Configuring processing settings for capture:")
+        # print("Configuring processing settings for capture:")
         settings = zivid.Settings()
         settings.experimental.engine = "phase"
         filters = settings.processing.filters
@@ -38,7 +38,7 @@ class Zivid(object):
         color.balance.green = 1.0
         color.gamma = 1.0
         settings.processing.color.experimental.mode = "automatic"
-        print(settings.processing)
+        # print(settings.processing)
         # print("Configuring acquisition settings different for all HDR acquisitions")
         exposure_values = [
             (2.71, 1.03, 1677,),
