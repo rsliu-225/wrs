@@ -270,7 +270,7 @@ class MotionPlanner(object):
         print("--------------start2end(rrt)---------------")
         planner = rrtc.RRTConnect(self.rbt)
         path = planner.plan(component_name=self.armname, start_conf=start, goal_conf=end,
-                            obstacle_list=self.obscmlist + additional_obscmlist, ext_dist=.01, max_time=300)
+                            obstacle_list=self.obscmlist + additional_obscmlist, ext_dist=.001, max_time=300)
 
         if path is None:
             print("rrt failed!")

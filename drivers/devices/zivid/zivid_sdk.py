@@ -21,11 +21,11 @@ class Zivid(object):
         settings.experimental.engine = "phase"
         filters = settings.processing.filters
         filters.smoothing.gaussian.enabled = True
-        filters.smoothing.gaussian.sigma = 1.5
+        filters.smoothing.gaussian.sigma = 2
         filters.noise.removal.enabled = True
-        filters.noise.removal.threshold = 7.0
+        filters.noise.removal.threshold = 5.0
         filters.outlier.removal.enabled = True
-        filters.outlier.removal.threshold = 5.0
+        filters.outlier.removal.threshold = 2.0
         filters.reflection.removal.enabled = True
         filters.reflection.removal.experimental.mode = "global"
         filters.experimental.contrast_distortion.correction.enabled = True
@@ -41,16 +41,16 @@ class Zivid(object):
         # print(settings.processing)
         # print("Configuring acquisition settings different for all HDR acquisitions")
         exposure_values = [
-            (2.71, 1.03, 1677,),
-            (9.24, 1, 1677,),
-            (2, 1.68, 8385,)
+            (2.38, 1.0, 5000,),
+            (9.24, 1.0, 1677,),
+            # (2, 1.68, 8385,)
         ]
         for (aperture, gain, exposure_time) in exposure_values:
             settings.acquisitions.append(
                 zivid.Settings.Acquisition(
                     aperture=aperture,
                     exposure_time=datetime.timedelta(microseconds=exposure_time),
-                    brightness=1.8,
+                    brightness=.9,
                     gain=gain,
                 )
             )

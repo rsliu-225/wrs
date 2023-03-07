@@ -7,7 +7,7 @@ import modeling.geometric_model as gm
 from zivid_sdk import Zivid
 
 if __name__ == "__main__":
-    base = wd.World(cam_pos=[2, 0, 1.5], lookat_pos=[0, 0, 0])
+    base = wd.World(cam_pos=[0, 0, 0], lookat_pos=[0, 0, 1])
     cam = Zivid()
 
     # Get point cloud

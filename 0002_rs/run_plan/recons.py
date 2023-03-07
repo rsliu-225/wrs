@@ -1,12 +1,6 @@
-import numpy as np
-from sklearn.mixture import GaussianMixture
-
-import basis.robot_math as rm
 import modeling.geometric_model as gm
 import utils.pcd_utils as pcdu
 import utils.recons_utils as rcu
-import vision.depth_camera.surface.bibspline_surface as b_surface
-import vision.depth_camera.surface.rbf_surface as rbf_surface
 import visualization.panda.world as wd
 
 if __name__ == '__main__':
@@ -30,21 +24,19 @@ if __name__ == '__main__':
     center = (.116, 0, .0155)
     # center = (0, 0, 0)
 
-    # x_range = (.065, .2)
+    # x_range = (.07, .2)
     # y_range = (-.15, .15)
     # z_range = (.0165, .2)
-
-    x_range = (.07, .2)
-    y_range = (-.15, .15)
-    z_range = (.0165, .2)
-    # z_range = (-.2, -.0155)
+    x_range = (.09, .2)
+    y_range = (-.15, .02)
+    z_range = (.02, .1)
     # gm.gen_frame().attach_to(base)
     pcd_cropped_list = rcu.reg_armarker(fo, seed, center, x_range=x_range, y_range=y_range, z_range=z_range,
                                         toggledebug=False, icp=False)
     pts = []
     for pcd in pcd_cropped_list:
         pts.extend(pcd)
-    pts = pcdu.remove_outliers(pts, toggledebug=False)
+    # pts = pcdu.remove_outliers(pts, nb_points=1000, radius=0.01, toggledebug=True)
     kpts, kpts_rotseq = pcdu.get_kpts_gmm(pts, rgba=(1, 1, 0, 1), n_components=20)
 
     # kpts = bu.linear_inp3d_by_step(kpts)

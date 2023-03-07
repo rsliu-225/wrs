@@ -40,7 +40,7 @@ def get_img(f_name, img_num, path=''):
         i += 1
 
 
-def get_img_rbt(img_num, path='', jnt_range=(-np.pi, np.pi)):
+def get_img_rbt(img_num, path='', jnt_range=(0, np.pi * 2)):
     if not os.path.exists(os.path.join(config.ROOT, 'img', path)):
         os.mkdir(os.path.join(config.ROOT, 'img', path))
     phxi = phoxi.Phoxi(host=config.PHOXI_HOST)
@@ -54,6 +54,8 @@ def get_img_rbt(img_num, path='', jnt_range=(-np.pi, np.pi)):
         jnts_new[6] = a
         rbtx.arm_move_jspace_path([jnts, jnts_new])
         grayimg, _, _ = phxi.dumpalldata(f_name='img/' + path + str(i).zfill(3) + '.pkl')
+        pickle.dump(rbtx.arm_get_jnt_values(),
+                    open(os.path.join(config.ROOT, 'img', path, str(i).zfill(3) + '_jnts.pkl'), 'wb'))
         i += 1
         # cv2.imshow('grayimg', grayimg)
         # cv2.waitKey(0)
@@ -111,9 +113,13 @@ def get_img_rbt_zivid(img_num, path='', jnt_range=(-np.pi, np.pi)):
         jnts_new[6] = a
         rbtx.arm_move_jspace_path([jnts, jnts_new])
         raw_pcd, pcd_no_nan_indices, rgba = cam.get_pcd_rgba()
+        raw_pcd[np.isnan(raw_pcd).any(axis=1)] = [0, 0, 0]
         rgbimg = cv2.cvtColor(rgba[:, :, :3], cv2.COLOR_BGR2RGB)
-        pcd_rgba = rgba.reshape(-1, 4)[pcd_no_nan_indices] / 255
-        pickle.dump([raw_pcd, pcd_rgba, rgbimg], open(os.path.join(config.ROOT, 'img',  path, str(i) + '.pkl'), 'wb'))
+        pcd_rgba = rgba.reshape(-1, 4) / 255
+        pickle.dump([raw_pcd, pcd_rgba, rgbimg],
+                    open(os.path.join(config.ROOT, 'img', path, str(i).zfill(3) + '.pkl'), 'wb'))
+        pickle.dump(rbtx.arm_get_jnt_values(),
+                    open(os.path.join(config.ROOT, 'img', path, str(i).zfill(3) + '_jnts.pkl'), 'wb'))
         i += 1
         cv2.imshow('rgb', rgbimg)
         cv2.waitKey(0)
@@ -121,14 +127,18 @@ def get_img_rbt_zivid(img_num, path='', jnt_range=(-np.pi, np.pi)):
 
 if __name__ == '__main__':
     import localenv.envloader as el
+
     rbt = el.loadXarm()
+    rbtx = el.loadXarmx(ip='10.2.0.201')
+
     folder_name = 'extrude_1'
-    img_num = 18
-    get_img_rbt_zivid(img_num, path=f'zivid/nbc/{folder_name}/')
+    img_num = 9
+    # get_img_rbt_zivid(img_num, path=f'zivid/nbc/{folder_name}/')
+    get_img_rbt(img_num, path=f'phoxi/seq/{folder_name}/')
     # get_img_rbt_opti(img_num, path=f'phoxi/opti/{folder_name}/', jnt_range=(-np.pi, np.pi))
 
-    # rbtx = xarmx.XArmShuidiX(ip='10.2.0.201')
-    # rbtx.arm_jaw_to(0)
-    # jnts = rbtx.arm_get_jnt_values()
-    # jnts_new = rbt.get_jnt_values('arm')
-    # rbtx.arm_move_jspace_path([jnts, jnts_new])
+    # goal_jnts = rbt.get_jnt_values()
+    # init_jnts = rbtx.arm_get_jnt_values()
+    # print(init_jnts)
+    # rbtx.arm_move_jspace_path([init_jnts, goal_jnts])
+    # rbtx.arm_jaw_to(jawwidth=10)
