@@ -1,5 +1,4 @@
 import numpy as np
-import time
 
 import basis.robot_math as rm
 import motion.probabilistic.rrt_connect as rrtc
@@ -48,7 +47,10 @@ class MotionPlannerRbtX(MotionPlanner):
         path_gotoinit = planner.plan(component_name=self.armname, start_conf=start, goal_conf=goal,
                                      obstacle_list=self.obscmlist, ext_dist=.2, max_time=200)
         if path_gotoinit is not None:
-            self.rbtx.move_jntspace_path(path=path_gotoinit, component_name=self.armname, speed_n=speed_n)
+            try:
+                self.rbtx.move_jntspace_path(path=path_gotoinit, component_name=self.armname, speed_n=speed_n)
+            except:
+                self.rbtx.arm_move_jspace_path(path_gotoinit)
 
     def goto_init_hold_x(self, grasp, objcm, objrelpos, objrelrot):
         start = self.get_armjnts()
@@ -61,7 +63,10 @@ class MotionPlannerRbtX(MotionPlanner):
 
         path_gotoinit = self.plan_start2end_hold_armj([start, goal], objcm, objrelpos, objrelrot)
         if path_gotoinit is not None:
-            self.rbtx.move_jntspace_path(path=path_gotoinit, component_name=self.armname)
+            try:
+                self.rbtx.move_jntspace_path(path=path_gotoinit, component_name=self.armname)
+            except:
+                self.rbtx.arm_move_jspace_path(path_gotoinit)
             return True
         return False
 

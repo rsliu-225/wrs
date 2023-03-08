@@ -40,12 +40,13 @@ def get_img(f_name, img_num, path=''):
         i += 1
 
 
-def get_img_rbt(img_num, path='', jnt_range=(0, np.pi * 2)):
+def get_img_rbt(img_num, path='', jnt_range=(-np.pi / 2, np.pi / 2)):
     if not os.path.exists(os.path.join(config.ROOT, 'img', path)):
         os.mkdir(os.path.join(config.ROOT, 'img', path))
     phxi = phoxi.Phoxi(host=config.PHOXI_HOST)
     rbtx = xarmx.XArmShuidiX(ip='10.2.0.201')
     rbtx.arm_jaw_to(0)
+    rbt = el.loadXarm()
     i = 0
 
     for a in np.linspace(jnt_range[0], jnt_range[1], img_num):
@@ -59,6 +60,7 @@ def get_img_rbt(img_num, path='', jnt_range=(0, np.pi * 2)):
         i += 1
         # cv2.imshow('grayimg', grayimg)
         # cv2.waitKey(0)
+    rbtx.arm_move_jspace_path([rbtx.arm_get_jnt_values(), rbt.get_jnt_values()])
 
 
 def get_img_rbt_opti(img_num, path='', jnt_range=(-np.pi, np.pi), capture_times=10):

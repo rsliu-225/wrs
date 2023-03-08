@@ -14,21 +14,18 @@ import visualization.panda.world as wd
 if __name__ == '__main__':
     base = wd.World(cam_pos=[2, 2, 2], lookat_pos=[0, 0, 0])
     # base = wd.World(cam_pos=[0, 0, 0], lookat_pos=[0, 0, 1])
-    # fo = 'nbc/plate_a_cubic'
-    fo = 'nbc_pcn/plate_a_cubic'
-    # fo = 'nbc/extrude_1'
+    fo = 'nbc_pcn/extrude_1'
 
     icp = False
 
     seed = (.116, 0, .1)
-    center = (.116, 0, .0155)
+    center = (.116, 0, -.016)
 
-    x_range = (.09, .2)
+    x_range = (.1, .2)
     y_range = (-.15, .02)
-    z_range = (.02, .1)
-    # z_range = (-.2, -.0155)
+    z_range = (-.1, -.02)
 
-    theta = np.pi / 6
+    theta = None
     max_a = np.pi / 90
 
     rbt = el.loadXarm(showrbt=False)
@@ -54,32 +51,25 @@ if __name__ == '__main__':
     pcd_roi, pcd_trans, gripperframe = \
         rcu.extract_roi_by_armarker(textureimg, pcd, seed=seed,
                                     x_range=x_range, y_range=y_range, z_range=z_range, toggledebug=False)
-
+    cam_pos = np.linalg.inv(gripperframe)[:3, 3]
     pcd_gl = pcdu.trans_pcd(pcd_trans, gl_transmat4)
     pcdu.show_pcd(pcd_gl, rgba=(.5, .5, .5, .5))
     pcdu.show_pcd(pcd_roi, rgba=(1, 1, 0, 1))
     # base.run()
-    cam_pos = np.linalg.inv(gripperframe)[:3, 3]
     # pts_nbv, nrmls_nbv, jnts = \
     #     rcu.cal_nbc(pcd_roi, gripperframe, rbt, seedjntagls=seedjntagls, gl_transmat4=gl_transmat4,
-    #                 theta=theta, max_a=max_a, show_cam=True, toggledebug=True)
+    #                 theta=theta, max_a=max_a, toggledebug=True)
     pts_nbv, nrmls_nbv, jnts = \
         rcu.cal_nbc_pcn(pcd_roi, gripperframe, rbt, center=center, seedjntagls=seedjntagls, gl_transmat4=gl_transmat4,
-                        theta=theta, max_a=max_a, show_cam=True, toggledebug=True)
-
+                        theta=theta, max_a=max_a, toggledebug_p3d=False, toggledebug=True)
+    # pts_nbv, nrmls_nbv, jnts = \
+    #     rcu.cal_nbc_pcn_opt(pcd_roi, gripperframe, rbt, center=center, seedjntagls=seedjntagls,
+    #                         gl_transmat4=gl_transmat4, theta=theta, toggledebug_p3d=False, toggledebug=False)
+    # jnts = np.asarray([-0.07398460829148522, -1.4831178293586407, 0.10714902219645851, -0.33213697033054007,
+    #                    0.1700315322580485, -0.6472981269504606, -0.06802726257477593])
+    # print(','.join([str(j) for j in jnts]))
     m_planner.ah.show_armjnts(armjnts=seedjntagls, rgba=(1, 1, 0, .5))
     m_planner.ah.show_armjnts(armjnts=jnts, rgba=(0, 1, 0, .5))
-    # base.run()
-
     path = m_planner.plan_start2end(start=seedjntagls, end=jnts)
     m_planner.ah.show_ani(path)
     base.run()
-
-    # for fo in sorted(os.listdir(os.path.join(config.ROOT, 'recons_data'))):
-    #     if fo[:2] == 'pl':
-    #         print(fo)
-    #         pcd_cropped_list = reg_plate(fo, seed, center)
-
-    # skeleton(pcd_cropped)
-    # pcdu.cal_conf(pcd_cropped, voxel_size=0.005, radius=.005)
-    # base.run()

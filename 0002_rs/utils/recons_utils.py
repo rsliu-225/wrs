@@ -255,35 +255,37 @@ def reg_armarker(fo, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False, t
         # cv2.waitKey(0)
         pcd = np.asarray(pcd_list[i])
         inx, gripperframe, pcd, pcd_cropped, = \
-            trans_by_armaker(texture_img[i], pcd,
-                             x_range=x_range, y_range=y_range, z_range=z_range, show_frame=toggledebug)
+            trans_by_armaker(texture_img[i], pcd, show_frame=toggledebug,
+                             x_range=(0, x_range[1]), y_range=y_range, z_range=(z_range[0], 0))
         if pcd_cropped is not None:
-            # pcdu.show_pcd(pcd)
             # pcd_cropped, _ = pcdu.get_nearest_cluster(pcd_cropped, seed=seed, eps=.02, min_samples=200)
             # seed = np.mean(pcd_cropped, axis=0)
             # pcd_cropped = pcdu.remove_outliers(pcd_cropped, nb_points=40, radius=0.01, toggledebug=True)
             # gm.gen_sphere(seed, rgba=(1, 1, 0, 1)).attach_to(base)
-            print('Num. of points in cropped pcd:', len(pcd_cropped))
             if len(pcd_cropped) > 0:
-                if to_zero:
-                    pcd_cropped = pcd_cropped - np.asarray(center)
-                o3dpcd = o3dh.nparray2o3dpcd(pcd_cropped)
-                o3d.io.write_point_cloud(os.path.join(config.ROOT, 'recons_data', fo, f'{fnlist[i]}' + '.pcd'), o3dpcd)
-                # o3d.visualization.draw_geometries([o3dpcd])
                 pcd_cropped_list.append(pcd_cropped)
                 inx_list.append(inx)
 
     colors = [(1, 0, 0, 1), (1, 1, 0, 1), (1, 0, 1, 1), (0, 1, 0, 1), (0, 1, 1, 1), (0, 0, 1, 1)]
-    for i in range(1, len(pcd_cropped_list)):
-        print(len(pcd_cropped_list[i - 1]))
-        if icp:
+    if icp:
+        for i in range(1, len(pcd_cropped_list)):
             _, _, trans_tmp = \
-                o3dh.registration_ptpt(pcd_list[i], pcd_list[i - 1], downsampling_voxelsize=.001, toggledebug=False)
+                o3dh.registration_ptpt(pcd_cropped_list[i], pcd_cropped_list[i - 1], downsampling_voxelsize=.01,
+                                       toggledebug=False)
             trans = trans_tmp.dot(trans)
             pcd_cropped_list[i] = pcdu.trans_pcd(pcd_cropped_list[i], trans)
-            pcdu.show_pcd(pcdu.trans_pcd(pcd_cropped_list[i], trans), rgba=colors[inx_list[i] - 1])
-        else:
-            pcdu.show_pcd(pcd_cropped_list[i - 1], rgba=colors[inx_list[i] - 1])
+
+    for i in range(len(pcd_cropped_list)):
+        pcd_cropped = pcdu.crop_pcd(pcd_cropped_list[i], x_range, y_range, z_range)
+        print('Num. of points in cropped pcd:', len(pcd_cropped))
+        o3dpcd = o3dh.nparray2o3dpcd(pcd_cropped)
+        o3d.io.write_point_cloud(os.path.join(config.ROOT, 'recons_data', fo, f'{fnlist[i]}' + '.pcd'), o3dpcd)
+        # pcdu.show_pcd(pcd_cropped_list[i], rgba=colors[inx_list[i] - 1])
+        if to_zero:
+            pcd_cropped = pcd_cropped - np.asarray(center)
+        pcd_cropped_list[i] = pcd_cropped
+        # o3d.visualization.draw_geometries([o3dpcd])
+
     # if toggledebug:
     #     o3dpcd_list = []
     #     for i in range(len(pcd_cropped_list)):
@@ -428,12 +430,17 @@ def extract_roi_by_armarker(textureimg, pcd, seed,
 
 
 def cal_nbc(pcd, gripperframe, rbt, seedjntagls, gl_transmat4=np.eye(4),
-            theta=np.pi / 3, max_a=np.pi / 18, max_dist=1, toggledebug=True, show_cam=True):
+            theta=np.pi / 3, max_a=np.pi / 18, max_dist=1, toggledebug_p3d=False, toggledebug=False):
     arrow_len = .04
     cam_mat4 = np.linalg.inv(gripperframe)
     pts, nrmls, confs = pcdu.cal_conf(pcd, voxel_size=.005, cam_pos=cam_mat4[:3, 3], theta=theta)
-    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv(pts, nrmls, confs, toggledebug=toggledebug)
+    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv(pts, nrmls, confs, toggledebug=toggledebug_p3d)
     print('Num. of NBV:', len(pts_nbv))
+
+    if toggledebug:
+        coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
+        o3dpcd = o3dh.nparray2o3dpcd(pcd)
+        nu.show_nbv_o3d(pts_nbv, nrmls_nbv, confs_nbv, o3dpcd, coord)
 
     pcd = pcdu.trans_pcd(pcd, gl_transmat4)
     pts_nbv = pcdu.trans_pcd(pts_nbv, gl_transmat4)
@@ -441,15 +448,14 @@ def cal_nbc(pcd, gripperframe, rbt, seedjntagls, gl_transmat4=np.eye(4),
     cam_mat4 = np.dot(gl_transmat4, cam_mat4)
     cam_pos = cam_mat4[:3, 3]
 
-    if show_cam:
+    if toggledebug_p3d:
         pcdu.show_cam(cam_mat4)
-    if toggledebug:
         nu.attach_nbv_gm(pts_nbv, nrmls_nbv, confs_nbv, cam_pos, arrow_len)
 
     nbc_solver = nbcs.NBCOptimizerVec(rbt, max_a=max_a, max_dist=max_dist)
     jnts, transmat4, _, time_cost = nbc_solver.solve(seedjntagls, pts_nbv[0], nrmls_nbv[0], cam_pos)
 
-    if toggledebug:
+    if toggledebug_p3d:
         pcd_cropped_new = pcdu.trans_pcd(pcd, transmat4)
         pts_nbv_new = pcdu.trans_pcd(pts_nbv, transmat4)
         nrmls_nbv_new = [transmat4[:3, :3].dot(n) for n in nrmls_nbv]
@@ -465,19 +471,23 @@ def cal_nbc(pcd, gripperframe, rbt, seedjntagls, gl_transmat4=np.eye(4),
 
 
 def cal_nbc_pcn(pcd, gripperframe, rbt, seedjntagls, center=np.asarray((0, 0, 0)), gl_transmat4=np.eye(4),
-                theta=np.pi / 3, max_a=np.pi / 18, max_dist=1, toggledebug=False, show_cam=True):
+                theta=np.pi / 3, max_a=np.pi / 18, max_dist=1, toggledebug=False, toggledebug_p3d=False):
     arrow_len = .04
     cam_mat4 = np.linalg.inv(gripperframe)
-    gm.gen_frame().attach_to(base)
     pcd = np.asarray(pcd) - center
-    pcd_pcn = inference.inference_sgl(pcd, load_model='pcn_emd_rlen/best_cd_p_network.pth', toggledebug=False)
-    pcd_pcn = pcdu.crop_pcd(pcd_pcn, x_range=(-1, 1), y_range=(-1, 1), z_range=(0, 1))
+    pcd_pcn = inference.inference_sgl(pcd, load_model='pcn_emd_rlen/best_cd_p_network.pth', toggledebug=True)
+    pcd_pcn = pcdu.crop_pcd(pcd_pcn, x_range=(-1, 1), y_range=(-1, 1), z_range=(-1, 0))
     pcd_pcn = np.asarray(pcd_pcn) + center
     pcd = np.asarray(pcd) + center
 
-    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd, pcd_pcn, theta=theta, toggledebug=toggledebug)
+    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd, pcd_pcn, radius=.01, theta=theta, toggledebug=toggledebug_p3d)
     print(confs_nbv)
     print('Num. of NBV:', len(pts_nbv))
+    if toggledebug:
+        coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
+        o3dpcd = o3dh.nparray2o3dpcd(pcd)
+        o3dpcd_o = o3dh.nparray2o3dpcd(pcd_pcn)
+        nu.show_nbv_o3d(pts_nbv, nrmls_nbv, confs_nbv, o3dpcd, coord, o3dpcd_o)
 
     pcd = pcdu.trans_pcd(pcd, gl_transmat4)
     pts_nbv = pcdu.trans_pcd(pts_nbv, gl_transmat4)
@@ -485,15 +495,15 @@ def cal_nbc_pcn(pcd, gripperframe, rbt, seedjntagls, center=np.asarray((0, 0, 0)
     cam_mat4 = np.dot(gl_transmat4, cam_mat4)
     cam_pos = cam_mat4[:3, 3]
 
-    if show_cam:
+    if toggledebug_p3d:
         pcdu.show_cam(cam_mat4)
-    if toggledebug:
+        gm.gen_frame().attach_to(base)
         nu.attach_nbv_gm(pts_nbv, nrmls_nbv, confs_nbv, cam_pos, arrow_len)
 
     nbc_solver = nbcs.NBCOptimizerVec(rbt, max_a=max_a, max_dist=max_dist)
     jnts, transmat4, _, time_cost = nbc_solver.solve(seedjntagls, pts_nbv[0], nrmls_nbv[0], cam_pos)
 
-    if toggledebug:
+    if toggledebug_p3d:
         pcd_cropped_new = pcdu.trans_pcd(pcd, transmat4)
         pts_nbv_new = pcdu.trans_pcd(pts_nbv, transmat4)
         nrmls_nbv_new = [transmat4[:3, :3].dot(n) for n in nrmls_nbv]
@@ -509,44 +519,50 @@ def cal_nbc_pcn(pcd, gripperframe, rbt, seedjntagls, center=np.asarray((0, 0, 0)
 
 
 def cal_nbc_pcn_opt(pcd, gripperframe, rbt, seedjntagls, center=np.asarray((0, 0, 0)), gl_transmat4=np.eye(4),
-                    theta=np.pi / 3, toggledebug=False, show_cam=True):
+                    theta=np.pi / 3, toggledebug=False, toggledebug_p3d=False):
     arrow_len = .04
     cam_mat4 = np.linalg.inv(gripperframe)
-    gm.gen_frame().attach_to(base)
+    relmat4 = rm.homomat_from_posrot((0, 0, 0), rm.rotmat_from_axangle((0, 1, 0), -np.pi / 2))
     pcd = np.asarray(pcd) - center
     pcd_pcn = inference.inference_sgl(pcd, load_model='pcn_emd_rlen/best_cd_p_network.pth', toggledebug=False)
-    pcd_pcn = pcdu.crop_pcd(pcd_pcn, x_range=(-1, 1), y_range=(-1, 1), z_range=(0, 1))
-    pcd_pcn = np.asarray(pcd_pcn) + center
-    pcd = np.asarray(pcd) + center
-
-    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd, pcd_pcn, theta=theta, toggledebug=toggledebug)
+    pcd_pcn = pcdu.crop_pcd(pcd_pcn, x_range=(-1, 1), y_range=(-1, 1), z_range=(-1, 0))
+    pcd = pcdu.trans_pcd(pcd, relmat4)
+    pcd_pcn = pcdu.trans_pcd(pcd_pcn, relmat4)
+    cam_mat4 = relmat4.dot(cam_mat4)
+    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd, pcd_pcn, theta=theta, toggledebug=toggledebug_p3d)
     print(confs_nbv)
     print('Num. of NBV:', len(pts_nbv))
 
-    pcd = pcdu.trans_pcd(pcd, gl_transmat4)
-    pts_nbv = pcdu.trans_pcd(pts_nbv, gl_transmat4)
-    nrmls_nbv = pcdu.trans_pcd(nrmls_nbv, gl_transmat4)
-    cam_mat4 = np.dot(gl_transmat4, cam_mat4)
-    cam_pos = cam_mat4[:3, 3]
-
-    if show_cam:
-        pcdu.show_cam(cam_mat4)
     if toggledebug:
-        nu.attach_nbv_gm(pts_nbv, nrmls_nbv, confs_nbv, cam_pos, arrow_len)
+        coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
+        o3dpcd = o3dh.nparray2o3dpcd(pcd)
+        o3dpcd_o = o3dh.nparray2o3dpcd(pcd_pcn)
+        nu.show_nbv_o3d(pts_nbv, nrmls_nbv, confs_nbv, o3dpcd, coord, o3dpcd_o)
 
-    nbc_opt = nbcs_conf.PCNNBCOptimizer(rbt, toggledebug=False)
-    jnts, transmat4, _, time_cost = nbc_opt.solve(seedjntagls, pcd, cam_pos, method='COBYLA')
+    nbc_opt = nbcs_conf.PCNNBCOptimizer(rbt, toggledebug=toggledebug)
+    jnts, transmat4, _, time_cost = nbc_opt.solve(seedjntagls, pcd, cam_mat4[:3, 3], method='COBYLA')
 
-    pcd_cropped_new = pcdu.trans_pcd(pcd, transmat4)
-    n_new = pcdu.trans_pcd([nrmls_nbv[0]], transmat4)[0]
-    p_new = pcdu.trans_pcd([pts_nbv[0]], transmat4)[0]
-    if toggledebug:
-        pcdu.show_pcd(pcd_cropped_new, rgba=(0, 1, 0, 1))
-        gm.gen_arrow(p_new, p_new + n_new / np.linalg.norm(n_new) * arrow_len,
-                     rgba=(0, 1, 0, 1), thickness=0.002).attach_to(base)
-        gm.gen_arrow(pts_nbv[0], pts_nbv[0] + nrmls_nbv[0] * arrow_len / np.linalg.norm(nrmls_nbv[0]),
-                     rgba=(0, 0, 1, 1), thickness=0.002).attach_to(base)
-        gm.gen_dashstick(cam_pos, p_new, rgba=(.7, .7, 0, .5), thickness=.002).attach_to(base)
+    # if toggledebug_p3d:
+    #     gm.gen_frame().attach_to(base)
+    #     pcd = pcdu.trans_pcd(pcd, gl_transmat4)
+    #     pts_nbv = pcdu.trans_pcd(pts_nbv, gl_transmat4)
+    #     nrmls_nbv = [gl_transmat4[:3, :3].dot(n) for n in nrmls_nbv]
+    #     cam_mat4 = np.dot(gl_transmat4, cam_mat4)
+    #     cam_pos = cam_mat4[:3, 3]
+    #
+    #     pcdu.show_cam(cam_mat4)
+    #     nu.attach_nbv_gm(pts_nbv, nrmls_nbv, confs_nbv, cam_pos, arrow_len)
+    #
+    #     pcd_cropped_new = pcdu.trans_pcd(pcd, transmat4)
+    #     pts_nbv_new = pcdu.trans_pcd(pts_nbv, transmat4)
+    #     nrmls_nbv_new = [transmat4[:3, :3].dot(n) for n in nrmls_nbv]
+    #     pcdu.show_pcd(pcd_cropped_new, rgba=(0, 1, 0, 1))
+    #     nu.attach_nbv_gm(pts_nbv_new, nrmls_nbv_new, confs_nbv, cam_pos, arrow_len)
+    #     gm.gen_arrow(pts_nbv_new[0], pts_nbv_new[0] + nrmls_nbv_new[0] / np.linalg.norm(nrmls_nbv_new[0]) * arrow_len,
+    #                  rgba=(0, 1, 0, 1), thickness=0.002).attach_to(base)
+    #     gm.gen_arrow(pts_nbv[0], pts_nbv[0] + nrmls_nbv[0] / np.linalg.norm(nrmls_nbv[0]) * arrow_len,
+    #                  rgba=(0, 0, 1, 1), thickness=0.002).attach_to(base)
+    #     gm.gen_dashstick(cam_pos, pts_nbv_new[0], rgba=(.7, .7, 0, .5), thickness=.002).attach_to(base)
 
     return pts_nbv, nrmls_nbv, jnts
 

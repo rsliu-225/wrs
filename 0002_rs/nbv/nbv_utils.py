@@ -382,7 +382,7 @@ def gen_partial_o3dpcd(o3dmesh, rot=np.eye(3), trans=np.zeros(3), rot_center=(0,
         o3dpcd = o3dpcd.select_by_index(selected_idx)
 
     if fov:
-        o3dpcd = filer_pcd_by_cam_pos(o3dpcd, cam_pos, dist=1.5, angle=np.pi / 6)
+        o3dpcd = filer_pcd_by_cam_pos(o3dpcd, cam_pos, dist=1, angle=np.pi / 6)
 
     o3dpcd.translate(-trans)
     o3dpcd.rotate(np.linalg.inv(rot), center=rot_center)

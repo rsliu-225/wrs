@@ -36,12 +36,11 @@ if __name__ == '__main__':
     icp = False
 
     seed = (.116, 0, .1)
-    center = (.116, 0, .0155)
+    center = (.116, 0, -.016)
 
     x_range = (.1, .2)
     y_range = (-.15, .02)
-    z_range = (.02, .1)
-    # z_range = (-.2, -.0155)
+    z_range = (-.1, -.02)
     theta = None
     max_a = np.pi / 18
 
@@ -49,18 +48,21 @@ if __name__ == '__main__':
 
     i = 0
 
-    use_pcn = True
-    if use_pcn:
-        dump_path = f'phoxi/nbc_pcn/{fo}'
+    method = 'pcn'
+    if method != '':
+        dump_path = f'phoxi/nbc_{method}/{fo}'
     else:
         dump_path = f'phoxi/nbc/{fo}'
 
     if not os.path.exists(os.path.join(config.ROOT, 'img', dump_path)):
         os.makedirs(os.path.join(config.ROOT, 'img', dump_path))
 
-    while i < 2:
+    m_planner_x.goto_init_x()
+    pcd_cmp = np.asarray([])
+    while i < 3:
         seedjntagls = m_planner_x.get_armjnts()
-        # seedjntagls = pickle.load(open(f'{config.ROOT}/img/phoxi/nbc/plate_a_cubic/000_jnts.pkl', 'rb'))
+        # seedjntagls = \
+        #     pickle.load(open(os.path.join(config.ROOT, 'img', dump_path, f'{str(i).zfill(3)}_jnts.pkl'), 'rb'))
         pickle.dump(seedjntagls,
                     open(os.path.join(config.ROOT, 'img', dump_path, f'{str(i).zfill(3)}_jnts.pkl'), 'wb'))
 
@@ -72,7 +74,6 @@ if __name__ == '__main__':
         gm.gen_frame(gl_transpos, tcprot).attach_to(base)
 
         textureimg, depthimg, pcd = phxi.dumpalldata(f_name=os.path.join('img', dump_path, f'{str(i).zfill(3)}.pkl'))
-        pcd = np.asarray(pcd)
         cv2.imshow('grayimg', textureimg)
         cv2.waitKey(0)
         pcd_roi, pcd_trans, gripperframe = \
@@ -81,37 +82,36 @@ if __name__ == '__main__':
         pcd_gl = pcdu.trans_pcd(pcd_trans, gl_transmat4)
         pcdu.show_pcd(pcd_gl, rgba=(1, 1, 1, .5))
         pcdu.show_pcd(pcd_roi, rgba=(1, 0, 0, 1))
+        o3dpcd_tmp = o3dh.nparray2o3dpcd(pcd_roi - np.asarray(center))
+        o3d.io.write_point_cloud(os.path.join(config.ROOT, 'recons_data', 'nbc', fo, f'{str(i).zfill(3)}.pcd'),
+                                 o3dpcd_tmp)
+        if len(pcd_cmp) == 0:
+            pcd_cmp = pcd_roi
+        else:
+            pcd_cmp = np.concatenate([pcd_cmp, pcd_roi])
+        o3dpcd = o3dh.nparray2o3dpcd(pcd_cmp)
 
-        o3dpcd = o3dh.nparray2o3dpcd(pcd_roi - np.asarray(center))
-        o3d.io.write_point_cloud(os.path.join(config.ROOT, 'recons_data', 'nbc', fo, f'{str(i).zfill(3)}.pcd'), o3dpcd)
-
-        if use_pcn:
-            # pcd_pcn = o3d.io.read_point_cloud(
-            #     os.path.join(os.path.join(config.ROOT, 'img/phoxi/nbc_pcn/', fo, f'{str(i).zfill(3)}_output_lc.pcd')))
-            pcd_pcn = inference_sgl(np.asarray(o3dpcd.points))
-            pcd_pcn = pcd_pcn + np.asarray(center)
-
-            # o3dpcd_o = nparray2o3dpcd(pcd_pcn)
-            # o3dpcd.paint_uniform_color(COLOR[0])
-            # o3dpcd_o.paint_uniform_color(COLOR[2])
-            # o3d.visualization.draw_geometries([o3dpcd])
-            # o3d.visualization.draw_geometries([o3dpcd, o3dpcd_o])
+        if method == 'pcn':
             nbv_pts, nbv_nrmls, jnts = \
-                rcu.cal_nbc_pcn(pcd_roi, pcd_pcn, gripperframe, rbt, seedjntagls=seedjntagls, gl_transmat4=gl_transmat4,
-                                theta=theta, max_a=max_a, show_cam=False, toggledebug=True)
+                rcu.cal_nbc_pcn(pcd, gripperframe, rbt, seedjntagls, center=center, gl_transmat4=gl_transmat4,
+                                theta=theta, max_a=max_a, toggledebug_p3d=False, toggledebug=True)
+        elif method == 'opt':
+            nbv_pts, nbv_nrmls, jnts = \
+                rcu.cal_nbc_pcn_opt(pcd, gripperframe, rbt, seedjntagls, center=center, gl_transmat4=gl_transmat4,
+                                    toggledebug_p3d=True)
         else:
             nbv_pts, nbv_nrmls, jnts = \
                 rcu.cal_nbc(pcd_roi, gripperframe, rbt, seedjntagls=seedjntagls, gl_transmat4=gl_transmat4,
-                            theta=theta, max_a=max_a, show_cam=True, toggledebug=True)
+                            theta=theta, max_a=max_a, toggledebug_p3d=True)
         m_planner.ah.show_armjnts(armjnts=jnts, rgba=(0, 1, 0, .5))
         print(jnts)
         pickle.dump(jnts, open(os.path.join(config.ROOT, 'img', dump_path, f'{str(i + 1).zfill(3)}_jnts.pkl'), 'wb'))
         path = m_planner.plan_start2end(start=seedjntagls, end=jnts)
-        base.run()
-
         m_planner.ah.show_ani(path)
+        # base.run()
         m_planner_x.movepath(path)
         time.sleep(5)
         i += 1
+        phxi.dumpalldata(f_name=os.path.join('img', dump_path, f'{str(i).zfill(3)}.pkl'))
 
-    base.run()
+    # base.run()

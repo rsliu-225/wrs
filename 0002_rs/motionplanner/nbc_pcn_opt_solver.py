@@ -1,24 +1,18 @@
-import math
-import warnings as wns
+import copy
 import time
+
 import matplotlib.pyplot as plt
 import numpy as np
+import open3d as o3d
 from scipy.optimize import minimize
 
-import config
-import motionplanner.robot_helper as rbt_helper
-import modeling.geometric_model as gm
 import basis.robot_math as rm
-import copy
-import utils.pcd_utils as pcdu
-import localenv.envloader as el
-
-import nbv.nbv_utils as nu
-import datagenerator.data_utils as du
 import bendplanner.bend_utils as bu
-import open3d as o3d
+import datagenerator.data_utils as du
+import motionplanner.robot_helper as rbt_helper
+import nbv.nbv_utils as nu
 import pcn.inference as pcn
-from scipy.spatial import KDTree
+import utils.pcd_utils as pcdu
 
 TB = True
 
@@ -78,26 +72,20 @@ class PCNNBCOptimizer(object):
                                   fov=True, vis_threshold=np.radians(75), cam_pos=self.cam_pos)
         o3dpcd_tmp_origin.paint_uniform_color(nu.COLOR[5])
 
-        # if self.toggledebug:
-        #     coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
-        #     coord_tmp = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
-        #     coord_tmp.transform(transmat4)
-        #     cam_mesh = o3d.geometry.TriangleMesh.create_sphere(radius=.005)
-        #     cam_mesh.translate(self.cam_pos)
-        #     rbt_o3dmesh_all = nu.rbt2o3dmesh(self.rbt, link_num=3, show_nrml=True)
-        #     rbt_o3dmesh_all.transform(np.linalg.inv(self.init_eemat4))
-        #     o3dmesh_tmp = copy.deepcopy(self.o3dmesh)
-        #     o3dmesh_tmp.transform(transmat4)
-        #     o3dpcd_nxt = copy.deepcopy(o3dpcd_tmp_origin)
-        #     o3dpcd_nxt.transform(transmat4)
-        #     o3d.visualization.draw_geometries([rbt_o3dmesh_all, o3dpcd_nxt, o3dmesh_tmp, coord, coord_tmp, cam_mesh])
-        #     o3d.visualization.draw_geometries([o3dpcd_tmp_origin, self.o3dpcd_nbv, coord])
-
-        # kdt_nbv = o3d.geometry.KDTreeFlann(self.o3dpcd_nbv)
-        # for p in np.asarray(o3dpcd_tmp_origin.points):
-        #     _, idx, _ = kdt_nbv.search_knn_vector_3d(p, 1)
-        #     if np.linalg.norm(p - self.nbv_pts[idx]) < .01 and self.nbv_conf[idx] < .2:
-        #         conf_sum += 1 - (self.nbv_conf[idx])
+        if self.toggledebug:
+            coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
+            coord_tmp = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
+            coord_tmp.transform(transmat4)
+            cam_mesh = o3d.geometry.TriangleMesh.create_sphere(radius=1)
+            cam_mesh.translate(self.cam_pos)
+            rbt_o3dmesh_all = nu.rbt2o3dmesh(self.rbt, link_num=3, show_nrml=True)
+            rbt_o3dmesh_all.transform(np.linalg.inv(self.init_eemat4))
+            o3dmesh_tmp = copy.deepcopy(self.o3dmesh)
+            o3dmesh_tmp.transform(transmat4)
+            o3dpcd_nxt = copy.deepcopy(o3dpcd_tmp_origin)
+            o3dpcd_nxt.transform(transmat4)
+            o3d.visualization.draw_geometries([rbt_o3dmesh_all, o3dpcd_nxt, o3dmesh_tmp, coord, coord_tmp, cam_mesh])
+            o3d.visualization.draw_geometries([o3dpcd_tmp_origin, self.o3dpcd_nbv, coord])
 
         if len(np.asarray(o3dpcd_tmp_origin.points)) == 0:
             self.obj_list.append(conf_sum)
@@ -165,23 +153,28 @@ class PCNNBCOptimizer(object):
         self.rbth.goto_armjnts(x)
         eepos, eerot = self.rbt.get_gl_tcp()
         err = abs(np.asarray(eepos)[0] - self.init_eepos[0])
-        return .2 - err
+        return .1 - err
 
     def con_diff_y(self, x):
         self.rbth.goto_armjnts(x)
         eepos, eerot = self.rbt.get_gl_tcp()
-        err = abs(np.asarray(eepos)[1] - self.init_eepos[1])
-        return .2 - err
+        err = -(abs(np.asarray(eepos)[1] - self.init_eepos[1]))
+        return .1 - err
 
     def con_diff_z(self, x):
         self.rbth.goto_armjnts(x)
         eepos, eerot = self.rbt.get_gl_tcp()
         err = abs(np.asarray(eepos)[2] - self.init_eepos[2])
-        return .2 - err
+        return .1 - err
 
     def con_cost(self, x):
         w_e = np.linalg.norm(x - self.seedjntagls)
         return 1 - w_e
+
+    def con_collision(self, x):
+        flag = self.rbth.is_selfcollided(x)
+        print(flag, .5 - flag)
+        return .5 - flag
 
     def con_manipulability(self, x):
         self.rbth.goto_armjnts(x)
@@ -200,6 +193,7 @@ class PCNNBCOptimizer(object):
         time_start = time.time()
         self.update_known(seedjntagls, pcd_i, cam_pos)
         # self.addconstraint(self.con_dist, condition="ineq")
+        # self.addconstraint(self.con_collision, condition="ineq")
         self.addconstraint(self.con_diff_x, condition="ineq")
         self.addconstraint(self.con_diff_y, condition="ineq")
         self.addconstraint(self.con_diff_z, condition="ineq")

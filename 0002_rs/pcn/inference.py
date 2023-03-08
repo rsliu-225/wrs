@@ -1,13 +1,12 @@
 import logging
 import os
 import warnings
-import config as config
 
 import munch
 import numpy as np
 import open3d as o3d
 import torch
-
+import config
 import pcn.models.pcn as model_module
 
 warnings.filterwarnings("ignore")
@@ -35,11 +34,12 @@ def inference_sgl(input_narry, model_name='pcn', load_model='pcn_emd_rlen/best_c
         result_dict = net(inputs)
         output = result_dict['result'].cpu().numpy()
     if toggledebug:
+        coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
         o3dpcd_i = nparray2o3dpcd(input_narry)
         o3dpcd_o = nparray2o3dpcd(output[0])
         o3dpcd_i.paint_uniform_color(COLOR[0])
         o3dpcd_o.paint_uniform_color(COLOR[2])
-        o3d.visualization.draw_geometries([o3dpcd_i, o3dpcd_o])
+        o3d.visualization.draw_geometries([o3dpcd_i, o3dpcd_o, coord])
 
     return output[0]
 

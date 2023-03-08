@@ -16,7 +16,6 @@ import basis.robot_math as rm
 import basis.trimesh as trm
 import modeling.collision_model as cm
 import modeling.geometric_model as gm
-import pcd_utils
 
 COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40], [255, 127, 14]]) / 255
 

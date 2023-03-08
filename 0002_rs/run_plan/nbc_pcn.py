@@ -72,7 +72,7 @@ if __name__ == '__main__':
     # pcd_pcn = np.asarray(pcd_pcn) + np.asarray(center)
     pts_nbv, nrmls_nbv, jnts = \
         rcu.cal_nbc_pcn(pcd_roi, gripperframe, rbt, seedjntagls, center=center, gl_transmat4=gl_transmat4,
-                        show_cam=True, theta=np.pi / 6, toggledebug=True)
+                        show_cam=True, theta=np.pi / 6, toggledebug_p3d=True)
     pcdu.show_pcd(pcd_roi, rgba=(1, 0, 0, 1))
 
     m_planner.ah.show_armjnts(armjnts=seedjntagls, rgba=(1, 0, 0, .5))

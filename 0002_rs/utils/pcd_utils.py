@@ -889,15 +889,15 @@ def cal_nbv_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, radius=.01, toggled
     def _normalize(l):
         return [(v - min(l)) / (max(l) - min(l)) for v in l]
 
-    # _, _, trans = o3dh.registration_icp_ptpt(pts_pcn, pts, maxcorrdist=.02, toggledebug=False)
-    # pts_pcn = trans_pcd(pts_pcn, trans)
+    _, _, trans = o3dh.registration_icp_ptpt(pts_pcn, pts, maxcorrdist=.02, toggledebug=False)
+    pts_pcn = trans_pcd(pts_pcn, trans)
     # if toggledebug:
     #     show_pcd(pts_pcn, rgba=COLOR[2])
     # show_pcd(pts, rgba=COLOR[0])
     o3d_pcn = o3dh.nparray2o3dpcd(pts_pcn)
     o3d_pts = o3dh.nparray2o3dpcd(pts)
-    o3d_pcn.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=radius, max_nn=100))
-    o3d_pts.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=radius, max_nn=100))
+    o3d_pcn.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=radius * 2, max_nn=200))
+    o3d_pts.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=radius * 2, max_nn=200))
 
     o3d_kpts = o3d_pcn.voxel_down_sample(voxel_size=radius)
     kpts = np.asarray(o3d_kpts.points)

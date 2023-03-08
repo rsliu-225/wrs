@@ -8,7 +8,7 @@ if __name__ == '__main__':
 
     base = wd.World(cam_pos=[2, 2, 2], lookat_pos=[0, 0, 0])
     # base = wd.World(cam_pos=[0, 0, 0], lookat_pos=[0, 0, 1])
-    fo = 'nbc/extrude_1'
+    fo = 'nbc_pcn/extrude_1'
     # fo = 'nbc/plate_a_cubic'
     # fo = 'opti/plate_a_cubic'
     # fo = 'seq/plate_a_quadratic'
@@ -16,7 +16,7 @@ if __name__ == '__main__':
 
     width = .008
     thickness = .0015
-    cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
+    cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]][::-1]
 
     icp = False
 
@@ -27,12 +27,12 @@ if __name__ == '__main__':
     # x_range = (.07, .2)
     # y_range = (-.15, .15)
     # z_range = (.0165, .2)
-    x_range = (.09, .2)
+    x_range = (.1, .2)
     y_range = (-.15, .02)
-    z_range = (.02, .1)
+    z_range = (-.1, -.03)
     # gm.gen_frame().attach_to(base)
     pcd_cropped_list = rcu.reg_armarker(fo, seed, center, x_range=x_range, y_range=y_range, z_range=z_range,
-                                        toggledebug=False, icp=False)
+                                        toggledebug=False, icp=True)
     pts = []
     for pcd in pcd_cropped_list:
         pts.extend(pcd)
@@ -45,6 +45,7 @@ if __name__ == '__main__':
     for i, rot in enumerate(kpts_rotseq):
         gm.gen_frame(kpts[i], kpts_rotseq[i], thickness=.001, length=.03).attach_to(base)
     objcm = bu.gen_swap(kpts, kpts_rotseq, cross_sec)
+    objcm.set_rgba((1, 1, 1, .5))
     objcm.attach_to(base)
 
     # surface = b_surface.BiBSpline(pts[:, :2], pts[:, 2])
