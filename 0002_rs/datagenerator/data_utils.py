@@ -16,6 +16,7 @@ import basis.robot_math as rm
 import basis.trimesh as trm
 import modeling.collision_model as cm
 import modeling.geometric_model as gm
+import pcd_utils
 
 COLOR = np.asarray([[31, 119, 180], [44, 160, 44], [214, 39, 40], [255, 127, 14]]) / 255
 
@@ -336,6 +337,54 @@ def gen_seed(num_kpts=4, max=.02, width=.008, length=.2, thickness=.0015, n=10, 
     #     if i % 10 == 0:
     #         gm.gen_frame(pseq[i], rotseq[i], length=.02, thickness=.002).attach_to(base)
     return gen_swap(pseq, rotseq, cross_sec), gen_swap(pseq, rotseq, flat_sec), pseq, rotseq
+
+
+def gen_seed_deform(objcm, num_kpts=4, max=.02, n=10, toggledebug=False):
+    success = False
+    vs = objcm.objtrm.vertices
+    org_len = np.linalg.norm(vs[:, 0].max() - vs[:, 0].min())
+    width = np.linalg.norm(vs[:, 1].max() - vs[:, 1].min())
+    flat_sec = [[0, width / 2], [0, -width / 2], [0, -width / 2], [0, width / 2]]
+
+    pseq, rotseq = [], []
+    vs_deformed = []
+    # vs_deformed = vs
+    while not success:
+        if num_kpts <= 5:
+            kpts = random_kpts(num_kpts, max=max)
+        else:
+            kpts = random_kpts_sprl(num_kpts, z_max=max, toggledebug=toggledebug)
+
+        if len(kpts) != n:
+            pseq = uni_length(spl_inp(pseq=kpts, n=n, toggledebug=toggledebug), goal_len=org_len)
+        else:
+            pseq = uni_length(kpts, goal_len=org_len)
+
+        pseq = np.asarray(pseq) - pseq[0]
+        pseq, rotseq = get_rotseq_by_pseq(pseq)
+        for i in range(len(rotseq) - 1):
+            if rm.angle_between_vectors(rotseq[i][:, 2], rotseq[i + 1][:, 2]) > np.pi / 15:
+                success = False
+                break
+            success = True
+
+    pseq_org = [(0, 0, 0)]
+    for i in range(1, len(pseq)):
+        pseq_org.append(np.asarray((np.linalg.norm(pseq[i] - pseq[i - 1]), 0, 0)) + np.asarray(pseq_org[-1]))
+    for i in range(len(pseq)):
+        if i % 10 == 0:
+            gm.gen_frame(pseq[i], rotseq[i], length=.02, thickness=.002).attach_to(base)
+            gm.gen_sphere(pseq_org[i], radius=0.002).attach_to(base)
+    kdt_pseq_org = KDTree(pseq_org, leaf_size=2)
+    for v in vs:
+        _, ind = kdt_pseq_org.query([v], k=1)
+        rot = rm.rotmat_between_vectors(np.asarray([0, 0, 1]), rotseq[ind[0][0]][:, 2])
+        vs_deformed.append(np.asarray(pseq[ind[0][0]]) + np.dot(rot, np.asarray(v - pseq_org[ind[0][0]])))
+
+    objtrm_deformed = trm.Trimesh(vertices=np.asarray(vs_deformed), faces=np.asarray(objcm.objtrm.faces))
+
+    return cm.CollisionModel(initor=objtrm_deformed, btwosided=True, name='obj'), \
+           gen_swap(pseq, rotseq, flat_sec), pseq, rotseq
 
 
 '''

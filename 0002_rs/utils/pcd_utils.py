@@ -759,6 +759,7 @@ def extract_main_vec(pts, nrmls, confs, threshold=np.radians(30), toggledebug=Fa
     inx = sorted(range(len(confs)), key=lambda k: confs[k])
     confs = np.asarray(confs)[inx]
     pts = np.asarray(pts)[inx]
+    # nrmls = np.asarray([rm.unit_vector(n) for n in nrmls])[inx]
     nrmls = np.asarray(nrmls)[inx]
     res_list = list(range(len(confs)))
     nbv_inx_dict = {}
@@ -892,7 +893,7 @@ def cal_nbv_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, radius=.01, toggled
     # pts_pcn = trans_pcd(pts_pcn, trans)
     # if toggledebug:
     #     show_pcd(pts_pcn, rgba=COLOR[2])
-        # show_pcd(pts, rgba=COLOR[0])
+    # show_pcd(pts, rgba=COLOR[0])
     o3d_pcn = o3dh.nparray2o3dpcd(pts_pcn)
     o3d_pts = o3dh.nparray2o3dpcd(pts)
     o3d_pcn.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=radius, max_nn=100))
@@ -926,7 +927,7 @@ def cal_nbv_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, radius=.01, toggled
     #         # gm.gen_arrow(kpts[i], kpts[i] + nrmls[i] * .02, rgba=[confs[i], 0, 1 - confs[i], 1],
     #         #              thickness=.001).attach_to(base)
     # kpts, nrmls, confs = extract_main_vec(kpts, nrmls, confs)
-    # pts, nrmls, confs = extract_main_vec(pts, nrmls, confs, threshold=np.radians(10), toggledebug=toggledebug)
+    # pts, nrmls, confs = extract_main_vec(pts, nrmls, confs, threshold=np.radians(30), toggledebug=toggledebug)
 
     return np.asarray(kpts)[np.argsort(confs)], \
            np.asarray(nrmls)[np.argsort(confs)], \

@@ -444,14 +444,14 @@ if __name__ == '__main__':
     # make_dual_marker(marker_dict=aruco.DICT_4X4_250, marker_size=45, dpi=600)
     make_aruco_board(2, 1, marker_size=40, marker_dict=aruco.DICT_4X4_250, start_id=1, frame_size=[50, 100])
     # makechessboard(1, 1, square_size=35, frame_size = [100,150])
-
-    make_multi_marker(marker_dict=aruco.DICT_4X4_250,
-                      id_list=[0, 1, 2, 3, 4, 5, 6, 7],
-                      marker_pos_list=((-77.5, 37.5), (-77.5, 12.5), (-77.5, -12.5), (-77.5, -37.5), (77.5, 37.5), (77.5, 12.5), (77.5, -12.5), (77.5, -37.5)),
-                      marker_size=20,
-                      savepath='./',
-                      name='test',
-                      frame_size=(180, 130),
-                      paper_width=210,
-                      paper_height=297,
-                      dpi=600)
+    #
+    # make_multi_marker(marker_dict=aruco.DICT_4X4_250,
+    #                   id_list=[0, 1, 2, 3, 4, 5, 6, 7],
+    #                   marker_pos_list=((-77.5, 37.5), (-77.5, 12.5), (-77.5, -12.5), (-77.5, -37.5), (77.5, 37.5), (77.5, 12.5), (77.5, -12.5), (77.5, -37.5)),
+    #                   marker_size=20,
+    #                   savepath='./',
+    #                   name='test',
+    #                   frame_size=(180, 130),
+    #                   paper_width=210,
+    #                   paper_height=297,
+    #                   dpi=600)

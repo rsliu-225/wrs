@@ -2,7 +2,7 @@ import os.path
 
 import numpy
 
-from _tst_gen_dataset import *
+from _gen_dataset import *
 import data_utils as utl
 from gen_multiview import *
 import open3d as o3d
