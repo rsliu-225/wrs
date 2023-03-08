@@ -1,18 +1,13 @@
 import logging
-import importlib
-import numpy as np
-import h5py
-import subprocess
 import os
-
-from numpy.lib.index_tricks import AxisConcatenator
-import munch
-import torch
-import open3d as o3d
-
 import warnings
+import config as config
 
-import config
+import munch
+import numpy as np
+import open3d as o3d
+import torch
+
 import pcn.models.pcn as model_module
 
 warnings.filterwarnings("ignore")
@@ -60,22 +55,34 @@ def nparray2o3dpcd(nx3nparray_pnts, nx3nparray_nrmls=None, estimate_normals=Fals
 
 
 if __name__ == "__main__":
+    import config
 
     f_name = 'test'
 
     model_name = 'pcn'
-    load_model = 'pcn_emd_rec/best_emd_network.pth'
+    load_model = 'pcn_emd_rlen/best_emd_network.pth'
 
     # o3dpcd_1 = o3d.io.read_point_cloud('D:/liu/MVP_Benchmark/completion/data_real/020.pcd')
     # o3dpcd_2 = o3d.io.read_point_cloud('D:/liu/MVP_Benchmark/completion/data_real/001.pcd')
     # o3dpcd_1 = o3d.io.read_point_cloud(config.ROOT + '/recons_data/nbc/plate_a_cubic/000.pcd')
-    # path = os.path.join(config.ROOT, 'recons_data/nbc/plate_a_cubic')
+    # path = os.path.join(config.ROOT, 'recons_data/seq/plate_a_quadratic')
     # path = 'D:/liu/MVP_Benchmark/completion/data_real/'
-    # path = 'C:/Users/rsliu/Documents/GitHub/wrs/0002_rs/recons_data/nbc_pcn/plate_a_cubic'
-    path = 'C:/Users/rsliu/Documents/GitHub/wrs/0002_rs/recons_data/seq/plate_a_cubic'
+    # path = f'{config.ROOT}/recons_data/nbc_pcn/plate_a_cubic'
+    path = f'{config.ROOT}/recons_data/nbc/extrude_1'
 
     for i, f in enumerate(os.listdir(path)):
         o3dpcd = o3d.io.read_point_cloud(os.path.join(path, f))
+        o3dpcd = o3dpcd.voxel_down_sample(voxel_size=.001)
+
+        o3dpcd, ind = o3dpcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=2)
+        outlier_cloud = o3dpcd.select_by_index(ind, invert=True)
+        o3dpcd = o3dpcd.select_by_index(ind)
+        print("Showing outliers (red) and inliers (gray): ")
+        outlier_cloud.paint_uniform_color([1, 0, 0])
+        o3dpcd.paint_uniform_color([0.8, 0.8, 0.8])
+
+        o3d.visualization.draw_geometries([o3dpcd, outlier_cloud])
+
         # o3dpcd_2 = o3d.io.read_point_cloud(os.path.join(path, os.listdir(path)[i + 1]))
         # print(np.asarray(o3dpcd.points).shape)
         # o3dpcd = o3dpcd + o3dpcd_2
@@ -83,6 +90,7 @@ if __name__ == "__main__":
         # if len(np.asarray(o3dpcd.points)) > 2048:
         #     o3dpcd = o3dpcd.uniform_down_sample(int(len(np.asarray(o3dpcd.points)) / 2048))
         # print(np.asarray(o3dpcd.points).shape)
+
         result = inference_sgl(np.asarray(o3dpcd.points), model_name, load_model)
         o3dpcd_o = nparray2o3dpcd(result)
         o3dpcd.paint_uniform_color(COLOR[0])

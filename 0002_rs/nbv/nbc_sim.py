@@ -641,11 +641,11 @@ if __name__ == '__main__':
             o3dmesh_gt = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'prim', f))
             o3dpcd_gt = du.get_objpcd_full_sample_o3d(o3dmesh_gt, smp_num=2048, method='possion')
 
-            run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, goal=goal, cov_tor=cov_tor,
-                    vis_threshold=vis_threshold, toggledebug=False, toggledebug_p3d=False)
-            run_random(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, goal=goal, cov_tor=cov_tor,
-                       vis_threshold=vis_threshold, toggledebug=False, toggledebug_p3d=False)
+            # run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, goal=goal, cov_tor=cov_tor,
+            #         vis_threshold=vis_threshold, toggledebug=False, toggledebug_p3d=True)
+            # run_random(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, goal=goal, cov_tor=cov_tor,
+            #            vis_threshold=vis_threshold, toggledebug=False, toggledebug_p3d=False)
             run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_name, load_model, goal=goal,
-                    cov_tor=cov_tor, vis_threshold=vis_threshold, toggledebug=False, toggledebug_p3d=False)
+                    cov_tor=cov_tor, vis_threshold=vis_threshold, toggledebug=False, toggledebug_p3d=True)
             run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_name, load_model, goal=goal,
                         cov_tor=cov_tor, vis_threshold=vis_threshold, toggledebug=False, toggledebug_p3d=False)

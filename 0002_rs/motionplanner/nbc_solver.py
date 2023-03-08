@@ -1,17 +1,14 @@
-import math
-import warnings as wns
 import time
+
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import minimize
 
-import config
-import motionplanner.robot_helper as rbt_helper
-import modeling.geometric_model as gm
 import basis.robot_math as rm
-import copy
+import config
+import modeling.geometric_model as gm
+import motionplanner.robot_helper as rbt_helper
 import utils.pcd_utils as pcdu
-import localenv.envloader as el
 
 TB = True
 
@@ -60,8 +57,8 @@ class NBCOptimizerVec(object):
         eemat4 = rm.homomat_from_posrot(eepos, eerot)
         transmat4 = eemat4.dot(np.linalg.inv(self.init_eemat4))
         p_new = pcdu.trans_pcd(self.nbv_pt, transmat4)[0]
-        w_sr = np.degrees(rm.angle_between_vectors(config.CAM_LS, self.campos - p_new))
-        w_wo = np.degrees(rm.angle_between_vectors(eerot[:, 0], self.campos - p_new))
+        w_sr = np.degrees(rm.angle_between_vectors(config.CAM_LS, self.cam_pos - p_new))
+        w_wo = np.degrees(rm.angle_between_vectors(eerot[:, 0], self.cam_pos - p_new))
 
         # obj = -(w_e * w_m * (-w_sr) * w_wo)
         # obj = w_e + (-w_m) + w_sr
@@ -79,16 +76,17 @@ class NBCOptimizerVec(object):
         self.seedjntagls = seedjntagls
         self.init_eepos, self.init_eerot = self.rbt.get_gl_tcp()
         self.init_eemat4 = rm.homomat_from_posrot(self.init_eepos, self.init_eerot)
-        self.nbv_pt, self.nbv_nrml, self.campos = nbv_pt, nbv_nrml, campos,
+        self.nbv_pt, self.nbv_nrml, self.cam_pos = nbv_pt, nbv_nrml, campos,
 
     def con_rot(self, x):
         self.rbth.goto_armjnts(x)
         eepos, eerot = self.rbt.get_gl_tcp()
         eemat4 = rm.homomat_from_posrot(eepos, eerot)
         transmat4 = eemat4.dot(np.linalg.inv(self.init_eemat4))
-        n_new = pcdu.trans_pcd([self.nbv_nrml], transmat4)[0]
+        # n_new = pcdu.trans_pcd([self.nbv_nrml], transmat4)[0]
+        n_new = transmat4[:3, :3].dot(self.nbv_nrml)
         p_new = pcdu.trans_pcd([self.nbv_pt], transmat4)[0]
-        err = rm.angle_between_vectors(n_new, self.campos - p_new)
+        err = rm.angle_between_vectors(n_new, self.cam_pos - p_new)
         err = min([err, np.pi - err])
         self.rot_err.append(np.degrees(err))
         return self.max_a - err
@@ -96,7 +94,7 @@ class NBCOptimizerVec(object):
     def con_dist(self, x):
         self.rbth.goto_armjnts(x)
         eepos, eerot = self.rbt.get_gl_tcp()
-        err = np.linalg.norm(np.asarray(eepos) - self.campos)
+        err = np.linalg.norm(np.asarray(eepos) - self.cam_pos)
         self.pos_err.append(err)
         return self.max_dist - err
 
@@ -132,9 +130,9 @@ class NBCOptimizerVec(object):
         self.update_known(seedjntagls, nbv_p, nbv_nrml, campos)
         self.addconstraint(self.con_rot, condition="ineq")
         self.addconstraint(self.con_dist, condition="ineq")
-        # self.addconstraint(self.con_diff_x, condition="ineq")
-        # self.addconstraint(self.con_diff_y, condition="ineq")
-        # self.addconstraint(self.con_diff_z, condition="ineq")
+        self.addconstraint(self.con_diff_x, condition="ineq")
+        self.addconstraint(self.con_diff_y, condition="ineq")
+        self.addconstraint(self.con_diff_z, condition="ineq")
 
         sol = minimize(self.objctive, seedjntagls, method=method, bounds=self.bnds, constraints=self.cons)
         time_cost = time.time() - time_start
