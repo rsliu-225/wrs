@@ -2,10 +2,10 @@ import copy
 
 import numpy as np
 
-import robot_sim.end_effectors.gripper.robotiqhe.robotiqhe as rtqhe
-import motionplanner.robot_helper as rbt_helper
 import basis.robot_math as rm
 import modeling.geometric_model as gm
+import motionplanner.robot_helper as rbt_helper
+import robot_sim.end_effectors.gripper.robotiqhe.robotiqhe as rtqhe
 
 
 class AnimationHelper(object):
@@ -156,13 +156,13 @@ class AnimationHelper(object):
         obj.attach_to(base)
         obj.showlocalframe()
 
-    def show_armjnts(self, rgba=None, armjnts=None, toggleendcoord=False, togglejntcoord=False, jawwidth=50,
+    def show_armjnts(self, rgba=None, armjnts=None, toggleendcoord=False, togglejntcoord=False, jawwidth=10,
                      genmnp=True):
         if armjnts is not None:
             self.rbt.fk(self.armname, jnt_values=armjnts)
         if genmnp:
             self.__genmnp_by_armname(rgba=rgba, toggleendcoord=toggleendcoord, togglejntcoord=togglejntcoord,
-                                     jawwidth=jawwidth)
+                                     jaw_width=jawwidth)
         else:
             self.__gensnp_by_armname(toggleendcoord=toggleendcoord, togglejntcoord=togglejntcoord)
 
@@ -186,7 +186,7 @@ class AnimationHelper(object):
     def show_ani(self, path):
         rbtmnp = [None, None]
         motioncounter = [0]
-        taskMgr.doMethodLater(0.05, self.__update, "update",
+        taskMgr.doMethodLater(0.01, self.__update, "update",
                               extraArgs=[rbtmnp, motioncounter, self.rbt, path, self.armname],
                               appendTask=True)
 
@@ -207,7 +207,8 @@ class AnimationHelper(object):
                                          obj_lft, objrelpos_lft, objrelrot_lft, obj_rgt, objrelpos_rgt, objrelrot_rgt],
                               appendTask=True)
 
-    def __genmnp_by_armname(self, rgba, toggleendcoord=False, togglejntcoord=False, jawwidth=50):
+    def __genmnp_by_armname(self, rgba, toggleendcoord=False, togglejntcoord=False, jaw_width=50):
+        self.rbt.jaw_to(jawwidth=jaw_width * .001)
         if self.armname == "lft_arm":
             self.rbt.gen_meshmodel(toggle_tcpcs=toggleendcoord, toggle_jntscs=togglejntcoord, rgba=rgba).attach_to(base)
         else:

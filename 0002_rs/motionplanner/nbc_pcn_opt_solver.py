@@ -51,7 +51,7 @@ class PCNNBCOptimizer(object):
         self.nbv_pts, self.nbv_nrmls, self.nbv_conf = [], [], []
         self.init_eepos, self.init_eerot, self.init_eemat4 = None, None, None
         self.o3dpcd_o, self.o3dmesh, self.o3dpcd_nbv = None, None, None
-        self.cam_pos = None
+        self.cam_pos, self.cam_mat4 = None, None
 
     def objective(self, x):
         self.jnts.append(x)
@@ -92,11 +92,17 @@ class PCNNBCOptimizer(object):
             return 0
 
         kdt_tmp = o3d.geometry.KDTreeFlann(o3dpcd_tmp_origin)
+        nrmls_tmp = np.asarray(o3dpcd_tmp_origin.normals)
         for i in range(len(self.nbv_pts)):
             if self.nbv_conf[i] > .4:
                 continue
             _, idx, _ = kdt_tmp.search_radius_vector_3d(self.nbv_pts[i], .01)
             conf_sum += (1 - (self.nbv_conf[i])) * len(idx) / 10
+            # for j in idx:
+            #     a = rm.angle_between_vectors(nrmls_tmp[j], self.cam_mat4[:3, 2])
+            #     if a > np.pi / 9:
+            #         conf_sum += (1 - (self.nbv_conf[i])) / 10
+
             # if len(idx) > 50:
             #     conf_sum += 1 - (self.nbv_conf[i])
         self.obj_list.append(conf_sum)
@@ -104,7 +110,7 @@ class PCNNBCOptimizer(object):
             print(x, conf_sum)
         return -conf_sum
 
-    def update_known(self, seedjntagls, pcd_i, cam_pos):
+    def update_known(self, seedjntagls, pcd_i, cam_mat4):
         model_name = 'pcn'
         load_model = 'pcn_emd_all/best_cd_p_network.pth'
 
@@ -112,7 +118,8 @@ class PCNNBCOptimizer(object):
         thickness = .002
         cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
         pcd_i = pcdu.trans_pcd(pcd_i, np.linalg.inv(self.releemat4))
-        self.cam_pos = cam_pos
+        self.cam_pos, self.cam_mat4 = cam_mat4[:3, 3], cam_mat4
+
         self.seedjntagls = seedjntagls
         self.init_eepos, self.init_eerot = self.rbt.get_gl_tcp()
         self.init_eemat4 = rm.homomat_from_posrot(self.init_eepos, self.init_eerot)
@@ -121,7 +128,7 @@ class PCNNBCOptimizer(object):
         pcd_i_inhnd = pcdu.trans_pcd(pcd_i, self.releemat4)
         pcd_o_inhnd = pcdu.trans_pcd(pcd_o, self.releemat4)
         self.nbv_pts, self.nbv_nrmls, self.nbv_conf = \
-            pcdu.cal_nbv_pcn(pcd_i_inhnd, pcd_o_inhnd, cam_pos=cam_pos, theta=None, toggledebug=True)
+            pcdu.cal_nbv_pcn(pcd_i_inhnd, pcd_o_inhnd, cam_pos=self.cam_pos, theta=None, toggledebug=True)
         self.o3dpcd_o = du.nparray2o3dpcd(pcd_o_inhnd)
         self.o3dpcd_nbv = du.nparray2o3dpcd(np.asarray(self.nbv_pts))
         self.o3dpcd_nbv.colors = o3d.utility.Vector3dVector([[c, 0, 1 - c] for c in self.nbv_conf])
@@ -159,7 +166,7 @@ class PCNNBCOptimizer(object):
         self.rbth.goto_armjnts(x)
         eepos, eerot = self.rbt.get_gl_tcp()
         err = -(abs(np.asarray(eepos)[1] - self.init_eepos[1]))
-        return .1 - err
+        return .15 - err
 
     def con_diff_z(self, x):
         self.rbth.goto_armjnts(x)
@@ -183,7 +190,7 @@ class PCNNBCOptimizer(object):
     def addconstraint(self, constraint, condition="ineq"):
         self.cons.append({'type': condition, 'fun': constraint})
 
-    def solve(self, seedjntagls, pcd_i, cam_pos, method='SLSQP'):
+    def solve(self, seedjntagls, pcd_i, cam_mat4, method='SLSQP'):
         """
 
         :param seedjntagls:
@@ -191,8 +198,8 @@ class PCNNBCOptimizer(object):
         :return:
         """
         time_start = time.time()
-        self.update_known(seedjntagls, pcd_i, cam_pos)
-        # self.addconstraint(self.con_dist, condition="ineq")
+        self.update_known(seedjntagls, pcd_i, cam_mat4)
+        self.addconstraint(self.con_dist, condition="ineq")
         # self.addconstraint(self.con_collision, condition="ineq")
         self.addconstraint(self.con_diff_x, condition="ineq")
         self.addconstraint(self.con_diff_y, condition="ineq")

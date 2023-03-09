@@ -36,6 +36,7 @@ if __name__ == '__main__':
 
     tcppos, tcprot = m_planner.get_tcp(armjnts=seedjntagls)
     gm.gen_frame(tcppos + tcprot[:, 2] * (.03466 + .065), tcprot).attach_to(base)
+    gm.gen_frame().attach_to(base)
     gl_relrot = np.asarray([[0, 0, 1], [0, 1, 0], [-1, 0, 0]]).T
     # gl_relrot = np.asarray([[0, 0, -1], [0, -1, 0], [1, 0, 0]])
     gl_transrot = np.dot(tcprot, gl_relrot)
@@ -61,7 +62,7 @@ if __name__ == '__main__':
     #                 theta=theta, max_a=max_a, toggledebug=True)
     pts_nbv, nrmls_nbv, jnts = \
         rcu.cal_nbc_pcn(pcd_roi, gripperframe, rbt, center=center, seedjntagls=seedjntagls, gl_transmat4=gl_transmat4,
-                        theta=theta, max_a=max_a, toggledebug_p3d=False, toggledebug=True)
+                        theta=theta, max_a=max_a, toggledebug_p3d=True, toggledebug=False)
     # pts_nbv, nrmls_nbv, jnts = \
     #     rcu.cal_nbc_pcn_opt(pcd_roi, gripperframe, rbt, center=center, seedjntagls=seedjntagls,
     #                         gl_transmat4=gl_transmat4, theta=theta, toggledebug_p3d=False, toggledebug=False)
@@ -70,6 +71,6 @@ if __name__ == '__main__':
     # print(','.join([str(j) for j in jnts]))
     m_planner.ah.show_armjnts(armjnts=seedjntagls, rgba=(1, 1, 0, .5))
     m_planner.ah.show_armjnts(armjnts=jnts, rgba=(0, 1, 0, .5))
-    path = m_planner.plan_start2end(start=seedjntagls, end=jnts)
-    m_planner.ah.show_ani(path)
+    # path = m_planner.plan_start2end(start=seedjntagls, end=jnts)
+    # m_planner.ah.show_ani(path)
     base.run()

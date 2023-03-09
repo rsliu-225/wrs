@@ -74,7 +74,8 @@ if __name__ == '__main__':
             init_eemat4 = rm.homomat_from_posrot(init_eepos, init_eerot).dot(relmat4)
 
             nbc_opt = nbc_solver.PCNNBCOptimizer(rbt, releemat4=relmat4, toggledebug=True)
-            jnts, transmat4, _, time_cost = nbc_opt.solve(seedjntagls, pcd_i, cam_pos, method='COBYLA')
+            jnts, transmat4, _, time_cost = \
+                nbc_opt.solve(seedjntagls, pcd_i, rm.homomat_from_posrot(pos=cam_pos), method='COBYLA')
             print(jnts)
 
             rbt.fk('arm', jnts)

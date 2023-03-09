@@ -277,13 +277,14 @@ def reg_armarker(fo, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False, t
 
     for i in range(len(pcd_cropped_list)):
         pcd_cropped = pcdu.crop_pcd(pcd_cropped_list[i], x_range, y_range, z_range)
-        print('Num. of points in cropped pcd:', len(pcd_cropped))
+        print(f'Num. of points in cropped pcd ({i}):', len(pcd_cropped))
         o3dpcd = o3dh.nparray2o3dpcd(pcd_cropped)
         o3d.io.write_point_cloud(os.path.join(config.ROOT, 'recons_data', fo, f'{fnlist[i]}' + '.pcd'), o3dpcd)
-        # pcdu.show_pcd(pcd_cropped_list[i], rgba=colors[inx_list[i] - 1])
         if to_zero:
             pcd_cropped = pcd_cropped - np.asarray(center)
         pcd_cropped_list[i] = pcd_cropped
+        if toggledebug:
+            pcdu.show_pcd(pcd_cropped_list[i], rgba=colors[inx_list[i] - 1])
         # o3d.visualization.draw_geometries([o3dpcd])
 
     # if toggledebug:
@@ -453,7 +454,7 @@ def cal_nbc(pcd, gripperframe, rbt, seedjntagls, gl_transmat4=np.eye(4),
         nu.attach_nbv_gm(pts_nbv, nrmls_nbv, confs_nbv, cam_pos, arrow_len)
 
     nbc_solver = nbcs.NBCOptimizerVec(rbt, max_a=max_a, max_dist=max_dist)
-    jnts, transmat4, _, time_cost = nbc_solver.solve(seedjntagls, pts_nbv[0], nrmls_nbv[0], cam_pos)
+    jnts, transmat4, _, time_cost = nbc_solver.solve(seedjntagls, pts_nbv[0], nrmls_nbv[0], cam_mat4)
 
     if toggledebug_p3d:
         pcd_cropped_new = pcdu.trans_pcd(pcd, transmat4)
@@ -475,7 +476,7 @@ def cal_nbc_pcn(pcd, gripperframe, rbt, seedjntagls, center=np.asarray((0, 0, 0)
     arrow_len = .04
     cam_mat4 = np.linalg.inv(gripperframe)
     pcd = np.asarray(pcd) - center
-    pcd_pcn = inference.inference_sgl(pcd, load_model='pcn_emd_rlen/best_cd_p_network.pth', toggledebug=True)
+    pcd_pcn = inference.inference_sgl(pcd, load_model='pcn_emd_rlen/best_cd_p_network.pth', toggledebug=toggledebug)
     pcd_pcn = pcdu.crop_pcd(pcd_pcn, x_range=(-1, 1), y_range=(-1, 1), z_range=(-1, 0))
     pcd_pcn = np.asarray(pcd_pcn) + center
     pcd = np.asarray(pcd) + center
@@ -501,7 +502,7 @@ def cal_nbc_pcn(pcd, gripperframe, rbt, seedjntagls, center=np.asarray((0, 0, 0)
         nu.attach_nbv_gm(pts_nbv, nrmls_nbv, confs_nbv, cam_pos, arrow_len)
 
     nbc_solver = nbcs.NBCOptimizerVec(rbt, max_a=max_a, max_dist=max_dist)
-    jnts, transmat4, _, time_cost = nbc_solver.solve(seedjntagls, pts_nbv[0], nrmls_nbv[0], cam_pos)
+    jnts, transmat4, _, time_cost = nbc_solver.solve(seedjntagls, pts_nbv[0], nrmls_nbv[0], cam_mat4)
 
     if toggledebug_p3d:
         pcd_cropped_new = pcdu.trans_pcd(pcd, transmat4)
@@ -514,6 +515,10 @@ def cal_nbc_pcn(pcd, gripperframe, rbt, seedjntagls, center=np.asarray((0, 0, 0)
         gm.gen_arrow(pts_nbv[0], pts_nbv[0] + nrmls_nbv[0] / np.linalg.norm(nrmls_nbv[0]) * arrow_len,
                      rgba=(0, 0, 1, 1), thickness=0.002).attach_to(base)
         gm.gen_dashstick(cam_pos, pts_nbv_new[0], rgba=(.7, .7, 0, .5), thickness=.002).attach_to(base)
+
+        gm.gen_dashstick(cam_pos, cam_pos + cam_mat4[:3, 2], rgba=(.7, .7, 0, .5), thickness=.002).attach_to(base)
+        gm.gen_dashstick(pts_nbv_new[0] - cam_mat4[:3, 2], pts_nbv_new[0] + cam_mat4[:3, 2], rgba=(.7, .7, 0, .5),
+                         thickness=.002).attach_to(base)
 
     return pts_nbv, nrmls_nbv, jnts
 
@@ -540,7 +545,7 @@ def cal_nbc_pcn_opt(pcd, gripperframe, rbt, seedjntagls, center=np.asarray((0, 0
         nu.show_nbv_o3d(pts_nbv, nrmls_nbv, confs_nbv, o3dpcd, coord, o3dpcd_o)
 
     nbc_opt = nbcs_conf.PCNNBCOptimizer(rbt, toggledebug=toggledebug)
-    jnts, transmat4, _, time_cost = nbc_opt.solve(seedjntagls, pcd, cam_mat4[:3, 3], method='COBYLA')
+    jnts, transmat4, _, time_cost = nbc_opt.solve(seedjntagls, pcd, cam_mat4, method='COBYLA')
 
     # if toggledebug_p3d:
     #     gm.gen_frame().attach_to(base)

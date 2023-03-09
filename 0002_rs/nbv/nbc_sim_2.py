@@ -91,7 +91,8 @@ def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_name, 
             nu.attach_nbv_gm(pts_nbv_inhnd, nrmls_nbv_inhnd, confs_nbv, cam_pos, .05)
 
         nbc_solver = nbcs.NBCOptimizerVec(rbt, max_a=max_a, max_dist=max_dist, toggledebug=False)
-        jnts, transmat4, _, time_cost = nbc_solver.solve(seedjntagls, pts_nbv_inhnd[0], nrmls_nbv_inhnd[0], cam_pos)
+        jnts, transmat4, _, time_cost = nbc_solver.solve(seedjntagls, pts_nbv_inhnd[0], nrmls_nbv_inhnd[0],
+                                                         rm.homomat_from_posrot(pos=cam_pos))
 
         if jnts is None:
             print('Planning Failed!')
@@ -224,7 +225,8 @@ def run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_na
             nu.attach_nbv_gm(pts_nbv_inhnd, nrmls_nbv_inhnd, confs_nbv, cam_pos, .05)
 
         nbc_opt = nbcs_conf.PCNNBCOptimizer(rbt, releemat4=relmat4, toggledebug=False)
-        jnts, transmat4, _, time_cost = nbc_opt.solve(seedjntagls, pcd_i, cam_pos, method='COBYLA')
+        jnts, transmat4, _, time_cost = \
+            nbc_opt.solve(seedjntagls, pcd_i, rm.homomat_from_posrot(pos=cam_pos), method='COBYLA')
 
         if jnts is None:
             print('Planning Failed!')
@@ -352,7 +354,8 @@ def run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, cov_tor=.001
             nu.attach_nbv_gm(pts_nbv_inhnd, nrmls_nbv_inhnd, confs_nbv, cam_pos, .05)
 
         nbc_solver = nbcs.NBCOptimizerVec(rbt, max_a=max_a, max_dist=max_dist, toggledebug=False)
-        jnts, transmat4, _, time_cost = nbc_solver.solve(seedjntagls, pts_nbv_inhnd[0], nrmls_nbv_inhnd[0], cam_pos)
+        jnts, transmat4, _, time_cost = nbc_solver.solve(seedjntagls, pts_nbv_inhnd[0], nrmls_nbv_inhnd[0],
+                                                         rm.homomat_from_posrot(pos=cam_pos))
 
         if jnts is None:
             print('Planning Failed!')
@@ -481,7 +484,8 @@ def run_random(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, cov_tor=.
             rbt.gen_meshmodel(rgba=(1, 1, 0, .4)).attach_to(base)
 
         nbc_solver = nbcs.NBCOptimizerVec(rbt, max_a=max_a, max_dist=max_dist, toggledebug=False)
-        jnts, transmat4, _, time_cost = nbc_solver.solve(seedjntagls, pts_nbv[0], nrmls_nbv[0], cam_pos)
+        jnts, transmat4, _, time_cost = nbc_solver.solve(seedjntagls, pts_nbv[0], nrmls_nbv[0],
+                                                         rm.homomat_from_posrot(pos=cam_pos))
 
         if jnts is None:
             print('Planning Failed!')

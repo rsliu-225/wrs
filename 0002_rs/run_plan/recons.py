@@ -6,9 +6,9 @@ import visualization.panda.world as wd
 if __name__ == '__main__':
     import bendplanner.bend_utils as bu
 
-    base = wd.World(cam_pos=[2, 2, 2], lookat_pos=[0, 0, 0])
+    base = wd.World(cam_pos=[1, 1, 1], lookat_pos=[0, 0, 0])
     # base = wd.World(cam_pos=[0, 0, 0], lookat_pos=[0, 0, 1])
-    fo = 'nbc_pcn/extrude_1'
+    fo = 'nbc/extrude_1'
     # fo = 'nbc/plate_a_cubic'
     # fo = 'opti/plate_a_cubic'
     # fo = 'seq/plate_a_quadratic'
@@ -21,7 +21,7 @@ if __name__ == '__main__':
     icp = False
 
     seed = (.116, -.1, .1)
-    center = (.116, 0, .0155)
+    center = (.116, 0, -.016)
     # center = (0, 0, 0)
 
     # x_range = (.07, .2)
@@ -29,7 +29,7 @@ if __name__ == '__main__':
     # z_range = (.0165, .2)
     x_range = (.1, .2)
     y_range = (-.15, .02)
-    z_range = (-.1, -.03)
+    z_range = (-.1, -.025)
     # gm.gen_frame().attach_to(base)
     pcd_cropped_list = rcu.reg_armarker(fo, seed, center, x_range=x_range, y_range=y_range, z_range=z_range,
                                         toggledebug=False, icp=True)
@@ -59,14 +59,5 @@ if __name__ == '__main__':
     # rgba_list = [[1, 0, 0, 1], [0, 1, 0, 1]]
     # for i, pcd in enumerate(pcd_cropped_list):
     #     pcdu.show_pcd(pcd, rgba=rgba_list[i])
-
-    # pcdu.show_pcd(pts, rgba_list[0])
-    # for fo in sorted(os.listdir(os.path.join(config.ROOT, 'recons_data'))):
-    #     if fo[:2] == 'pl':
-    #         print(fo)
-    #         pcd_cropped_list = reg_plate(fo, seed, center)
-
-    # skeleton(pcd_cropped)
-    # pcdu.cal_conf(pcd_cropped, voxel_size=0.005, radius=.005)
 
     base.run()
