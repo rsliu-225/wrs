@@ -69,7 +69,7 @@ class PCNNBCOptimizer(object):
         o3dpcd_tmp_origin = \
             nu.gen_partial_o3dpcd(self.o3dmesh, toggledebug=False, othermesh=[rbt_o3dmesh],
                                   trans=transmat4[:3, 3], rot=transmat4[:3, :3], rot_center=self.rot_center,
-                                  fov=True, vis_threshold=np.radians(75), cam_pos=self.cam_pos)
+                                  fov=False, vis_threshold=np.radians(60), cam_pos=self.cam_pos)
         o3dpcd_tmp_origin.paint_uniform_color(nu.COLOR[5])
 
         if self.toggledebug:

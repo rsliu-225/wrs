@@ -9,6 +9,7 @@ import localenv.envloader as el
 import modeling.geometric_model as gm
 import motionplanner.motion_planner as mp
 import motionplanner.rbtx_motion_planner as mpx
+import nbv.nbv_utils as nu
 import utils.pcd_utils as pcdu
 import utils.phoxi as phoxi
 import utils.recons_utils as rcu
@@ -17,7 +18,7 @@ from pcn.inference import *
 
 if __name__ == '__main__':
     base = wd.World(cam_pos=[2, 2, 2], lookat_pos=[0, 0, 0])
-    fo = 'extrude_1_woef'
+    fo = 'extrude_1'
 
     rbt = el.loadXarm(showrbt=False)
     phxi = phoxi.Phoxi(host=config.PHOXI_HOST)
@@ -29,11 +30,11 @@ if __name__ == '__main__':
     icp = True
 
     seed = (.116, 0, .1)
-    center = (.116, 0, -.016)
+    center = (.116, 0, -.02)
 
     x_range = (.1, .2)
     y_range = (-.15, .02)
-    z_range = (-.1, -.025)
+    z_range = (-.1, -.02)
     theta = None
     max_a = np.pi / 18
 
@@ -41,7 +42,7 @@ if __name__ == '__main__':
 
     i = 0
 
-    method = ''
+    method = 'opt'
     if method != '':
         dump_path = f'phoxi/nbc_{method}/{fo}'
     else:
@@ -53,14 +54,11 @@ if __name__ == '__main__':
     m_planner_x.goto_init_x()
     pcd_cmp = np.asarray([])
     pcd_icp_list = []
+    pcd_pcn_list = []
     trans_icp = np.eye(4)
 
-    while i < 3:
+    while i < 4:
         seedjntagls = m_planner_x.get_armjnts()
-        pickle.dump(seedjntagls,
-                    open(os.path.join(config.ROOT, 'img', dump_path, f'{str(i).zfill(3)}_jnts.pkl'), 'wb'))
-        # seedjntagls = \
-        #     pickle.load(open(os.path.join(config.ROOT, 'img', dump_path, f'{str(i).zfill(3)}_jnts.pkl'), 'rb'))
         m_planner.ah.show_armjnts(armjnts=seedjntagls, rgba=(1, 0, 0, .5))
         tcppos, tcprot = m_planner.get_tcp(armjnts=seedjntagls)
         gl_transrot = np.dot(tcprot, gl_relrot)
@@ -80,19 +78,36 @@ if __name__ == '__main__':
             rcu.extract_roi_by_armarker(textureimg, pcd, seed=seed,
                                         x_range=(0, x_range[1]), y_range=y_range, z_range=(z_range[0], 0))
         pcd_gl = pcdu.trans_pcd(pcd_trans, gl_transmat4)
-        pcdu.show_pcd(pcd_gl, rgba=(1, 1, 1, .5))
-        pcdu.show_pcd(pcd_roi, rgba=(1, 0, 0, 1))
+        pcd_pcn = None
+        # pcdu.show_pcd(pcd_gl, rgba=(1, 1, 1, .5))
+        # pcdu.show_pcd(pcd_roi, rgba=(1, 0, 0, 1))
 
         o3dpcd_tmp = o3dh.nparray2o3dpcd(pcd_roi - np.asarray(center))
         o3dpcd_icp = o3dh.nparray2o3dpcd(pcd_icp - np.asarray(center))
-        o3d.io.write_point_cloud(os.path.join(config.ROOT, 'recons_data', 'nbc', fo, f'{str(i).zfill(3)}.pcd'),
-                                 o3dpcd_tmp)
-        o3dpcd_tmp.paint_uniform_color((1, 0, 0))
-        o3dpcd_icp.paint_uniform_color((.5, .5, .5))
-        o3d.visualization.draw_geometries([o3dpcd_tmp, o3dpcd_icp])
+        o3dpcd_tmp.paint_uniform_color(nu.COLOR[0])
+        o3dpcd_icp.paint_uniform_color((.7, .7, .7))
+        o3dpcd_tmp.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=.01, max_nn=200))
 
+        if i >= 1 and method != '':
+            o3dpcd_pcn = o3dh.nparray2o3dpcd(pcd_pcn_list[-1] - np.asarray(center))
+            o3dpcd_pcn.paint_uniform_color(nu.COLOR[2])
+            o3dpcd_pcn.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=.01, max_nn=200))
+            kdt_pcn = o3d.geometry.KDTreeFlann(o3dpcd_pcn)
+            o3d.visualization.draw_geometries([o3dpcd_tmp, o3dpcd_pcn])
+            # remain_ids = []
+            # for j in range(len(o3dpcd_tmp.points)):
+            #     _, idx, _ = kdt_pcn.search_knn_vector_3d(o3dpcd_tmp.points[j], 10)
+            #     dist = np.linalg.norm(np.asarray(o3dpcd_tmp.points[j]) - np.asarray(o3dpcd_tmp.points[idx[0]]))
+            #     a = rm.angle_between_vectors(np.asarray(o3dpcd_tmp.normals[j]), np.asarray(o3dpcd_tmp.normals[idx[0]]))
+            #     a = min([a, np.pi - a])
+            #     if dist < .05 and a < np.pi / 3:
+            #         remain_ids.append(j)
+            # o3dpcd_tmp = o3dpcd_tmp.select_by_index(remain_ids)
+
+        o3d.visualization.draw_geometries([o3dpcd_tmp, o3dpcd_icp])
         pcd_icp_list.append(pcd_icp)
-        if len(pcd_cmp) == 0:
+
+        if i == 0:
             pcd_cmp = pcd_roi
         else:
             if icp:
@@ -108,29 +123,31 @@ if __name__ == '__main__':
         o3dpcd_cmp = nparray2o3dpcd(pcd_cmp)
         o3dpcd_cmp.paint_uniform_color((1, 0, 1))
         o3d.visualization.draw_geometries([o3dpcd_cmp])
-
         if method == 'pcn':
-            nbv_pts, nbv_nrmls, jnts = \
+            pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts, pcd_pcn = \
                 rcu.cal_nbc_pcn(pcd_cmp, gripperframe, rbt, seedjntagls, center=center, gl_transmat4=gl_transmat4,
                                 theta=theta, max_a=max_a, toggledebug_p3d=False, toggledebug=True)
         elif method == 'opt':
-            nbv_pts, nbv_nrmls, jnts = \
+            pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts, pcd_pcn = \
                 rcu.cal_nbc_pcn_opt(pcd_cmp, gripperframe, rbt, seedjntagls, center=center, gl_transmat4=gl_transmat4,
                                     toggledebug_p3d=False, toggledebug=True)
         else:
-            nbv_pts, nbv_nrmls, jnts = \
+            pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts = \
                 rcu.cal_nbc(pcd_cmp, gripperframe, rbt, seedjntagls=seedjntagls, gl_transmat4=gl_transmat4,
                             theta=theta, max_a=max_a, toggledebug_p3d=False, toggledebug=True)
         # jnts = np.asarray([-0.01743049, - 0.84020071, - 0.2070076, 0.2452313, - 0.01734984, - 0.37176669, 0.96997314])
+        pcd_pcn_list.append(pcd_pcn)
         m_planner.ah.show_armjnts(armjnts=jnts, rgba=(0, 1, 0, .5))
         print(jnts)
-        pickle.dump(jnts, open(os.path.join(config.ROOT, 'img', dump_path, f'{str(i + 1).zfill(3)}_jnts.pkl'), 'wb'))
+
         path = m_planner.plan_start2end(start=seedjntagls, end=jnts)
         # m_planner.ah.show_ani(path)
         # base.run()
         m_planner_x.movepath(path)
         time.sleep(5)
         i += 1
+        pickle.dump([pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts, pcd_pcn],
+                    open(os.path.join(config.ROOT, 'img', dump_path, f'{str(i).zfill(3)}_res.pkl'), 'wb'))
         phxi.dumpalldata(f_name=os.path.join('img', dump_path, f'{str(i).zfill(3)}.pkl'))
 
     # base.run()

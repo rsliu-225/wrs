@@ -468,7 +468,7 @@ def cal_nbc(pcd, gripperframe, rbt, seedjntagls, gl_transmat4=np.eye(4),
                      rgba=(0, 0, 1, 1), thickness=0.002).attach_to(base)
         gm.gen_dashstick(cam_pos, pts_nbv_new[0], rgba=(.7, .7, 0, .5), thickness=.002).attach_to(base)
 
-    return pts_nbv, nrmls_nbv, jnts
+    return pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts
 
 
 def cal_nbc_pcn(pcd, gripperframe, rbt, seedjntagls, center=np.asarray((0, 0, 0)), gl_transmat4=np.eye(4),
@@ -481,7 +481,7 @@ def cal_nbc_pcn(pcd, gripperframe, rbt, seedjntagls, center=np.asarray((0, 0, 0)
     pcd_pcn = np.asarray(pcd_pcn) + center
     pcd = np.asarray(pcd) + center
 
-    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd, pcd_pcn, radius=.01, theta=theta, toggledebug=toggledebug_p3d)
+    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd, pcd_pcn, radius=.02, theta=theta, toggledebug=toggledebug_p3d)
     print(confs_nbv)
     print('Num. of NBV:', len(pts_nbv))
     if toggledebug:
@@ -520,7 +520,7 @@ def cal_nbc_pcn(pcd, gripperframe, rbt, seedjntagls, center=np.asarray((0, 0, 0)
         gm.gen_dashstick(pts_nbv_new[0] - cam_mat4[:3, 2], pts_nbv_new[0] + cam_mat4[:3, 2], rgba=(.7, .7, 0, .5),
                          thickness=.002).attach_to(base)
 
-    return pts_nbv, nrmls_nbv, jnts
+    return pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts, pcd_pcn
 
 
 def cal_nbc_pcn_opt(pcd, gripperframe, rbt, seedjntagls, center=np.asarray((0, 0, 0)), gl_transmat4=np.eye(4),
@@ -544,32 +544,32 @@ def cal_nbc_pcn_opt(pcd, gripperframe, rbt, seedjntagls, center=np.asarray((0, 0
         o3dpcd_o = o3dh.nparray2o3dpcd(pcd_pcn)
         nu.show_nbv_o3d(pts_nbv, nrmls_nbv, confs_nbv, o3dpcd, coord, o3dpcd_o)
 
-    nbc_opt = nbcs_conf.PCNNBCOptimizer(rbt, toggledebug=toggledebug)
+    nbc_opt = nbcs_conf.PCNNBCOptimizer(rbt, toggledebug=True)
     jnts, transmat4, _, time_cost = nbc_opt.solve(seedjntagls, pcd, cam_mat4, method='COBYLA')
 
-    # if toggledebug_p3d:
-    #     gm.gen_frame().attach_to(base)
-    #     pcd = pcdu.trans_pcd(pcd, gl_transmat4)
-    #     pts_nbv = pcdu.trans_pcd(pts_nbv, gl_transmat4)
-    #     nrmls_nbv = [gl_transmat4[:3, :3].dot(n) for n in nrmls_nbv]
-    #     cam_mat4 = np.dot(gl_transmat4, cam_mat4)
-    #     cam_pos = cam_mat4[:3, 3]
-    #
-    #     pcdu.show_cam(cam_mat4)
-    #     nu.attach_nbv_gm(pts_nbv, nrmls_nbv, confs_nbv, cam_pos, arrow_len)
-    #
-    #     pcd_cropped_new = pcdu.trans_pcd(pcd, transmat4)
-    #     pts_nbv_new = pcdu.trans_pcd(pts_nbv, transmat4)
-    #     nrmls_nbv_new = [transmat4[:3, :3].dot(n) for n in nrmls_nbv]
-    #     pcdu.show_pcd(pcd_cropped_new, rgba=(0, 1, 0, 1))
-    #     nu.attach_nbv_gm(pts_nbv_new, nrmls_nbv_new, confs_nbv, cam_pos, arrow_len)
-    #     gm.gen_arrow(pts_nbv_new[0], pts_nbv_new[0] + nrmls_nbv_new[0] / np.linalg.norm(nrmls_nbv_new[0]) * arrow_len,
-    #                  rgba=(0, 1, 0, 1), thickness=0.002).attach_to(base)
-    #     gm.gen_arrow(pts_nbv[0], pts_nbv[0] + nrmls_nbv[0] / np.linalg.norm(nrmls_nbv[0]) * arrow_len,
-    #                  rgba=(0, 0, 1, 1), thickness=0.002).attach_to(base)
-    #     gm.gen_dashstick(cam_pos, pts_nbv_new[0], rgba=(.7, .7, 0, .5), thickness=.002).attach_to(base)
+    if toggledebug_p3d:
+        gm.gen_frame().attach_to(base)
+        pcd = pcdu.trans_pcd(pcd, gl_transmat4)
+        pts_nbv = pcdu.trans_pcd(pts_nbv, gl_transmat4)
+        nrmls_nbv = [gl_transmat4[:3, :3].dot(n) for n in nrmls_nbv]
+        cam_mat4 = np.dot(gl_transmat4, cam_mat4)
+        cam_pos = cam_mat4[:3, 3]
 
-    return pts_nbv, nrmls_nbv, jnts
+        pcdu.show_cam(cam_mat4)
+        nu.attach_nbv_gm(pts_nbv, nrmls_nbv, confs_nbv, cam_pos, arrow_len)
+
+        pcd_cropped_new = pcdu.trans_pcd(pcd, transmat4)
+        pts_nbv_new = pcdu.trans_pcd(pts_nbv, transmat4)
+        nrmls_nbv_new = [transmat4[:3, :3].dot(n) for n in nrmls_nbv]
+        pcdu.show_pcd(pcd_cropped_new, rgba=(0, 1, 0, 1))
+        nu.attach_nbv_gm(pts_nbv_new, nrmls_nbv_new, confs_nbv, cam_pos, arrow_len)
+        gm.gen_arrow(pts_nbv_new[0], pts_nbv_new[0] + nrmls_nbv_new[0] / np.linalg.norm(nrmls_nbv_new[0]) * arrow_len,
+                     rgba=(0, 1, 0, 1), thickness=0.002).attach_to(base)
+        gm.gen_arrow(pts_nbv[0], pts_nbv[0] + nrmls_nbv[0] / np.linalg.norm(nrmls_nbv[0]) * arrow_len,
+                     rgba=(0, 0, 1, 1), thickness=0.002).attach_to(base)
+        gm.gen_dashstick(cam_pos, pts_nbv_new[0], rgba=(.7, .7, 0, .5), thickness=.002).attach_to(base)
+
+    return pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts, pcd_pcn
 
 
 def sort_kpts(kpts, seed):

@@ -8,7 +8,7 @@ if __name__ == '__main__':
 
     base = wd.World(cam_pos=[1, 1, 1], lookat_pos=[0, 0, 0])
     # base = wd.World(cam_pos=[0, 0, 0], lookat_pos=[0, 0, 1])
-    fo = 'nbc/extrude_1'
+    fo = 'nbc/extrude_1_woef'
     # fo = 'nbc/plate_a_cubic'
     # fo = 'opti/plate_a_cubic'
     # fo = 'seq/plate_a_quadratic'
@@ -29,7 +29,7 @@ if __name__ == '__main__':
     # z_range = (.0165, .2)
     x_range = (.1, .2)
     y_range = (-.15, .02)
-    z_range = (-.1, -.025)
+    z_range = (-.1, -.02)
     # gm.gen_frame().attach_to(base)
     pcd_cropped_list = rcu.reg_armarker(fo, seed, center, x_range=x_range, y_range=y_range, z_range=z_range,
                                         toggledebug=False, icp=True)
@@ -37,7 +37,7 @@ if __name__ == '__main__':
     for pcd in pcd_cropped_list:
         pts.extend(pcd)
     # pts = pcdu.remove_outliers(pts, nb_points=1000, radius=0.01, toggledebug=True)
-    kpts, kpts_rotseq = pcdu.get_kpts_gmm(pts, rgba=(1, 1, 0, 1), n_components=20)
+    kpts, kpts_rotseq = pcdu.get_kpts_gmm(pts, rgba=(1, 1, 0, 1), n_components=15)
 
     # kpts = bu.linear_inp3d_by_step(kpts)
     # kpts, kpts_rotseq = bu.inp_rotp_by_step(kpts, kpts_rotseq)

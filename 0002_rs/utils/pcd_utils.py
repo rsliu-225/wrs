@@ -889,15 +889,15 @@ def cal_nbv_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, radius=.01, toggled
     def _normalize(l):
         return [(v - min(l)) / (max(l) - min(l)) for v in l]
 
-    _, _, trans = o3dh.registration_icp_ptpt(pts_pcn, pts, maxcorrdist=.02, toggledebug=False)
-    pts_pcn = trans_pcd(pts_pcn, trans)
+    # _, _, trans = o3dh.registration_icp_ptpt(pts_pcn, pts, maxcorrdist=.02, toggledebug=False)
+    # pts_pcn = trans_pcd(pts_pcn, trans)
     # if toggledebug:
     #     show_pcd(pts_pcn, rgba=COLOR[2])
     # show_pcd(pts, rgba=COLOR[0])
     o3d_pcn = o3dh.nparray2o3dpcd(pts_pcn)
     o3d_pts = o3dh.nparray2o3dpcd(pts)
-    o3d_pcn.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=radius * 2, max_nn=200))
-    o3d_pts.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=radius * 2, max_nn=200))
+    o3d_pcn.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=radius, max_nn=200))
+    o3d_pts.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=radius, max_nn=200))
 
     o3d_kpts = o3d_pcn.voxel_down_sample(voxel_size=radius)
     kpts = np.asarray(o3d_kpts.points)
@@ -1070,10 +1070,15 @@ def show_pcd_withrbt(pcd, rgba=(1, 1, 1, 1), rbtx=None, toggleendcoord=False):
 
 
 def show_cam(transmat4):
-    cam_cm = cm.CollisionModel(os.path.join(config.ROOT, 'obstacles', 'Phoxi.stl'))
+    transmat4 = np.dot(transmat4, rm.homomat_from_posrot((0, 0, 0), rm.rotmat_from_axangle((1, 0, 0), np.pi / 2)))
+    cam_cm = cm.CollisionModel(os.path.join(config.ROOT, 'obstacles', 'phoxi.stl'))
     cam_cm.set_homomat(transmat4)
-    cam_cm.set_rgba((.7, .7, .7, .2))
+    cam_cm.set_rgba((.1, .1, .1, 1))
     cam_cm.attach_to(base)
+    fov_cm = cm.CollisionModel(os.path.join(config.ROOT, 'obstacles', 'phoxi_fov.stl'))
+    fov_cm.set_homomat(transmat4)
+    fov_cm.set_rgba((.7, .7, .7, .4))
+    fov_cm.attach_to(base)
     gm.gen_frame(transmat4[:3, 3], transmat4[:3, :3]).attach_to(base)
 
 

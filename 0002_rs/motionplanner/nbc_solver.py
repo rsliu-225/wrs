@@ -126,7 +126,7 @@ class NBCOptimizerVec(object):
         err = rm.angle_between_vectors(n_new, self.cam_mat4[:3, 2])
         err = min([err, np.pi - err])
         self.ref_list.append(np.degrees(err))
-        return err - np.pi / 9
+        return err - np.pi / 6
 
     def addconstraint(self, constraint, condition="ineq"):
         self.cons.append({'type': condition, 'fun': constraint})
@@ -145,7 +145,7 @@ class NBCOptimizerVec(object):
         self.addconstraint(self.con_diff_x, condition="ineq")
         self.addconstraint(self.con_diff_y, condition="ineq")
         self.addconstraint(self.con_diff_z, condition="ineq")
-        # self.addconstraint(self.con_reflection, condition="ineq")
+        self.addconstraint(self.con_reflection, condition="ineq")
 
         sol = minimize(self.objctive, seedjntagls, method=method, bounds=self.bnds, constraints=self.cons)
         time_cost = time.time() - time_start
