@@ -10,6 +10,7 @@ import basis.robot_math as rm
 import bendplanner.bend_utils as bu
 import datagenerator.data_utils as du
 import motionplanner.robot_helper as rbt_helper
+import motionplanner.nbc_solver as nbcs
 import nbv.nbv_utils as nu
 import pcn.inference as pcn
 import utils.pcd_utils as pcdu
@@ -18,8 +19,9 @@ TB = True
 
 
 class PCNNBCOptimizer(object):
-    def __init__(self, rbt, max_a=np.pi / 6, max_dist=1, env=None, armname="arm", releemat4=np.eye(4), toggledebug=TB):
+    def __init__(self, rbt, max_dist=1, env=None, armname="arm", releemat4=np.eye(4), toggledebug=TB):
         self.rbt = rbt
+        self.rbt.jaw_to(jawwidth=0.01)
         self.armname = armname
         self.env = env
         self.armname = armname
@@ -43,15 +45,15 @@ class PCNNBCOptimizer(object):
         self.mp_list = []  # manipulability
         self.sr_list = []  # angle between line of sight
         self.wo_list = []  # wrist obstruction
+        self.ref_list = []
         self.obj_list = []
 
-        self.max_a = max_a
         self.max_dist = max_dist
 
-        self.nbv_pts, self.nbv_nrmls, self.nbv_conf = [], [], []
+        self.pts_nbv, self.nrmls_nbv, self.nbv_conf = [], [], []
         self.init_eepos, self.init_eerot, self.init_eemat4 = None, None, None
         self.o3dpcd_o, self.o3dmesh, self.o3dpcd_nbv = None, None, None
-        self.cam_pos, self.cam_mat4 = None, None
+        self.laser_pos, self.cam_pos, self.cam_mat4 = (0, 0, 0), (0, 0, 0), np.eye(3)
 
     def objective(self, x):
         self.jnts.append(x)
@@ -69,22 +71,26 @@ class PCNNBCOptimizer(object):
         o3dpcd_tmp_origin = \
             nu.gen_partial_o3dpcd(self.o3dmesh, toggledebug=False, othermesh=[rbt_o3dmesh],
                                   trans=transmat4[:3, 3], rot=transmat4[:3, :3], rot_center=self.rot_center,
-                                  fov=False, vis_threshold=np.radians(60), cam_pos=self.cam_pos)
+                                  fov=True, vis_threshold=np.radians(75),
+                                  cam_mat4=self.cam_mat4)
         o3dpcd_tmp_origin.paint_uniform_color(nu.COLOR[5])
 
         if self.toggledebug:
             coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
             coord_tmp = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
             coord_tmp.transform(transmat4)
-            cam_mesh = o3d.geometry.TriangleMesh.create_sphere(radius=1)
+            cam_mesh = o3d.geometry.TriangleMesh.create_sphere(radius=.005)
             cam_mesh.translate(self.cam_pos)
+            coord_cam = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
+            coord_cam.transform(self.cam_mat4)
             rbt_o3dmesh_all = nu.rbt2o3dmesh(self.rbt, link_num=3, show_nrml=True)
             rbt_o3dmesh_all.transform(np.linalg.inv(self.init_eemat4))
             o3dmesh_tmp = copy.deepcopy(self.o3dmesh)
             o3dmesh_tmp.transform(transmat4)
             o3dpcd_nxt = copy.deepcopy(o3dpcd_tmp_origin)
             o3dpcd_nxt.transform(transmat4)
-            o3d.visualization.draw_geometries([rbt_o3dmesh_all, o3dpcd_nxt, o3dmesh_tmp, coord, coord_tmp, cam_mesh])
+            o3d.visualization.draw_geometries(
+                [rbt_o3dmesh_all, o3dpcd_nxt, o3dmesh_tmp, coord, coord_tmp, cam_mesh, coord_cam])
             o3d.visualization.draw_geometries([o3dpcd_tmp_origin, self.o3dpcd_nbv, coord])
 
         if len(np.asarray(o3dpcd_tmp_origin.points)) == 0:
@@ -93,10 +99,10 @@ class PCNNBCOptimizer(object):
 
         kdt_tmp = o3d.geometry.KDTreeFlann(o3dpcd_tmp_origin)
         nrmls_tmp = np.asarray(o3dpcd_tmp_origin.normals)
-        for i in range(len(self.nbv_pts)):
+        for i in range(len(self.pts_nbv)):
             if self.nbv_conf[i] > .4:
                 continue
-            _, idx, _ = kdt_tmp.search_radius_vector_3d(self.nbv_pts[i], .01)
+            _, idx, _ = kdt_tmp.search_radius_vector_3d(self.pts_nbv[i], .01)
             conf_sum += (1 - (self.nbv_conf[i])) * len(idx) / 10
             # for j in idx:
             #     a = rm.angle_between_vectors(nrmls_tmp[j], self.cam_mat4[:3, 2])
@@ -118,36 +124,29 @@ class PCNNBCOptimizer(object):
         thickness = .002
         cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
         pcd_i = pcdu.trans_pcd(pcd_i, np.linalg.inv(self.releemat4))
-        self.cam_pos, self.cam_mat4 = cam_mat4[:3, 3], cam_mat4
 
         self.seedjntagls = seedjntagls
         self.init_eepos, self.init_eerot = self.rbt.get_gl_tcp()
         self.init_eemat4 = rm.homomat_from_posrot(self.init_eepos, self.init_eerot)
+        self.cam_mat4 = np.dot(np.linalg.inv(self.init_eemat4), cam_mat4)
+        self.cam_pos = self.cam_mat4[:3, 3]
+        self.laser_pos = self.cam_mat4[:3, 3] - .175 * rm.unit_vector(self.cam_mat4[:3, 0]) \
+                         + .049 * rm.unit_vector(self.cam_mat4[:3, 1]) \
+                         + .01 * rm.unit_vector(self.cam_mat4[:3, 2])
 
         pcd_o = pcn.inference_sgl(pcd_i, model_name, load_model, toggledebug=False)
         pcd_i_inhnd = pcdu.trans_pcd(pcd_i, self.releemat4)
         pcd_o_inhnd = pcdu.trans_pcd(pcd_o, self.releemat4)
-        self.nbv_pts, self.nbv_nrmls, self.nbv_conf = \
+        self.pts_nbv, self.nrmls_nbv, self.nbv_conf = \
             pcdu.cal_nbv_pcn(pcd_i_inhnd, pcd_o_inhnd, cam_pos=self.cam_pos, theta=None, toggledebug=True)
         self.o3dpcd_o = du.nparray2o3dpcd(pcd_o_inhnd)
-        self.o3dpcd_nbv = du.nparray2o3dpcd(np.asarray(self.nbv_pts))
+        self.o3dpcd_nbv = du.nparray2o3dpcd(np.asarray(self.pts_nbv))
         self.o3dpcd_nbv.colors = o3d.utility.Vector3dVector([[c, 0, 1 - c] for c in self.nbv_conf])
         kpts, kpts_rotseq = pcdu.get_kpts_gmm(pcd_o_inhnd, rgba=(1, 1, 0, 1), n_components=16)
         inp_pseq = nu.nurbs_inp(kpts)
         inp_rotseq = pcdu.get_rots_wkpts(pcd_o_inhnd, inp_pseq, k=200, show=True, rgba=(1, 0, 0, 1))
         self.o3dmesh = du.cm2o3dmesh(bu.gen_swap(inp_pseq, inp_rotseq, cross_sec, extend=.008))
         # self.o3dmesh.compute_vertex_normals()
-
-    def con_rot(self, x):
-        self.rbth.goto_armjnts(x)
-        eepos, eerot = self.rbt.get_gl_tcp()
-        eemat4 = rm.homomat_from_posrot(eepos, eerot)
-        transmat4 = eemat4.dot(np.linalg.inv(self.init_eemat4))
-        n_new = pcdu.trans_pcd([self.nbv_nrmls[0]], transmat4)[0]
-        p_new = pcdu.trans_pcd([self.nbv_pts[0]], transmat4)[0]
-        err = rm.angle_between_vectors(n_new, self.cam_pos - p_new)
-        self.rot_err.append(err)
-        return self.max_a - err
 
     def con_dist(self, x):
         self.rbth.goto_armjnts(x)
@@ -165,7 +164,7 @@ class PCNNBCOptimizer(object):
     def con_diff_y(self, x):
         self.rbth.goto_armjnts(x)
         eepos, eerot = self.rbt.get_gl_tcp()
-        err = -(abs(np.asarray(eepos)[1] - self.init_eepos[1]))
+        err = abs(np.asarray(eepos)[1] - self.init_eepos[1])
         return .15 - err
 
     def con_diff_z(self, x):
@@ -182,6 +181,22 @@ class PCNNBCOptimizer(object):
         flag = self.rbth.is_selfcollided(x)
         print(flag, .5 - flag)
         return .5 - flag
+
+    def con_reflection(self, x):
+        self.rbth.goto_armjnts(x)
+        eepos, eerot = self.rbt.get_gl_tcp()
+        eemat4 = rm.homomat_from_posrot(eepos, eerot)
+        transmat4 = eemat4.dot(np.linalg.inv(self.init_eemat4))
+        # n_new = transmat4[:3, :3].dot(self.nrml_nbv)
+        # err = rm.angle_between_vectors(n_new, self.cam_mat4[:3, 1])
+        # err = min([err, np.pi - err])
+        pts_new = pcdu.trans_pcd(self.pts_nbv, transmat4)
+        nrmls_new = np.asarray([transmat4[:3, :3].dot(n) for n in self.nrmls_nbv])
+        err = min([min(rm.angle_between_vectors(p - self.laser_pos, nrmls_new[i]),
+                       np.pi - rm.angle_between_vectors(p - self.laser_pos, nrmls_new[i]))
+                   for i, p in enumerate(pts_new)])
+        self.ref_list.append(np.degrees(err))
+        return err - np.pi / 9
 
     def con_manipulability(self, x):
         self.rbth.goto_armjnts(x)
@@ -200,10 +215,10 @@ class PCNNBCOptimizer(object):
         time_start = time.time()
         self.update_known(seedjntagls, pcd_i, cam_mat4)
         self.addconstraint(self.con_dist, condition="ineq")
-        # self.addconstraint(self.con_collision, condition="ineq")
         self.addconstraint(self.con_diff_x, condition="ineq")
         self.addconstraint(self.con_diff_y, condition="ineq")
         self.addconstraint(self.con_diff_z, condition="ineq")
+
         sol = minimize(self.objective, seedjntagls, method=method, bounds=self.bnds, constraints=self.cons)
         time_cost = time.time() - time_start
         print("time cost", time_cost, sol.success)

@@ -2,17 +2,20 @@ import modeling.geometric_model as gm
 import utils.pcd_utils as pcdu
 import utils.recons_utils as rcu
 import visualization.panda.world as wd
+import nbv.nbv_utils as nu
 
 if __name__ == '__main__':
     import bendplanner.bend_utils as bu
 
-    base = wd.World(cam_pos=[1, 1, 1], lookat_pos=[0, 0, 0])
+    # base = wd.World(cam_pos=[1, 1, 1], lookat_pos=[0, 0, 0])
+    base = wd.World(cam_pos=[.1, -.5, -.05], lookat_pos=[.1, 0, -.05])
+
     # base = wd.World(cam_pos=[0, 0, 0], lookat_pos=[0, 0, 1])
-    fo = 'nbc/extrude_1_woef'
+    fo = 'nbc_pcn/extrude_1_woef'
     # fo = 'nbc/plate_a_cubic'
     # fo = 'opti/plate_a_cubic'
     # fo = 'seq/plate_a_quadratic'
-    gm.gen_frame().attach_to(base)
+    # gm.gen_frame().attach_to(base)
 
     width = .008
     thickness = .0015
@@ -21,7 +24,7 @@ if __name__ == '__main__':
     icp = False
 
     seed = (.116, -.1, .1)
-    center = (.116, 0, -.016)
+    center = (.116, 0, -.02)
     # center = (0, 0, 0)
 
     # x_range = (.07, .2)
@@ -36,14 +39,16 @@ if __name__ == '__main__':
     pts = []
     for pcd in pcd_cropped_list:
         pts.extend(pcd)
+    # base.run()
     # pts = pcdu.remove_outliers(pts, nb_points=1000, radius=0.01, toggledebug=True)
     kpts, kpts_rotseq = pcdu.get_kpts_gmm(pts, rgba=(1, 1, 0, 1), n_components=15)
 
-    # kpts = bu.linear_inp3d_by_step(kpts)
-    # kpts, kpts_rotseq = bu.inp_rotp_by_step(kpts, kpts_rotseq)
+    inp_pseq = nu.nurbs_inp(kpts)
+    # inp_pseq, inp_rotseq = du.get_rotseq_by_pseq(inp_pseq)
+    inp_rotseq = pcdu.get_rots_wkpts(pts, inp_pseq, show=False, rgba=(1, 0, 0, 1))
 
-    for i, rot in enumerate(kpts_rotseq):
-        gm.gen_frame(kpts[i], kpts_rotseq[i], thickness=.001, length=.03).attach_to(base)
+    # for i, rot in enumerate(kpts_rotseq):
+    #     gm.gen_frame(kpts[i], kpts_rotseq[i], thickness=.001, length=.03).attach_to(base)
     objcm = bu.gen_swap(kpts, kpts_rotseq, cross_sec)
     objcm.set_rgba((1, 1, 1, .5))
     objcm.attach_to(base)
@@ -54,7 +59,7 @@ if __name__ == '__main__':
     #                                        rgba=[.5, .7, 1, .5])
     # surface_gm.attach_to(base)
 
-    pcdu.show_pcd(pts, rgba=(1, 1, 0, 1))
+    pcdu.show_pcd(pts, rgba=(nu.COLOR[0][0], nu.COLOR[0][1], nu.COLOR[0][2], 1))
 
     # rgba_list = [[1, 0, 0, 1], [0, 1, 0, 1]]
     # for i, pcd in enumerate(pcd_cropped_list):

@@ -346,15 +346,20 @@ def hausdorff_distance(x, y, metric='l2'):
     return hausdorff_distance
 
 
-def gen_partial_o3dpcd(o3dmesh, rot=np.eye(3), trans=np.zeros(3), rot_center=(0, 0, 0), cam_pos=(0, 0, 0),
+def gen_partial_o3dpcd(o3dmesh, rot=np.eye(3), trans=np.zeros(3), rot_center=(0, 0, 0), cam_mat4=np.eye(4),
                        vis_threshold=np.radians(75), fov=False, othermesh=[], w_otherpcd=False, toggledebug=False):
     vis = o3d.visualization.Visualizer()
     vis.create_window('win', left=0, top=0)
     o3dmesh = o3dmesh.filter_smooth_taubin(number_of_iterations=10)
-    o3dmesh.rotate(rot, center=rot_center)
-    o3dmesh.translate(trans)
+    # o3dmesh.rotate(rot, center=rot_center)
+    # o3dmesh.translate(trans)
+    o3dmesh.transform(rm.homomat_from_posrot(trans, rot))
+    o3dmesh.transform(np.linalg.inv(cam_mat4))
+
     for mesh in othermesh:
+        mesh.transform(np.linalg.inv(cam_mat4))
         vis.add_geometry(mesh)
+
     vis.add_geometry(o3dmesh)
     vis.poll_events()
     tmp_f_name = str(random.randint(0, 100))
@@ -363,7 +368,7 @@ def gen_partial_o3dpcd(o3dmesh, rot=np.eye(3), trans=np.zeros(3), rot_center=(0,
     o3dpcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.001, max_nn=10))
     o3dpcd_nrml = np.asarray(o3dpcd.normals)
 
-    vis_idx = np.argwhere(np.arccos(abs(o3dpcd_nrml.dot(np.asarray([0, 0, 1])))) < vis_threshold).flatten()
+    vis_idx = np.argwhere(np.arccos(abs(o3dpcd_nrml.dot(cam_mat4[:3, 2]))) < vis_threshold).flatten()
     o3dpcd = o3dpcd.select_by_index(vis_idx)
     o3dpcd.paint_uniform_color(COLOR[0])
 
@@ -382,10 +387,13 @@ def gen_partial_o3dpcd(o3dmesh, rot=np.eye(3), trans=np.zeros(3), rot_center=(0,
         o3dpcd = o3dpcd.select_by_index(selected_idx)
 
     if fov:
-        o3dpcd = filer_pcd_by_cam_pos(o3dpcd, cam_pos, dist=1, angle=np.pi / 6)
+        o3dpcd = filer_pcd_by_cam(o3dpcd, cam_mat4[:3, 3], cam_mat4[:3, 2], dist=1.5, angle=np.pi / 6)
 
-    o3dpcd.translate(-trans)
-    o3dpcd.rotate(np.linalg.inv(rot), center=rot_center)
+    # o3dpcd.translate(-trans)
+    # o3dpcd.rotate(np.linalg.inv(rot), center=rot_center)
+
+    o3dpcd.transform(cam_mat4)
+    o3dpcd.transform(np.linalg.inv(rm.homomat_from_posrot(trans, rot)))
 
     if toggledebug:
         coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.1)
@@ -402,7 +410,7 @@ def gen_partial_o3dpcd_occ(path, f, rot, rot_center, trans=np.zeros(3), resolusi
                            occ_vt_ratio=1.0, noise_vt_ratio=1.0,
                            add_noise_vt=False, add_occ_nrml=False, add_occ_vt=False, add_occ_rnd=True,
                            add_noise_pts=True, noise_cnt=random.randint(0, 5),
-                           othermesh=[], fov=True, w_otherpcd=False, toggledebug=False):
+                           othermesh=[], fov=False, w_otherpcd=False, toggledebug=False):
     o3dmesh = o3d.io.read_triangle_mesh(os.path.join(path, 'mesh', f + '.ply'))
 
     vis = o3d.visualization.Visualizer()
@@ -419,7 +427,6 @@ def gen_partial_o3dpcd_occ(path, f, rot, rot_center, trans=np.zeros(3), resolusi
     o3dpcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.001, max_nn=10))
     o3dpcd_nrml = np.asarray(o3dpcd.normals)
     vis_idx = np.argwhere(np.arccos(abs(o3dpcd_nrml.dot(np.asarray([0, 0, 1])))) < vis_threshold).flatten()
-    o3dpcd = o3dpcd.select_by_index(vis_idx)
 
     if add_occ_rnd:
         o3dpcd = du.add_random_occ(o3dpcd, occ_ratio_rng=rnd_occ_ratio_rng)
@@ -434,6 +441,7 @@ def gen_partial_o3dpcd_occ(path, f, rot, rot_center, trans=np.zeros(3), resolusi
                                              noise_mean=1e-3, noise_sigma=2e-4, ratio=noise_vt_ratio)
     if add_noise_pts:
         o3dpcd = du.add_noise_pts_by_vt(o3dpcd, noise_cnt=noise_cnt, size=.03)
+    o3dpcd = o3dpcd.select_by_index(vis_idx)
 
     # o3dpcd = du.resample(o3dpcd, smp_num=2048)
     o3dpcd, _ = o3dpcd.remove_radius_outlier(nb_points=10, radius=0.05)
@@ -445,9 +453,8 @@ def gen_partial_o3dpcd_occ(path, f, rot, rot_center, trans=np.zeros(3), resolusi
         idxs = list(pcd_kdt.query_ball_tree(mesh_kdt, r=0.006))
         selected_idx = np.asarray([i for i in range(len(idxs)) if len(idxs[i]) > 0])
         o3dpcd = o3dpcd.select_by_index(selected_idx)
-
     if fov:
-        o3dpcd = filer_pcd_by_cam_pos(o3dpcd, cam_pos, dist=1.5, angle=np.pi / 6)
+        o3dpcd = filer_pcd_by_cam(o3dpcd, cam_pos, dist=1.5, angle=np.pi / 6)
 
     if toggledebug:
         o3dpcd_org = o3d.io.read_point_cloud(os.path.join(path, f'{f}_tmp.pcd'))
@@ -465,14 +472,18 @@ def gen_partial_o3dpcd_occ(path, f, rot, rot_center, trans=np.zeros(3), resolusi
     return o3dpcd
 
 
-def filer_pcd_by_cam_pos(o3dpcd, cam_pos, dist=.8, angle=np.pi / 9):
+def filer_pcd_by_cam(o3dpcd, cam_pos, cam_ls=None, dist=.8, angle=np.pi / 9):
     if len(np.asarray(o3dpcd.points)) == 0:
         return o3dpcd
     o3dpcd_kdt = o3d.geometry.KDTreeFlann(o3dpcd)
     _, radius_vis_idx, _ = o3dpcd_kdt.search_radius_vector_3d(cam_pos, dist)
     o3dpcd = o3dpcd.select_by_index(radius_vis_idx)
-    pcd_fov = np.asarray([p for p in np.asarray(o3dpcd.points)
-                          if rm.angle_between_vectors(cam_pos - p, cam_pos) < angle])
+    pcd_fov = np.asarray(o3dpcd.points)
+    # pcd_fov = np.asarray([p for p in np.asarray(o3dpcd.points)
+    #                       if rm.angle_between_vectors(cam_mat4[:3, 3] - p, cam_mat4[:3, 3]) < angle])
+    if cam_ls is not None:
+        pcd_fov = np.asarray([p for p in pcd_fov if rm.angle_between_vectors(cam_pos - p, cam_ls) < angle])
+
     if len(pcd_fov) == 0:
         return o3d.geometry.PointCloud()
     o3dpcd = o3dh.nparray2o3dpcd(pcd_fov)
@@ -574,7 +585,7 @@ def rbt2o3dmesh(rbt, link_num=10, show_nrml=True):
     return rbt_o3d
 
 
-def show_nbv_o3d(pts_nbv, nrmls_nbv, confs_nbv, o3dpcd, coord, o3dpcd_o=None):
+def show_nbv_o3d(pts_nbv, nrmls_nbv, confs_nbv, o3dpcd, coord=None, o3dpcd_o=None):
     nbv_mesh_list = []
     for i in range(len(pts_nbv)):
         nbv_mesh_list.append(gen_o3d_arrow(pts_nbv[i], pts_nbv[i] + rm.unit_vector(nrmls_nbv[i]) * .02,
@@ -607,19 +618,19 @@ panda3d related
 '''
 
 
-def attach_nbv_gm(pts, nrml, conf, cam_pos, arrow_len):
+def attach_nbv_gm(pts, nrml, conf, cam_pos, arrow_len, thickness=.002):
     for i in range(len(pts)):
         gm.gen_arrow(pts[i], pts[i] + nrml[i] * arrow_len / np.linalg.norm(nrml[i]),
-                     rgba=(conf[i], 0, 1 - conf[i], 1), thickness=.002).attach_to(base)
-    gm.gen_dashstick(cam_pos, pts[0], rgba=(.7, .7, 0, .5), thickness=.002).attach_to(base)
+                     rgba=(conf[i], 0, 1 - conf[i], 1), thickness=thickness).attach_to(base)
+    # gm.gen_dashstick(cam_pos, pts[0], rgba=(.7, .7, 0, .5), thickness=.002).attach_to(base)
 
 
-def attach_nbv_conf_gm(pts, nrml, conf, cam_pos, arrow_len):
+def attach_nbv_conf_gm(pts, nrml, conf, cam_pos, arrow_len, thickness=.002):
     for i in range(len(pts)):
         if conf[i] > .2:
             continue
         gm.gen_arrow(pts[i], pts[i] + nrml[i] * arrow_len / np.linalg.norm(nrml[i]),
-                     rgba=(conf[i], 0, 1 - conf[i], 1), thickness=.002).attach_to(base)
+                     rgba=(conf[i], 0, 1 - conf[i], 1), thickness=thickness).attach_to(base)
         # gm.gen_sphere(pts[i], radius=.01, rgba=(conf[i], 0, 1 - conf[i], .2)).attach_to(base)
         gm.gen_dashstick(cam_pos, pts[i], rgba=(.7, .7, 0, .5), thickness=.002).attach_to(base)
 

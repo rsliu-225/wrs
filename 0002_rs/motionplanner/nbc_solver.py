@@ -45,9 +45,9 @@ class NBCOptimizerVec(object):
         self.max_a = max_a
         self.max_dist = max_dist
 
-        self.nbv_pt, self.nbv_nrml = [], []
+        self.pt_nbv, self.nrml_nbv = [], []
         self.init_eepos, self.init_eerot, self.init_eemat4 = None, None, None
-        self.cam_pos, self.cam_mat4 = None, None
+        self.laser_pos, self.cam_pos, self.cam_mat4 = (0, 0, 0), (0, 0, 0), np.eye(3)
 
     def objctive(self, x):
         self.jnts.append(x)
@@ -58,7 +58,7 @@ class NBCOptimizerVec(object):
         eepos, eerot = self.rbt.get_gl_tcp()
         eemat4 = rm.homomat_from_posrot(eepos, eerot)
         transmat4 = eemat4.dot(np.linalg.inv(self.init_eemat4))
-        p_new = pcdu.trans_pcd(self.nbv_pt, transmat4)[0]
+        p_new = pcdu.trans_pcd(self.pt_nbv, transmat4)[0]
         w_sr = np.degrees(rm.angle_between_vectors(config.CAM_LS, self.cam_pos - p_new))
         w_wo = np.degrees(rm.angle_between_vectors(eerot[:, 0], self.cam_pos - p_new))
 
@@ -74,19 +74,24 @@ class NBCOptimizerVec(object):
 
         return obj
 
-    def update_known(self, seedjntagls, nbv_pt, nbv_nrml, cam_mat4):
+    def update_known(self, seedjntagls, pts_nbv, nrmls_nbv, cam_mat4):
         self.seedjntagls = seedjntagls
         self.init_eepos, self.init_eerot = self.rbt.get_gl_tcp()
         self.init_eemat4 = rm.homomat_from_posrot(self.init_eepos, self.init_eerot)
-        self.nbv_pt, self.nbv_nrml, self.cam_pos, self.cam_mat4 = nbv_pt, nbv_nrml, cam_mat4[:3, 3], cam_mat4
+        self.pt_nbv, self.nrml_nbv, self.cam_pos, self.cam_mat4 = pts_nbv[0], nrmls_nbv[0], cam_mat4[:3, 3], cam_mat4
+        self.pts_nbv, self.nrmls_nbv = pts_nbv, nrmls_nbv
+        self.laser_pos = self.cam_mat4[:3, 3] - .175 * rm.unit_vector(self.cam_mat4[:3, 0]) \
+                         + .049 * rm.unit_vector(self.cam_mat4[:3, 1]) \
+                         + .01 * rm.unit_vector(self.cam_mat4[:3, 2])
+        gm.gen_frame(self.laser_pos, self.cam_mat4[:3, :3]).attach_to(base)
 
     def con_rot(self, x):
         self.rbth.goto_armjnts(x)
         eepos, eerot = self.rbt.get_gl_tcp()
         eemat4 = rm.homomat_from_posrot(eepos, eerot)
         transmat4 = eemat4.dot(np.linalg.inv(self.init_eemat4))
-        n_new = transmat4[:3, :3].dot(self.nbv_nrml)
-        p_new = pcdu.trans_pcd([self.nbv_pt], transmat4)[0]
+        n_new = transmat4[:3, :3].dot(self.nrml_nbv)
+        p_new = pcdu.trans_pcd([self.pt_nbv], transmat4)[0]
         err = rm.angle_between_vectors(n_new, self.cam_pos - p_new)
         err = min([err, np.pi - err])
         self.rot_err.append(np.degrees(err))
@@ -122,16 +127,21 @@ class NBCOptimizerVec(object):
         eepos, eerot = self.rbt.get_gl_tcp()
         eemat4 = rm.homomat_from_posrot(eepos, eerot)
         transmat4 = eemat4.dot(np.linalg.inv(self.init_eemat4))
-        n_new = transmat4[:3, :3].dot(self.nbv_nrml)
-        err = rm.angle_between_vectors(n_new, self.cam_mat4[:3, 2])
-        err = min([err, np.pi - err])
+        # n_new = transmat4[:3, :3].dot(self.nrml_nbv)
+        # err = rm.angle_between_vectors(n_new, self.cam_mat4[:3, 1])
+        # err = min([err, np.pi - err])
+        pts_new = pcdu.trans_pcd(self.pts_nbv, transmat4)
+        nrmls_new = np.asarray([transmat4[:3, :3].dot(n) for n in self.nrmls_nbv])
+        err = min([min(rm.angle_between_vectors(p - self.laser_pos, nrmls_new[i]),
+                          np.pi - rm.angle_between_vectors(p - self.laser_pos, nrmls_new[i]))
+                      for i, p in enumerate(pts_new)])
         self.ref_list.append(np.degrees(err))
-        return err - np.pi / 6
+        return err - np.pi / 9
 
     def addconstraint(self, constraint, condition="ineq"):
         self.cons.append({'type': condition, 'fun': constraint})
 
-    def solve(self, seedjntagls, nbv_p, nbv_nrml, cam_mat4, method='SLSQP'):
+    def solve(self, seedjntagls, pts_nbv, nrmls_nbv, cam_mat4, method='SLSQP'):
         """
 
         :param seedjntagls:
@@ -139,7 +149,7 @@ class NBCOptimizerVec(object):
         :return:
         """
         time_start = time.time()
-        self.update_known(seedjntagls, nbv_p, nbv_nrml, cam_mat4)
+        self.update_known(seedjntagls, pts_nbv, nrmls_nbv, cam_mat4)
         self.addconstraint(self.con_rot, condition="ineq")
         self.addconstraint(self.con_dist, condition="ineq")
         self.addconstraint(self.con_diff_x, condition="ineq")
@@ -183,4 +193,3 @@ class NBCOptimizerVec(object):
         # ax6 = plt.subplot(326)
         # self.rbth.plot_armjnts(ax6, self.jnts, show=False)
         plt.show()
-

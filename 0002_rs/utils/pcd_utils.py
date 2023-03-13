@@ -889,11 +889,11 @@ def cal_nbv_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, radius=.01, toggled
     def _normalize(l):
         return [(v - min(l)) / (max(l) - min(l)) for v in l]
 
-    # _, _, trans = o3dh.registration_icp_ptpt(pts_pcn, pts, maxcorrdist=.02, toggledebug=False)
-    # pts_pcn = trans_pcd(pts_pcn, trans)
-    # if toggledebug:
-    #     show_pcd(pts_pcn, rgba=COLOR[2])
-    # show_pcd(pts, rgba=COLOR[0])
+    _, _, trans = o3dh.registration_icp_ptpt(pts_pcn, pts, maxcorrdist=.02, toggledebug=False)
+    pts_pcn = trans_pcd(pts_pcn, trans)
+    if toggledebug:
+        show_pcd(pts_pcn, rgba=COLOR[2])
+        show_pcd(pts, rgba=COLOR[0])
     o3d_pcn = o3dh.nparray2o3dpcd(pts_pcn)
     o3d_pts = o3dh.nparray2o3dpcd(pts)
     o3d_pcn.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=radius, max_nn=200))
@@ -922,10 +922,12 @@ def cal_nbv_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, radius=.01, toggled
 
     if toggledebug:
         for i in range(len(confs)):
-            # if confs[i] < .3:
             gm.gen_sphere(kpts[i], radius=radius, rgba=[confs[i], 0, 1 - confs[i], .1]).attach_to(base)
-    #         # gm.gen_arrow(kpts[i], kpts[i] + nrmls[i] * .02, rgba=[confs[i], 0, 1 - confs[i], 1],
-    #         #              thickness=.001).attach_to(base)
+            # if confs[i] < .4:
+            #     gm.gen_arrow(kpts[i], kpts[i] + rm.unit_vector(nrmls[i]) * .02, rgba=[confs[i], 0, 1 - confs[i], 1],
+            #                  thickness=.001).attach_to(base)
+            gm.gen_arrow(kpts[1], kpts[1] + rm.unit_vector(nrmls[1]) * .02, rgba=[0, 0, 1, 1],
+                         thickness=.001).attach_to(base)
     # kpts, nrmls, confs = extract_main_vec(kpts, nrmls, confs)
     # pts, nrmls, confs = extract_main_vec(pts, nrmls, confs, threshold=np.radians(30), toggledebug=toggledebug)
 
@@ -1069,17 +1071,25 @@ def show_pcd_withrbt(pcd, rgba=(1, 1, 1, 1), rbtx=None, toggleendcoord=False):
     gm.gen_pointcloud(pcd, rgbas=[rgba]).attach_to(base)
 
 
-def show_cam(transmat4):
-    transmat4 = np.dot(transmat4, rm.homomat_from_posrot((0, 0, 0), rm.rotmat_from_axangle((1, 0, 0), np.pi / 2)))
+def show_cam(mat4):
     cam_cm = cm.CollisionModel(os.path.join(config.ROOT, 'obstacles', 'phoxi.stl'))
-    cam_cm.set_homomat(transmat4)
-    cam_cm.set_rgba((.1, .1, .1, 1))
+    cam_cm.set_homomat(mat4)
+    cam_cm.set_rgba((.2, .2, .2, 1))
     cam_cm.attach_to(base)
     fov_cm = cm.CollisionModel(os.path.join(config.ROOT, 'obstacles', 'phoxi_fov.stl'))
-    fov_cm.set_homomat(transmat4)
-    fov_cm.set_rgba((.7, .7, .7, .4))
+    fov_cm.set_homomat(mat4)
+    fov_cm.set_rgba((.8, .8, .8, .1))
     fov_cm.attach_to(base)
-    gm.gen_frame(transmat4[:3, 3], transmat4[:3, :3]).attach_to(base)
+    laser_pos = mat4[:3, 3] - .175 * rm.unit_vector(mat4[:3, 0]) + .049 * rm.unit_vector(mat4[:3, 1]) + \
+                .01 * rm.unit_vector(mat4[:3, 2])
+    laser_cm = cm.CollisionModel(os.path.join(config.ROOT, 'obstacles', 'phoxi_laser.stl'))
+    laser_cm.set_homomat(rm.homomat_from_posrot(laser_pos,
+                                                np.dot(rm.rotmat_from_axangle((0, 0, 1), np.radians(22.5)),
+                                                       mat4[:3, :3])))
+    laser_cm.set_rgba((1, 0, 0, .1))
+    laser_cm.attach_to(base)
+
+    gm.gen_frame(mat4[:3, 3], mat4[:3, :3]).attach_to(base)
 
 
 if __name__ == '__main__':

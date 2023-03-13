@@ -308,25 +308,20 @@ def run_random(path, cat, f, o3dpcd_init, o3dpcd_gt, cov_tor=.001, goal=.05,
 
 
 if __name__ == '__main__':
-    RES_FO_NAME = 'res_60_all'
+    RES_FO_NAME = 'res_60_rlen'
 
     model_name = 'pcn'
     load_model = 'pcn_emd_all/best_emd_network.pth'
-    cam_pos = [0, 0, .5]
+    cam_pos = [0, 0, .4]
 
     base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
-    # rbt = el.loadXarm(showrbt=False)
-    # m_planner = mp.MotionPlanner(env=None, rbt=rbt, armname="arm")
-    #
-    # seedjntagls = m_planner.get_armjnts()
 
     path = 'D:/nbv_mesh/'
     if not os.path.exists(path):
         path = 'E:/liu/nbv_mesh/'
-    # cat_list = ['plat']
-    cat_list = ['plat', 'tmpl']
-    # cat_list = ['rlen_3', 'rlen_4', 'rlen_5']
-    cov_tor = .0018
+    # cat_list = ['plat', 'tmpl']
+    cat_list = ['bspl_4']
+    cov_tor = .001
     goal = .95
     vis_threshold = np.radians(60)
     for cat in cat_list:
@@ -334,27 +329,28 @@ if __name__ == '__main__':
             os.makedirs(os.path.join(path, cat, RES_FO_NAME))
         for f in os.listdir(os.path.join(path, cat, 'mesh')):
             print(f'-----------{f}------------')
-            if os.path.exists(os.path.join(path, cat, RES_FO_NAME, f'pcn_{f.split(".ply")[0]}.json')) and \
-                    os.path.exists(os.path.join(path, cat, RES_FO_NAME, f'pcn_opt_{f.split(".ply")[0]}.json')) and \
-                    os.path.exists(os.path.join(path, cat, RES_FO_NAME, f'org_{f.split(".ply")[0]}.json')) and \
-                    os.path.exists(os.path.join(path, cat, RES_FO_NAME, f'random_{f.split(".ply")[0]}.json')):
-                continue
+            # if os.path.exists(os.path.join(path, cat, RES_FO_NAME, f'pcn_{f.split(".ply")[0]}.json')) and \
+            #         os.path.exists(os.path.join(path, cat, RES_FO_NAME, f'pcn_opt_{f.split(".ply")[0]}.json')) and \
+            #         os.path.exists(os.path.join(path, cat, RES_FO_NAME, f'org_{f.split(".ply")[0]}.json')) and \
+            #         os.path.exists(os.path.join(path, cat, RES_FO_NAME, f'random_{f.split(".ply")[0]}.json')):
+            #     continue
+            f = '0001.ply'
 
             o3dpcd_init = \
                 nu.gen_partial_o3dpcd_occ(os.path.join(path, cat), f.split('.ply')[0], np.eye(3), [0, 0, 0],
                                           rnd_occ_ratio_rng=(.2, .4), nrml_occ_ratio_rng=(.2, .6),
-                                          vis_threshold=vis_threshold, toggledebug=False,
+                                          vis_threshold=vis_threshold, toggledebug=True,
                                           occ_vt_ratio=random.uniform(.08, .1), noise_vt_ratio=random.uniform(.2, .5),
-                                          noise_cnt=random.randint(1, 5),
+                                          noise_cnt=random.randint(1, 5), fov=False,
                                           add_occ_vt=True, add_noise_vt=False, add_occ_rnd=False, add_noise_pts=True)
 
             o3dmesh_gt = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'prim', f))
             o3dpcd_gt = du.get_objpcd_full_sample_o3d(o3dmesh_gt, smp_num=2048, method='possion')
 
             run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_model,
-                    goal=goal, cov_tor=cov_tor, vis_threshold=vis_threshold, toggledebug=False)
+                    goal=goal, cov_tor=cov_tor, vis_threshold=vis_threshold, toggledebug=True)
             run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, model_name, load_model,
-                        goal=goal, cov_tor=cov_tor, vis_threshold=vis_threshold, toggledebug=False)
+                        goal=goal, cov_tor=cov_tor, vis_threshold=vis_threshold, toggledebug=True)
             run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, goal=goal, cov_tor=cov_tor,
                     vis_threshold=vis_threshold, toggledebug=False)
             run_random(path, cat, f, o3dpcd_init, o3dpcd_gt, goal=goal, cov_tor=cov_tor,

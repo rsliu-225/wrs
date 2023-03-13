@@ -19,7 +19,9 @@ import basis.robot_math as rm
 
 if __name__ == '__main__':
     base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
-    cam_pos = [0, 0, .4]
+    cam_pos = [.3, 0, .3]
+    # cam_mat4 = rm.homomat_from_posrot(cam_pos, rot=np.asarray([[1, 0, 0], [0, 1, 0], [0, 0, 1]]).T)
+    cam_mat4 = rm.homomat_from_posrot(cam_pos, rot=rm.rotmat_from_axangle((0, 1, 0), np.pi / 4))
 
     rbt = el.loadXarm(showrbt=False)
     rbt.jaw_to('hnd', 0)
@@ -74,8 +76,7 @@ if __name__ == '__main__':
             init_eemat4 = rm.homomat_from_posrot(init_eepos, init_eerot).dot(relmat4)
 
             nbc_opt = nbc_solver.PCNNBCOptimizer(rbt, releemat4=relmat4, toggledebug=True)
-            jnts, transmat4, _, time_cost = \
-                nbc_opt.solve(seedjntagls, pcd_i, rm.homomat_from_posrot(pos=cam_pos), method='COBYLA')
+            jnts, transmat4, _, time_cost = nbc_opt.solve(seedjntagls, pcd_i, cam_mat4, method='COBYLA')
             print(jnts)
 
             rbt.fk('arm', jnts)
@@ -88,7 +89,7 @@ if __name__ == '__main__':
             rbt_o3dmesh.transform(np.linalg.inv(init_eemat4))
             o3dpcd_nxt = nu.gen_partial_o3dpcd(o3dmesh, othermesh=[rbt_o3dmesh], toggledebug=toggledebug,
                                                trans=transmat4[:3, 3], rot=transmat4[:3, :3], rot_center=[0, 0, 0],
-                                               fov=True, cam_pos=cam_pos)
+                                               fov=True, cam_mat4=cam_mat4)
 
             o3d.visualization.draw_geometries([coord, o3dpcd_gt, o3dpcd_nxt])
             o3dpcd_i += o3dpcd_nxt

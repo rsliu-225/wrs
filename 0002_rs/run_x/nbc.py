@@ -130,7 +130,7 @@ if __name__ == '__main__':
         elif method == 'opt':
             pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts, pcd_pcn = \
                 rcu.cal_nbc_pcn_opt(pcd_cmp, gripperframe, rbt, seedjntagls, center=center, gl_transmat4=gl_transmat4,
-                                    toggledebug_p3d=False, toggledebug=True)
+                                    toggledebug=True)
         else:
             pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts = \
                 rcu.cal_nbc(pcd_cmp, gripperframe, rbt, seedjntagls=seedjntagls, gl_transmat4=gl_transmat4,
