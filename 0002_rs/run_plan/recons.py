@@ -11,7 +11,7 @@ if __name__ == '__main__':
     base = wd.World(cam_pos=[.1, -.5, -.05], lookat_pos=[.1, 0, -.05])
 
     # base = wd.World(cam_pos=[0, 0, 0], lookat_pos=[0, 0, 1])
-    fo = 'nbc_pcn/extrude_1_woef'
+    fo = 'nbc_opt/extrude_1'
     # fo = 'nbc/plate_a_cubic'
     # fo = 'opti/plate_a_cubic'
     # fo = 'seq/plate_a_quadratic'
@@ -35,7 +35,7 @@ if __name__ == '__main__':
     z_range = (-.1, -.02)
     # gm.gen_frame().attach_to(base)
     pcd_cropped_list = rcu.reg_armarker(fo, seed, center, x_range=x_range, y_range=y_range, z_range=z_range,
-                                        toggledebug=False, icp=True)
+                                        toggledebug=False, icp=False)
     pts = []
     for pcd in pcd_cropped_list:
         pts.extend(pcd)

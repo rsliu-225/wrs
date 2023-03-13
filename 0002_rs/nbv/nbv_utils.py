@@ -1,24 +1,24 @@
 import json
 import os
 import random
-import h5py
 
+import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 import open3d as o3d
 from geomdl import BSpline
-from sklearn.neighbors import NearestNeighbors
 from scipy.spatial import KDTree
+from sklearn.neighbors import NearestNeighbors
 
-import basis.robot_math as rm
 import basis.o3dhelper as o3dh
+import basis.robot_math as rm
+import bendplanner.bend_utils as bu
 import datagenerator.data_utils as du
+import modeling.geometric_model as gm
+import pcn.inference as inference
 # import localenv.envloader as el
 # import motionplanner.motion_planner as mp
 import utils.pcd_utils as pcdu
-import bendplanner.bend_utils as bu
-import pcn.inference as inference
-import modeling.geometric_model as gm
 
 COLOR = np.asarray(
     [[31, 119, 180], [44, 160, 44], [214, 39, 40], [255, 127, 14], [148, 103, 189], [23, 190, 207]]) / 255
@@ -211,8 +211,6 @@ def fit_dist_cov(path, cat, fo, cross_sec, prefix='pcn', kpts_num=16, toggledebu
             o3dpcd_o.paint_uniform_color(COLOR[2])
             o3dpcd.paint_uniform_color(COLOR[0])
 
-            from sklearn.svm import OneClassSVM
-
             kpts_o, kpts_rotseq_o = pcdu.get_kpts_gmm(pts_o, rgba=(1, 1, 0, 1), n_components=kpts_num)
             # o3dpcd_final = None
             # for p in kpts_o:
@@ -351,16 +349,17 @@ def gen_partial_o3dpcd(o3dmesh, rot=np.eye(3), trans=np.zeros(3), rot_center=(0,
     vis = o3d.visualization.Visualizer()
     vis.create_window('win', left=0, top=0)
     o3dmesh = o3dmesh.filter_smooth_taubin(number_of_iterations=10)
-    # o3dmesh.rotate(rot, center=rot_center)
-    # o3dmesh.translate(trans)
     o3dmesh.transform(rm.homomat_from_posrot(trans, rot))
     o3dmesh.transform(np.linalg.inv(cam_mat4))
+    vis.add_geometry(o3dmesh)
 
     for mesh in othermesh:
         mesh.transform(np.linalg.inv(cam_mat4))
         vis.add_geometry(mesh)
+    circle_mesh = o3d.geometry.TriangleMesh.create_sphere(radius=.001)
+    circle_mesh.translate((0, 0, -.5))
+    vis.add_geometry(circle_mesh)
 
-    vis.add_geometry(o3dmesh)
     vis.poll_events()
     tmp_f_name = str(random.randint(0, 100))
     vis.capture_depth_point_cloud(f'./{tmp_f_name}.pcd', do_render=False, convert_to_world_coordinate=True)

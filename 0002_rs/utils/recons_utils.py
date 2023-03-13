@@ -533,17 +533,14 @@ def cal_nbc_pcn(pcd, gripperframe, rbt, seedjntagls, center=np.asarray((0, 0, 0)
 
 def cal_nbc_pcn_opt(pcd, gripperframe, rbt, seedjntagls, center=np.asarray((0, 0, 0)), gl_transmat4=np.eye(4),
                     theta=np.pi / 3, toggledebug=False):
-    arrow_len = .04
     cam_mat4 = np.linalg.inv(gripperframe)
     relmat4 = rm.homomat_from_posrot((0, 0, 0), rm.rotmat_from_axangle((0, 1, 0), -np.pi / 2))
-    # relmat4 = rm.homomat_from_posrot((0, 0, 0), np.eye(3))
     pcd = np.asarray(pcd) - center
     pcd_pcn = inference.inference_sgl(pcd, load_model='pcn_emd_rlen/best_cd_p_network.pth', toggledebug=False)
     pcd_pcn = pcdu.crop_pcd(pcd_pcn, x_range=(-1, 1), y_range=(-1, 1), z_range=(-1, 0))
     pcd = pcdu.trans_pcd(pcd, relmat4)
     pcd_pcn = pcdu.trans_pcd(pcd_pcn, relmat4)
     cam_mat4 = np.dot(cam_mat4, rm.homomat_from_posrot((0, 0, 0), np.asarray([[-1, 0, 0], [0, 1, 0], [0, 0, -1]])))
-    # cam_mat4 = np.dot(cam_mat4, rm.homomat_from_posrot((0, 0, 0), rm.rotmat_from_axangle((1, 0, 0), np.pi / 2)))
     pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd, pcd_pcn, theta=theta, toggledebug=False)
     print(confs_nbv)
     print('Num. of NBV:', len(pts_nbv))

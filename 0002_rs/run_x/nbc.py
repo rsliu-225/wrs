@@ -100,7 +100,7 @@ if __name__ == '__main__':
             #     dist = np.linalg.norm(np.asarray(o3dpcd_tmp.points[j]) - np.asarray(o3dpcd_tmp.points[idx[0]]))
             #     a = rm.angle_between_vectors(np.asarray(o3dpcd_tmp.normals[j]), np.asarray(o3dpcd_tmp.normals[idx[0]]))
             #     a = min([a, np.pi - a])
-            #     if dist < .05 and a < np.pi / 3:
+            #     if dist < .05:
             #         remain_ids.append(j)
             # o3dpcd_tmp = o3dpcd_tmp.select_by_index(remain_ids)
 
@@ -130,12 +130,14 @@ if __name__ == '__main__':
         elif method == 'opt':
             pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts, pcd_pcn = \
                 rcu.cal_nbc_pcn_opt(pcd_cmp, gripperframe, rbt, seedjntagls, center=center, gl_transmat4=gl_transmat4,
-                                    toggledebug=True)
+                                    theta=theta, toggledebug=True)
+            # pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts, pcd_pcn = \
+            #     pickle.load(open(os.path.join(f'../run_plan/tmp_res.pkl'), 'rb'))
+
         else:
             pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts = \
                 rcu.cal_nbc(pcd_cmp, gripperframe, rbt, seedjntagls=seedjntagls, gl_transmat4=gl_transmat4,
                             theta=theta, max_a=max_a, toggledebug_p3d=False, toggledebug=True)
-        # jnts = np.asarray([-0.01743049, - 0.84020071, - 0.2070076, 0.2452313, - 0.01734984, - 0.37176669, 0.96997314])
         pcd_pcn_list.append(pcd_pcn)
         m_planner.ah.show_armjnts(armjnts=jnts, rgba=(0, 1, 0, .5))
         print(jnts)

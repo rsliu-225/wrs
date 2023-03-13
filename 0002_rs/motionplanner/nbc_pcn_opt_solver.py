@@ -71,7 +71,7 @@ class PCNNBCOptimizer(object):
         o3dpcd_tmp_origin = \
             nu.gen_partial_o3dpcd(self.o3dmesh, toggledebug=False, othermesh=[rbt_o3dmesh],
                                   trans=transmat4[:3, 3], rot=transmat4[:3, :3], rot_center=self.rot_center,
-                                  fov=True, vis_threshold=np.radians(75),
+                                  fov=True, vis_threshold=np.radians(60),
                                   cam_mat4=self.cam_mat4)
         o3dpcd_tmp_origin.paint_uniform_color(nu.COLOR[5])
 
@@ -100,7 +100,7 @@ class PCNNBCOptimizer(object):
         kdt_tmp = o3d.geometry.KDTreeFlann(o3dpcd_tmp_origin)
         nrmls_tmp = np.asarray(o3dpcd_tmp_origin.normals)
         for i in range(len(self.pts_nbv)):
-            if self.nbv_conf[i] > .4:
+            if self.nbv_conf[i] > .2:
                 continue
             _, idx, _ = kdt_tmp.search_radius_vector_3d(self.pts_nbv[i], .01)
             conf_sum += (1 - (self.nbv_conf[i])) * len(idx) / 10
@@ -165,13 +165,16 @@ class PCNNBCOptimizer(object):
         self.rbth.goto_armjnts(x)
         eepos, eerot = self.rbt.get_gl_tcp()
         err = abs(np.asarray(eepos)[1] - self.init_eepos[1])
-        return .15 - err
+        return .12 - err
 
     def con_diff_z(self, x):
         self.rbth.goto_armjnts(x)
         eepos, eerot = self.rbt.get_gl_tcp()
-        err = abs(np.asarray(eepos)[2] - self.init_eepos[2])
-        return .1 - err
+        err = np.asarray(eepos)[2] - self.init_eepos[2]
+        if err > 0:
+            return .12 - err
+        if err <= 0:
+            return .05 + err
 
     def con_cost(self, x):
         w_e = np.linalg.norm(x - self.seedjntagls)

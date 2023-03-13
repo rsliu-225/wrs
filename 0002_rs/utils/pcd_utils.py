@@ -865,6 +865,7 @@ def cal_distribution(pts, kpts, voxel_size=0.001, radius=.005):
     for i, p in enumerate(np.asarray(kpts)):
         k, _, _ = kdt_i.search_radius_vector_3d(p, radius)
         confs.append(k)
+    print(min(confs))
     # print(confs, np.std(np.asarray(confs)),
     #       min(confs), len(np.asarray(o3dpcd_down.points)) / len(kpts))
     # o3dpcd.paint_uniform_color((1, 0, 0))

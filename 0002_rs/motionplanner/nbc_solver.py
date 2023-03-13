@@ -114,13 +114,16 @@ class NBCOptimizerVec(object):
         self.rbth.goto_armjnts(x)
         eepos, eerot = self.rbt.get_gl_tcp()
         err = abs(np.asarray(eepos)[1] - self.init_eepos[1])
-        return .15 - err
+        return .12 - err
 
     def con_diff_z(self, x):
         self.rbth.goto_armjnts(x)
         eepos, eerot = self.rbt.get_gl_tcp()
-        err = abs(np.asarray(eepos)[2] - self.init_eepos[2])
-        return .1 - err
+        err = np.asarray(eepos)[2] - self.init_eepos[2]
+        if err > 0:
+            return .12 - err
+        if err <= 0:
+            return .05 + err
 
     def con_reflection(self, x):
         self.rbth.goto_armjnts(x)
@@ -133,10 +136,10 @@ class NBCOptimizerVec(object):
         pts_new = pcdu.trans_pcd(self.pts_nbv, transmat4)
         nrmls_new = np.asarray([transmat4[:3, :3].dot(n) for n in self.nrmls_nbv])
         err = min([min(rm.angle_between_vectors(p - self.laser_pos, nrmls_new[i]),
-                          np.pi - rm.angle_between_vectors(p - self.laser_pos, nrmls_new[i]))
-                      for i, p in enumerate(pts_new)])
+                       np.pi - rm.angle_between_vectors(p - self.laser_pos, nrmls_new[i]))
+                   for i, p in enumerate(pts_new)])
         self.ref_list.append(np.degrees(err))
-        return err - np.pi / 9
+        return err - np.pi / 10
 
     def addconstraint(self, constraint, condition="ineq"):
         self.cons.append({'type': condition, 'fun': constraint})
@@ -155,7 +158,7 @@ class NBCOptimizerVec(object):
         self.addconstraint(self.con_diff_x, condition="ineq")
         self.addconstraint(self.con_diff_y, condition="ineq")
         self.addconstraint(self.con_diff_z, condition="ineq")
-        self.addconstraint(self.con_reflection, condition="ineq")
+        # self.addconstraint(self.con_reflection, condition="ineq")
 
         sol = minimize(self.objctive, seedjntagls, method=method, bounds=self.bnds, constraints=self.cons)
         time_cost = time.time() - time_start

@@ -67,15 +67,15 @@ if __name__ == '__main__':
     # pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts, _ = \
     #     rcu.cal_nbc(pcd_roi, gripperframe, rbt, seedjntagls=seedjntagls, gl_transmat4=gl_transmat4,
     #                 theta=theta, max_a=max_a, toggledebug_p3d=True, toggledebug=False)
-    # pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts, pcd_pcn = \
-    #     rcu.cal_nbc_pcn(pcd_roi, gripperframe, rbt, center=center, seedjntagls=seedjntagls, gl_transmat4=gl_transmat4,
-    #                     theta=theta, max_a=max_a, toggledebug_p3d=True, toggledebug=False)
+    pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts, pcd_pcn = \
+        rcu.cal_nbc_pcn(pcd_roi, gripperframe, rbt, center=center, seedjntagls=seedjntagls, gl_transmat4=gl_transmat4,
+                        theta=theta, max_a=max_a, toggledebug_p3d=True, toggledebug=False)
     # pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts, pcd_pcn = \
     #     rcu.cal_nbc_pcn_opt(pcd_roi, gripperframe, rbt, center=center, seedjntagls=seedjntagls,
     #                         gl_transmat4=gl_transmat4, theta=theta, toggledebug=False)
     # pickle.dump([pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts, pcd_pcn], open(os.path.join(f'tmp_res.pkl'), 'wb'))
 
-    pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts, pcd_pcn = pickle.load(open(os.path.join(f'tmp_res.pkl'), 'rb'))
+    # pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts, pcd_pcn = pickle.load(open(os.path.join(f'tmp_res.pkl'), 'rb'))
     m_planner.ah.show_armjnts(armjnts=seedjntagls, rgba=(1, 1, 0, .5))
     m_planner.ah.show_armjnts(armjnts=jnts, rgba=(0, 1, 0, .5))
 
