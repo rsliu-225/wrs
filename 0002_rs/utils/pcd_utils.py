@@ -835,7 +835,7 @@ def get_rots_wkpts(objpcd, kpts, k=None, show=True, rgba=(1, 0, 0, 1)):
     kdt, _ = get_kdt(objpcd)
     kpts_rotseq = []
     for i, p in enumerate(kpts[:-1]):
-        knn = get_knn(kpts[i], kdt, k=int(len(objpcd) / len(kpts)) if k is None else k)
+        knn = get_knn(kpts[i], kdt, k=int(len(objpcd) * 2 / len(kpts)) if k is None else k)
         pcv, pcaxmat = rm.compute_pca(knn)
         y_v = kpts[i + 1] - kpts[i]
         x_v = pcaxmat[:, np.argmin(pcv)]
@@ -890,8 +890,8 @@ def cal_nbv_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, radius=.01, toggled
     def _normalize(l):
         return [(v - min(l)) / (max(l) - min(l)) for v in l]
 
-    _, _, trans = o3dh.registration_icp_ptpt(pts_pcn, pts, maxcorrdist=.02, toggledebug=False)
-    pts_pcn = trans_pcd(pts_pcn, trans)
+    # _, _, trans = o3dh.registration_icp_ptpt(pts_pcn, pts, maxcorrdist=.02, toggledebug=False)
+    # pts_pcn = trans_pcd(pts_pcn, trans)
     if toggledebug:
         show_pcd(pts_pcn, rgba=COLOR[2])
         show_pcd(pts, rgba=COLOR[0])

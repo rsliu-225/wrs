@@ -356,8 +356,8 @@ def gen_partial_o3dpcd(o3dmesh, rot=np.eye(3), trans=np.zeros(3), rot_center=(0,
     for mesh in othermesh:
         mesh.transform(np.linalg.inv(cam_mat4))
         vis.add_geometry(mesh)
-    circle_mesh = o3d.geometry.TriangleMesh.create_sphere(radius=.001)
-    circle_mesh.translate((0, 0, -.5))
+    circle_mesh = o3d.geometry.TriangleMesh.create_sphere(radius=.0001)
+    circle_mesh.translate((0, 0, -.65))
     vis.add_geometry(circle_mesh)
 
     vis.poll_events()
@@ -372,8 +372,8 @@ def gen_partial_o3dpcd(o3dmesh, rot=np.eye(3), trans=np.zeros(3), rot_center=(0,
     o3dpcd.paint_uniform_color(COLOR[0])
 
     if toggledebug:
-        coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.1)
-        o3d.visualization.draw_geometries([coord, o3dpcd, o3dmesh], mesh_show_back_face=True)
+        # coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.1)
+        o3d.visualization.draw_geometries([o3dpcd, o3dmesh], mesh_show_back_face=True)
         # o3d.visualization.draw_geometries([o3dpcd], mesh_show_back_face=True)
 
     o3dpcd = o3dpcd.voxel_down_sample(voxel_size=.001)
@@ -584,9 +584,11 @@ def rbt2o3dmesh(rbt, link_num=10, show_nrml=True):
     return rbt_o3d
 
 
-def show_nbv_o3d(pts_nbv, nrmls_nbv, confs_nbv, o3dpcd, coord=None, o3dpcd_o=None):
+def show_nbv_o3d(pts_nbv, nrmls_nbv, confs_nbv, o3dpcd, conf_tresh=1, coord=None, o3dpcd_o=None):
     nbv_mesh_list = []
     for i in range(len(pts_nbv)):
+        if confs_nbv[i] > conf_tresh:
+            continue
         nbv_mesh_list.append(gen_o3d_arrow(pts_nbv[i], pts_nbv[i] + rm.unit_vector(nrmls_nbv[i]) * .02,
                                            rgb=[confs_nbv[i], 0, 1 - confs_nbv[i]]))
     circle_mesh = gen_o3d_sphere(pts_nbv[0], radius=.002, rgb=[0, 0, 1])

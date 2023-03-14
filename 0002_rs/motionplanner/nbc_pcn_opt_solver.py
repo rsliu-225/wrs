@@ -10,7 +10,6 @@ import basis.robot_math as rm
 import bendplanner.bend_utils as bu
 import datagenerator.data_utils as du
 import motionplanner.robot_helper as rbt_helper
-import motionplanner.nbc_solver as nbcs
 import nbv.nbv_utils as nu
 import pcn.inference as pcn
 import utils.pcd_utils as pcdu
@@ -21,7 +20,7 @@ TB = True
 class PCNNBCOptimizer(object):
     def __init__(self, rbt, max_dist=1, env=None, armname="arm", releemat4=np.eye(4), toggledebug=TB):
         self.rbt = rbt
-        self.rbt.jaw_to(jawwidth=0.01)
+        self.rbt.jaw_to(jawwidth=0)
         self.armname = armname
         self.env = env
         self.armname = armname
@@ -49,6 +48,7 @@ class PCNNBCOptimizer(object):
         self.obj_list = []
 
         self.max_dist = max_dist
+        self.conf_tresh = .5
 
         self.pts_nbv, self.nrmls_nbv, self.nbv_conf = [], [], []
         self.init_eepos, self.init_eerot, self.init_eemat4 = None, None, None
@@ -100,7 +100,7 @@ class PCNNBCOptimizer(object):
         kdt_tmp = o3d.geometry.KDTreeFlann(o3dpcd_tmp_origin)
         nrmls_tmp = np.asarray(o3dpcd_tmp_origin.normals)
         for i in range(len(self.pts_nbv)):
-            if self.nbv_conf[i] > .2:
+            if self.nbv_conf[i] > self.conf_tresh:
                 continue
             _, idx, _ = kdt_tmp.search_radius_vector_3d(self.pts_nbv[i], .01)
             conf_sum += (1 - (self.nbv_conf[i])) * len(idx) / 10
@@ -116,7 +116,7 @@ class PCNNBCOptimizer(object):
             print(x, conf_sum)
         return -conf_sum
 
-    def update_known(self, seedjntagls, pcd_i, cam_mat4):
+    def update_known(self, seedjntagls, pcd_i, cam_mat4, conf_tresh):
         model_name = 'pcn'
         load_model = 'pcn_emd_all/best_cd_p_network.pth'
 
@@ -124,7 +124,7 @@ class PCNNBCOptimizer(object):
         thickness = .002
         cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
         pcd_i = pcdu.trans_pcd(pcd_i, np.linalg.inv(self.releemat4))
-
+        self.conf_tresh = conf_tresh
         self.seedjntagls = seedjntagls
         self.init_eepos, self.init_eerot = self.rbt.get_gl_tcp()
         self.init_eemat4 = rm.homomat_from_posrot(self.init_eepos, self.init_eerot)
@@ -147,6 +147,7 @@ class PCNNBCOptimizer(object):
         inp_rotseq = pcdu.get_rots_wkpts(pcd_o_inhnd, inp_pseq, k=200, show=True, rgba=(1, 0, 0, 1))
         self.o3dmesh = du.cm2o3dmesh(bu.gen_swap(inp_pseq, inp_rotseq, cross_sec, extend=.008))
         # self.o3dmesh.compute_vertex_normals()
+        # o3d.visualization.draw_geometries([self.o3dpcd_o, self.o3dmesh])
 
     def con_dist(self, x):
         self.rbth.goto_armjnts(x)
@@ -158,8 +159,11 @@ class PCNNBCOptimizer(object):
     def con_diff_x(self, x):
         self.rbth.goto_armjnts(x)
         eepos, eerot = self.rbt.get_gl_tcp()
-        err = abs(np.asarray(eepos)[0] - self.init_eepos[0])
-        return .1 - err
+        err = np.asarray(eepos)[0] - self.init_eepos[0]
+        if err > 0:
+            return .1 - err
+        if err <= 0:
+            return .05 + err
 
     def con_diff_y(self, x):
         self.rbth.goto_armjnts(x)
@@ -172,9 +176,9 @@ class PCNNBCOptimizer(object):
         eepos, eerot = self.rbt.get_gl_tcp()
         err = np.asarray(eepos)[2] - self.init_eepos[2]
         if err > 0:
-            return .12 - err
+            return .1 - err
         if err <= 0:
-            return .05 + err
+            return .04 + err
 
     def con_cost(self, x):
         w_e = np.linalg.norm(x - self.seedjntagls)
@@ -208,7 +212,7 @@ class PCNNBCOptimizer(object):
     def addconstraint(self, constraint, condition="ineq"):
         self.cons.append({'type': condition, 'fun': constraint})
 
-    def solve(self, seedjntagls, pcd_i, cam_mat4, method='SLSQP'):
+    def solve(self, seedjntagls, pcd_i, cam_mat4, conf_tresh=.2, method='SLSQP'):
         """
 
         :param seedjntagls:
@@ -216,7 +220,7 @@ class PCNNBCOptimizer(object):
         :return:
         """
         time_start = time.time()
-        self.update_known(seedjntagls, pcd_i, cam_mat4)
+        self.update_known(seedjntagls, pcd_i, cam_mat4, conf_tresh)
         self.addconstraint(self.con_dist, condition="ineq")
         self.addconstraint(self.con_diff_x, condition="ineq")
         self.addconstraint(self.con_diff_y, condition="ineq")

@@ -157,7 +157,7 @@ def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_name, 
     return flag
 
 
-def run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_name, load_model, cov_tor=.001, goal=.5,
+def run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, releemat4, model_name, load_model, cov_tor=.001, goal=.5,
                 vis_threshold=np.radians(75), toggledebug=False, toggledebug_p3d=False):
     flag = True
     coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
@@ -186,14 +186,14 @@ def run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_na
 
     rbt.fk('arm', seedjntagls)
     init_eepos, init_eerot = rbt.get_gl_tcp()
-    init_eemat4 = rm.homomat_from_posrot(init_eepos, init_eerot).dot(relmat4)
+    init_eemat4 = rm.homomat_from_posrot(init_eepos, init_eerot).dot(releemat4)
     cam_pos_origin = pcdu.trans_pcd([cam_pos], np.linalg.inv(init_eemat4))[0]
     pcdu.show_cam(rm.homomat_from_posrot(cam_pos, rot=config.CAM_ROT))
 
     while coverage < goal and cnt < 9:
         rbt.fk('arm', seedjntagls)
         init_eepos, init_eerot = rbt.get_gl_tcp()
-        init_eemat4 = rm.homomat_from_posrot(init_eepos, init_eerot).dot(relmat4)
+        init_eemat4 = rm.homomat_from_posrot(init_eepos, init_eerot).dot(releemat4)
 
         pcd_o = pcn.inference_sgl(pcd_i, model_name, load_model, toggledebug=False)
         exp_dict[cnt] = {'input': pcd_i.tolist(), 'pcn_output': pcd_o.tolist()}
@@ -224,7 +224,7 @@ def run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_na
             rbt.gen_meshmodel(rgba=(1, 1, 0, .4)).attach_to(base)
             nu.attach_nbv_gm(pts_nbv_inhnd, nrmls_nbv_inhnd, confs_nbv, cam_pos, .05)
 
-        nbc_opt = nbcs_conf.PCNNBCOptimizer(rbt, releemat4=relmat4, toggledebug=False)
+        nbc_opt = nbcs_conf.PCNNBCOptimizer(rbt, releemat4=releemat4, toggledebug=False)
         jnts, transmat4, _, time_cost = \
             nbc_opt.solve(seedjntagls, pcd_i, rm.homomat_from_posrot(pos=cam_pos), method='COBYLA')
 
@@ -236,7 +236,7 @@ def run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_na
         rbt.fk('arm', jnts)
         rbt_o3dmesh_nxt = nu.rbt2o3dmesh(rbt, link_num=10, show_nrml=toggledebug)
         eepos, eerot = rbt.get_gl_tcp()
-        eemat4 = rm.homomat_from_posrot(eepos, eerot).dot(relmat4)
+        eemat4 = rm.homomat_from_posrot(eepos, eerot).dot(releemat4)
 
         if toggledebug_p3d:
             pcd_next = pcdu.trans_pcd(pcd_i, eemat4)

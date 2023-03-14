@@ -1,8 +1,8 @@
 import itertools
 import os
 import pickle
-import cv2
 
+import cv2
 import numpy as np
 import open3d as o3d
 from cv2 import aruco as aruco
@@ -251,7 +251,7 @@ def reg_armarker(fo, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False, t
     trans = np.eye(4)
     if toggledebug:
         gm.gen_frame(center, np.eye(3)).attach_to(base)
-    for i in range(len(texture_img[:2])):
+    for i in range(len(texture_img)):
         cv2.imshow('', texture_img[i])
         cv2.waitKey(0)
         pcd = np.asarray(pcd_list[i])
@@ -279,6 +279,8 @@ def reg_armarker(fo, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False, t
     for i in range(len(pcd_cropped_list)):
         pcd_cropped = pcdu.crop_pcd(pcd_cropped_list[i], x_range, y_range, z_range)
         print(f'Num. of points in cropped pcd ({i}):', len(pcd_cropped))
+        if len(pcd_cropped) == 0:
+            continue
         o3dpcd = o3dh.nparray2o3dpcd(pcd_cropped)
         o3d.io.write_point_cloud(os.path.join(config.ROOT, 'recons_data', fo, f'{fnlist[i]}' + '.pcd'), o3dpcd)
         if to_zero:
@@ -424,7 +426,7 @@ def extract_roi_by_armarker(textureimg, pcd, seed,
     # pcd_roi = pcdu.remove_outliers(pcd_roi, nb_points=50, radius=0.005, toggledebug=False)
 
     print('Num. of points in extracted pcd:', len(pcd_roi))
-    if len(pcd) < 0:
+    if len(pcd) == 0:
         return None, None, None
     if toggledebug:
         gm.gen_sphere(seed).attach_to(base)
@@ -490,7 +492,7 @@ def cal_nbc_pcn(pcd, gripperframe, rbt, seedjntagls, center=np.asarray((0, 0, 0)
         coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
         o3dpcd = o3dh.nparray2o3dpcd(pcd)
         o3dpcd_o = o3dh.nparray2o3dpcd(pcd_pcn)
-        nu.show_nbv_o3d(pts_nbv, nrmls_nbv, confs_nbv, o3dpcd, coord, o3dpcd_o)
+        nu.show_nbv_o3d(pts_nbv, nrmls_nbv, confs_nbv, o3dpcd, conf_tresh=1, coord=coord, o3dpcd_o=o3dpcd_o)
 
     pcd = pcdu.trans_pcd(pcd, gl_transmat4)
     pts_nbv = pcdu.trans_pcd(pts_nbv, gl_transmat4)
@@ -541,18 +543,23 @@ def cal_nbc_pcn_opt(pcd, gripperframe, rbt, seedjntagls, center=np.asarray((0, 0
     pcd = pcdu.trans_pcd(pcd, relmat4)
     pcd_pcn = pcdu.trans_pcd(pcd_pcn, relmat4)
     cam_mat4 = np.dot(cam_mat4, rm.homomat_from_posrot((0, 0, 0), np.asarray([[-1, 0, 0], [0, 1, 0], [0, 0, -1]])))
-    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd, pcd_pcn, theta=theta, toggledebug=False)
+    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd, pcd_pcn, radius=.01, theta=theta, toggledebug=False)
     print(confs_nbv)
     print('Num. of NBV:', len(pts_nbv))
 
     if toggledebug:
         coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
+        # _, _, trans = o3dh.registration_icp_ptpt(pcd_pcn, pcd, maxcorrdist=.02, toggledebug=False)
+        # pcd_pcn = pcdu.trans_pcd(pcd_pcn, trans)
         o3dpcd = o3dh.nparray2o3dpcd(pcd)
         o3dpcd_o = o3dh.nparray2o3dpcd(pcd_pcn)
-        nu.show_nbv_o3d(pts_nbv, nrmls_nbv, confs_nbv, o3dpcd, coord, o3dpcd_o)
+        nu.show_nbv_o3d(pts_nbv, nrmls_nbv, confs_nbv, o3dpcd, coord=coord, o3dpcd_o=o3dpcd_o, conf_tresh=.2)
+    releemat4 = rm.homomat_from_posrot((.016, 0, 0))
+    pcd = pcdu.trans_pcd(pcd, releemat4)
 
-    nbc_opt = nbcs_conf.PCNNBCOptimizer(rbt, toggledebug=False)
-    jnts, transmat4, _, time_cost = nbc_opt.solve(seedjntagls, pcd, np.dot(gl_transmat4, cam_mat4), method='COBYLA')
+    nbc_opt = nbcs_conf.PCNNBCOptimizer(rbt, releemat4=releemat4, toggledebug=False)
+    jnts, transmat4, _, time_cost = nbc_opt.solve(seedjntagls, pcd, np.dot(gl_transmat4, cam_mat4),
+                                                  conf_tresh=.4, method='COBYLA')
 
     return pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts, pcd_pcn
 
