@@ -63,6 +63,7 @@ if __name__ == '__main__':
     pcdu.show_pcd(pcd_gl, rgba=(.5, .5, .5, .5))
     pcdu.show_pcd(pcd_roi, rgba=(1, 1, 0, 1))
     pcdu.show_cam(cam_mat4)
+    base.run()
 
     # pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts, _ = \
     #     rcu.cal_nbc(pcd_roi, gripperframe, rbt, seedjntagls=seedjntagls, gl_transmat4=gl_transmat4,

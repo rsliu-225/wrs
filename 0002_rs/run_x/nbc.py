@@ -18,7 +18,7 @@ from pcn.inference import *
 
 if __name__ == '__main__':
     base = wd.World(cam_pos=[2, 2, 2], lookat_pos=[0, 0, 0])
-    fo = 'extrude_2'
+    fo = 'template_2'
 
     rbt = el.loadXarm(showrbt=False)
     phxi = phoxi.Phoxi(host=config.PHOXI_HOST)
@@ -27,15 +27,15 @@ if __name__ == '__main__':
     rbtx = el.loadXarmx(ip='10.2.0.201')
     m_planner_x = mpx.MotionPlannerRbtX(env=None, rbt=rbt, rbtx=rbtx, armname='arm')
 
-    icp = False
+    icp = True
 
     seed = (.116, 0, .1)
-    center = (.116, 0, -.02)
+    center = (.116, 0, -.019)
 
-    x_range = (.1, .2)
+    x_range = (.1, .25)
     # y_range = (-.15, .02)
-    y_range = (-.02, .15)
-    z_range = (-.1, -.02)
+    y_range = (-.01, .15)
+    z_range = (-.1, -.019)
     theta = None
     max_a = np.pi / 18
 
@@ -43,7 +43,7 @@ if __name__ == '__main__':
 
     i = 0
 
-    method = 'pcn'
+    method = 'opt'
     if method != '':
         dump_path = f'phoxi/nbc_{method}/{fo}'
     else:
@@ -128,11 +128,11 @@ if __name__ == '__main__':
         if method == 'pcn':
             pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts, pcd_pcn = \
                 rcu.cal_nbc_pcn(pcd_cmp, gripperframe, rbt, seedjntagls, center=center, gl_transmat4=gl_transmat4,
-                                theta=theta, max_a=max_a, toggledebug_p3d=False, toggledebug=True)
+                                theta=theta, max_a=max_a, icp=False, toggledebug_p3d=False, toggledebug=True)
         elif method == 'opt':
             pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts, pcd_pcn = \
                 rcu.cal_nbc_pcn_opt(pcd_cmp, gripperframe, rbt, seedjntagls, center=center, gl_transmat4=gl_transmat4,
-                                    theta=theta, toggledebug=True)
+                                    theta=theta, icp=True, toggledebug=True)
             # pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts, pcd_pcn = \
             #     pickle.load(open(os.path.join(f'../run_plan/tmp_res.pkl'), 'rb'))
 
@@ -148,7 +148,7 @@ if __name__ == '__main__':
         # m_planner.ah.show_ani(path)
         # base.run()
         m_planner_x.movepath(path)
-        time.sleep(5)
+        time.sleep(3)
         i += 1
         pickle.dump([pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts, pcd_pcn],
                     open(os.path.join(config.ROOT, 'img', dump_path, f'{str(i).zfill(3)}_res.pkl'), 'wb'))

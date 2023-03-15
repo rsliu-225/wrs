@@ -865,7 +865,7 @@ def cal_distribution(pts, kpts, voxel_size=0.001, radius=.005):
     for i, p in enumerate(np.asarray(kpts)):
         k, _, _ = kdt_i.search_radius_vector_3d(p, radius)
         confs.append(k)
-    print(min(confs))
+    print('Min. k:', min(confs))
     # print(confs, np.std(np.asarray(confs)),
     #       min(confs), len(np.asarray(o3dpcd_down.points)) / len(kpts))
     # o3dpcd.paint_uniform_color((1, 0, 0))
@@ -886,12 +886,13 @@ def cal_nbv(pts, nrmls, confs, toggledebug=False):
            np.asarray(confs)[np.argsort(confs)]
 
 
-def cal_nbv_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, radius=.01, toggledebug=False):
+def cal_nbv_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, radius=.01, icp=True, toggledebug=False):
     def _normalize(l):
         return [(v - min(l)) / (max(l) - min(l)) for v in l]
 
-    # _, _, trans = o3dh.registration_icp_ptpt(pts_pcn, pts, maxcorrdist=.02, toggledebug=False)
-    # pts_pcn = trans_pcd(pts_pcn, trans)
+    if icp:
+        _, _, trans = o3dh.registration_icp_ptpt(pts_pcn, pts, maxcorrdist=.02, toggledebug=False)
+        pts_pcn = trans_pcd(pts_pcn, trans)
     if toggledebug:
         show_pcd(pts_pcn, rgba=COLOR[2])
         show_pcd(pts, rgba=COLOR[0])

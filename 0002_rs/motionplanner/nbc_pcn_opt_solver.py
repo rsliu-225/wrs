@@ -71,7 +71,7 @@ class PCNNBCOptimizer(object):
         o3dpcd_tmp_origin = \
             nu.gen_partial_o3dpcd(self.o3dmesh, toggledebug=False, othermesh=[rbt_o3dmesh],
                                   trans=transmat4[:3, 3], rot=transmat4[:3, :3], rot_center=self.rot_center,
-                                  fov=True, vis_threshold=np.radians(60),
+                                  fov=True, vis_threshold=np.radians(45),
                                   cam_mat4=self.cam_mat4)
         o3dpcd_tmp_origin.paint_uniform_color(nu.COLOR[5])
 
@@ -138,7 +138,7 @@ class PCNNBCOptimizer(object):
         pcd_i_inhnd = pcdu.trans_pcd(pcd_i, self.releemat4)
         pcd_o_inhnd = pcdu.trans_pcd(pcd_o, self.releemat4)
         self.pts_nbv, self.nrmls_nbv, self.nbv_conf = \
-            pcdu.cal_nbv_pcn(pcd_i_inhnd, pcd_o_inhnd, cam_pos=self.cam_pos, theta=None, toggledebug=True)
+            pcdu.cal_nbv_pcn(pcd_i_inhnd, pcd_o_inhnd, cam_pos=self.cam_pos, icp=True, theta=None, toggledebug=True)
         self.o3dpcd_o = du.nparray2o3dpcd(pcd_o_inhnd)
         self.o3dpcd_nbv = du.nparray2o3dpcd(np.asarray(self.pts_nbv))
         self.o3dpcd_nbv.colors = o3d.utility.Vector3dVector([[c, 0, 1 - c] for c in self.nbv_conf])

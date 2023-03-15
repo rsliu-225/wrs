@@ -476,8 +476,9 @@ def cal_nbc(pcd, gripperframe, rbt, seedjntagls, gl_transmat4=np.eye(4),
 
 
 def cal_nbc_pcn(pcd, gripperframe, rbt, seedjntagls, center=np.asarray((0, 0, 0)), gl_transmat4=np.eye(4),
-                theta=np.pi / 3, max_a=np.pi / 18, max_dist=1, toggledebug=False, toggledebug_p3d=False):
+                theta=np.pi / 3, max_a=np.pi / 18, max_dist=1, icp=True, toggledebug=False, toggledebug_p3d=False):
     arrow_len = .04
+
     cam_mat4 = np.linalg.inv(gripperframe)
     pcd = np.asarray(pcd) - center
     pcd_pcn = inference.inference_sgl(pcd, load_model='pcn_emd_rlen/best_cd_p_network.pth', toggledebug=toggledebug)
@@ -485,11 +486,15 @@ def cal_nbc_pcn(pcd, gripperframe, rbt, seedjntagls, center=np.asarray((0, 0, 0)
     pcd_pcn = np.asarray(pcd_pcn) + center
     pcd = np.asarray(pcd) + center
 
-    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd, pcd_pcn, radius=.02, theta=theta, toggledebug=toggledebug_p3d)
+    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd, pcd_pcn, radius=.02, theta=theta, icp=icp,
+                                                     toggledebug=toggledebug_p3d)
     print(confs_nbv)
     print('Num. of NBV:', len(pts_nbv))
     if toggledebug:
         coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
+        if icp:
+            _, _, trans = o3dh.registration_icp_ptpt(pcd_pcn, pcd, maxcorrdist=.02, toggledebug=False)
+            pcd_pcn = pcdu.trans_pcd(pcd_pcn, trans)
         o3dpcd = o3dh.nparray2o3dpcd(pcd)
         o3dpcd_o = o3dh.nparray2o3dpcd(pcd_pcn)
         nu.show_nbv_o3d(pts_nbv, nrmls_nbv, confs_nbv, o3dpcd, conf_tresh=1, coord=coord, o3dpcd_o=o3dpcd_o)
@@ -534,7 +539,7 @@ def cal_nbc_pcn(pcd, gripperframe, rbt, seedjntagls, center=np.asarray((0, 0, 0)
 
 
 def cal_nbc_pcn_opt(pcd, gripperframe, rbt, seedjntagls, center=np.asarray((0, 0, 0)), gl_transmat4=np.eye(4),
-                    theta=np.pi / 3, toggledebug=False):
+                    theta=np.pi / 3, icp=True, toggledebug=False):
     cam_mat4 = np.linalg.inv(gripperframe)
     relmat4 = rm.homomat_from_posrot((0, 0, 0), rm.rotmat_from_axangle((0, 1, 0), -np.pi / 2))
     pcd = np.asarray(pcd) - center
@@ -543,17 +548,19 @@ def cal_nbc_pcn_opt(pcd, gripperframe, rbt, seedjntagls, center=np.asarray((0, 0
     pcd = pcdu.trans_pcd(pcd, relmat4)
     pcd_pcn = pcdu.trans_pcd(pcd_pcn, relmat4)
     cam_mat4 = np.dot(cam_mat4, rm.homomat_from_posrot((0, 0, 0), np.asarray([[-1, 0, 0], [0, 1, 0], [0, 0, -1]])))
-    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd, pcd_pcn, radius=.01, theta=theta, toggledebug=False)
+    pts_nbv, nrmls_nbv, confs_nbv = pcdu.cal_nbv_pcn(pcd, pcd_pcn, radius=.01, theta=theta, icp=icp, toggledebug=False)
     print(confs_nbv)
     print('Num. of NBV:', len(pts_nbv))
 
     if toggledebug:
         coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=.05)
-        # _, _, trans = o3dh.registration_icp_ptpt(pcd_pcn, pcd, maxcorrdist=.02, toggledebug=False)
-        # pcd_pcn = pcdu.trans_pcd(pcd_pcn, trans)
+        if icp:
+            _, _, trans = o3dh.registration_icp_ptpt(pcd_pcn, pcd, maxcorrdist=.02, toggledebug=False)
+            pcd_pcn = pcdu.trans_pcd(pcd_pcn, trans)
         o3dpcd = o3dh.nparray2o3dpcd(pcd)
         o3dpcd_o = o3dh.nparray2o3dpcd(pcd_pcn)
-        nu.show_nbv_o3d(pts_nbv, nrmls_nbv, confs_nbv, o3dpcd, coord=coord, o3dpcd_o=o3dpcd_o, conf_tresh=.2)
+        nu.show_nbv_o3d(pts_nbv, nrmls_nbv, confs_nbv, o3dpcd, coord=coord, o3dpcd_o=o3dpcd_o, conf_tresh=.4)
+
     releemat4 = rm.homomat_from_posrot((.016, 0, 0))
     pcd = pcdu.trans_pcd(pcd, releemat4)
 
