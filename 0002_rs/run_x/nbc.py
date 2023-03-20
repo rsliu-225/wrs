@@ -135,7 +135,6 @@ if __name__ == '__main__':
                                     theta=theta, icp=True, toggledebug=True)
             # pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts, pcd_pcn = \
             #     pickle.load(open(os.path.join(f'../run_plan/tmp_res.pkl'), 'rb'))
-
         else:
             pts_nbv, nrmls_nbv, confs_nbv, transmat4, jnts = \
                 rcu.cal_nbc(pcd_cmp, gripperframe, rbt, seedjntagls=seedjntagls, gl_transmat4=gl_transmat4,

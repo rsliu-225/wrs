@@ -902,20 +902,6 @@ def resample(o3dpcd, smp_num=8192):
 
 
 '''
-view control
-'''
-
-
-def custom_draw_geometry_with_rotation(geo):
-    def rotate_view(vis):
-        ctr = vis.get_view_control()
-        ctr.rotate(10.0, 0.0)
-        return False
-
-    o3d.visualization.draw_geometries_with_animation_callback([geo], rotate_view)
-
-
-'''
 file io
 '''
 

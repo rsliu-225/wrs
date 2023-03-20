@@ -252,12 +252,12 @@ def reg_armarker(fo, seed=(.116, 0, -.1), center=(.116, 0, -.0155), icp=False, t
     if toggledebug:
         gm.gen_frame(center, np.eye(3)).attach_to(base)
     for i in range(len(texture_img)):
-        cv2.imshow('', texture_img[i])
-        cv2.waitKey(0)
+        # cv2.imshow('', texture_img[i])
+        # cv2.waitKey(0)
         pcd = np.asarray(pcd_list[i])
         inx, gripperframe, pcd, pcd_cropped, = \
             trans_by_armaker(texture_img[i], pcd, show_frame=toggledebug,
-                             x_range=(0, x_range[1]), y_range=y_range, z_range=(z_range[0], 0))
+                             x_range=(0, x_range[1]), y_range=(-.1, .1), z_range=(z_range[0], 0))
         if pcd_cropped is not None:
             # pcd_cropped, _ = pcdu.get_nearest_cluster(pcd_cropped, seed=seed, eps=.02, min_samples=200)
             # seed = np.mean(pcd_cropped, axis=0)

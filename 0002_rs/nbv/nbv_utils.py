@@ -279,7 +279,7 @@ def nurbs_inp(kpts):
     curve.degree = degree
     curve.ctrlpts = kpts.tolist()
     curve.knotvector = [0] * degree + np.linspace(0, 1, len(kpts) - degree + 1).tolist() + [1] * degree
-    curve.delta = 0.01
+    curve.delta = 0.02
     inp_pseq = np.asarray(curve.evalpts)
 
     return inp_pseq

@@ -906,6 +906,8 @@ def cal_nbv_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, radius=.01, icp=Tru
 
     confs = cal_distribution(pts, kpts, radius=radius)
     nrmls = np.asarray(o3d_kpts.normals)
+    if min(confs) > 50:
+        confs = np.ones(len(confs))
     if max(confs) != min(confs):
         confs = _normalize(confs)
     else:
@@ -925,11 +927,11 @@ def cal_nbv_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, radius=.01, icp=Tru
     if toggledebug:
         for i in range(len(confs)):
             gm.gen_sphere(kpts[i], radius=radius, rgba=[confs[i], 0, 1 - confs[i], .1]).attach_to(base)
-            # if confs[i] < .4:
-            #     gm.gen_arrow(kpts[i], kpts[i] + rm.unit_vector(nrmls[i]) * .02, rgba=[confs[i], 0, 1 - confs[i], 1],
-            #                  thickness=.001).attach_to(base)
-            gm.gen_arrow(kpts[1], kpts[1] + rm.unit_vector(nrmls[1]) * .02, rgba=[0, 0, 1, 1],
-                         thickness=.001).attach_to(base)
+            if confs[i] < .2:
+                gm.gen_arrow(kpts[i], kpts[i] + rm.unit_vector(nrmls[i]) * .02, rgba=[confs[i], 0, 1 - confs[i], 1],
+                             thickness=.001).attach_to(base)
+            # gm.gen_arrow(kpts[0], kpts[0] + rm.unit_vector(nrmls[0]) * .02, rgba=[0, 0, 1, 1],
+            #              thickness=.001).attach_to(base)
     # kpts, nrmls, confs = extract_main_vec(kpts, nrmls, confs)
     # pts, nrmls, confs = extract_main_vec(pts, nrmls, confs, threshold=np.radians(30), toggledebug=toggledebug)
 
@@ -1082,14 +1084,14 @@ def show_cam(mat4):
     fov_cm.set_homomat(mat4)
     fov_cm.set_rgba((.8, .8, .8, .1))
     fov_cm.attach_to(base)
-    laser_pos = mat4[:3, 3] - .175 * rm.unit_vector(mat4[:3, 0]) + .049 * rm.unit_vector(mat4[:3, 1]) + \
-                .01 * rm.unit_vector(mat4[:3, 2])
-    laser_cm = cm.CollisionModel(os.path.join(config.ROOT, 'obstacles', 'phoxi_laser.stl'))
-    laser_cm.set_homomat(rm.homomat_from_posrot(laser_pos,
-                                                np.dot(rm.rotmat_from_axangle((0, 0, 1), np.radians(22.5)),
-                                                       mat4[:3, :3])))
-    laser_cm.set_rgba((1, 0, 0, .1))
-    laser_cm.attach_to(base)
+    # laser_pos = mat4[:3, 3] - .175 * rm.unit_vector(mat4[:3, 0]) + .049 * rm.unit_vector(mat4[:3, 1]) + \
+    #             .01 * rm.unit_vector(mat4[:3, 2])
+    # laser_cm = cm.CollisionModel(os.path.join(config.ROOT, 'obstacles', 'phoxi_laser.stl'))
+    # laser_cm.set_homomat(rm.homomat_from_posrot(laser_pos,
+    #                                             np.dot(rm.rotmat_from_axangle((0, 0, 1), np.radians(22.5)),
+    #                                                    mat4[:3, :3])))
+    # laser_cm.set_rgba((1, 0, 0, .1))
+    # laser_cm.attach_to(base)
 
     gm.gen_frame(mat4[:3, 3], mat4[:3, :3]).attach_to(base)
 

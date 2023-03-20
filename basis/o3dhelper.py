@@ -438,3 +438,12 @@ def getobb(pnppcd):
 
     # TODO get the object oriented bounding box of a point cloud using PoindCloud.get_oriented_bounding_box() and OrientedBoundinBox
     pass
+
+
+def custom_draw_geometry_with_rotation(geos):
+    def rotate_view(vis):
+        ctr = vis.get_view_control()
+        ctr.rotate(10.0, 0.0)
+        return False
+
+    o3d.visualization.draw_geometries_with_animation_callback(geos, rotate_view)
