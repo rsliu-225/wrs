@@ -697,6 +697,7 @@ def remove_outliers(pts, nb_points=50, radius=0.005, toggledebug=False):
 
 
 def cal_conf(pts, voxel_size=.01, cam_pos=(0, 0, 0), theta=None, toggledebug=False):
+    pts = np.asarray(pts)
     o3dpcd = o3d_helper.nparray2o3dpcd(pts)
     downpcd = o3dpcd.voxel_down_sample(voxel_size=voxel_size)
     # downpcd = o3dpcd.uniform_down_sample(10)
