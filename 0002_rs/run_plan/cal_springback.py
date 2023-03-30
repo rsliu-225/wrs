@@ -97,7 +97,7 @@ def springback_from_img(fo, z_range, line_thresh=.002, line_size_thresh=300):
                 key = 'refine'
             else:
                 key = 'refine_goal'
-                continue
+                # continue
 
         if angle not in sb_dict.keys():
             sb_dict[angle] = {}
@@ -127,53 +127,18 @@ def _get_angle_from_vecs(v1, v2, gt):
 
 def show_data(input_dict):
     X = []
-    sb_err = []
-    bend_err = []
-    for k, v in input_dict.items():
-        if int(k) == 0:
-            continue
-        gt = int(k)
-        res = _get_angle_from_vecs(input_dict[k]['res'][0], input_dict[k]['res'][1], gt)
-        goal = _get_angle_from_vecs(input_dict[k]['goal'][0], input_dict[k]['goal'][1], gt)
-        print(f'------------{int(k) + 15}------------')
-        sb = gt - res
-        if sb < 0:
-            res = 180 - res
-            sb = gt - res
-        bend = gt - goal
+    sb_err_list = []
+    bend_err_list = []
+    refined_err_list = []
+    refine_goal_list = []
+    fig = plt.figure()
+    plt.rcParams["font.family"] = "Times New Roman"
+    plt.rcParams["font.size"] = 24
+    ax = fig.add_subplot(1, 1, 1)
+    grid_on(ax)
+    ax.set_xticks([v for v in range(15, 166, 30)])
+    ax.set_yticks([v for v in range(-2, 10, 2)])
 
-        print('goal, result', goal, res)
-        print('spring back:', sb)
-
-        sb_err.append(sb)
-        bend_err.append(bend)
-        X.append(int(k))
-
-    sort_inx = np.argsort(X)
-    X = [X[i] for i in sort_inx]
-    sb_err = [sb_err[i] for i in sort_inx]
-    bend_err = [bend_err[i] for i in sort_inx]
-
-    plt.grid()
-    plt.xticks(X)
-    plt.plot(X, sb_err, c='gold')
-
-    plt.plot(X, [np.mean(sb_err)] * len(X), c='gold', linestyle='dashed')
-    plt.plot(X, bend_err, c='g')
-    plt.plot(X, [np.mean(bend_err)] * len(X), c='g', linestyle='dashed')
-
-    next = lasso_pre(X[:2], sb_err[:2], 45)
-    print(next)
-
-    # plt.plot(X, np.asarray(bend_err) + np.asarray(sb_err))
-    plt.show()
-
-
-def show_data_w_refine(input_dict):
-    X = []
-    sb_err = []
-    bend_err = []
-    refined_err = []
     for k, v in input_dict.items():
         if int(k) == 0:
             continue
@@ -181,6 +146,7 @@ def show_data_w_refine(input_dict):
         res = _get_angle_from_vecs(input_dict[k]['res'][0], input_dict[k]['res'][1], gt)
         goal = _get_angle_from_vecs(input_dict[k]['goal'][0], input_dict[k]['goal'][1], gt)
         refine = _get_angle_from_vecs(input_dict[k]['refine'][0], input_dict[k]['refine'][1], gt)
+        refine_goal = _get_angle_from_vecs(input_dict[k]['refine_goal'][0], input_dict[k]['refine_goal'][1], gt)
         print(f'------------{int(k) + 15}------------')
         sb = goal - res
         if sb < 0:
@@ -190,46 +156,45 @@ def show_data_w_refine(input_dict):
         print('goal, result, refined', goal, res, refine)
         print('spring back:', sb)
 
-        sb_err.append(sb)
-        bend_err.append(gt - goal)
-        refined_err.append(goal - refine)
+        sb_err_list.append(sb)
+        bend_err_list.append(gt - goal)
+        refined_err_list.append(goal - refine)
+        refine_goal_list.append(refine_goal)
         X.append(goal)
+        if len(X) > 1 and gt <= 150:
+            pre = lasso_pre(X, sb_err_list, gt + 15)
+            print('prediction:', pre)
+            ax.scatter([gt + 15], [pre], c='g')
+        elif gt < 150:
+            ax.scatter([gt + 15], [np.mean(sb_err_list)], c='g')
 
     sort_inx = np.argsort(X)
     X = [X[i] for i in sort_inx]
-    sb_err = [sb_err[i] for i in sort_inx]
-    bend_err = [bend_err[i] for i in sort_inx]
-    refined_err = [refined_err[i] for i in sort_inx]
+    sb_err_list = [sb_err_list[i] for i in sort_inx]
+    bend_err_list = [bend_err_list[i] for i in sort_inx]
+    refined_err_list = [refined_err_list[i] for i in sort_inx]
 
-    fig = plt.figure()
-    plt.rcParams["font.family"] = "Times New Roman"
-    plt.rcParams["font.size"] = 24
-    ax = fig.add_subplot(1, 1, 1)
-    grid_on(ax)
-    ax.set_xticks([v for v in range(15, 166, 30)])
-    ax.set_yticks([v for v in range(-2, 10, 2)])
-    ax.plot(X, sb_err, c='gold')
-    # plt.plot(X, [np.mean(sb_err)] * len(X), c='gold', linestyle='dashed')
-    lasso_pre(X, sb_err, 0)
+    ax.plot(X, sb_err_list, c='gold')
+    # plt.plot(X, [np.mean(sb_err_list)] * len(X), c='gold', linestyle='dashed')
+    lasso_pre(X, sb_err_list, 0, plot=True)
 
-    # plt.plot(X, bend_err, c='g')
-    # plt.plot(X, [np.mean(bend_err)] * len(X), c='g', linestyle='dashed')
+    # plt.plot(X, bend_err_list, c='g')
+    # plt.plot(X, [np.mean(bend_err_list)] * len(X), c='g', linestyle='dashed')
 
-    plt.plot(X, refined_err, c='b')
-    plt.plot(X, [np.mean(refined_err)] * len(X), c='b', linestyle='dashed')
+    plt.plot(X, refined_err_list, c='b')
+    plt.plot(X, [np.mean(refined_err_list)] * len(X), c='b', linestyle='dashed')
 
-    # print(next)
-
-    # plt.plot(X, np.asarray(bend_err) + np.asarray(sb_err))
+    # plt.plot(X, np.asarray(bend_err) + np.asarray(sb_err_list))
     plt.show()
 
 
-def lasso_pre(X, y, x_pre):
+def lasso_pre(X, y, x_pre, plot=False):
     model = linear_model.Lasso(alpha=10)
     model.fit([[x] for x in X], y)
     print(model.coef_, model.intercept_)
     y_pre = model.predict([[x] for x in X])
-    plt.plot(X, y_pre, c='gold', linestyle='dashed')
+    if plot:
+        plt.plot(X, y_pre, c='gold', linestyle='dashed')
     return model.predict([[x_pre]])
 
 
@@ -251,12 +216,12 @@ if __name__ == '__main__':
     fo = 'springback/alu_refine_lr_1'
     z_range = (.15, .17)
     line_thresh = 0.003
-    line_size_thresh = 300
-    sb_dict = springback_from_img(fo, z_range, line_thresh, line_size_thresh)
-    # sb_dict = pickle.load(
-    #     open(os.path.join(config.ROOT, 'bendplanner/springback', f'{fo.split("/")[1]}_springback.pkl'), 'rb'))
+    line_size_thresh = 500
+    # sb_dict = springback_from_img(fo, z_range, line_thresh, line_size_thresh)
+    sb_dict = pickle.load(
+        open(os.path.join(config.ROOT, 'bendplanner/springback', f'{fo.split("/")[1]}_springback.pkl'), 'rb'))
 
-    show_data_w_refine(sb_dict)
+    show_data(sb_dict)
     # show_data(sb_dict)
 
     base.run()
