@@ -81,8 +81,8 @@ def get_fit_err(bs, goal_pseq, goal_rotseq, bend_num_range, init_pseq, init_rots
 
     for i in range(bend_num_range[0], bend_num_range[1]):
         bs.reset(init_pseq, init_rotseq)
-        fit_pseq, fit_rotseq, _ = bu.decimate_pseq_by_cnt(goal_pseq, cnt=i, toggledebug=False)
-        # fit_pseq, fit_rotseq, res_id = bu.decimate_pseq_by_cnt_uni(goal_pseq, cnt=i, toggledebug=False)
+        # fit_pseq, fit_rotseq, _ = bu.decimate_pseq_by_cnt(goal_pseq, cnt=i, toggledebug=False)
+        fit_pseq, fit_rotseq, res_id = bu.decimate_pseq_by_cnt_uni(goal_pseq, cnt=i, toggledebug=False)
         init_rot = bu.get_init_rot(fit_pseq)
         init_bendset = bu.pseq2bendset(fit_pseq, bend_r=bs.bend_r, toggledebug=False)
         m_list.append(len(init_bendset))
@@ -132,7 +132,6 @@ if __name__ == '__main__':
     snum = 20
     res_list = []
     # goal_list = []
-    # res_list = pickle.load(open('./bendnum/bspl_20.pkl', 'rb'))
     goal_list = pickle.load(open('./bendnum/bspl_goal.pkl', 'rb'))
 
     for goal_pseq in goal_list:
@@ -152,9 +151,10 @@ if __name__ == '__main__':
             continue
 
         best_n, _ = find_best_n(bend_avg_err_list, threshold=.5)
+        print('Best n:', best_n)
         if bend_max_err_list[best_n] > 5 or best_n > 14:
-            print(bend_max_err_list)
-            continue
+            print('Large Error!', bend_max_err_list)
+            # continue
 
         # ax = plt.axes(projection='3d')
         # bu.plot_pseq(ax, fit_pseq_list[best_n], c='darkorange', linestyle='--')
@@ -167,5 +167,5 @@ if __name__ == '__main__':
                          m_list, fit_pseq_list, bend_pseq_list, goal_pseq_list])
         # goal_list.append(goal_pseq)
 
-        pickle.dump(res_list, open('./bendnum/bspl_15.pkl', 'wb'))
+        pickle.dump(res_list, open('./bendnum/bspl_15_uni.pkl', 'wb'))
         # pickle.dump(goal_list, open('./bendnum/bspl_goal.pkl', 'wb'))

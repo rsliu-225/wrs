@@ -311,9 +311,10 @@ def mindist_err(res_pts, goal_pts, res_rs=None, goal_rs=None, toggledebug=False,
         print('Sum. distance between polylines:', np.asarray(pos_err_list).sum())
         print('Avg. distance between polylines:', np.asarray(pos_err_list).mean())
         print('Max. distance between polylines:', max(pos_err_list))
-        print('Sum. angel err between polylines:', np.asarray(n_err_list).sum())
-        print('Avg. angel err between polylines:', np.asarray(n_err_list).mean())
-        print('Max. angel err between polylines:', max(n_err_list))
+        if res_rs is not None:
+            print('Sum. angel err between polylines:', np.asarray(n_err_list).sum())
+            print('Avg. angel err between polylines:', np.asarray(n_err_list).mean())
+            print('Max. angel err between polylines:', max(n_err_list))
         ax = plt.axes(projection='3d')
         center = np.mean(res_pts, axis=0)
         ax.set_xlim([center[0] - 50, center[0] + 50])

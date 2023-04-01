@@ -130,12 +130,21 @@ def plot_err(fit_max_err_list, bend_max_err_list, fit_avg_err_list, bend_avg_err
 if __name__ == '__main__':
     bend_num_range = (5, 50)
     x = range(bend_num_range[0], bend_num_range[1])
-    f_list = ['bspl_20']
-    for f in f_list:
-        print('-------')
+    f_list = ['bspl_10', 'bspl_15', 'bspl_20']
+    c_list = ['tab:blue', 'tab:orange', 'tab:green']
+    goal_list = pickle.load(open('./bspl_goal.pkl', 'rb'))
 
-        res_list = pickle.load(open(f'./{f}_opt.pkl', 'rb'))
-        goal_list = pickle.load(open('./bspl_goal.pkl', 'rb'))
+    fig = plt.figure()
+    plt.rcParams["font.family"] = "Times New Roman"
+    plt.rcParams["font.size"] = 24
+    ax = fig.add_subplot(1, 1, 1)
+    grid_on(ax)
+    for idx, f in enumerate(f_list):
+        print('-------')
+        try:
+            res_list = pickle.load(open(f'./{f}_uni_opt.pkl', 'rb'))
+        except:
+            continue
 
         eps = .05
         best_n_list = []
@@ -181,8 +190,8 @@ if __name__ == '__main__':
             #     bu.plot_pseq(ax, goal_pseq_list[i], c='k')
             #     plt.show()
 
-        plt.grid()
-        plt.scatter(best_n_list, min_err_list, marker=str(random.randint(1, 3)), s=100)
-        plt.scatter(best_n_list, opt_err_list, marker=str(random.randint(1, 3)), s=100)
-        plt.show()
+        ax.scatter(best_n_list, min_err_list, s=50, marker='x', c=c_list[idx])
+        ax.scatter(best_n_list, opt_err_list, s=50, edgecolors=c_list[idx], facecolor='none')
+        ax.axhline(y=np.mean(min_err_list), linestyle='--', c=c_list[idx], alpha=.5)
+        ax.axhline(y=np.mean(opt_err_list), linestyle='-.', c=c_list[idx], alpha=.5)
     plt.show()

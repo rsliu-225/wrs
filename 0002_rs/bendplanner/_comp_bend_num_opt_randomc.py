@@ -95,17 +95,18 @@ if __name__ == '__main__':
     org_err_list = []
     opt_err_list = []
 
-    f = 'bspl_15'
+    f = 'bspl_15_uni'
     res_list = pickle.load(open(f'./bendnum/{f}.pkl', 'rb'))
-    opt_res_list = []
-    # opt_res_list = pickle.load(open(f'./bendnum/{f}_opt.pkl', 'rb'))
+    # opt_res_list = []
+    opt_res_list = pickle.load(open(f'./bendnum/{f}_opt.pkl', 'rb'))
 
     best_n_list = []
     min_err_list = []
     for i, res in enumerate(res_list):
         if len(opt_res_list) > i:
+            print(opt_res_list[i].keys())
             continue
-        fit_max_err_list, bend_max_err_list, fit_avg_err_list, bend_avg_err_list, \
+        fit_max_err_list, bend_max_err_list, fit_avg_err_list, bend_avg_err_list,\
         m_list, fit_pseq_list, bend_pseq_list, goal_pseq_list = res
         goal_pseq = goal_pseq_list[i]
 

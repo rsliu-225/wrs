@@ -117,11 +117,11 @@ if __name__ == '__main__':
     bend_num_range = (5, 50)
     x = range(bend_num_range[0], bend_num_range[1])
 
-    f_name = 'bspl_15'
+    f_name = 'bspl_10'
     goal_list = pickle.load(open('./bspl_goal.pkl', 'rb'))
     res_list = pickle.load(open(f'./{f_name}.pkl', 'rb'))
-    opt_list = pickle.load(open(f'./{f_name}_opt.pkl', 'rb'))
-    print(len(goal_list), len(res_list), len(opt_list))
+    # opt_list = pickle.load(open(f'./{f_name}_opt.pkl', 'rb'))
+    print(len(goal_list), len(res_list))
 
     for i in range(len(res_list)):
         goal_pseq = goal_list[i]
