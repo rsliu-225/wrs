@@ -151,7 +151,7 @@ if __name__ == '__main__':
             continue
 
         best_n, _ = find_best_n(bend_avg_err_list, threshold=.5)
-        print('Best n:', best_n)
+        print('Best n:', best_n + 6)
         if bend_max_err_list[best_n] > 5 or best_n > 14:
             print('Large Error!', bend_max_err_list)
             # continue
@@ -167,5 +167,5 @@ if __name__ == '__main__':
                          m_list, fit_pseq_list, bend_pseq_list, goal_pseq_list])
         # goal_list.append(goal_pseq)
 
-        pickle.dump(res_list, open('./bendnum/bspl_15_uni.pkl', 'wb'))
+        pickle.dump(res_list, open('./bendnum/bspl_10_uni.pkl', 'wb'))
         # pickle.dump(goal_list, open('./bendnum/bspl_goal.pkl', 'wb'))
