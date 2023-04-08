@@ -105,12 +105,20 @@ def run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_name, 
         eemat4 = rm.homomat_from_posrot(eepos, eerot).dot(relmat4)
 
         if toggledebug_p3d:
+            import motion.probabilistic.rrt_connect as rrtc
             pcd_next = pcdu.trans_pcd(pcd_i, eemat4)
             pts_nbv_inhnd = pcdu.trans_pcd(pts_nbv_inhnd, transmat4)
             nrmls_nbv_inhnd = pcdu.trans_pcd(nrmls_nbv_inhnd, transmat4)
             pcdu.show_pcd(pcd_next, rgba=(0, 1, 0, 1))
             rbt.gen_meshmodel(rgba=(0, 1, 0, .5)).attach_to(base)
             nu.attach_nbv_gm(pts_nbv_inhnd, nrmls_nbv_inhnd, confs_nbv, cam_pos, .05)
+            planner = rrtc.RRTConnect(rbt)
+            path = planner.plan(component_name='arm', start_conf=seedjntagls, goal_conf=jnts, ext_dist=.01,
+                                max_time=300)
+            for jnts_p in path:
+                rbt.fk('arm', jnts_p)
+                rbt.gen_meshmodel(rgba=(1, 1, 1, .2)).attach_to(base)
+
             base.run()
 
         '''
@@ -349,8 +357,7 @@ def run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, cov_tor=.001
         if toggledebug_p3d:
             gm.gen_frame().attach_to(base)
             pcdu.show_pcd(pcd_inhnd)
-            rbt.gen_meshmodel().attach_to(base)
-            rbt.gen_meshmodel(rgba=(1, 1, 0, .4)).attach_to(base)
+            rbt.gen_meshmodel(rgba=(1, 1, 0, .2)).attach_to(base)
             nu.attach_nbv_gm(pts_nbv_inhnd, nrmls_nbv_inhnd, confs_nbv, cam_pos, .05)
 
         nbc_solver = nbcs.NBCOptimizerVec(rbt, max_a=max_a, max_dist=max_dist, toggledebug=False)
@@ -604,11 +611,12 @@ if __name__ == '__main__':
     if not os.path.exists(path):
         path = 'E:/liu/nbv_mesh/'
 
-    cat_list = ['bspl_5']
+    cat_list = ['bspl_3', 'bspl_4', 'bspl_5']
     # cat_list = ['plat', 'tmpl']
     # cat_list = ['rlen_3', 'rlen_4', 'rlen_5']
     cam_pos = [0, 0, .4]
     cov_tor = .001
+    # cov_tor = .0018
     goal = .95
     vis_threshold = np.radians(75)
     relmat4 = rm.homomat_from_posrot([.02, 0, 0], np.eye(3))
@@ -632,24 +640,24 @@ if __name__ == '__main__':
                     os.path.exists(os.path.join(path, cat, RES_FO_NAME, f'random_{f.split(".ply")[0]}.json')):
                 continue
 
-            # o3dpcd_init = \
-            #     nu.gen_partial_o3dpcd_occ(os.path.join(path, cat), f.split('.ply')[0], np.eye(3), [0, 0, 0],
-            #                               rnd_occ_ratio_rng=(.1, .2), nrml_occ_ratio_rng=(.2, .6), cam_pos=cam_pos,
-            #                               vis_threshold=vis_threshold, toggledebug=False,
-            #                               occ_vt_ratio=random.uniform(.08, .1), noise_vt_ratio=random.uniform(.3, .6),
-            #                               noise_cnt=random.randint(2, 5), add_occ_nrml=True,
-            #                               add_occ_vt=False, add_noise_vt=True, add_occ_rnd=False, add_noise_pts=True)
+            o3dpcd_init = \
+                nu.gen_partial_o3dpcd_occ(os.path.join(path, cat), f.split('.ply')[0], np.eye(3), [0, 0, 0],
+                                          rnd_occ_ratio_rng=(.1, .3), nrml_occ_ratio_rng=(.3, .6), cam_pos=cam_pos,
+                                          vis_threshold=vis_threshold, toggledebug=False,
+                                          occ_vt_ratio=random.uniform(.08, .1), noise_vt_ratio=random.uniform(.5, .8),
+                                          noise_cnt=random.randint(3, 6), add_occ_nrml=False,
+                                          add_occ_vt=True, add_noise_vt=False, add_occ_rnd=True, add_noise_pts=True)
             # o3d.io.write_point_cloud('./tmp/nbc_vis/init.pcd', o3dpcd_init)
-            o3dpcd_init = o3d.io.read_point_cloud('./tmp/nbc_vis/init.pcd')
+            # o3dpcd_init = o3d.io.read_point_cloud('./tmp/nbc_vis/init.pcd')
 
             o3dmesh_gt = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'prim', f))
             o3dpcd_gt = du.get_objpcd_full_sample_o3d(o3dmesh_gt, smp_num=2048, method='possion')
 
             run_nbv(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, goal=goal, cov_tor=cov_tor,
-                    vis_threshold=vis_threshold, toggledebug=False, toggledebug_p3d=True)
-            # run_random(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, goal=goal, cov_tor=cov_tor,
-            #            vis_threshold=vis_threshold, toggledebug=False, toggledebug_p3d=False)
-            # run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_name, load_model, goal=goal,
-            #         cov_tor=cov_tor, vis_threshold=vis_threshold, toggledebug=False, toggledebug_p3d=True)
-            # run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_name, load_model, goal=goal,
-            #             cov_tor=cov_tor, vis_threshold=vis_threshold, toggledebug=False, toggledebug_p3d=False)
+                    vis_threshold=vis_threshold, toggledebug=False, toggledebug_p3d=False)
+            run_random(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, goal=goal, cov_tor=cov_tor,
+                       vis_threshold=vis_threshold, toggledebug=False, toggledebug_p3d=False)
+            run_pcn(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_name, load_model, goal=goal,
+                    cov_tor=cov_tor, vis_threshold=vis_threshold, toggledebug=False, toggledebug_p3d=False)
+            run_pcn_opt(path, cat, f, cam_pos, o3dpcd_init, o3dpcd_gt, relmat4, model_name, load_model, goal=goal,
+                        cov_tor=cov_tor, vis_threshold=vis_threshold, toggledebug=False, toggledebug_p3d=False)

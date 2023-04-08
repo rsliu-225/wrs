@@ -652,7 +652,7 @@ def cnt_remove_objid(path, objid, max_num):
 def get_objpcd_partial_o3d(objcm, objcm_gt, rot, rot_center, pseq=None, rotseq=None,
                            path='./', f_name='', resolusion=(1280, 720), ext_name='.pcd',
                            rnd_occ_ratio_rng=(.2, .5), nrml_occ_ratio_rng=(.2, .6),
-                           occ_vt_ratio=1, noise_vt_ratio=1, noise_cnt=random.randint(0, 5),
+                           occ_vt_ratio=1, noise_vt_ratio=1, noise_cnt=random.randint(1, 5),
                            visible_threshold=np.pi / 3,
                            add_noise=False, add_occ=False, add_rnd_occ=True, add_noise_pts=True,
                            savemesh=False, savedepthimg=False, savergbimg=False, savekpts=True, toggledebug=False):

@@ -12,10 +12,10 @@ if __name__ == '__main__':
     path = 'E:/liu/nbv_mesh/'
     if not os.path.exists(path):
         path = 'D:/nbv_mesh/'
-    cat_list = ['bspl_3', 'bspl_4', 'bspl_5']
-    cat_cnt_list = [67, 67, 66]
-    # cat_list = ['plat', 'tmpl']
-    # cat_cnt_list = [100, 100]
+    # cat_list = ['bspl_3', 'bspl_4', 'bspl_5']
+    # cat_cnt_list = [67, 67, 66]
+    cat_list = ['plat', 'tmpl']
+    cat_cnt_list = [100, 100]
 
     fo = 'res_75_rlen'
     coverage_rnd, max_rnd, cnt_rnd = nbv_utl.load_cov(path, cat_list, fo, cat_cnt_list, prefix='random')
@@ -52,19 +52,24 @@ if __name__ == '__main__':
     ax1.grid(which='major', linestyle='-', linewidth='0.5', color='black', alpha=.8)
     ax1.grid(which='minor', linestyle=':', linewidth='0.5', color='gray', alpha=.5)
 
-    ax2.bar(x[1:] - .3, cnt_rnd[1:], color='tab:blue', width=0.2)
-    ax2.bar(x[1:] - .1, cnt_org[1:], color='tab:orange', width=0.2)
-    ax2.bar(x[1:] + .1, cnt_pcn[1:], color='tab:green', width=0.2)
-    ax2.bar(x[1:] + .3, cnt_opt[1:], color='tab:red', width=0.2)
+    # ax2.bar(x[1:] - .3, cnt_rnd[1:], color='tab:blue', width=0.2)
+    # ax2.bar(x[1:] - .1, cnt_org[1:], color='tab:orange', width=0.2)
+    # ax2.bar(x[1:] + .1, cnt_pcn[1:], color='tab:green', width=0.2)
+    # ax2.bar(x[1:] + .3, cnt_opt[1:], color='tab:red', width=0.2)
+
+    ax2.plot(x[1:], [sum(cnt_rnd[1:i + 1]) for i, v in enumerate(cnt_rnd[1:])], color='tab:blue')
+    ax2.plot(x[1:], [sum(cnt_org[1:i + 1]) for i, v in enumerate(cnt_org[1:])], color='tab:orange')
+    ax2.plot(x[1:], [sum(cnt_pcn[1:i + 1]) for i, v in enumerate(cnt_pcn[1:])], color='tab:green')
+    ax2.plot(x[1:], [sum(cnt_opt[1:i + 1]) for i, v in enumerate(cnt_opt[1:])], color='tab:red')
 
     ax2.set_xticks(x[1:])
     # ax2.set_ylim(0, 92)
-    ax2.set_ylim(0, 190)
+    ax2.set_ylim(0, 205)
 
     # ax2.set_yticks(np.linspace(0, 100, 10))
     ax2.minorticks_on()
-    ax2.yaxis.set_major_locator(mticker.MultipleLocator(base=100 / 4))
-    ax2.yaxis.set_minor_locator(mticker.MultipleLocator(base=100 / 20))
+    ax2.yaxis.set_major_locator(mticker.MultipleLocator(base=100 / 2))
+    ax2.yaxis.set_minor_locator(mticker.MultipleLocator(base=100 / 10))
     ax2.grid(which='major', linestyle='-', linewidth='0.5', color='black', alpha=.8)
     ax2.grid(which='minor', linestyle=':', linewidth='0.5', color='gray', alpha=.5)
 

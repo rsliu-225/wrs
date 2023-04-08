@@ -29,7 +29,7 @@ if __name__ == '__main__':
     if not os.path.exists(path):
         path = 'E:/liu/nbv_mesh/'
 
-    cat = 'bspl_4'
+    cat = 'bspl_5'
     fo = 'res_75'
 
     cov_tor = .001
@@ -45,6 +45,8 @@ if __name__ == '__main__':
 
     for f in os.listdir(os.path.join(path, cat, 'mesh'))[0:]:
         print(f'-----------------{f}-----------------')
+        if f != '0064.ply':
+            continue
         res_pcn = json.load(open(os.path.join(path, cat, fo, f'pcn_{f.split(".ply")[0]}.json'), 'rb'))
         o3dmesh = o3d.io.read_triangle_mesh(os.path.join(path, cat, 'mesh', f))
         o3dmesh.compute_vertex_normals()
@@ -53,9 +55,12 @@ if __name__ == '__main__':
         # o3dpcd_i = nu.gen_partial_o3dpcd(o3dmesh, toggledebug=False)
         pcd_gt = np.asarray(res_pcn['gt'])
         pcd_i = np.asarray(res_pcn['0']['input'])
+        pcd_o = np.asarray(res_pcn['0']['pcn_output'])
         o3dpcd_i = o3dh.nparray2o3dpcd(pcd_i)
+        o3dpcd_o = o3dh.nparray2o3dpcd(pcd_o)
         o3dpcd_gt = o3dh.nparray2o3dpcd(pcd_gt)
         o3dpcd_i.paint_uniform_color(nu.COLOR[0])
+        o3dpcd_o.paint_uniform_color(nu.COLOR[2])
         o3dpcd_gt.paint_uniform_color(nu.COLOR[1])
         cnt = 0
         coverage = 0
@@ -70,12 +75,13 @@ if __name__ == '__main__':
         while coverage < .95:
             pcd_i = np.asarray(o3dpcd_i.points)
             o3d.visualization.draw_geometries([coord, o3dpcd_gt, o3dpcd_i], mesh_show_back_face=True)
+            o3d.visualization.draw_geometries([coord, o3dpcd_gt, o3dpcd_i, o3dpcd_o], mesh_show_back_face=True)
 
             rbt.gen_meshmodel(rgba=(1, 1, 0, .4)).attach_to(base)
             init_eepos, init_eerot = rbt.get_gl_tcp()
             init_eemat4 = rm.homomat_from_posrot(init_eepos, init_eerot).dot(relmat4)
 
-            nbc_opt = nbc_solver.PCNNBCOptimizer(rbt, releemat4=relmat4, toggledebug=True)
+            nbc_opt = nbc_solver.PCNNBCOptimizer(rbt, releemat4=relmat4, toggledebug=False)
             jnts, transmat4, _, time_cost = nbc_opt.solve(seedjntagls, pcd_i, cam_mat4, method='COBYLA')
             print(jnts)
 

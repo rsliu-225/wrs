@@ -437,7 +437,7 @@ def gen_partial_o3dpcd_occ(path, f, rot, rot_center, trans=np.zeros(3), resolusi
     if add_noise_vt:
         o3dmesh.compute_vertex_normals()
         o3dpcd = du.add_guassian_noise_by_vt(o3dpcd, np.asarray(o3dmesh.vertices), np.asarray(o3dmesh.vertex_normals),
-                                             noise_mean=1e-3, noise_sigma=2e-4, ratio=noise_vt_ratio)
+                                             noise_mean=1e-3, noise_sigma=5e-4, ratio=noise_vt_ratio)
     if add_noise_pts:
         o3dpcd = du.add_noise_pts_by_vt(o3dpcd, noise_cnt=noise_cnt, size=.03)
     o3dpcd = o3dpcd.select_by_index(vis_idx)

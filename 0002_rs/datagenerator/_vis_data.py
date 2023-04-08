@@ -37,7 +37,7 @@ def show_dataset_o3d(path, cat=['plat']):
         for f in f_list:
             if f[-3:] != 'pcd':
                 continue
-            # if int(f.split('_')[0]) < 1600:
+            # if int(f.split('_')[0]) != 802:
             #     continue
             print(f)
             o3dpcd_gt = o3d.io.read_point_cloud(os.path.join(path, fo, 'complete', f))
@@ -45,9 +45,9 @@ def show_dataset_o3d(path, cat=['plat']):
             # gm.gen_pointcloud(np.asarray(o3dpcd_gt.points)).attach_to(base)
             o3dpcd_i.paint_uniform_color(COLOR[0])
             o3dpcd_gt.paint_uniform_color(COLOR[1])
-            # o3d.visualization.draw_geometries([o3dpcd_i])
-            # o3d.visualization.draw_geometries([o3dpcd_gt])
-            draw_geometry_with_rotation([o3dpcd_i])
+            o3d.visualization.draw_geometries([o3dpcd_i])
+            o3d.visualization.draw_geometries([o3dpcd_gt])
+            # draw_geometry_with_rotation([o3dpcd_i])
 
 
 def show_conf(path, cat=['plat'], toggledebug=False):
@@ -58,7 +58,7 @@ def show_conf(path, cat=['plat'], toggledebug=False):
         for f in os.listdir(os.path.join(path, fo, 'complete')):
             if f[-3:] != 'pcd':
                 continue
-            # if int(f.split('_')[0]) != 802:
+            # if f.split('_')[0] != 'rlen':
             #     continue
             conf = pickle.load(open(os.path.join(path, fo, 'conf', f[:-3] + 'pkl'), 'rb'))
             coverage_list.append(collections.Counter(conf)[1] / 2048)
@@ -81,6 +81,7 @@ def show_conf(path, cat=['plat'], toggledebug=False):
                     o3dpcd_i.paint_uniform_color((.7, .7, .7))
                     o3d.visualization.draw_geometries([o3dpcd_gt, o3dpcd_i])
     print('coverage', round(np.asarray(coverage_list).mean(), 2), round(np.asarray(coverage_list).std(), 2))
+    print('min/max', round(min(coverage_list), 2), round(max(coverage_list), 2))
 
 
 def show_kpts(path, cat):
@@ -139,17 +140,17 @@ if __name__ == '__main__':
     # show_dataset_h5(goal_path, 'train', label=3)
     # show_dataset_h5(goal_path, 'test', label=2)
     path = 'E:/liu/org_data/dataset/'
-    # show_dataset_o3d(path, cat=['bspl', 'quad'])
+    show_dataset_o3d(path, cat=['bspl'])
     # show_dataset_o3d(path, cat=['plat'])
     # show_dataset_o3d(path, cat=['tmpl'])
     # show_dataset_o3d(path, cat=['multiview'])
 
     # path = 'E:/liu/org_data/dataset/'
     # show_conf(path, cat=['bspl'], toggledebug=False)
-    show_conf(path, cat=['rlen'], toggledebug=False)
+    # show_conf(path, cat=['rlen'], toggledebug=False)
     # show_conf(path, cat=['plat'], toggledebug=False)
     # show_conf(path, cat=['tmpl'], toggledebug=False)
-    show_conf(path, cat=['multiview'], toggledebug=False)
+    # show_conf(path, cat=['multiview'], toggledebug=False)
     # show_conf(path, cat=['multiview_true'], toggledebug=False)
     # show_kpts('E:/liu/org_data/dataset_kpts/', cat=['plat'])
     # show_dataset_h5('val')
