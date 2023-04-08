@@ -431,6 +431,32 @@ def decimate_pseq(pseq, tor=.001, toggledebug=False):
     return np.asarray(pseq[res_pids]), get_rotseq_by_pseq(pseq[res_pids]), res_pids
 
 
+def decimate_pseq_avg(pseq, tor=.001, toggledebug=False):
+    pseq = np.asarray(pseq)
+    res_pids = [0, len(pseq) - 1]
+    avg_err = np.inf
+    while avg_err / 1000 > tor:
+        max_err = 0
+        max_inx = -1
+        for i in range(len(res_pids) - 1):
+            max_err_tmp, max_inx_tmp = __ps2seg_max_dist(pseq[res_pids[i]], pseq[res_pids[i + 1]],
+                                                         pseq[res_pids[i]:res_pids[i + 1]])
+            if max_err_tmp > max_err:
+                max_err = max_err_tmp
+                max_inx = res_pids[i] + max_inx_tmp
+        res_pids.append(max_inx)
+        res_pids = sorted(res_pids)
+        if toggledebug:
+            ax = plt.axes(projection='3d')
+            plot_pseq(ax, pseq)
+            plot_pseq(ax, linear_inp3d_by_step(pseq[res_pids]))
+            plot_pseq(ax, pseq[res_pids])
+            plt.show()
+        avg_err, _ = mindist_err(pseq[res_pids], pseq, toggledebug=False, type='avg')
+    print(f'Num. of fitting result:{len(res_pids)}/{len(pseq)}')
+    return np.asarray(pseq[res_pids]), get_rotseq_by_pseq(pseq[res_pids]), res_pids
+
+
 def decimate_pseq_by_cnt(pseq, cnt=10, toggledebug=False):
     pseq = np.asarray(pseq)
     res_pids = [0, len(pseq) - 1]
@@ -457,11 +483,11 @@ def decimate_pseq_by_cnt(pseq, cnt=10, toggledebug=False):
 
 def decimate_pseq_by_cnt_curvature(pseq, thresh_r=bconfig.R_BEND, cnt=10, toggledebug=False):
     pseq = np.asarray(pseq)
-    curvature_list, r_list, torsion_list = cal_curvature(pseq)
-    inx_real = [i for i in range(len(r_list)) if r_list[i] >= thresh_r]
-    pseq_tmp = np.asarray([pseq[i + 1] for i in range(len(r_list) - 2) if r_list[i] >= thresh_r])
+    curvature_list, r_list, torsion_list = cal_curvature(pseq, show=False)
+    inx_real = [i for i in range(len(r_list)) if r_list[i] > thresh_r]
+    pseq_tmp = np.asarray(
+        [pseq[0]] + [pseq[i + 1] for i in range(len(r_list) - 2) if r_list[i] > thresh_r] + [pseq[-1]])
     res_pids = [0, len(pseq_tmp) - 1]
-
     while len(res_pids) < cnt:
         max_err = 0
         max_inx = -1
@@ -473,12 +499,14 @@ def decimate_pseq_by_cnt_curvature(pseq, thresh_r=bconfig.R_BEND, cnt=10, toggle
                 max_inx = res_pids[i] + max_inx_tmp
         res_pids.append(max_inx)
         res_pids = sorted(res_pids)
-        if toggledebug:
-            ax = plt.axes(projection='3d')
-            plot_pseq(ax, pseq)
-            plot_pseq(ax, pseq_tmp[res_pids])
-            plt.show()
+
     res_pids = [inx_real[i] for i in res_pids]
+    if toggledebug:
+        ax = plt.axes(projection='3d')
+        plot_pseq(ax, pseq)
+        plot_pseq(ax, pseq[res_pids])
+        plot_pseq(ax, pseq_tmp)
+        plt.show()
     print(f'Num. of fitting result:{len(res_pids)}/{len(pseq)}')
     return np.asarray(pseq[res_pids]), get_rotseq_by_pseq(pseq[res_pids]), res_pids
 
@@ -689,8 +717,9 @@ def pseq2bendset(pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggledebug
 
         if i > 1 and is_collinearity(p_tan1, [pseq[i - 1], tangent_pts[-1]]):
             scatter_pseq(ax, [p_tan1], s=20, c='gray')
+            print("merge", i)
             bendseq[-1][0] += bend_a
-            # bendseq[-1][2] = rot_a
+            bendseq[-1][2] = rot_a
 
         else:
             if i == 1:

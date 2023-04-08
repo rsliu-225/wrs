@@ -151,7 +151,7 @@ if __name__ == '__main__':
     for idx, f in enumerate(f_list):
         print('-------')
         try:
-            res_list = pickle.load(open(f'./{f}_uni_opt.pkl', 'rb'))
+            res_list = pickle.load(open(f'./{f}_opt_2.pkl', 'rb'))
         except:
             continue
 

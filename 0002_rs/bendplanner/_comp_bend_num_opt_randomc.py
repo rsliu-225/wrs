@@ -75,6 +75,20 @@ def find_best_n(err_list, threshold=1.):
     return inx, min_err
 
 
+def find_best_n_ploy(err_list, threshold=1.):
+    min_err = np.inf
+    inx = 0
+    for i, v in enumerate(err_list):
+        if v < min_err:
+            min_err = v
+            inx = i
+        else:
+            break
+        if v < threshold:
+            break
+    return inx, min_err
+
+
 if __name__ == '__main__':
     base = wd.World(cam_pos=[0, 0, 1], lookat_pos=[0, 0, 0])
     gm.gen_frame(thickness=.0005, alpha=.1, length=.01).attach_to(base)
@@ -95,10 +109,12 @@ if __name__ == '__main__':
     org_err_list = []
     opt_err_list = []
 
-    f = 'bspl_15_uni'
+    f = 'bspl_10'
     res_list = pickle.load(open(f'./bendnum/{f}.pkl', 'rb'))
-    # opt_res_list = []
-    opt_res_list = pickle.load(open(f'./bendnum/{f}_opt.pkl', 'rb'))
+    try:
+        opt_res_list = pickle.load(open(f'./bendnum/{f}_opt_2.pkl', 'rb'))
+    except:
+        opt_res_list = []
 
     best_n_list = []
     min_err_list = []
@@ -106,14 +122,16 @@ if __name__ == '__main__':
         if len(opt_res_list) > i:
             print(opt_res_list[i].keys())
             continue
-        fit_max_err_list, bend_max_err_list, fit_avg_err_list, bend_avg_err_list,\
+        fit_max_err_list, bend_max_err_list, fit_avg_err_list, bend_avg_err_list, \
         m_list, fit_pseq_list, bend_pseq_list, goal_pseq_list = res
         goal_pseq = goal_pseq_list[i]
 
         init_pseq = [(0, 0, 0), (0, .05 + bu.cal_length(goal_pseq), 0)]
         init_rotseq = [np.eye(3), np.eye(3)]
-        best_n, min_err = find_best_n(bend_avg_err_list, threshold=.5)
-
+        # best_n, min_err = find_best_n(bend_avg_err_list, threshold=.5)
+        pseq_coarse, _, _ = bu.decimate_pseq_avg(goal_pseq, tor=.0005, toggledebug=False)
+        best_n = len(pseq_coarse) - 6
+        min_err = bend_avg_err_list[best_n]
         best_n_list.append(best_n + 6)
         min_err_list.append(min_err)
 
@@ -121,4 +139,4 @@ if __name__ == '__main__':
 
         opt_res = opt_process(best_n + 6, bs, opt, tor=tor, obj_type=obj_type, method=method)
         opt_res_list.append(opt_res)
-        pickle.dump(opt_res_list, open(f'./bendnum/{f}_opt.pkl', 'wb'))
+        pickle.dump(opt_res_list, open(f'./bendnum/{f}_opt_2.pkl', 'wb'))

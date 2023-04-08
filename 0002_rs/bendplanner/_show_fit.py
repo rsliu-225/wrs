@@ -58,7 +58,7 @@ if __name__ == '__main__':
     for i in range(5, 50):
         # pseq, rotseq, res_pids = bu.decimate_pseq_by_cnt(goal_pseq, cnt=i)
         # pseq, rotseq, res_pids = bu.decimate_pseq_by_cnt_uni(goal_pseq, cnt=i)
-        pseq, rotseq, res_pids = bu.decimate_pseq_by_cnt_curvature(goal_pseq, cnt=i)
+        pseq, rotseq, res_pids = bu.decimate_pseq_by_cnt_curvature(goal_pseq, cnt=i, toggledebug=True)
         bs.reset(init_pseq, init_rotseq)
 
         # ax = plt.axes(projection='3d')
@@ -85,9 +85,8 @@ if __name__ == '__main__':
         bu.plot_pseq(ax, bs.pseq, c='darkorange')
         plt.show()
 
-        # plt.plot(curvature_list)
-        plt.plot(range(len(goal_pseq))[1:-1], np.asarray(curvature_list_goal)/1000)
-        plt.plot(res_pids[1:-1], np.asarray(curvature_list)/1000)
-        plt.hlines(y=1/(bconfig.R_BEND*1000), xmin=0, xmax=len(goal_pseq), colors='gray', linestyles='--')
-        # plt.ylim(0, .1)
-        plt.show()
+        # plt.plot(range(len(goal_pseq))[1:-1], np.asarray(curvature_list_goal) / 1000)
+        # plt.plot(res_pids[1:-1], np.asarray(curvature_list) / 1000)
+        # plt.hlines(y=1 / (bconfig.R_BEND * 1000), xmin=0, xmax=len(goal_pseq), colors='gray', linestyles='--')
+        # # plt.ylim(0, .1)
+        # plt.show()
