@@ -15,30 +15,32 @@ import utils.vision_utils as vu
 import bendplanner.bender_config as bconfig
 import config
 import motionplanner.motion_planner as m_planner
+from sklearn.neighbors import NearestNeighbors
+import open3d as o3d
 
-# affine_mat = np.asarray([[0.00282079054, -1.00400178, -0.000574846621, 0.31255359],
-#                          [-0.98272743, -0.00797055, 0.19795055, -0.15903892],
-#                          [-0.202360828, 0.00546017392, -0.96800006, 0.94915224],
-#                          [0.0, 0.0, 0.0, 1.0]])
+AFFINE_MAT4 = np.asarray([[0.00282079054, -1.00400178, -0.000574846621, 0.31255359],
+                          [-0.98272743, -0.00797055, 0.19795055, -0.15903892],
+                          [-0.202360828, 0.00546017392, -0.96800006, 0.94915224],
+                          [0.0, 0.0, 0.0, 1.0]])
 
 
-affine_mat = np.asarray([[6.01298773e-02, -9.78207659e-01, 1.98731412e-01, 5.16091421e+02],
-                         [-9.79046435e-01, -1.89910797e-02, 2.02749641e-01, -1.70789291e+02],
-                         [-1.94557128e-01, -2.06758591e-01, -9.58852652e-01, 1.75997120e+03],
-                         [0, 0, 0, 1]])
+# AFFINE_MAT4 = np.asarray([[6.01298773e-02, -9.78207659e-01, 1.98731412e-01, 5.16091421e+02],
+#                          [-9.79046435e-01, -1.89910797e-02, 2.02749641e-01, -1.70789291e+02],
+#                          [-1.94557128e-01, -2.06758591e-01, -9.58852652e-01, 1.75997120e+03],
+#                          [0, 0, 0, 1]])
 
 
 def show_wire(fo, f, center, z_range=(.15, .18), rgba=(1, 0, 0, 1)):
     textureimg, _, pcd = pickle.load(open(os.path.join(config.ROOT, 'img/phoxi/exp_bend', fo, f), 'rb'))
-    pcd = rm.homomat_transform_points(affine_mat, np.asarray(pcd))
-    pcd = np.asarray(pcd) / 1000
+    pcd = rm.homomat_transform_points(AFFINE_MAT4, np.asarray(pcd))
+    pcd = np.asarray(pcd)
     textureimg = vu.enhance_grayimg(textureimg)
     cv2.imshow('', textureimg)
     cv2.waitKey(0)
     pcd_crop = pcdu.crop_pcd(pcd, x_range=(center[0] - .12, center[0] + .2),
                              y_range=(center[1] - .1, center[1] + .2), z_range=z_range)
 
-    # pcdu.show_pcd(pcd, rgba=(1, 1, 1, .5))
+    # pcdu.show_pcd(pcd, rgba=(1, 1, 1, .4))
     # pcdu.show_pcd(pcd_crop, rgba=rgba)
 
     # lines = pcdu.extract_lines_from_pcd(textureimg, pcd_crop, z_range=None, line_thresh=.0025,
@@ -92,17 +94,19 @@ def filter_pcd(pcd_gt, pcd, max_dist=.02):
 
 
 if __name__ == '__main__':
-    f_name = 'penta'
+    f_name = 'randomc'
     fo = 'stick'
-    rbt_name = 'ur'
+    rbt_name = 'yumi'
 
-    # base, env = el.loadEnv_yumi(camp=[2, -1, 1.5], lookatpos=[.5, 0, 0])
-    # rbt = el.loadYumi(showrbt=True)
-    base, env = el.loadEnv_wrs()
-    rbt = el.loadUr3e(showrbt=True)
+    if rbt_name == 'yumi':
+        base, env = el.loadEnv_yumi(camp=[2, -1, 1.5], lookatpos=[.5, 0, 0])
+        rbt = el.loadYumi(showrbt=True)
+    else:
+        base, env = el.loadEnv_wrs()
+        rbt = el.loadUr3e(showrbt=True)
 
-    # transmat4 = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{rbt_name}/{f_name}_transmat4.pkl', 'rb'))
-    transmat4 = rm.homomat_from_posrot((.8, .2, bconfig.BENDER_H + .8), rm.rotmat_from_axangle((0, 0, 1), np.pi))
+    transmat4 = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{rbt_name}/{f_name}_transmat4.pkl', 'rb'))
+    # transmat4 = rm.homomat_from_posrot((.8, .2, bconfig.BENDER_H + .8), rm.rotmat_from_axangle((0, 0, 1), np.pi))
     goal_pseq, bendset = \
         pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{rbt_name}/{f_name}_bendset.pkl', 'rb'))
     seqs, _, bendresseq = \
@@ -112,25 +116,21 @@ if __name__ == '__main__':
     pathseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{rbt_name}/{f_name}_pathseq.pkl', 'rb'))
     bendset = [bendset[i] for i in seqs]
 
-    for b in bendset:
-        print(np.degrees(b[0]))
-
-    # transmat4 = rm.homomat_from_posrot(transmat4[:3, 3] + np.asarray([0, 0, .008]), transmat4[:3, :3])
-
-    # UR
-    transmat4 = rm.homomat_from_posrot(transmat4[:3, 3] + np.asarray([0, .01, -.01]), transmat4[:3, :3])
+    transmat4 = rm.homomat_from_posrot(transmat4[:3, 3] + np.asarray([0, 0, .008]), transmat4[:3, :3])
+    # transmat4 = rm.homomat_from_posrot(transmat4[:3, 3] + np.asarray([0, .01, -.01]), transmat4[:3, :3])
 
     bs = b_sim.BendSim(show=False)
     mp = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
     # print(armjntsseq_list[0])
-    # mp.ah.show_armjnts(armjnts=armjntsseq_list[1][1][1])ccc
+    # mp.ah.show_armjnts(armjnts=armjntsseq_list[1][1][1])
 
     init_pseq = [(0, 0, 0), (0, max([b[-1] for b in bendset]), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
     brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp)
     brp.set_up(bendset, [], transmat4)
 
-    i = 0
+    i = 2
+    print('goal:', np.degrees(bendset[i][0]))
     bendresseq_new = []
     for j, v in enumerate(bendresseq):
         init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = v
@@ -146,34 +146,46 @@ if __name__ == '__main__':
     obj_res.attach_to(base)
     # base.run()
     pcd_init = np.asarray(obj_init.sample_surface(radius=.001)[0])
-    pcd_res = np.asarray(obj_res.sample_surface(radius=.001)[0])
-    # gm.gen_pointcloud(pcd_init, [[1, 1, 0, 1]]*len(pcd_init)).attach_to(base)
+    pcd_gt = np.asarray(obj_res.sample_surface(radius=.001)[0])
+    # gm.gen_pointcloud(pcd_init, [[1, 1, 0, 1]] * len(pcd_init)).attach_to(base)
+    # base.run()
 
     # pseq_init, pseq_end = brp.show_bend(bendresseq[1])
     # for p in pseq_end:
     #     gm.gen_sphere(p, radius=0.002, rgba=(1, 1, 0, 1)).attach_to(base)
-    # z_range = (.1, .2)
-    z_range = (.91, .92)
-    pcd_release = show_wire(f'{fo}/{f_name}_ur', f'{str(i)}_release.pkl', center=transmat4[:3, 3], z_range=z_range,
+    if rbt_name == 'yumi':
+        z_range = (.1, .2)
+    else:
+        z_range = (.91, .92)
+    pcd_release = show_wire(f'{fo}/{f_name}', f'{str(i)}_release.pkl', center=transmat4[:3, 3], z_range=z_range,
                             rgba=(1, 1, 0, 1))
-    pcd_goal = show_wire(f'{fo}/{f_name}_ur', f'{str(i)}_goal.pkl', center=transmat4[:3, 3], z_range=z_range,
+    pcd_goal = show_wire(f'{fo}/{f_name}', f'{str(i)}_goal.pkl', center=transmat4[:3, 3], z_range=z_range,
                          rgba=(0, 1, 0, 1))
     # base.run()
-    pcd_release_filtered = filter_pcd(pcd_res, pcd_release, max_dist=.03)
-    pcd_goal_filtered = filter_pcd(pcd_res, pcd_goal, max_dist=.03)
+    pcd_release_filtered = filter_pcd(pcd_gt, pcd_release, max_dist=.01)
+    pcd_goal_filtered = filter_pcd(pcd_gt, pcd_goal, max_dist=.01)
 
-    pcd_res = pcdu.get_objpcd_partial_bycampos(obj_res, cam_pos=[.4, 0, -1], smp_num=5000)
+    pcd_gt = pcdu.get_objpcd_partial_bycampos(obj_res, cam_pos=[.4, 0, -1], smp_num=5000)
+    pcdu.show_pcd(pcd_gt)
+    pcdu.show_pcd(pcd_release_filtered, rgba=(1, 1, 0, 1))
+    pcdu.show_pcd(pcd_goal_filtered, rgba=(0, 1, 0, 1))
+    # base.run()
+
     _, _, trans_release = \
-        o3dh.registration_ptpt(pcd_res, np.asarray(pcd_release_filtered), downsampling_voxelsize=.002,
+        o3dh.registration_ptpt(pcd_gt, np.asarray(pcd_release_filtered), downsampling_voxelsize=.002,
                                toggledebug=False)
     _, _, trans_goal = \
-        o3dh.registration_ptpt(pcd_res, np.asarray(pcd_goal_filtered), downsampling_voxelsize=.002,
+        o3dh.registration_ptpt(pcd_gt, np.asarray(pcd_goal_filtered), downsampling_voxelsize=.002,
                                toggledebug=False)
 
+    # _, _, trans_rel = \
+    #     o3dh.registration_ptpt(np.asarray(pcd_release_filtered), np.asarray(pcd_goal_filtered),
+    #                            downsampling_voxelsize=.002, toggledebug=False)
     gm.gen_frame(pos=transmat4[:3, 3], rotmat=trans_goal[:3, :3], thickness=.002).attach_to(base)
     gm.gen_frame(pos=transmat4[:3, 3], rotmat=trans_release[:3, :3], thickness=.002).attach_to(base)
     sb_angle = rm.angle_between_vectors(trans_goal[:3, 0], trans_release[:3, 0])
     print(np.degrees(sb_angle))
+    # sb_angle = rm.rotmat_to_euler(trans_rel)
 
     pcdu.show_pcd(pcd_release_filtered, rgba=(1, 1, 0, 1))
     pcdu.show_pcd(pcd_goal_filtered, rgba=(0, 1, 0, 1))

@@ -48,7 +48,7 @@ def remove_combs(rmv_l, combs):
 
 
 if __name__ == '__main__':
-    l = range(8)
+    l = range(4)
     combs = list(itertools.permutations(l, len(l)))
     print(l, len(combs))
 

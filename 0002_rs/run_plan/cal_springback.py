@@ -113,8 +113,8 @@ def springback_from_img(fo, z_range, line_thresh=.002, line_size_thresh=300):
             pcdu.show_pcd(pts, rgba=pcd_color[key])
             sb_dict[angle][key].append(slope)
 
-    # pickle.dump(sb_dict,
-    #             open(os.path.join(config.ROOT, 'bendplanner/springback', f'{fo.split("/")[1]}_springback.pkl'), 'wb'))
+    pickle.dump(sb_dict,
+                open(os.path.join(config.ROOT, 'bendplanner/springback', f'{fo.split("/")[1]}_springback.pkl'), 'wb'))
     return sb_dict
 
 
@@ -161,12 +161,12 @@ def show_data(input_dict):
         refined_err_list.append(goal - refine)
         refine_goal_list.append(refine_goal)
         X.append(goal)
-        if len(X) > 1 and gt <= 150:
-            pre = lasso_pre(X, sb_err_list, gt + 15)
-            print('prediction:', pre)
-            ax.scatter([gt + 15], [pre], c='g')
-        elif gt < 150:
-            ax.scatter([gt + 15], [np.mean(sb_err_list)], c='g')
+        # if len(X) > 1 and gt <= 150:
+        #     pre = lasso_pre(X, sb_err_list, gt + 15)
+        #     print('prediction:', pre)
+        #     ax.scatter([gt + 15], [pre], c='g')
+        # elif gt < 150:
+        #     ax.scatter([gt + 15], [np.mean(sb_err_list)], c='g')
 
     sort_inx = np.argsort(X)
     X = [X[i] for i in sort_inx]
@@ -183,9 +183,9 @@ def show_data(input_dict):
 
     plt.plot(X, refined_err_list, c='b')
     plt.plot(X, [np.mean(refined_err_list)] * len(X), c='b', linestyle='dashed')
-
+    ax.scatter([72.0, 72.0, 72.0, 72.0, 90.0, 90.0, 109.63, 13.41, 29.42, 35.25],
+               [4.51, 5.57, 4.06, 4.17, 4.12, 5.94, 5.71, 3.22, 2.88, 3.09], c='g')
     # plt.plot(X, np.asarray(bend_err) + np.asarray(sb_err_list))
-    plt.show()
 
 
 def lasso_pre(X, y, x_pre, plot=False):
@@ -219,9 +219,15 @@ if __name__ == '__main__':
     line_size_thresh = 500
     # sb_dict = springback_from_img(fo, z_range, line_thresh, line_size_thresh)
     sb_dict = pickle.load(
-        open(os.path.join(config.ROOT, 'bendplanner/springback', f'{fo.split("/")[1]}_springback.pkl'), 'rb'))
-
+        open(os.path.join(config.ROOT, 'bendplanner/', f'{fo}_springback.pkl'), 'rb'))
+    sb_dict_2 = pickle.load(
+        open(os.path.join(config.ROOT, 'bendplanner/', f'springback/alu_refine_lr_2_springback.pkl'), 'rb'))
+    sb_dict_3 = pickle.load(
+        open(os.path.join(config.ROOT, 'bendplanner/', f'springback/alu_refine_lr_3_springback.pkl'), 'rb'))
     show_data(sb_dict)
-    # show_data(sb_dict)
+    show_data(sb_dict_2)
+    show_data(sb_dict_3)
+
+    plt.show()
 
     base.run()
