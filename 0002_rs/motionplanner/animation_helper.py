@@ -11,6 +11,7 @@ import robot_sim.end_effectors.gripper.robotiqhe.robotiqhe as rtqhe
 class AnimationHelper(object):
     def __init__(self, env, rbt, armname="lft_arm"):
         self.rbt = rbt
+        self.rbt.jaw_to(jawwidth=0)
         self.env = env
         if env is not None:
             self.obscmlist = self.env.getstationaryobslist() + self.env.getchangableobslist()

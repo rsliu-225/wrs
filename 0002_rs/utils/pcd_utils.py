@@ -899,7 +899,7 @@ def cal_nbv_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, radius=.01, icp=Tru
         show_pcd(pts, rgba=COLOR[0])
     o3d_pcn = o3dh.nparray2o3dpcd(pts_pcn)
     o3d_pts = o3dh.nparray2o3dpcd(pts)
-    o3d_pcn.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=radius, max_nn=200))
+    o3d_pcn.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=radius*1.5, max_nn=200))
     o3d_pts.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=radius, max_nn=200))
 
     o3d_kpts = o3d_pcn.voxel_down_sample(voxel_size=radius)
