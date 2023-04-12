@@ -29,7 +29,7 @@ def get_fit_err(bs, goal_pseq, goal_rotseq, bend_num_range):
     for i in range(bend_num_range[0], bend_num_range[1]):
         bs.reset(init_pseq, init_rotseq)
         # fit_pseq, fit_rotseq, _ = bu.decimate_pseq_by_cnt(goal_pseq, cnt=i, toggledebug=False)
-        fit_pseq, fit_rotseq, res_id = bu.decimate_pseq_by_cnt_uni(goal_pseq, cnt=i, toggledebug=False)
+        fit_pseq, fit_rotseq = bu.decimate_pseq_by_cnt_uni(goal_pseq, cnt=i, toggledebug=False)
         init_rot = bu.get_init_rot(fit_pseq)
         init_bendset = bu.pseq2bendset(fit_pseq, bend_r=bs.bend_r, toggledebug=False)
         m_list.append(len(init_bendset))

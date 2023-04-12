@@ -82,6 +82,10 @@ class BendOptimizer(object):
                                         type=self.obj_type, toggledebug=False)
         except:
             err = 100
+        # ax = plt.axes(projection='3d')
+        # bu.plot_pseq(ax, self._bs.pseq[1:], c='darkorange')
+        # bu.plot_pseq(ax, goal_pseq, c='k')
+        # plt.show()
         if len(self.cost_list) % 10 == 0:
             print('cost:', err)
         self.cost_list.append(err)
@@ -134,12 +138,12 @@ class BendOptimizer(object):
 
     def equal_init(self, goal_pseq, cnt):
         fit_pseq, fit_rotseq = bu.decimate_pseq_by_cnt_uni(goal_pseq, cnt, toggledebug=False)
-        self.init_bendset = bu.rotpseq2bendset(fit_pseq, fit_rotseq, bend_r=self._bs.bend_r, toggledebug=False)
+        self.init_bendset = bu.pseq2bendset(fit_pseq, bend_r=self._bs.bend_r, toggledebug=False)
         self.init_rot = bu.get_init_rot(fit_pseq)
         self.bend_times = len(self.init_bendset)
         return np.asarray(self.init_bendset).flatten()
 
-    def fit_init(self, goal_pseq, goal_rotseq, tor=None, cnt=None):
+    def dp_init(self, goal_pseq, goal_rotseq, tor=None, cnt=None):
         if goal_rotseq is not None:
             fit_pseq, fit_rotseq = bu.decimate_rotpseq(goal_pseq, goal_rotseq, tor=tor, toggledebug=False)
             self.init_bendset = bu.rotpseq2bendset(fit_pseq, fit_rotseq, bend_r=self._bs.bend_r, toggledebug=False)
@@ -148,7 +152,7 @@ class BendOptimizer(object):
                 fit_pseq, fit_rotseq, _ = bu.decimate_pseq(goal_pseq, tor=tor, toggledebug=False)
             else:
                 fit_pseq, fit_rotseq, _ = bu.decimate_pseq_by_cnt(goal_pseq, cnt=cnt, toggledebug=False)
-            self.init_bendset = bu.pseq2bendset(fit_pseq, toggledebug=False)
+            self.init_bendset = bu.pseq2bendset(fit_pseq, bend_r=self._bs.bend_r, toggledebug=False)
         self.init_rot = bu.get_init_rot(fit_pseq)
         self.bend_times = len(self.init_bendset)
         return np.asarray(self.init_bendset).flatten()
@@ -177,9 +181,9 @@ class BendOptimizer(object):
         # self.addconstraint(self.con_end, condition="ineq")
         # self.addconstraint(self.con_avgdist, condition="ineq")
         if init is None:
-            # init = self.equal_init(self.goal_pseq, cnt=cnt)
-            init = self.fit_init(self.goal_pseq, self.goal_rotseq, tor=tor, cnt=cnt)
-        init = self.update_bnds(init)
+            init = self.equal_init(self.goal_pseq, cnt=cnt)
+            # init = self.dp_init(self.goal_pseq, self.goal_rotseq, tor=tor, cnt=cnt)
+        init = self.update_bnds(np.asarray(init).flatten())
         # var_num = len(init) / self.bend_times
         # for i in range(int(len(init) / var_num) - 1):
         #     self.addconstraint_sort(i)

@@ -146,8 +146,8 @@ if __name__ == '__main__':
     c_list = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:red', 'tab:cyan']
     pos_list = [0, 0, 0, 0, 0, 0]
     goal_list = pickle.load(open('./bspl_goal.pkl', 'rb'))
-
     ax = gen_ax()
+
     for idx, f in enumerate(f_list):
         print('-------')
         try:
@@ -198,78 +198,14 @@ if __name__ == '__main__':
             #     # bu.scatter_pseq(ax, goal_pseq_list[i][:1], c='g', s=10)
             #     bu.plot_pseq(ax, goal_pseq_list[i], c='k')
             #     plt.show()
-
-        ax.scatter([n + pos_list[-(idx + 1)] for n in best_n_list], min_err_list, s=50, marker='x',
-                   c=c_list[-(idx + 1)])
-        # ax.scatter([n + pos_list[-(idx + 1)] for n in best_n_list], opt_err_list, s=50, edgecolors=c_list[-(idx + 1)],
-        #            facecolor='none')
-        ax.axhline(y=np.mean(min_err_list), linestyle='--', c=c_list[-(idx + 1)], alpha=.5)
-        # ax.axhline(y=np.mean(opt_err_list), linestyle='-.', c=c_list[-(idx + 1)], alpha=.5)
-        print(np.round(np.mean(min_err_list), decimals=2), np.round(np.std(min_err_list), decimals=2))
-        print(np.round(np.mean(opt_err_list), decimals=2), np.round(np.std(opt_err_list), decimals=2))
-        print(np.round(np.mean(best_n_list), decimals=2), np.round(np.std(best_n_list), decimals=2))
-
-    plt.show()
-    ax = gen_ax()
-
-    for idx, f in enumerate(f_list):
-        print('-------')
-        try:
-            res_list = pickle.load(open(f'./{f}_opt.pkl', 'rb'))
-        except:
-            continue
-
-        eps = .05
-        best_n_list = []
-        min_err_list = []
-        opt_err_list = []
-        for i, res_dict in enumerate(res_list):
-            goal_pseq = goal_list[i]
-
-            init_bendset = res_dict['init_bendset']
-            init_err = res_dict['init_err']
-            init_res_pseq = res_dict['init_res_pseq']
-            init_res_kpts = res_dict['init_res_kpts']
-
-            opt_bendset = res_dict['opt_bendset']
-            opt_err = res_dict['opt_err']
-            opt_res_pseq = res_dict['opt_res_pseq']
-            opt_res_kpts = res_dict['opt_res_kpts']
-            opt_time_cost = res_dict['opt_time_cost']
-            best_n_list.append(len(init_bendset))
-            min_err_list.append(init_err)
-            opt_err_list.append(opt_err)
-            # print(init_err, opt_err, len(opt_bendset))
-
-            # ax = plt.axes(projection='3d')
-            # center = np.asarray(goal_pseq).mean(axis=0)
-            # ax.axes.set_xlim3d(left=center[0] - eps, right=center[0] + eps)
-            # ax.axes.set_ylim3d(bottom=center[1] - eps, top=center[1] + eps)
-            # ax.axes.set_zlim3d(bottom=center[2] - eps, top=center[2] + eps)
-            # bu.plot_pseq(ax, init_res_pseq, c='darkorange')
-            # bu.plot_pseq(ax, opt_res_pseq, c='green')
-            # bu.plot_pseq(ax, goal_pseq, c='k')
-            # plt.show()
-
-            # for i in range(len(bend_pseq_list)):
-            #     ax = plt.axes(projection='3d')
-            #     center = np.asarray(bend_pseq_list[i]).mean(axis=0)
-            #     ax.axes.set_xlim3d(left=center[0] - eps, right=center[0] + eps)
-            #     ax.axes.set_ylim3d(bottom=center[1] - eps, top=center[1] + eps)
-            #     ax.axes.set_zlim3d(bottom=center[2] - eps, top=center[2] + eps)
-            #     bu.plot_pseq(ax, bend_pseq_list[i], c='darkorange')
-            #     # bu.scatter_pseq(ax, bend_pseq_list[i][1:-2], c='r')
-            #     # bu.scatter_pseq(ax, goal_pseq_list[i][:1], c='g', s=10)
-            #     bu.plot_pseq(ax, goal_pseq_list[i], c='k')
-            #     plt.show()
-
+        print(best_n_list)
         ax.scatter([n + pos_list[idx] for n in best_n_list], min_err_list, s=50, marker='x', c=c_list[idx])
-        # ax.scatter([n + pos_list[idx] for n in best_n_list], opt_err_list, s=50, edgecolors=c_list[idx],
-        #            facecolor='none')
+        ax.scatter([n + pos_list[idx] for n in best_n_list], opt_err_list, s=50, edgecolors=c_list[idx],
+                   facecolor='none')
         ax.axhline(y=np.mean(min_err_list), linestyle='--', c=c_list[idx], alpha=.5)
-        # ax.axhline(y=np.mean(opt_err_list), linestyle='-.', c=c_list[idx], alpha=.5)
+        ax.axhline(y=np.mean(opt_err_list), linestyle='-.', c=c_list[idx], alpha=.5)
+        print(np.round(np.mean(best_n_list), decimals=2), np.round(np.std(best_n_list), decimals=2))
         print(np.round(np.mean(min_err_list), decimals=2), np.round(np.std(min_err_list), decimals=2))
         print(np.round(np.mean(opt_err_list), decimals=2), np.round(np.std(opt_err_list), decimals=2))
-        print(np.round(np.mean(best_n_list), decimals=2), np.round(np.std(best_n_list), decimals=2))
 
     plt.show()

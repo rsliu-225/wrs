@@ -10,7 +10,6 @@ import bend_utils as bu
 import bendplanner.BendSim as b_sim
 import modeling.geometric_model as gm
 import visualization.panda.world as wd
-
 from multiprocessing import Process
 
 
@@ -26,6 +25,7 @@ def run_parallel(fn, args):
 
 def opt_process(i, bs, opt, tor=None, obj_type='avg', method='SLSQP'):
     res_bendseq, cost, time_cost = opt.solve(tor=tor, cnt=i, method=method)
+
     bs.reset(opt.init_pseq, opt.init_rotseq, extend=False)
     bs.gen_by_bendseq(opt.init_bendset, cc=False)
     goal_pseq_aligned, goal_rotseq_aligned = bu.align_with_init(bs, opt.goal_pseq, opt.init_rot, opt.goal_rotseq)
@@ -110,9 +110,9 @@ if __name__ == '__main__':
     opt_err_list = []
 
     f = 'bspl_10'
-    res_list = pickle.load(open(f'./bendnum/{f}.pkl', 'rb'))
+    res_list = pickle.load(open(f'./bendnum/{f}_uni.pkl', 'rb'))
     try:
-        opt_res_list = pickle.load(open(f'./bendnum/{f}_opt_2.pkl', 'rb'))
+        opt_res_list = pickle.load(open(f'./bendnum/{f}_uni_opt.pkl', 'rb'))
     except:
         opt_res_list = []
 
@@ -124,19 +124,21 @@ if __name__ == '__main__':
             continue
         fit_max_err_list, bend_max_err_list, fit_avg_err_list, bend_avg_err_list, \
         m_list, fit_pseq_list, bend_pseq_list, goal_pseq_list = res
-        goal_pseq = goal_pseq_list[i]
 
+        goal_pseq = goal_pseq_list[i]
         init_pseq = [(0, 0, 0), (0, .05 + bu.cal_length(goal_pseq), 0)]
         init_rotseq = [np.eye(3), np.eye(3)]
-        # best_n, min_err = find_best_n(bend_avg_err_list, threshold=.5)
-        pseq_coarse, _, _ = bu.decimate_pseq_avg(goal_pseq, tor=.0005, toggledebug=False)
-        best_n = len(pseq_coarse) - 6
-        min_err = bend_avg_err_list[best_n]
-        best_n_list.append(best_n + 6)
+        best_n, min_err = find_best_n(bend_avg_err_list, threshold=.5)
+        print('Best n:', best_n + 5, bend_avg_err_list[best_n])
+
+        # best_n_list.append(best_n + 6)
+        # pseq_coarse, _, _ = bu.decimate_pseq_avg(goal_pseq, tor=.0005, toggledebug=False)
+        # min_err = bend_avg_err_list[len(pseq_coarse) - 6]
+        # best_n_list.append(len(pseq_coarse))
+
         min_err_list.append(min_err)
-
         opt = b_opt.BendOptimizer(bs, init_pseq, init_rotseq, goal_pseq, bend_times=1, obj_type=obj_type)
-
-        opt_res = opt_process(best_n + 6, bs, opt, tor=tor, obj_type=obj_type, method=method)
+        opt_res = opt_process(best_n + 5, bs, opt, tor=tor, obj_type=obj_type, method=method)
         opt_res_list.append(opt_res)
-        pickle.dump(opt_res_list, open(f'./bendnum/{f}_opt_2.pkl', 'wb'))
+        pickle.dump(opt_res_list, open(f'./bendnum/{f}_uni_opt.pkl', 'wb'))
+    # print(best_n_list)

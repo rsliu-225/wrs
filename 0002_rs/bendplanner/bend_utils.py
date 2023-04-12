@@ -512,11 +512,30 @@ def decimate_pseq_by_cnt_curvature(pseq, thresh_r=bconfig.R_BEND, cnt=10, toggle
 
 
 def decimate_pseq_by_cnt_uni(pseq, cnt=10, toggledebug=False):
-    pseq = np.asarray(pseq)
-    res_pids = [int(v) for v in np.linspace(0, len(pseq) - 1, cnt)]
+    pseq = linear_inp3d_by_step(pseq, .0001)
+    uni_len = cal_length(pseq) / (cnt - 1)
+    tmp_len = 0
+    pseq_res = [pseq[0]]
+    for i in range(len(pseq) - 1):
+        tmp_len += np.linalg.norm(pseq[i + 1] - pseq[i])
+        if tmp_len > uni_len:
+            pseq_res.append(pseq[i] + (tmp_len - uni_len) * rm.unit_vector(pseq[i] - pseq[i + 1]))
+            tmp_len = np.linalg.norm(pseq[i + 1] - pseq_res[-1])
+    if len(pseq) < cnt:
+        pseq_res.append(pseq[-1])
+    else:
+        pseq_res[-1] = pseq[-1]
 
-    print(f'Num. of fitting result:{len(res_pids)}/{len(pseq)}')
-    return np.asarray(pseq[res_pids]), get_rotseq_by_pseq(pseq[res_pids]), res_pids
+    if toggledebug:
+        ax = plt.axes(projection='3d')
+        plot_pseq(ax, pseq)
+        plot_pseq(ax, pseq_res)
+        scatter_pseq(ax, pseq)
+        scatter_pseq(ax, pseq_res)
+        plt.show()
+    print(f'Num. of fitting result:{len(pseq_res)}/{len(pseq)}')
+
+    return np.asarray(pseq_res), get_rotseq_by_pseq(pseq_res)
 
 
 def decimate_rotpseq(pseq, rotseq, tor=.001, toggledebug=False):
@@ -871,18 +890,15 @@ def rotpseq2bendset(pseq, rotseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, 
                 l_pos += np.linalg.norm(p_tan1 - tangent_pts[-1])
                 l_pos += abs(bendseq[-1][0]) * bend_r / np.cos(abs(bendseq[-1][1]))
             bendseq.append([bend_a, 4 * lift_a, rot_a, l_pos + init_l])
-            print(bendseq[-1])
         tangent_pts.extend([p_tan1, p_tan2])
 
     if toggledebug:
-        for i in range(len(pseq)):
-            plot_frame(ax, pseq[i], rotseq[i])
+        # for i in range(len(pseq)):
+        #     plot_frame(ax, pseq[i], rotseq[i])
         center = np.mean(pseq, axis=0)
         ax.set_xlim([center[0] - 0.02, center[0] + 0.02])
         ax.set_ylim([center[1] - 0.02, center[1] + 0.02])
         ax.set_zlim([center[2] - 0.02, center[2] + 0.02])
-        # goal_pseq = pickle.load(open('../run_plan/randomc.pkl', 'rb'))
-        # plot_pseq(ax, goal_pseq)
         plot_pseq(ax, pseq)
         scatter_pseq(ax, [pseq[0]], s=10, c='y')
         scatter_pseq(ax, pseq[1:], s=10, c='g')

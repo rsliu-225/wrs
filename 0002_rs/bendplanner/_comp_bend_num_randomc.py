@@ -82,8 +82,8 @@ def get_fit_err(bs, goal_pseq, goal_rotseq, bend_num_range, init_pseq, init_rots
     for i in range(bend_num_range[0], bend_num_range[1]):
         bs.reset(init_pseq, init_rotseq)
         # fit_pseq, fit_rotseq, _ = bu.decimate_pseq_by_cnt(goal_pseq, cnt=i, toggledebug=False)
-        # fit_pseq, fit_rotseq, res_id = bu.decimate_pseq_by_cnt_uni(goal_pseq, cnt=i, toggledebug=False)
-        fit_pseq, fit_rotseq, res_id = bu.decimate_pseq_by_cnt_curvature(goal_pseq, cnt=i, toggledebug=False)
+        fit_pseq, fit_rotseq = bu.decimate_pseq_by_cnt_uni(goal_pseq, cnt=i, toggledebug=False)
+        # fit_pseq, fit_rotseq, res_id = bu.decimate_pseq_by_cnt_curvature(goal_pseq, cnt=i, toggledebug=False)
         init_rot = bu.get_init_rot(fit_pseq)
         init_bendset = bu.pseq2bendset(fit_pseq, bend_r=bs.bend_r, toggledebug=False)
         m_list.append(len(init_bendset))
@@ -105,6 +105,7 @@ def get_fit_err(bs, goal_pseq, goal_rotseq, bend_num_range, init_pseq, init_rots
         fit_pseq_list.append(fit_pseq)
         bend_pseq_list.append(bs.pseq[1:])
         goal_pseq_list.append(goal_pseq_trans)
+
     return fit_max_err_list, bend_max_err_list, fit_avg_err_list, bend_avg_err_list, m_list, \
            fit_pseq_list, bend_pseq_list, goal_pseq_list
 
@@ -152,7 +153,7 @@ if __name__ == '__main__':
             continue
 
         best_n, _ = find_best_n(bend_avg_err_list, threshold=.5)
-        print('Best n:', best_n + 6)
+        print('Best n:', best_n + 6, bend_avg_err_list[best_n])
         if bend_max_err_list[best_n] > 5 or best_n > 14:
             print('Large Error!', bend_max_err_list)
             # continue
@@ -162,11 +163,12 @@ if __name__ == '__main__':
         # bu.plot_pseq(ax, bend_pseq_list[best_n], c='darkorange')
         # bu.plot_pseq(ax, goal_pseq_list[best_n], c='k')
         # plt.show()
+
         # plot_err(fit_max_err_list, bend_max_err_list, fit_avg_err_list, bend_avg_err_list, m_list)
 
         res_list.append([fit_max_err_list, bend_max_err_list, fit_avg_err_list, bend_avg_err_list,
                          m_list, fit_pseq_list, bend_pseq_list, goal_pseq_list])
         # goal_list.append(goal_pseq)
 
-        pickle.dump(res_list, open('./bendnum/bspl_20_curv.pkl', 'wb'))
+        pickle.dump(res_list, open('./bendnum/bspl_10_uni.pkl', 'wb'))
         # pickle.dump(goal_list, open('./bendnum/bspl_goal.pkl', 'wb'))
