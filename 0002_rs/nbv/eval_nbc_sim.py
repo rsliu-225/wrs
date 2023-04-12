@@ -12,10 +12,10 @@ if __name__ == '__main__':
     path = 'E:/liu/nbv_mesh/'
     if not os.path.exists(path):
         path = 'D:/nbv_mesh/'
-    # cat_list = ['bspl_3', 'bspl_4', 'bspl_5']
-    # cat_cnt_list = [67, 67, 66]
-    cat_list = ['tmpl', 'plat']
-    cat_cnt_list = [100, 100]
+    cat_list = ['bspl_3', 'bspl_4', 'bspl_5']
+    cat_cnt_list = [67, 67, 66]
+    # cat_list = ['tmpl', 'plat']
+    # cat_cnt_list = [100, 100]
 
     fo = 'res_75_rbt'
 
@@ -64,14 +64,14 @@ if __name__ == '__main__':
     # ax2.bar(x[1:] + .1, cnt_pcn[1:], color='tab:green', width=0.2)
     # ax2.bar(x[1:] + .3, cnt_opt[1:], color='tab:red', width=0.2)
 
-    ax2.plot(x[1:], [sum(cnt_rnd[1:i + 1]) for i, v in enumerate(cnt_rnd[1:])], color='tab:blue')
-    ax2.plot(x[1:], [sum(cnt_org[1:i + 1]) for i, v in enumerate(cnt_org[1:])], color='tab:orange')
-    ax2.plot(x[1:], [sum(cnt_pcn[1:i + 1]) for i, v in enumerate(cnt_pcn[1:])], color='tab:green')
-    ax2.plot(x[1:], [sum(cnt_opt[1:i + 1]) for i, v in enumerate(cnt_opt[1:])], color='tab:red')
+    ax2.plot(x, [sum(cnt_rnd[:i + 1]) for i in range(10)], color='tab:blue')
+    ax2.plot(x, [sum(cnt_org[:i + 1]) for i in range(10)], color='tab:orange')
+    ax2.plot(x, [sum(cnt_pcn[:i + 1]) for i in range(10)], color='tab:green')
+    ax2.plot(x, [sum(cnt_opt[:i + 1]) for i in range(10)], color='tab:red')
 
-    ax2.set_xticks(x[1:])
+    ax2.set_xticks(x)
     # ax2.set_ylim(0, 92)
-    ax2.set_ylim(0, 205)
+    ax2.set_ylim(0, 210)
 
     # ax2.set_yticks(np.linspace(0, 100, 10))
     ax2.minorticks_on()

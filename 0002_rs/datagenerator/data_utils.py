@@ -651,7 +651,7 @@ def cnt_remove_objid(path, objid, max_num):
 
 def get_objpcd_partial_o3d(objcm, objcm_gt, rot, rot_center, pseq=None, rotseq=None,
                            path='./', f_name='', resolusion=(1280, 720), ext_name='.pcd',
-                           rnd_occ_ratio_rng=(.2, .5), nrml_occ_ratio_rng=(.2, .6),
+                           rnd_occ_ratio_rng=(.2, .5), nrml_occ_ratio_rng=(0, .2),
                            occ_vt_ratio=1, noise_vt_ratio=1, noise_cnt=random.randint(1, 5),
                            visible_threshold=np.pi / 3,
                            add_noise=False, add_occ=False, add_rnd_occ=True, add_noise_pts=True,
@@ -684,7 +684,7 @@ def get_objpcd_partial_o3d(objcm, objcm_gt, rot, rot_center, pseq=None, rotseq=N
         o3dpcd = add_random_occ(o3dpcd, occ_ratio_rng=rnd_occ_ratio_rng)
         o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
     if add_occ:
-        # o3dpcd = add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=nrml_occ_ratio_rng)
+        o3dpcd = add_random_occ_by_nrml(o3dpcd, occ_ratio_rng=nrml_occ_ratio_rng)
         o3dpcd = add_random_occ_by_vt(o3dpcd, np.asarray(o3dmesh.vertices),
                                       edg_radius=5e-4, edg_sigma=5e-4, ratio=occ_vt_ratio)
         o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
@@ -694,7 +694,7 @@ def get_objpcd_partial_o3d(objcm, objcm_gt, rot, rot_center, pseq=None, rotseq=N
                                           noise_mean=1e-3, noise_sigma=1e-4, ratio=noise_vt_ratio)
         o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
     if add_noise_pts:
-        o3dpcd = add_noise_pts_by_vt(o3dpcd, noise_cnt=noise_cnt, size=.01)
+        o3dpcd = add_noise_pts_by_vt(o3dpcd, noise_cnt=noise_cnt, size=.02)
         o3d.io.write_point_cloud(os.path.join(path, 'partial', f'{f_name}{ext_name}'), o3dpcd)
 
     o3dpcd, _ = o3dpcd.remove_radius_outlier(nb_points=10, radius=0.05)

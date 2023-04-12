@@ -46,16 +46,16 @@ if __name__ == '__main__':
     # icos_cm = cm.CollisionModel(icos)
     # icos_cm.attach_to(base)
 
-    width = .008
-    thickness = .0015
+    width = .01
+    thickness = .003
     fo = './tst'
     cross_sec = [[0, width / 2], [0, -width / 2], [-thickness / 2, -width / 2], [-thickness / 2, width / 2]]
     # pseq = np.asarray([[0, 0, 0], [.16, 0, 0]])
     # rotseq = np.asarray([np.eye(3), np.eye(3)])
-    # pseq = utl.poly_inp(pseq=np.asarray([[0, 0, 0], [.018, .02, .02], [.06, .04, 0], [.12, 0, 0]]))
-    pseq = utl.spl_inp(pseq=np.asarray([[0, 0, 0], [0.02, -0.00411336, -0.01327048], [0.04, -0.01863003, 0.0190177],
-                                        [0.06, 0.00720252, 0.01764031], [0.08, -0.0065916, -0.00725867]]),
-                       toggledebug=False)
+    pseq = utl.poly_inp(pseq=np.asarray([[0, 0, 0], [.03, .012, .01], [.08, .01, 0], [.12, 0, 0]]))
+    # pseq = utl.spl_inp(pseq=np.asarray([[0, 0, 0], [0.02, -0.00411336, -0.01327048], [0.04, -0.01863003, 0.0190177],
+    #                                     [0.06, 0.00720252, 0.01764031], [0.08, -0.0065916, -0.00725867]]),
+    #                    toggledebug=False)
     pseq = utl.uni_length(pseq, goal_len=.2)
     pseq, rotseq = utl.get_rotseq_by_pseq(pseq)
 
@@ -83,11 +83,11 @@ if __name__ == '__main__':
     obj_id = 0
     rot_center = (0, 0, 0)
 
-    o3dpcd_1 = utl.get_objpcd_partial_o3d(objcm, objcm, np.eye(3), rot_center, path=fo,
+    o3dpcd_1 = utl.get_objpcd_partial_o3d(objcm, objcm, icomats[3][2], rot_center, path=fo,
                                           f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
                                           visible_threshold=np.radians(75), noise_cnt=3, rnd_occ_ratio_rng=(0, .2),
-                                          occ_vt_ratio=random.uniform(.1, .2), noise_vt_ratio=random.uniform(.5, 1),
-                                          add_noise=True, add_occ=True, add_rnd_occ=True, add_noise_pts=True,
+                                          occ_vt_ratio=random.uniform(.2, .5), noise_vt_ratio=random.uniform(.5, 1),
+                                          add_noise=True, add_occ=True, add_rnd_occ=False, add_noise_pts=True,
                                           savemesh=False, savedepthimg=False, savergbimg=False, toggledebug=True)
 
     o3dpcd_2 = utl.get_objpcd_partial_o3d(objcm, objcm, icomats[0][5], rot_center, path=fo,
@@ -97,32 +97,18 @@ if __name__ == '__main__':
                                           add_noise=True, add_occ=True, add_rnd_occ=True, add_noise_pts=True,
                                           savemesh=False, savedepthimg=False, savergbimg=False, toggledebug=False)
 
-    o3dpcd_3 = utl.get_objpcd_partial_o3d(objcm, objcm, icomats[0][3], rot_center, path=fo,
-                                          f_name=f'{str(obj_id)}_{str(cnt).zfill(3)}',
-                                          visible_threshold=np.radians(75), noise_cnt=3, rnd_occ_ratio_rng=(0, .2),
-                                          occ_vt_ratio=random.uniform(.1, .2), noise_vt_ratio=random.uniform(.5, 1),
-                                          add_noise=True, add_occ=True, add_rnd_occ=True, add_noise_pts=True,
-                                          savemesh=False, savedepthimg=False, savergbimg=False, toggledebug=False)
-
     homomat4 = rm.homomat_from_posrot((0, 0, 0), icomats[0][5])
-    # pcd = np.asarray(o3dpcd_2.points)
-    # pcd = utl.trans_pcd(pcd, np.dot(np.eye(4), np.linalg.inv(homomat4)))
-    random_homomat4 = utl.gen_random_homomat4((.001, .001, .001), np.radians((1, 1, 1)))
-    # pcd = utl.trans_pcd(pcd, random_homomat4)
-    # o3dpcd_2 = utl.nparray2o3dpcd(pcd)
-
+    random_homomat4 = utl.gen_random_homomat4((.002, .002, .002), np.radians((1, 1, 1)))
     o3dpcd_2.transform(np.linalg.inv(homomat4))
     o3dpcd_2.transform(random_homomat4)
-    homomat4 = rm.homomat_from_posrot((0, 0, 0), icomats[0][3])
-    random_homomat4 = utl.gen_random_homomat4((.001, .001, .001), np.radians((1, 1, 1)))
-    o3dpcd_3.transform(np.linalg.inv(homomat4))
-    o3dpcd_3.transform(random_homomat4)
+
+    init_homomat4 = rm.homomat_from_posrot((0, 0, 0), icomats[3][2])
+    o3dpcd_2.transform(init_homomat4)
 
     o3dpcd_1.paint_uniform_color(COLOR[0])
     o3dpcd_2.paint_uniform_color((.7, .7, .7))
-    o3dpcd_3.paint_uniform_color((.7, .7, .7))
     o3d.visualization.draw_geometries([o3dpcd_1])
-    o3d.visualization.draw_geometries([o3dpcd_1, o3dpcd_3])
+    o3d.visualization.draw_geometries([o3dpcd_1, o3dpcd_2])
 
     # '''
     # show data

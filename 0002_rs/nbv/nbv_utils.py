@@ -38,7 +38,7 @@ def transpose(data, len=6):
 def load_cov(path, cat_list, fo, cat_cnt_list, max_times=5, prefix='pcn'):
     cov_list = []
     max_list = []
-    cnt_list = [0] * max_times
+    cnt_list = [0] * (max_times + 1)
     for inx, cat in enumerate(cat_list):
         for f in os.listdir(os.path.join(path, cat, 'mesh')):
             print(f'-----------{f}------------')
@@ -69,16 +69,19 @@ def load_cov(path, cat_list, fo, cat_cnt_list, max_times=5, prefix='pcn'):
                     #     continue
                     max_cnt = i
                 max_tmp.append(max)
-            cnt_list[max_cnt] += 1
+            if max > .95:
+                cnt_list[max_cnt] += 1
+            else:
+                cnt_list[-1] += 1
             max_list.append(max_tmp)
             cov_list.append(cov_list_tmp)
-    return transpose(cov_list, max_times + 1), transpose(max_list, max_times + 1), [cnt_list[0]] + cnt_list
+    return transpose(cov_list, max_times + 1), transpose(max_list, max_times + 1), [0] + cnt_list
 
 
 def load_cov_w_fail(path, cat_list, fo, cat_cnt_list, max_times=5, prefix='pcn'):
     cov_list = []
     max_list = []
-    cnt_list = [0] * max_times
+    cnt_list = [0] * (max_times+1)
     plan_fail_cnt = 0
     for inx, cat in enumerate(cat_list):
         for f in os.listdir(os.path.join(path, cat, 'mesh')):
@@ -113,12 +116,14 @@ def load_cov_w_fail(path, cat_list, fo, cat_cnt_list, max_times=5, prefix='pcn')
                         continue
                     max_cnt = i
                 max_tmp.append(max)
-            if max_cnt != -1:
+            if max > .95 and max_cnt != -1:
                 cnt_list[max_cnt] += 1
+            else:
+                cnt_list[-1] += 1
             max_list.append(max_tmp)
             cov_list.append(cov_list_tmp)
     return transpose(cov_list, max_times + 1), transpose(max_list, max_times + 1), \
-           [cnt_list[0]] + cnt_list, plan_fail_cnt
+           [0] + cnt_list, plan_fail_cnt
 
 
 def fit(path, cat, fo, cross_sec, prefix='pcn', toggledebug=False):

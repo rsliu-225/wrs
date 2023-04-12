@@ -16,8 +16,8 @@ if __name__ == '__main__':
     # base = wd.World(cam_pos=[0, 0, .4], lookat_pos=[0, 0, 0])
 
     # base = wd.World(cam_pos=[0, 0, 0], lookat_pos=[0, 0, 1])
+    # fo = 'nbc_opt/extrude_1'
     fo = 'nbc_pcn/extrude_1'
-    # fo = 'nbc_opt/template_2'
     # fo = 'nbc/plate_a_cubic'
     # fo = 'opti/plate_a_cubic'
     # fo = 'seq/plate_a_quadratic'
@@ -42,22 +42,22 @@ if __name__ == '__main__':
     z_range = (-.15, -.02)
     gm.gen_frame(pos=(-.005, 0, 0), rotmat=rm.rotmat_from_axangle((1, 0, 0), np.pi),
                  length=.03, thickness=.002).attach_to(base)
-    # gm.gen_frame().attach_to(base)
+    gm.gen_frame().attach_to(base)
     pcd_cropped_list = rcu.reg_armarker(fo, seed, center, x_range=x_range, y_range=y_range, z_range=z_range,
                                         toggledebug=False, icp=True)
     pcd_all = []
     pcd_cropped_list[1] = pcdu.trans_pcd(pcd_cropped_list[1],
-                                         rm.homomat_from_posrot((.003, 0, 0),
+                                         rm.homomat_from_posrot((-.003, 0, 0),
                                                                 rm.rotmat_from_euler(0, 0, 0)))
-    pcd_cropped_list[2] = pcdu.trans_pcd(pcd_cropped_list[2],
-                                         rm.homomat_from_posrot((-.001, .004, 0),
-                                                                rm.rotmat_from_euler(0, 0, 0)))
+    # pcd_cropped_list[2] = pcdu.trans_pcd(pcd_cropped_list[2],
+    #                                      rm.homomat_from_posrot((0, 0, -.002),
+    #                                                             rm.rotmat_from_euler(0, 0, 0)))
 
-    # pcdu.show_pcd(pcd_cropped_list[0], rgba=list(nu.COLOR[0]) + [1])
-    # pcdu.show_pcd(pcd_cropped_list[1],rgba=list(nu.COLOR[0]) + [1])
+    pcdu.show_pcd(pcd_cropped_list[0], rgba=list(nu.COLOR[0]) + [1])
+    pcdu.show_pcd(pcd_cropped_list[1], rgba=list(nu.COLOR[0]) + [1])
     # pcdu.show_pcd(pcd_cropped_list[2], rgba=(.8, .8, 0, 1))
-    # base.run()
-    for pcd in pcd_cropped_list[:3]:
+    base.run()
+    for pcd in pcd_cropped_list[:1]:
         pcd_all.extend(pcd)
     '''
     remove noise
@@ -92,7 +92,7 @@ if __name__ == '__main__':
     #                                        rgba=[.5, .7, 1, .5])
     # surface_gm.attach_to(base)
 
-    # pcdu.show_pcd(pcd_all, rgba=list(nu.COLOR[0]) + [.5])
+    pcdu.show_pcd(pcd_all, rgba=list(nu.COLOR[0]) + [.5])
 
     # rgba_list = [[1, 0, 0, 1], [0, 1, 0, 1]]
     # for i, pcd in enumerate(pcd_cropped_list):
