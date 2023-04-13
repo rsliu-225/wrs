@@ -132,7 +132,7 @@ def gen_ax():
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams["font.size"] = 24
     ax = fig.add_subplot(1, 1, 1)
-    ax.set_ylim(0, 1.5)
+    ax.set_ylim(0, 1.2)
     ax.set_xlim(5.5, 16.5)
     ax.set_xticks(range(6, 17))
     grid_on(ax)
@@ -151,7 +151,7 @@ if __name__ == '__main__':
     for idx, f in enumerate(f_list):
         print('-------')
         try:
-            res_list = pickle.load(open(f'./{f}_opt_2.pkl', 'rb'))
+            res_list = pickle.load(open(f'./{f}_uni_opt.pkl', 'rb'))
         except:
             continue
 
@@ -198,14 +198,15 @@ if __name__ == '__main__':
             #     # bu.scatter_pseq(ax, goal_pseq_list[i][:1], c='g', s=10)
             #     bu.plot_pseq(ax, goal_pseq_list[i], c='k')
             #     plt.show()
+
         print(best_n_list)
         ax.scatter([n + pos_list[idx] for n in best_n_list], min_err_list, s=50, marker='x', c=c_list[idx])
         ax.scatter([n + pos_list[idx] for n in best_n_list], opt_err_list, s=50, edgecolors=c_list[idx],
                    facecolor='none')
         ax.axhline(y=np.mean(min_err_list), linestyle='--', c=c_list[idx], alpha=.5)
         ax.axhline(y=np.mean(opt_err_list), linestyle='-.', c=c_list[idx], alpha=.5)
-        print(np.round(np.mean(best_n_list), decimals=2), np.round(np.std(best_n_list), decimals=2))
-        print(np.round(np.mean(min_err_list), decimals=2), np.round(np.std(min_err_list), decimals=2))
-        print(np.round(np.mean(opt_err_list), decimals=2), np.round(np.std(opt_err_list), decimals=2))
+        print(np.round(np.mean(best_n_list), decimals=2), '±', np.round(np.std(best_n_list), decimals=2))
+        print(np.round(np.mean(min_err_list), decimals=2), '±', np.round(np.std(min_err_list), decimals=2))
+        print(np.round(np.mean(opt_err_list), decimals=2), '±', np.round(np.std(opt_err_list), decimals=2))
 
     plt.show()

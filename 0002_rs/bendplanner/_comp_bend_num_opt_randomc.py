@@ -109,7 +109,7 @@ if __name__ == '__main__':
     org_err_list = []
     opt_err_list = []
 
-    f = 'bspl_10'
+    f = 'bspl_15'
     res_list = pickle.load(open(f'./bendnum/{f}_uni.pkl', 'rb'))
     try:
         opt_res_list = pickle.load(open(f'./bendnum/{f}_uni_opt.pkl', 'rb'))
