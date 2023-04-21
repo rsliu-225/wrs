@@ -341,14 +341,14 @@ def plot_success(ax, x_range, fo, clr, d, alpha=1., marker='+'):
     # box1 = ax.boxplot(first_tc_box, positions=x_range, patch_artist=True)
     # box1 = ax.boxplot(top10_tc_box, positions=x_range, patch_artist=True)
     if d == 1:
-        # box1 = ax.boxplot(first_tc_box, positions=[d + 3 * (x - 1) + .25 for x in x_range], patch_artist=True)
-        box1 = ax.boxplot(top10_tc_box, positions=[d + 3 * (x - 1) + .25 for x in x_range], patch_artist=True)
+        box1 = ax.boxplot(first_tc_box, positions=[d + 3 * (x - 1) + .25 for x in x_range], patch_artist=True)
+        # box1 = ax.boxplot(top10_tc_box, positions=[d + 3 * (x - 1) + .25 for x in x_range], patch_artist=True)
     elif d == 2:
-        # box1 = ax.boxplot(first_tc_box, positions=[d + 3 * (x - 1) for x in x_range], patch_artist=True)
-        box1 = ax.boxplot(top10_tc_box, positions=[d + 3 * (x - 1) for x in x_range], patch_artist=True)
+        box1 = ax.boxplot(first_tc_box, positions=[d + 3 * (x - 1) for x in x_range], patch_artist=True)
+        # box1 = ax.boxplot(top10_tc_box, positions=[d + 3 * (x - 1) for x in x_range], patch_artist=True)
     else:
-        # box1 = ax.boxplot(first_tc_box, positions=[d + 3 * (x - 1) - .25 for x in x_range], patch_artist=True)
-        box1 = ax.boxplot(top10_tc_box, positions=[d + 3 * (x - 1) - .25 for x in x_range], patch_artist=True)
+        box1 = ax.boxplot(first_tc_box, positions=[d + 3 * (x - 1) - .25 for x in x_range], patch_artist=True)
+        # box1 = ax.boxplot(top10_tc_box, positions=[d + 3 * (x - 1) - .25 for x in x_range], patch_artist=True)
 
     for item in ['boxes', 'whiskers', 'fliers', 'medians', 'caps']:
         plt.setp(box1[item], color=clr, alpha=alpha)
@@ -393,11 +393,11 @@ if __name__ == '__main__':
     ax = plt.axes()
     grid_on(ax)
     plot_success(ax, x_range, '45', d=1, clr='tab:gray', marker='1', alpha=.2)
-    plot_success(ax, x_range, 'new_45', d=1, clr='tab:green', marker='1')
+    plot_success(ax, x_range, 'final_45', d=1, clr='tab:green', marker='1')
     plot_success(ax, x_range, '90', d=2, clr='tab:gray', marker='2', alpha=.2)
-    plot_success(ax, x_range, 'new_90', d=2, clr='tab:blue', marker='2')
+    plot_success(ax, x_range, 'final_90', d=2, clr='tab:blue', marker='2')
     plot_success(ax, x_range, '180', d=3, clr='tab:gray', marker='3', alpha=.2)
-    plot_success(ax, x_range, 'new_180', d=3, clr='tab:orange', marker='3')
+    plot_success(ax, x_range, 'final_180', d=3, clr='tab:orange', marker='3')
     plt.xticks([2 + 3 * (x - 1) for x in x_range], x_range)
     # plt.xticks(x_range, x_range)
     plt.show()

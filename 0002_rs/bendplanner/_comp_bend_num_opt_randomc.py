@@ -109,36 +109,44 @@ if __name__ == '__main__':
     org_err_list = []
     opt_err_list = []
 
-    f = 'bspl_15'
+    f = 'bspl_20'
     res_list = pickle.load(open(f'./bendnum/{f}_uni.pkl', 'rb'))
     try:
-        opt_res_list = pickle.load(open(f'./bendnum/{f}_uni_opt.pkl', 'rb'))
+        opt_res_list = pickle.load(open(f'./bendnum/{f}_opt_2.pkl', 'rb'))
     except:
         opt_res_list = []
 
     best_n_list = []
+    best_m_list = []
     min_err_list = []
     for i, res in enumerate(res_list):
-        if len(opt_res_list) > i:
-            print(opt_res_list[i].keys())
-            continue
+        # if len(opt_res_list) > i:
+        #     print(opt_res_list[i].keys())
+        #     continue
         fit_max_err_list, bend_max_err_list, fit_avg_err_list, bend_avg_err_list, \
         m_list, fit_pseq_list, bend_pseq_list, goal_pseq_list = res
 
         goal_pseq = goal_pseq_list[i]
         init_pseq = [(0, 0, 0), (0, .05 + bu.cal_length(goal_pseq), 0)]
         init_rotseq = [np.eye(3), np.eye(3)]
-        best_n, min_err = find_best_n(bend_avg_err_list, threshold=.5)
-        print('Best n:', best_n + 5, bend_avg_err_list[best_n])
+        # best_n, min_err = find_best_n(bend_avg_err_list, threshold=.5)
 
-        # best_n_list.append(best_n + 6)
-        # pseq_coarse, _, _ = bu.decimate_pseq_avg(goal_pseq, tor=.0005, toggledebug=False)
-        # min_err = bend_avg_err_list[len(pseq_coarse) - 6]
-        # best_n_list.append(len(pseq_coarse))
+        pseq_coarse, _, _ = bu.decimate_pseq_avg(goal_pseq, tor=.0005, toggledebug=False)
+        min_err = bend_avg_err_list[len(pseq_coarse) - 6]
+        best_n = len(pseq_coarse)
 
-        min_err_list.append(min_err)
-        opt = b_opt.BendOptimizer(bs, init_pseq, init_rotseq, goal_pseq, bend_times=1, obj_type=obj_type)
-        opt_res = opt_process(best_n + 5, bs, opt, tor=tor, obj_type=obj_type, method=method)
-        opt_res_list.append(opt_res)
-        pickle.dump(opt_res_list, open(f'./bendnum/{f}_uni_opt.pkl', 'wb'))
-    # print(best_n_list)
+        # print('Best n:', best_n + 5, bend_avg_err_list[best_n])
+        best_n_list.append(best_n-2)
+        best_m_list.append(len(opt_res_list[i]['init_bendset']))
+        # min_err_list.append(min_err)
+        # opt = b_opt.BendOptimizer(bs, init_pseq, init_rotseq, goal_pseq, bend_times=1, obj_type=obj_type)
+        # opt_res = opt_process(best_n + 5, bs, opt, tor=tor, obj_type=obj_type, method=method)
+        # opt_res_list.append(opt_res)
+        # pickle.dump(opt_res_list, open(f'./bendnum/{f}_uni_opt.pkl', 'wb'))
+    print(best_n_list)
+    print(best_m_list)
+
+    print(np.round(np.mean(best_n_list), decimals=2), '±', np.round(np.std(best_n_list), decimals=2),
+          np.round(max(best_n_list), decimals=2), np.round(min(best_n_list), decimals=2))
+    print(np.round(np.mean(best_m_list), decimals=2), '±', np.round(np.std(best_m_list), decimals=2),
+          np.round(max(best_m_list), decimals=2), np.round(min(best_m_list), decimals=2))

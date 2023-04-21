@@ -49,6 +49,62 @@ def plot_pseq_2d(ax, pseq):
     ax.grid()
 
 
+def gen_heart():
+    def _heart_curve(t):
+        x = 16 * np.sin(t) ** 3
+        y = 13 * np.cos(t) - 5 * np.cos(2 * t) - 2 * np.cos(3 * t) - np.cos(4 * t)
+        return x, y
+
+    t = np.linspace(0, 2 * np.pi, 200)
+    x, y = _heart_curve(t)
+
+    pseq = np.asarray([v for v in zip(x, y, [0] * len(x))])
+    pseq = pseq / 400
+
+    plt.plot(pseq[:, 0], pseq[:, 1], color='red')
+    plt.axis("equal")
+    plt.title("Heart Curve")
+    plt.show()
+    return pseq
+
+
+def gen_alphabet():
+    def _curve(t):
+        x = 2 * (np.sin(t) - np.sin(2 * t) / 2)
+        y = -2 * (np.cos(t) - np.cos(2 * t) / 2) + 1
+        return x, y
+
+    t = np.linspace(0, 2 * np.pi, 1000)
+    x, y = _curve(t)
+
+    pseq = np.asarray([v for v in zip(x, y, [0] * len(x))])
+    pseq = pseq / 400
+
+    plt.plot(pseq[:, 0], pseq[:, 1], color='red')
+    plt.axis("equal")
+    plt.title("Heart Curve")
+    plt.show()
+    return pseq
+
+
+def gen_hook():
+    points = [
+                 (0, 0), (1, 0), (1, 1), (0, 1), (0, 2), (1, 2)
+             ][::-1]
+
+    x, y = zip(*points)
+
+    plt.figure(figsize=(5, 5))
+    plt.plot(x, y, marker='o', linestyle='-', linewidth=2, color='black')
+    plt.gca().set_aspect('equal', adjustable='box')
+    plt.grid(True)
+    plt.show()
+
+    pseq = np.asarray([v for v in zip(x, y, [0] * len(x))])
+    pseq = pseq / 20
+    return pseq
+
+
 def gen_circle(r, step=math.pi / 90):
     pseq = []
     for a in np.arange(0, 2 * math.pi, step):
@@ -122,10 +178,25 @@ def gen_sgl_curve(pseq, step=.001, do_inp=True, toggledebug=False):
     return pseq
 
 
-def gen_screw_thread(r, lift_a, rot_num, step=math.pi / 90):
+def gen_helix(r, lift_a, rot_num, step=math.pi / 90):
     pseq = []
     for a in np.arange(0, 2 * math.pi * rot_num, step):
         pseq.append(np.asarray([r * math.cos(a), r * math.sin(a), r * a * np.tan(lift_a)]))
+    return pseq
+
+
+def gen_sprial(n_points, tightness=0.1, angle=math.pi / 45):
+    pseq = []
+    for i in range(n_points):
+        r = tightness * i
+        theta = angle * i
+        x = r * np.cos(theta)
+        y = r * np.sin(theta)
+        pseq.append((x, y, 0))
+    pseq = np.asarray(pseq) / 250
+    ax = plt.axes(projection='3d')
+    ax.plot3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], color='red')
+    plt.show()
     return pseq
 
 
@@ -726,7 +797,8 @@ def pseq2bendset(pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggledebug
                 rot_a += a
             else:
                 rot_a -= a
-
+            while abs(rot_a) >= np.pi * 2:
+                rot_a = (abs(rot_a) - np.pi * 2) * (rot_a / rot_a)
         n_seq.append(n)
         l = (bend_r * np.tan(abs(bend_a) / 2)) / np.cos(abs(lift_a))
         ratio_1 = l / np.linalg.norm(pseq[i] - pseq[i - 1])
@@ -765,8 +837,8 @@ def pseq2bendset(pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggledebug
         scatter_pseq(ax, pseq[1:], s=10, c='g')
         scatter_pseq(ax, tangent_pts, s=10, c='r')
         plt.show()
-
-    return bendseq
+    bendseq.sort(key=lambda l: l[-1])
+    return bendseq[::-1]
 
 
 # def pseq2bendset(pseq, bend_r=bconfig.R_BEND, init_l=bconfig.INIT_L, toggledebug=False):

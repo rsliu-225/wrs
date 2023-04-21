@@ -132,7 +132,7 @@ def gen_ax():
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams["font.size"] = 24
     ax = fig.add_subplot(1, 1, 1)
-    ax.set_ylim(0, 1.2)
+    ax.set_ylim(0, 1.5)
     ax.set_xlim(5.5, 16.5)
     ax.set_xticks(range(6, 17))
     grid_on(ax)
@@ -205,8 +205,11 @@ if __name__ == '__main__':
                    facecolor='none')
         ax.axhline(y=np.mean(min_err_list), linestyle='--', c=c_list[idx], alpha=.5)
         ax.axhline(y=np.mean(opt_err_list), linestyle='-.', c=c_list[idx], alpha=.5)
-        print(np.round(np.mean(best_n_list), decimals=2), '±', np.round(np.std(best_n_list), decimals=2))
-        print(np.round(np.mean(min_err_list), decimals=2), '±', np.round(np.std(min_err_list), decimals=2))
-        print(np.round(np.mean(opt_err_list), decimals=2), '±', np.round(np.std(opt_err_list), decimals=2))
+        print(np.round(np.mean(best_n_list), decimals=2), '±', np.round(np.std(best_n_list), decimals=2),
+              np.round(max(best_n_list), decimals=2), np.round(min(best_n_list), decimals=2))
+        print(np.round(np.mean(min_err_list), decimals=2), '±', np.round(np.std(min_err_list), decimals=2),
+              np.round(max(min_err_list), decimals=2), np.round(min(min_err_list), decimals=2))
+        print(np.round(np.mean(opt_err_list), decimals=2), '±', np.round(np.std(opt_err_list), decimals=2),
+              np.round(max(opt_err_list), decimals=2), np.round(min(opt_err_list), decimals=2))
 
     plt.show()
