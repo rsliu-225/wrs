@@ -212,21 +212,21 @@ if __name__ == '__main__':
     base = wd.World(cam_pos=[.8, 0, 1.5], lookat_pos=[0, 0, 0])
     rbt = el.loadYumi(showrbt=True)
 
-    # fo = 'springback/steel_refine_lr_1'
-    fo = 'springback/alu_refine_lr_1'
-    z_range = (.15, .17)
-    line_thresh = 0.003
-    line_size_thresh = 500
-    # sb_dict = springback_from_img(fo, z_range, line_thresh, line_size_thresh)
-    sb_dict = pickle.load(
-        open(os.path.join(config.ROOT, 'bendplanner/', f'{fo}_springback.pkl'), 'rb'))
-    sb_dict_2 = pickle.load(
-        open(os.path.join(config.ROOT, 'bendplanner/', f'springback/alu_refine_lr_2_springback.pkl'), 'rb'))
-    sb_dict_3 = pickle.load(
-        open(os.path.join(config.ROOT, 'bendplanner/', f'springback/alu_refine_lr_3_springback.pkl'), 'rb'))
+    fo = 'springback/steel_refine_lr_2'
+    # fo = 'springback/alu_refine_lr_1'
+    z_range = (.12, .15)
+    line_thresh = 0.0015
+    line_size_thresh = 520
+    sb_dict = springback_from_img(fo, z_range, line_thresh, line_size_thresh)
+    # sb_dict = pickle.load(
+    #     open(os.path.join(config.ROOT, 'bendplanner/', f'{fo}_springback.pkl'), 'rb'))
+    # sb_dict_2 = pickle.load(
+    #     open(os.path.join(config.ROOT, 'bendplanner/', f'springback/alu_refine_lr_2_springback.pkl'), 'rb'))
+    # sb_dict_3 = pickle.load(
+    #     open(os.path.join(config.ROOT, 'bendplanner/', f'springback/alu_refine_lr_3_springback.pkl'), 'rb'))
     show_data(sb_dict)
-    show_data(sb_dict_2)
-    show_data(sb_dict_3)
+    # show_data(sb_dict_2)
+    # show_data(sb_dict_3)
 
     plt.show()
 

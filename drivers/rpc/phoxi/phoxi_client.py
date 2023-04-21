@@ -114,7 +114,7 @@ if __name__ == "__main__":
     import modeling.geometric_model as gm
     import visualization.panda.world as wd
 
-    pxc = PhxClient(host="10.2.0.218:18300")
+    pxc = PhxClient(host="127.0.0.1:18300")
     base = wd.World(cam_pos=[0, 0, 0], lookat_pos=[0, 0, .2])
 
     while True:
