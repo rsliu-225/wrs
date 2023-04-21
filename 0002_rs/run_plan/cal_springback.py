@@ -138,6 +138,7 @@ def show_data(input_dict):
     grid_on(ax)
     ax.set_xticks([v for v in range(15, 166, 30)])
     ax.set_yticks([v for v in range(-2, 10, 2)])
+    ax.set_ylim((-2.4, 9))
 
     for k, v in input_dict.items():
         if int(k) == 0:
@@ -152,13 +153,14 @@ def show_data(input_dict):
         if sb < 0:
             res = 180 - res
             sb = goal - res
+            refine = 180 - refine
 
         print('goal, result, refined', goal, res, refine)
         print('spring back:', sb)
 
         sb_err_list.append(sb)
-        bend_err_list.append(gt - goal)
-        refined_err_list.append(goal - refine)
+        bend_err_list.append(goal - gt)
+        refined_err_list.append(refine - goal)
         refine_goal_list.append(refine_goal)
         X.append(goal)
         # if len(X) > 1 and gt <= 150:
@@ -174,22 +176,36 @@ def show_data(input_dict):
     bend_err_list = [bend_err_list[i] for i in sort_inx]
     refined_err_list = [refined_err_list[i] for i in sort_inx]
 
-    ax.plot(X, sb_err_list, c='gold')
+    ax.scatter(X, sb_err_list, marker='x', c='gold')
     # plt.plot(X, [np.mean(sb_err_list)] * len(X), c='gold', linestyle='dashed')
     lasso_pre(X, sb_err_list, 0, plot=True)
 
-    # plt.plot(X, bend_err_list, c='g')
-    # plt.plot(X, [np.mean(bend_err_list)] * len(X), c='g', linestyle='dashed')
+    # plt.plot(X, bend_err_list, c='b')
+    # plt.plot(X, [np.mean(bend_err_list)] * len(X), c='b', linestyle='dashed')
 
-    plt.plot(X, refined_err_list, c='b')
+    plt.scatter(X, refined_err_list, marker='x', c='b')
     plt.plot(X, [np.mean(refined_err_list)] * len(X), c='b', linestyle='dashed')
-    ax.scatter([72.0, 72.0, 72.0, 72.0, 90.0, 90.0, 109.63, 13.41, 29.42, 35.25],
-               [4.51, 5.57, 4.06, 4.17, 4.12, 5.94, 5.71, 3.22, 2.88, 3.09], c='g')
+
+    X = [72.0, 72.0, 72.0, 72.0, 90.0, 90.0, 109.63, 13.41, 29.42, 35.25]
+    y = [3.88, 3.81, 3.79, 2.23, 4.12, 5.94, 5.71, 3.22, 2.88, 3.09]
+    # X = [72.0, 72.0, 72.0, 72.0]
+    # y = [4.51, 5.57, 4.06, 4.17]
+    # for i in range(2, 4):
+    #     print(X[:i], y[:i])
+    #     print(X[i], lasso_pre(X[:i], y[:i], X[i], plot=False))
+    X = [72.0, 72.0 + 3.88, 72.0 + 3.86, 72.0 + 3.82, 90.0, 90.0 + 4.12, 109.63, 13.41 + 5.71, 29.42 + 3.77,
+         35.25 + 3.57]
+    # X = [72.0, 72.0 + 4.51, 72.0 + 5.04, 72.0 + 4.71]
+    ax.scatter(X, y, marker='x', c='r')
+
+    # ax.scatter(X,
+    #            np.asarray([3.88, 3.88, 3.86, 3.82, 4.12, 4.12, 5.71, 5.71, 3.77, 3.57]) -
+    #            np.asarray([3.88, 3.81, 3.79, 2.23, 4.12, 5.94, 5.71, 3.22, 2.88, 3.09]), marker='x', c='b')
     # plt.plot(X, np.asarray(bend_err) + np.asarray(sb_err_list))
 
 
 def lasso_pre(X, y, x_pre, plot=False):
-    model = linear_model.Lasso(alpha=10)
+    model = linear_model.Lasso(alpha=1)
     model.fit([[x] for x in X], y)
     print(model.coef_, model.intercept_)
     y_pre = model.predict([[x] for x in X])
@@ -215,7 +231,7 @@ if __name__ == '__main__':
     # fo = 'springback/steel_refine_lr_1'
     fo = 'springback/alu_refine_lr_1'
     z_range = (.15, .17)
-    line_thresh = 0.003
+    line_thresh = 0.0015
     line_size_thresh = 500
     # sb_dict = springback_from_img(fo, z_range, line_thresh, line_size_thresh)
     sb_dict = pickle.load(
@@ -224,9 +240,11 @@ if __name__ == '__main__':
         open(os.path.join(config.ROOT, 'bendplanner/', f'springback/alu_refine_lr_2_springback.pkl'), 'rb'))
     sb_dict_3 = pickle.load(
         open(os.path.join(config.ROOT, 'bendplanner/', f'springback/alu_refine_lr_3_springback.pkl'), 'rb'))
+    sb_dict.update(sb_dict_2)
+    sb_dict.update(sb_dict_3)
     show_data(sb_dict)
-    show_data(sb_dict_2)
-    show_data(sb_dict_3)
+    # show_data(sb_dict_2)
+    # show_data(sb_dict_3)
 
     plt.show()
 

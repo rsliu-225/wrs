@@ -25,8 +25,9 @@ if __name__ == '__main__':
     bs = b_sim.BendSim(show=True, granularity=np.pi / 90, cm_type='stick')
 
     transmat4 = rm.homomat_from_posrot((.9, -.35, .78 + bconfig.BENDER_H), rm.rotmat_from_axangle((0, 0, 1), np.pi))
-    # goal_pseq = bu.gen_polygen(5, .01)
-    goal_pseq = bu.gen_screw_thread(r=.02, lift_a=np.radians(-20), rot_num=2)
+    # goal_pseq = bu.gen_hook()
+    # goal_pseq = bu.gen_helix(r=.02, lift_a=np.radians(-20), rot_num=2)
+    goal_pseq = bu.gen_sprial(150)
     # goal_pseq = bu.gen_circle(.05)
     # goal_pseq = np.asarray([(0, 0, 0), (0, .2, 0), (.2, .2, 0), (.2, .3, .2), (0, .3, 0), (0, .3, -.2)])
     # goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
@@ -36,19 +37,21 @@ if __name__ == '__main__':
     # goal_pseq = np.asarray([[.1, 0, .1], [0, 0, .1], [0, 0, 0]]) * .4
 
     # goal_pseq = bu.gen_ramdom_curve(kp_num=5, length=.12, step=.0005, z_max=.05, toggledebug=False)
-    # pickle.dump(goal_pseq, open('randomc.pkl', 'wb'))
-    # goal_pseq = pickle.load(open(config.ROOT + '/bendplanner/goal/pseq/randomc.pkl', 'rb'))
+    pickle.dump(goal_pseq, open(f'{config.ROOT}/bendplanner/goal/pseq/sprial.pkl', 'wb'))
+    goal_pseq = pickle.load(open(f'{config.ROOT}/bendplanner/goal/pseq/sprial.pkl', 'rb'))
     init_pseq = [(0, 0, 0), (0, bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
 
-    fit_pseq, fit_rotseq, _ = bu.decimate_pseq(goal_pseq, tor=.002, toggledebug=False)
-    bendset = bu.pseq2bendset(fit_pseq, toggledebug=False)[::-1]
+    fit_pseq, fit_rotseq, _ = bu.decimate_pseq(goal_pseq, tor=.005, toggledebug=False)
+    bendset = bu.pseq2bendset(fit_pseq, toggledebug=False)
+    # for b in bendset:
+    #     print(b)
     init_rot = bu.get_init_rot(fit_pseq)
 
     bs.reset(init_pseq, init_rotseq, extend=True)
-    is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=False, toggledebug=False)
-    # bs.show_bendresseq(bendresseq, is_success)
-    # base.run()
+    is_success, bendresseq, _ = bs.gen_by_bendseq(bendset, cc=True, toggledebug=False)
+    bs.show_bendresseq(bendresseq, is_success)
+    base.run()
 
     goal_pseq, goal_rotseq = bu.align_with_init(bs, goal_pseq, init_rot)
     fit_pseq, _ = bu.align_with_init(bs, fit_pseq, init_rot)
@@ -59,12 +62,13 @@ if __name__ == '__main__':
 
     res_pseq_tmp = bs.pseq[1:]
     ax = plt.axes(projection='3d')
-    ax.set_xlim([-0.05, 0.05])
-    ax.set_ylim([-0.02, 0.08])
-    ax.set_zlim([-0.05, 0.05])
+    ax.set_xlim([-0.5, 0.5])
+    ax.set_ylim([-0.2, 0.8])
+    ax.set_zlim([-0.5, 0.5])
     # bu.plot_pseq(ax, res_pseq, c='r')
     bu.plot_pseq(ax, res_pseq_tmp, c='g')
     bu.plot_pseq(ax, goal_pseq, c='black')
     plt.show()
     bs.show(rgba=(0, .7, 0, .7), show_frame=True)
+
     base.run()

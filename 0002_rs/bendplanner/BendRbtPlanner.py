@@ -212,6 +212,9 @@ class BendRbtPlanner(object):
         return pathseq
 
     def plan_motion(self, seqs, bendresseq, grasp, armjntsseq):
+        def _intersec(lst1, lst2):
+            lst3 = [value for value in lst1 if value in lst2]
+            return lst3
         print(f'----------plan linear motion----------')
         pathseq = [[armjntsseq[0]]]
         for i, armjnts in enumerate(armjntsseq[:-1]):
@@ -226,7 +229,8 @@ class BendRbtPlanner(object):
             objmat4_end = rm.homomat_from_posrot(pseq_end[0], rotseq_end[0])
             self.reset_bs(pseq_init, rotseq_init, extend=False)
             objcm = copy.deepcopy(self._bs.objcm)
-            if all([seqs[i + 1] > v for v in seqs[:i + 1]]):
+            # if all([seqs[i + 1] > v for v in seqs[:i + 1]]):
+            if seqs[i + 1] > seqs[i] and len(_intersec(seqs[:i], range(seqs[i], seqs[i + 1]))) == 0:
                 objmat4_list = self._mp.objmat4_list_inp([objmat4_init, objmat4_end])
                 path = self._mp.get_continuouspath_hold_ik(None, grasp, objmat4_list, objcm)
             else:
@@ -346,7 +350,7 @@ class BendRbtPlanner(object):
 
     def run_premutation(self, f_name='tmp', grasp_l=0.0, h=0.0, fo='stick'):
         start_time = time.time()
-        combs = list(itertools.permutations(range(len(bendset)), len(bendset)))
+        combs = list(itertools.permutations(range(len(self.bendset)), len(self.bendset)))
 
         attempt = 0
         combs = bu.rank_combs(combs)
@@ -355,7 +359,6 @@ class BendRbtPlanner(object):
             print(seq)
             attempt += 1
             bendseq = [self.bendset[i] for i in seq]
-            self._iptree.show()
             self.reset_bs(self.init_pseq, self.init_rotseq)
             is_success, bendresseq, _ = self._bs.gen_by_bendseq(bendseq, cc=True, prune=True, toggledebug=False)
             # self.show_bendresseq(bendresseq, self.transmat4)
@@ -365,9 +368,9 @@ class BendRbtPlanner(object):
                 continue
             time_seq = time.time() - start_time
             pickle.dump([seq, is_success, bendresseq],
-                        open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendresseq.pkl', 'wb'))
+                        open(f'{config.ROOT}/bendplanner/planres_rev/{fo}/{f_name}_bendresseq.pkl', 'wb'))
             seq, _, bendresseq = pickle.load(
-                open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendresseq.pkl', 'rb'))
+                open(f'{config.ROOT}/bendplanner/planres_rev/{fo}/{f_name}_bendresseq.pkl', 'rb'))
 
             fail_index, armjntsseq_list = self.check_ik(bendresseq, grasp_l=grasp_l)
             if fail_index != -1:
@@ -376,23 +379,25 @@ class BendRbtPlanner(object):
             min_f_list, f_list = self.check_force(bendresseq, armjntsseq_list, show_step=None)
             armjntsseq_list = np.asarray(armjntsseq_list)[np.argsort(min_f_list)[::-1]]
             time_gr = time.time() - start_time
-            pickle.dump(armjntsseq_list, open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_armjntsseq.pkl', 'wb'))
+            pickle.dump(armjntsseq_list,
+                        open(f'{config.ROOT}/bendplanner/planres_rev/{fo}/{f_name}_armjntsseq.pkl', 'wb'))
             # self.show_bendresseq_withrbt(bendresseq, armjntsseq_list[0][1])
             # base.run()
             seq, _, bendresseq = pickle.load(
-                open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendresseq.pkl', 'rb'))
-            armjntsseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_armjntsseq.pkl', 'rb'))
+                open(f'{config.ROOT}/bendplanner/planres_rev/{fo}/{f_name}_bendresseq.pkl', 'rb'))
+            armjntsseq_list = pickle.load(
+                open(f'{config.ROOT}/bendplanner/planres_rev/{fo}/{f_name}_armjntsseq.pkl', 'rb'))
             fail_index, pathseq_list = self.check_motion(seq, bendresseq, armjntsseq_list)
             # fail_index, pathseq_list = self.check_pull_motion(bendresseq, armjntsseq_list)
             if fail_index != -1:
                 combs = bu.remove_combs(seq[:fail_index + 1], combs)
                 continue
-            pickle.dump(pathseq_list, open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_pathseq.pkl', 'wb'))
+            pickle.dump(pathseq_list, open(f'{config.ROOT}/bendplanner/planres_rev/{fo}/{f_name}_pathseq.pkl', 'wb'))
             print(f'Grasp Reasoning time cost: {time_gr - time_seq}')
             print(f'Sequence Planning time cost: {time_seq}')
             print(f'Success {seq}')
             break
-        print(f'Fail! Number of attempt: {attempt} times; time cost: {time.time() - start_time}')
+        print(f'Fail! Number of attempt: {attempt} times; Total time cost: {time.time() - start_time}')
 
     def fine_tune(self, seq, f_name='tmp', grasp_l=0.0, h=0.0, fo='stick'):
         self.set_bs_stick_sec(30)

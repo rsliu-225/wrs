@@ -349,7 +349,7 @@ class BendSim(object):
             vertices, faces = self.gen_stick(self.pseq[::-1], self.rotseq[::-1], self.thickness / 2,
                                              section=self.stick_sec)
         else:
-            vertices, faces = self.gen_surface(self.pseq[::-1], self.rotseq[::-1])
+            vertices, faces = self.gen_swap(self.pseq[::-1], self.rotseq[::-1])
         objtrm = trm.Trimesh(vertices=np.asarray(vertices), faces=np.asarray(faces))
         self.objcm = cm.CollisionModel(initor=objtrm, btwosided=True, name='obj', cdprimit_type='surface_balls')
         # print('time cost(update cm):', time.time() - ts)
@@ -567,6 +567,12 @@ class BendSim(object):
 
         return np.asarray(vertices), np.asarray(faces)
 
+    def gen_swap(self, pseq, rotseq, toggledebug=False):
+        cross_sec = [[0, self.width / 2], [0, -self.width / 2],
+                     [-self.thickness / 2, -self.width / 2], [-self.thickness / 2, self.width / 2]]
+        objcm = bu.gen_swap(pseq, rotseq, cross_sec, toggledebug=toggledebug)
+        return np.asarray(objcm.objtrm.vertices), np.asarray(objcm.objtrm.faces)
+
     def gen_stick(self, pseq, rotseq, r, section=5, toggledebug=False):
         vertices = []
         faces = []
@@ -612,7 +618,7 @@ class BendSim(object):
                 print('-------------')
                 flag = is_success[motioncounter[0]]
                 init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendresseq[motioncounter[0]]
-                # print(np.degrees(init_a), np.degrees(end_a), np.degrees(plate_a))
+                print(np.degrees(init_a), np.degrees(end_a), np.degrees(plate_a))
                 # gm.gen_frame(pseq_init[0], rotseq_init[0], length=.02, thickness=.0005).attach_to(base)
 
                 self.reset(pseq_init, rotseq_init, extend=False)
@@ -800,7 +806,7 @@ if __name__ == '__main__':
     import visualization.panda.world as wd
 
     base = wd.World(cam_pos=[.075, .1, .05], lookat_pos=[0, 0, 0])
-    bs = BendSim(show=False, cm_type='stick', granularity=np.pi / 30)
+    bs = BendSim(show=False, cm_type='plate', granularity=np.pi / 30)
     bs.set_stick_sec(180)
     cm.gen_stick(spos=np.asarray([0, 0, -.015]),
                  epos=np.asarray([0, 0, .015]),
