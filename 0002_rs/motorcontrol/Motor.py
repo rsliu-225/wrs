@@ -129,7 +129,7 @@ if __name__ == '__main__':
 
     # motor.goto_pos(-10000)
     # time.sleep(2)
-    motor.rot_degree(clockwise=0, rot_deg=5)
+    motor.rot_degree(clockwise=0, rot_deg=2)
     # motor.rot_degree(clockwise=1, rot_deg=360)
     # motor.rot_degree(clockwise=1, rot_deg=3)
     # motor.rot_degree(clockwise=1, rot_deg=1)

@@ -137,7 +137,7 @@ def show_data(input_dict):
     ax = fig.add_subplot(1, 1, 1)
     grid_on(ax)
     ax.set_xticks([v for v in range(15, 166, 30)])
-    ax.set_yticks([v for v in range(-2, 10, 2)])
+    ax.set_yticks([v for v in range(-2, 12, 2)])
 
     for k, v in input_dict.items():
         if int(k) == 0:
@@ -151,6 +151,7 @@ def show_data(input_dict):
         sb = goal - res
         if sb < 0:
             res = 180 - res
+            # refine = 180 - refine
             sb = goal - res
 
         print('goal, result, refined', goal, res, refine)
@@ -158,7 +159,11 @@ def show_data(input_dict):
 
         sb_err_list.append(sb)
         bend_err_list.append(gt - goal)
-        refined_err_list.append(refine - goal)
+        if abs(refine - goal) < abs((180 - refine) - goal):
+            refined_err_list.append(refine - goal)
+        else:
+            refined_err_list.append((180 - refine) - goal)
+
         refine_goal_list.append(refine_goal)
         X.append(goal)
         # if len(X) > 1 and gt <= 150:
@@ -211,8 +216,8 @@ def lasso_pre(X, y, x_pre, plot=False):
 
 def grid_on(ax):
     ax.minorticks_on()
-    ax.grid(b=True, which='major')
-    ax.grid(b=True, which='minor', linestyle='--', alpha=.2)
+    # ax.grid(b=True, which='major')
+    # ax.grid(b=True, which='minor', grid_linestyle='--', grid_alpha=.2)
 
 
 if __name__ == '__main__':
@@ -223,7 +228,7 @@ if __name__ == '__main__':
     base = wd.World(cam_pos=[.8, 0, 1.5], lookat_pos=[0, 0, 0])
     rbt = el.loadYumi(showrbt=True)
 
-    fo = 'springback/steel_refine_lr_2'
+    fo = 'springback/steel_refine_lr_1'
     # fo = 'springback/alu_refine_lr_1'
     z_range = (.12, .15)
     line_thresh = 0.0018

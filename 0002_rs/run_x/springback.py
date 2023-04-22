@@ -21,7 +21,7 @@ affine_mat = np.asarray([[0.00282079054, -1.00400178, -0.000574846621, 0.3125535
 
 
 def lasso_pre(X, y, x_pre):
-    model = linear_model.Lasso(alpha=15)
+    model = linear_model.Lasso(alpha=10)
     model.fit([[x] for x in X], y)
     print(model.coef_, model.intercept_)
     y_pre = model.predict([[x] for x in X])
@@ -152,6 +152,8 @@ def uniform_bend_lr(s_angle, e_angle, interval, z_range, line_thresh=.002, line_
         if abs(goal - res) > 10:
             sb_list.append(np.mean(np.asarray(sb_list)))
         else:
+            if goal - res < 0:
+                res = 180 - res
             sb_list.append(abs(goal - res))
         print('***************************************** spring back:', sb_list)
         if len(sb_list) == 1:
@@ -177,11 +179,11 @@ if __name__ == '__main__':
     phxi = phoxi.Phoxi(host=config.PHOXI_HOST)
     base = wd.World(cam_pos=[1.5, 1.5, 1.5], lookat_pos=[0, 0, 0])
 
-    fo = 'steel_refine_lr_3'
+    fo = 'steel_refine_lr_2'
     z_range = (.12, .15)
-    line_thresh = 0.0015
+    line_thresh = 0.0018
     line_size_thresh = 150
 
-    uniform_bend_lr(s_angle=10, e_angle=175, interval=15, fo=fo,
+    uniform_bend_lr(s_angle=5, e_angle=170, interval=15, fo=fo,
                     z_range=z_range, line_thresh=line_thresh, line_size_thresh=line_size_thresh)
     base.run()
