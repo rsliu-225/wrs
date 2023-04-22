@@ -104,7 +104,7 @@ def springback_from_img(fo, z_range, line_thresh=.002, line_size_thresh=300):
         sb_dict[angle][key] = []
 
         textureimg, _, pcd = pickle.load(open(os.path.join(config.ROOT, 'img/phoxi', fo, f), 'rb'))
-        pcd = rm.homomat_transform_points(affine_mat, np.asarray(pcd) / 1000)
+        pcd = rm.homomat_transform_points(affine_mat, np.asarray(pcd))
         # pcdu.show_pcd(pcd, rgba=(1, 1, 1, .1))
         img = vu.enhance_grayimg(textureimg)
         lines = pcdu.extract_lines_from_pcd(img, pcd, z_range=z_range, line_thresh=line_thresh,
@@ -158,7 +158,7 @@ def show_data(input_dict):
 
         sb_err_list.append(sb)
         bend_err_list.append(gt - goal)
-        refined_err_list.append(goal - refine)
+        refined_err_list.append(refine - goal)
         refine_goal_list.append(refine_goal)
         X.append(goal)
         # if len(X) > 1 and gt <= 150:
@@ -174,17 +174,28 @@ def show_data(input_dict):
     bend_err_list = [bend_err_list[i] for i in sort_inx]
     refined_err_list = [refined_err_list[i] for i in sort_inx]
 
-    ax.plot(X, sb_err_list, c='gold')
+    ax.scatter(X, sb_err_list, marker='x', c='gold')
     # plt.plot(X, [np.mean(sb_err_list)] * len(X), c='gold', linestyle='dashed')
     lasso_pre(X, sb_err_list, 0, plot=True)
 
     # plt.plot(X, bend_err_list, c='g')
     # plt.plot(X, [np.mean(bend_err_list)] * len(X), c='g', linestyle='dashed')
 
-    plt.plot(X, refined_err_list, c='b')
+    plt.scatter(X, refined_err_list, marker='x', c='b')
     plt.plot(X, [np.mean(refined_err_list)] * len(X), c='b', linestyle='dashed')
-    ax.scatter([72.0, 72.0, 72.0, 72.0, 90.0, 90.0, 109.63, 13.41, 29.42, 35.25],
-               [4.51, 5.57, 4.06, 4.17, 4.12, 5.94, 5.71, 3.22, 2.88, 3.09], c='g')
+
+    # X = [72.0, 72.0, 72.0, 72.0, 90.0, 90.0, 109.63, 13.41, 29.42, 35.25]
+    # y = [3.88, 3.81, 3.79, 2.23, 4.12, 5.94, 5.71, 3.22, 2.88, 3.09]
+    X = [72.0, 72.0, 72.0, 72.0]
+    y = [4.51, 5.57, 4.06, 4.17]
+    # for i in range(2, 4):
+    #     print(X[:i], y[:i])
+    #     print(X[i], lasso_pre(X[:i], y[:i], X[i], plot=False))
+    # X = [72.0, 72.0 + 3.88, 72.0 + 3.86, 72.0 + 3.82, 90.0, 90.0 + 4.12, 109.63, 13.41 + 5.71, 29.42 + 3.77,
+    #      35.25 + 3.57]
+    X = [72.0, 72.0 + 4.51, 72.0 + 5.04, 72.0 + 4.71]
+    ax.scatter(X, y, marker='x', c='r')
+
     # plt.plot(X, np.asarray(bend_err) + np.asarray(sb_err_list))
 
 
@@ -215,18 +226,19 @@ if __name__ == '__main__':
     fo = 'springback/steel_refine_lr_2'
     # fo = 'springback/alu_refine_lr_1'
     z_range = (.12, .15)
-    line_thresh = 0.0015
-    line_size_thresh = 520
-    sb_dict = springback_from_img(fo, z_range, line_thresh, line_size_thresh)
-    # sb_dict = pickle.load(
-    #     open(os.path.join(config.ROOT, 'bendplanner/', f'{fo}_springback.pkl'), 'rb'))
-    # sb_dict_2 = pickle.load(
-    #     open(os.path.join(config.ROOT, 'bendplanner/', f'springback/alu_refine_lr_2_springback.pkl'), 'rb'))
-    # sb_dict_3 = pickle.load(
-    #     open(os.path.join(config.ROOT, 'bendplanner/', f'springback/alu_refine_lr_3_springback.pkl'), 'rb'))
+    line_thresh = 0.0018
+    line_size_thresh = 200
+    # sb_dict = springback_from_img(fo, z_range, line_thresh, line_size_thresh)
+    sb_dict = pickle.load(
+        open(os.path.join(config.ROOT, 'bendplanner/', f'{fo}_springback.pkl'), 'rb'))
+    sb_dict_2 = pickle.load(
+        open(os.path.join(config.ROOT, 'bendplanner/', f'springback/steel_refine_lr_2_springback.pkl'), 'rb'))
+    sb_dict_3 = pickle.load(
+        open(os.path.join(config.ROOT, 'bendplanner/', f'springback/steel_refine_lr_3_springback.pkl'), 'rb'))
+
+    sb_dict.update(sb_dict_2)
+    sb_dict.update(sb_dict_3)
     show_data(sb_dict)
-    # show_data(sb_dict_2)
-    # show_data(sb_dict_3)
 
     plt.show()
 
