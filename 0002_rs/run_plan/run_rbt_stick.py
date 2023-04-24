@@ -197,6 +197,7 @@ if __name__ == '__main__':
     print(min_f_list)
     pathseq_list = np.asarray(pathseq_list)[np.argsort(min_f_list)[::-1]]
     # armjntsseq_list = np.asarray(armjntsseq_list)[np.argsort(min_f_list)[::-1]]
+
     '''
     show force
     '''
