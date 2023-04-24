@@ -108,7 +108,8 @@ class BendSim(object):
         self.pseq = list(copy.deepcopy(pseq))
         self.rotseq = list(copy.deepcopy(rotseq))
         if extend:
-            self.pseq.append((0, self.pseq[-1][1] + 2 * np.pi * self.bend_r, 0))
+            # self.pseq.append((0, self.pseq[-1][1] + 2 * np.pi * self.bend_r, 0))
+            self.pseq.append((0, self.pseq[-1][1] + .6 * np.pi * self.bend_r, 0))
             # self.pseq = [np.asarray(p) + np.asarray([self.bend_r, 0, 0]) for p in self.pseq]
             self.rotseq.append(np.eye(3))
         self.update_cm()
@@ -146,8 +147,8 @@ class BendSim(object):
         l_center, l_side = np.asarray(np.linalg.solve(A, b))
 
         return l_center[0], l_side[0], \
-               np.sqrt(l_center[0] ** 2 - self.r_center ** 2) + \
-               np.sqrt(l_side[0] ** 2 - (self.r_side + self.thickness) ** 2)
+            np.sqrt(l_center[0] ** 2 - self.r_center ** 2) + \
+            np.sqrt(l_side[0] ** 2 - (self.r_side + self.thickness) ** 2)
 
     def cal_minlim(self):
         return 2 * np.arcsin((self.r_side + self.r_base) / (2 * self.c2c_dist))

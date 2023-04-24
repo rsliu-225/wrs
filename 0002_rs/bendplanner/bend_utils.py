@@ -193,7 +193,7 @@ def gen_sprial(n_points, tightness=0.1, angle=math.pi / 45):
         x = r * np.cos(theta)
         y = r * np.sin(theta)
         pseq.append((x, y, 0))
-    pseq = np.asarray(pseq) / 250
+    pseq = np.asarray(pseq) / 350
 
     return pseq
 

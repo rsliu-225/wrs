@@ -64,8 +64,8 @@ def cal_pseq_lenght(pseq):
 if __name__ == '__main__':
     # f_name = 'randomc'
     # f_name = 'chair'
-    f_name = 'helix'
-    # f_name = 'sprial'
+    # f_name = 'helix'
+    f_name = 'sprial'
     # f_name = 'penta'
 
     fo = 'stick'
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     plan = True
     opt = False
     calibrate = True
-    refine = True
+    refine = False
 
     if rbt_name == 'yumi':
         base, env = el.loadEnv_yumi()
@@ -114,6 +114,8 @@ if __name__ == '__main__':
                 if abs(b[2]) >= np.pi:
                     bendset[i][2] = 0
                     bendset[i][0] = -bendset[i][0]
+        for i, b in enumerate(bendset):
+            bendset[i][-1] = bendset[i][-1] + .008
 
         print('Num. of bend candidate', len(bendset))
         init_rot = bu.get_init_rot(fit_pseq)
