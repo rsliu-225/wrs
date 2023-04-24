@@ -97,7 +97,7 @@ class YumiController:
         :param speed_n: speed number. If speed_n = 100, then speed will be set to the corresponding v100
                 specified in RAPID. Loosely, n is translational speed in milimeters per second
                 Please refer to page 1186 of
-                https://library.e.abb.com/public/688894b98123f87bc1257cc50044e809/Technical%20reference%20manual_RAPID_3HAC16581-1_revJ_en.pdf
+                `https://library.e.abb.com/public/688894b98123f87bc1257cc50044e809/Technical%20reference%20manual_RAPID_3HAC16581-1_revJ_en.pdf`
 
         """
         if component_name in ["lft_arm", "lft_hnd"]:

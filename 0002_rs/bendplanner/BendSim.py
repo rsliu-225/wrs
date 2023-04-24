@@ -446,13 +446,13 @@ class BendSim(object):
                         continue
 
                 collided_pts = self.bender_cc([objcm_init, self.objcm.copy()])
-                if len(collided_pts) != 0:
-                    self.reset(pseq_init, rotseq_init, extend=False)
-                    fail_reason_list.append('collided')
-                    if prune:
-                        break
-                    else:
-                        continue
+                # if len(collided_pts) != 0:
+                #     self.reset(pseq_init, rotseq_init, extend=False)
+                #     fail_reason_list.append('collided')
+                #     if prune:
+                #         break
+                #     else:
+                #         continue
 
                 if abs(bend[1]) > np.pi / 2:
                     self._reverse()

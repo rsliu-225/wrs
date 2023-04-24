@@ -194,9 +194,7 @@ def gen_sprial(n_points, tightness=0.1, angle=math.pi / 45):
         y = r * np.sin(theta)
         pseq.append((x, y, 0))
     pseq = np.asarray(pseq) / 250
-    ax = plt.axes(projection='3d')
-    ax.plot3D(pseq[:, 0], pseq[:, 1], pseq[:, 2], color='red')
-    plt.show()
+
     return pseq
 
 

@@ -118,6 +118,52 @@ def springback_from_img(fo, z_range, line_thresh=.002, line_size_thresh=300):
     return sb_dict
 
 
+def update_springback_from_img(fo, z_range, line_thresh=.002, line_size_thresh=300):
+    sb_dict = {}
+    pcd_color = {'init': (1, 0, 0, 1), 'goal': (0, 1, 0, 1), 'res': (250 / 255, 220 / 255, 55 / 255, 1),
+                 'refine': (0, 0, 1, 1), 'refine_goal': (0, 1, 1, 1)}
+    ext_str = '.pkl'
+    for f in os.listdir(os.path.join(config.ROOT, 'img/phoxi', fo)):
+        if f[-3:] != 'pkl':
+            continue
+        # if f[0] != '0':
+        #     continue
+        print(f'------------{f}------------')
+        if f.split(ext_str)[0] == 'init':
+            key = 'init'
+            angle = 0
+            continue
+        else:
+            angle = int(f.split(ext_str)[0].split('_')[0]) + 15
+            if f.split(ext_str)[0].split('_')[1] == 'res':
+                key = 'res'
+            elif f.split(ext_str)[0].split('_')[1] == 'goal':
+                key = 'goal'
+            elif f.split(ext_str)[0].split('_')[1] == 'refine' and f.split(ext_str)[0].split('_')[-1] == 'refine':
+                key = 'refine'
+            else:
+                key = 'refine_goal'
+                # continue
+
+        if angle not in sb_dict.keys():
+            sb_dict[angle] = {}
+        sb_dict[angle][key] = []
+
+        textureimg, _, pcd = pickle.load(open(os.path.join(config.ROOT, 'img/phoxi', fo, f), 'rb'))
+        pcd = rm.homomat_transform_points(affine_mat, np.asarray(pcd))
+        # pcdu.show_pcd(pcd, rgba=(1, 1, 1, .1))
+        img = vu.enhance_grayimg(textureimg)
+        lines = pcdu.extract_lines_from_pcd(img, pcd, z_range=z_range, line_thresh=line_thresh,
+                                            line_size_thresh=line_size_thresh, toggledebug=False)
+        for slope, pts in lines:
+            pcdu.show_pcd(pts, rgba=pcd_color[key])
+            sb_dict[angle][key].append(slope)
+
+    pickle.dump(sb_dict,
+                open(os.path.join(config.ROOT, 'bendplanner/springback', f'{fo.split("/")[1]}_springback.pkl'), 'wb'))
+    return sb_dict
+
+
 def _get_angle_from_vecs(v1, v2, gt):
     angle = np.degrees(rm.angle_between_vectors(v1, v2))
     if abs(angle - gt) > abs((180 - angle) - gt):
@@ -131,13 +177,13 @@ def show_data(input_dict):
     bend_err_list = []
     refined_err_list = []
     refine_goal_list = []
-    fig = plt.figure()
-    plt.rcParams["font.family"] = "Times New Roman"
-    plt.rcParams["font.size"] = 24
-    ax = fig.add_subplot(1, 1, 1)
-    grid_on(ax)
-    ax.set_xticks([v for v in range(15, 166, 30)])
-    ax.set_yticks([v for v in range(-2, 12, 2)])
+    # fig = plt.figure()
+    # plt.rcParams["font.family"] = "Times New Roman"
+    # plt.rcParams["font.size"] = 24
+    # ax = fig.add_subplot(1, 1, 1)
+    # grid_on(ax)
+    # ax.set_xticks([v for v in range(15, 166, 30)])
+    # ax.set_yticks([v for v in range(-2, 12, 2)])
 
     for k, v in input_dict.items():
         if int(k) == 0:
@@ -181,6 +227,7 @@ def show_data(input_dict):
 
     ax.scatter(X, sb_err_list, marker='x', c='gold')
     # plt.plot(X, [np.mean(sb_err_list)] * len(X), c='gold', linestyle='dashed')
+    # print(X, sb_err_list)
     lasso_pre(X, sb_err_list, 0, plot=True)
 
     # plt.plot(X, bend_err_list, c='g')
@@ -189,29 +236,85 @@ def show_data(input_dict):
     plt.scatter(X, refined_err_list, marker='x', c='b')
     plt.plot(X, [np.mean(refined_err_list)] * len(X), c='b', linestyle='dashed')
 
-    # X = [72.0, 72.0, 72.0, 72.0, 90.0, 90.0, 109.63, 13.41, 29.42, 35.25]
-    # y = [3.88, 3.81, 3.79, 2.23, 4.12, 5.94, 5.71, 3.22, 2.88, 3.09]
-    X = [72.0, 72.0, 72.0, 72.0]
-    y = [4.51, 5.57, 4.06, 4.17]
+    X = [72.0, 72.0, 72.0, 72.0, 90.0, 90.0, 109.63, 13.41, 29.42, 35.25]
+    y = [3.88, 3.81, 3.79, 2.23, 4.12, 5.94, 5.71, 3.22, 2.88, 3.09]
+    # X = [72.0, 72.0, 72.0, 72.0]
+    # y = [4.51, 5.57, 4.06, 4.17]
     # for i in range(2, 4):
     #     print(X[:i], y[:i])
     #     print(X[i], lasso_pre(X[:i], y[:i], X[i], plot=False))
-    # X = [72.0, 72.0 + 3.88, 72.0 + 3.86, 72.0 + 3.82, 90.0, 90.0 + 4.12, 109.63, 13.41 + 5.71, 29.42 + 3.77,
-    #      35.25 + 3.57]
-    X = [72.0, 72.0 + 4.51, 72.0 + 5.04, 72.0 + 4.71]
+    X = [72.0, 72.0 + 3.88, 72.0 + 3.86, 72.0 + 3.82, 90.0, 90.0 + 4.12, 109.63, 13.41 + 5.71, 29.42 + 3.77,
+         35.25 + 3.57]
+    # X = [72.0, 72.0 + 4.51, 72.0 + 5.04, 72.0 + 4.71]
     ax.scatter(X, y, marker='x', c='r')
 
     # plt.plot(X, np.asarray(bend_err) + np.asarray(sb_err_list))
 
 
+def show_data_fix(input_dict):
+    X = []
+    sb_err_list = []
+    bend_err_list = []
+    refined_err_list = []
+    refine_goal_list = []
+
+    for k, v in input_dict.items():
+        if int(k) == 0:
+            continue
+        gt = int(k)
+        res = _get_angle_from_vecs(input_dict[k]['res'][0], input_dict[k]['res'][1], gt)
+        goal = _get_angle_from_vecs(input_dict[k]['goal'][0], input_dict[k]['goal'][1], gt)
+        refine = _get_angle_from_vecs(input_dict[k]['refine'][0], input_dict[k]['refine'][1], gt)
+        refine_goal = _get_angle_from_vecs(input_dict[k]['refine_goal'][0], input_dict[k]['refine_goal'][1], gt)
+        print(f'------------{int(k) + 15}------------')
+        sb = goal - res
+        if sb < 0:
+            res = 180 - res
+            refine = 180 - refine
+            sb = goal - res
+
+        print('goal, result, refined', goal, res, refine)
+        print('spring back:', sb)
+        if abs(sb) > 10:
+            continue
+
+        sb_err_list.append(sb)
+        bend_err_list.append(gt - goal)
+        if abs(refine - goal) < abs((180 - refine) - goal):
+            refined_err_list.append(refine - goal)
+        else:
+            refined_err_list.append((180 - refine) - goal)
+
+        refine_goal_list.append(refine_goal)
+        X.append(goal)
+
+    sort_inx = np.argsort(X)
+    X = [X[i] for i in sort_inx]
+    sb_err_list = [sb_err_list[i] for i in sort_inx]
+    bend_err_list = [bend_err_list[i] for i in sort_inx]
+    refined_err_list = [refined_err_list[i] for i in sort_inx]
+
+    ax.scatter(X, sb_err_list, marker='o', c='darkorange')
+    # plt.plot(X, [np.mean(sb_err_list)] * len(X), c='gold', linestyle='dashed')
+
+    # plt.plot(X, bend_err_list, c='g')
+    # plt.plot(X, [np.mean(bend_err_list)] * len(X), c='g', linestyle='dashed')
+
+    plt.scatter(X, refined_err_list, marker='o', c='cyan')
+    plt.plot(X, [np.mean(refined_err_list)] * len(X), c='cyan', linestyle='dashed')
+
+
 def lasso_pre(X, y, x_pre, plot=False):
-    model = linear_model.Lasso(alpha=10)
+    model = linear_model.Lasso(alpha=0)
     model.fit([[x] for x in X], y)
-    print(model.coef_, model.intercept_)
+    print('model', model.coef_, model.intercept_)
     y_pre = model.predict([[x] for x in X])
     if plot:
         plt.plot(X, y_pre, c='gold', linestyle='dashed')
+        # plt.plot(X, [(x + model.intercept_) / (1 - model.coef_[0]) - x for x in X], c='r', linestyle='dashed')
+    # pre = (x_pre + model.intercept_) / (1 - model.coef_[0]) - x_pre
     return model.predict([[x_pre]])
+    # return pre
 
 
 def grid_on(ax):
@@ -228,19 +331,48 @@ if __name__ == '__main__':
     base = wd.World(cam_pos=[.8, 0, 1.5], lookat_pos=[0, 0, 0])
     rbt = el.loadYumi(showrbt=True)
 
-    fo = 'springback/steel_refine_lr_1'
-    # fo = 'springback/alu_refine_lr_1'
-    z_range = (.12, .15)
-    line_thresh = 0.0018
-    line_size_thresh = 200
-    # sb_dict = springback_from_img(fo, z_range, line_thresh, line_size_thresh)
-    sb_dict = pickle.load(
-        open(os.path.join(config.ROOT, 'bendplanner/', f'{fo}_springback.pkl'), 'rb'))
-    sb_dict_2 = pickle.load(
-        open(os.path.join(config.ROOT, 'bendplanner/', f'springback/steel_refine_lr_2_springback.pkl'), 'rb'))
-    sb_dict_3 = pickle.load(
-        open(os.path.join(config.ROOT, 'bendplanner/', f'springback/steel_refine_lr_3_springback.pkl'), 'rb'))
+    mtr = 'steel'
+    # fo = f'springback/{mtr}_refine_lr_1'
+    fo = f'springback/{mtr}_fix_lr_2'
 
+    fig = plt.figure()
+    plt.rcParams["font.family"] = "Times New Roman"
+    plt.rcParams["font.size"] = 24
+    ax = fig.add_subplot(1, 1, 1)
+    grid_on(ax)
+    ax.set_xticks([v for v in range(15, 166, 30)])
+    ax.set_yticks([v for v in range(-2, 12, 2)])
+
+    z_range = (.15, .18)
+    line_thresh = 0.0018
+    line_size_thresh = 300
+
+    # sb_dict_fix = springback_from_img(fo, z_range, line_thresh, line_size_thresh)
+    sb_dict_fix = pickle.load(
+        open(os.path.join(config.ROOT, 'bendplanner/', f'{fo}_springback.pkl'), 'rb'))
+
+    # sb_dict_fix = {}
+    # sb_dict_fix_1 = pickle.load(
+    #     open(os.path.join(config.ROOT, 'bendplanner/', f'springback/{mtr}_fix_lr_1_springback.pkl'), 'rb'))
+    # sb_dict_fix_2 = pickle.load(
+    #     open(os.path.join(config.ROOT, 'bendplanner/', f'springback/{mtr}_fix_lr_2_springback.pkl'), 'rb'))
+    # for k in sb_dict_fix_1.keys():
+    #     if k in [15, 150, 165]:
+    #         sb_dict_fix[k] = sb_dict_fix_1[k]
+    #     else:
+    #         sb_dict_fix[k] = sb_dict_fix_2[k]
+
+    show_data_fix(sb_dict_fix)
+
+    sb_dict = {}
+    sb_dict_1 = pickle.load(
+        open(os.path.join(config.ROOT, 'bendplanner/', f'springback/{mtr}_refine_lr_1_springback.pkl'), 'rb'))
+    sb_dict_2 = pickle.load(
+        open(os.path.join(config.ROOT, 'bendplanner/', f'springback/{mtr}_refine_lr_2_springback.pkl'), 'rb'))
+    sb_dict_3 = pickle.load(
+        open(os.path.join(config.ROOT, 'bendplanner/', f'springback/{mtr}_refine_lr_3_springback.pkl'), 'rb'))
+
+    sb_dict.update(sb_dict_1)
     sb_dict.update(sb_dict_2)
     sb_dict.update(sb_dict_3)
     show_data(sb_dict)

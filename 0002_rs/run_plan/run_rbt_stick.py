@@ -64,17 +64,17 @@ def cal_pseq_lenght(pseq):
 if __name__ == '__main__':
     # f_name = 'randomc'
     # f_name = 'chair'
-    # f_name = 'helix'
-    f_name = 'sprial'
-    f_name_trans = 'chair'
+    f_name = 'helix'
+    # f_name = 'sprial'
     # f_name = 'penta'
+
     fo = 'stick'
     rbt_name = 'yumi'
 
     plan = True
     opt = False
-    calibrate = False
-    refine = False
+    calibrate = True
+    refine = True
 
     if rbt_name == 'yumi':
         base, env = el.loadEnv_yumi()
@@ -82,13 +82,14 @@ if __name__ == '__main__':
         if calibrate:
             transmat4 = get_transmat4_marker()
             pickle.dump(transmat4,
-                        open(f'{config.ROOT}/bendplanner/planres/stick/{rbt_name}/{f_name_trans}_transmat4.pkl', 'wb'))
+                        open(f'{config.ROOT}/bendplanner/planres_rev/stick/{rbt_name}/{f_name}_transmat4.pkl', 'wb'))
         transmat4 = \
-            pickle.load(open(f'{config.ROOT}/bendplanner/planres/stick/{rbt_name}/{f_name_trans}_transmat4.pkl', 'rb'))
+            pickle.load(open(f'{config.ROOT}/bendplanner/planres_rev/stick/{rbt_name}/{f_name}_transmat4.pkl', 'rb'))
         transmat4 = rm.homomat_from_posrot(transmat4[:3, 3] + np.asarray([0, 0, .008]),
                                            transmat4[:3, :3])
-        grasp_f_name = 'plate_yumi'
+        grasp_f_name = 'stick_yumi'
         gm.gen_frame(transmat4[:3, 3], transmat4[:3, :3]).attach_to(base)
+        # base.run()
     else:
         base, env = el.loadEnv_wrs()
         rbt = el.loadUr3e()
@@ -99,13 +100,6 @@ if __name__ == '__main__':
     bs = b_sim.BendSim(show=True, cm_type=fo)
     mp = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
     goal_pseq = pickle.load(open(os.path.join(config.ROOT, f'bendplanner/goal/pseq/{f_name}.pkl'), 'rb'))
-    # goal_pseq = bu.gen_polygen(5, .05)
-    # goal_pseq = bu.gen_ramdom_curve(kp_num=5, length=.12, step=.0005, z_max=.005, toggledebug=False)
-    # goal_pseq = bu.gen_circle(.05)
-    # goal_pseq = np.asarray([[0, 0, .1], [0, 0, 0], [.1, 0, 0], [.1, .1, 0], [0, .1, 0], [0, .1, .1]])[::-1] * .5
-    # goal_pseq = np.asarray([[0, 0, 0], [0, 0, .1], [.1, 0, .1], [.1, .1, .1], [0, .1, .1], [0, .1, 0]]) * .5
-    # goal_pseq = np.asarray([[0, .1, .1], [0, 0, .1], [0, 0, 0], [.1, 0, 0], [.1, 0, .1], [.1, .1, .1]])[::1] * .5
-    # pickle.dump(goal_pseq, open(f'{config.ROOT}/bendplanner/goal/pseq/{f_name}.pkl', 'wb'))
     grasp_list = mp.load_all_grasp(grasp_f_name)
 
     '''
@@ -143,13 +137,16 @@ if __name__ == '__main__':
         _, bendset = pickle.load(
             open(f'{config.ROOT}/bendplanner/planres_rev/{fo}/{rbt_name}/{f_name}_bendset.pkl', 'rb'))
 
+        print(len(bendset))
+
         # for i in range(len(bendset)):
         #     bendset[i][-1] = bendset[i][-1] -.05
         brp = br_planner.BendRbtPlanner(bs, init_pseq, init_rotseq, mp)
         # grasp_list = grasp_list[140:190]
         brp.set_up(bendset, grasp_list, transmat4)
         # brp.run(f_name=f_name, fo=f'{fo}/{rbt_name}')
-        brp.run_premutation(f_name=f_name, fo=f'{fo}/{rbt_name}')
+        # brp.run_premutation(f_name=f_name, fo=f'{fo}/{rbt_name}')
+        brp.run(f_name=f_name, fo=f'{fo}/{rbt_name}')
         # base.run()
 
     '''

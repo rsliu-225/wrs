@@ -63,7 +63,7 @@ class BendRbtPlanner(object):
 
     def transseq(self, pseq, rotseq, transmat4):
         return rm.homomat_transform_points(transmat4, pseq).tolist(), \
-               np.asarray([transmat4[:3, :3].dot(r) for r in rotseq])
+            np.asarray([transmat4[:3, :3].dot(r) for r in rotseq])
 
     def load_bendresseq(self, f_name='./penta_bendresseq.pkl'):
         return pickle.load(open(f_name, 'rb'))
@@ -215,6 +215,7 @@ class BendRbtPlanner(object):
         def _intersec(lst1, lst2):
             lst3 = [value for value in lst1 if value in lst2]
             return lst3
+
         print(f'----------plan linear motion----------')
         pathseq = [[armjntsseq[0]]]
         for i, armjnts in enumerate(armjntsseq[:-1]):
@@ -317,9 +318,9 @@ class BendRbtPlanner(object):
                 continue
             time_seq = time.time() - start_time
             pickle.dump([seq, is_success, bendresseq],
-                        open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendresseq.pkl', 'wb'))
+                        open(f'{config.ROOT}/bendplanner/planres_rev/{fo}/{f_name}_bendresseq.pkl', 'wb'))
             seq, _, bendresseq = pickle.load(
-                open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendresseq.pkl', 'rb'))
+                open(f'{config.ROOT}/bendplanner/planres_rev/{fo}/{f_name}_bendresseq.pkl', 'rb'))
 
             fail_index, armjntsseq_list = self.check_ik(bendresseq, grasp_l=grasp_l)
             if fail_index != -1:
@@ -329,19 +330,21 @@ class BendRbtPlanner(object):
             min_f_list, f_list = self.check_force(bendresseq, armjntsseq_list, show_step=None)
             armjntsseq_list = np.asarray(armjntsseq_list)[np.argsort(min_f_list)[::-1]]
             time_gr = time.time() - start_time
-            pickle.dump(armjntsseq_list, open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_armjntsseq.pkl', 'wb'))
+            pickle.dump(armjntsseq_list,
+                        open(f'{config.ROOT}/bendplanner/planres_rev/{fo}/{f_name}_armjntsseq.pkl', 'wb'))
             # self.show_bendresseq_withrbt(bendresseq, armjntsseq_list[0][1])
             # base.run()
             seq, _, bendresseq = pickle.load(
-                open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendresseq.pkl', 'rb'))
-            armjntsseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_armjntsseq.pkl', 'rb'))
+                open(f'{config.ROOT}/bendplanner/planres_rev/{fo}/{f_name}_bendresseq.pkl', 'rb'))
+            armjntsseq_list = pickle.load(
+                open(f'{config.ROOT}/bendplanner/planres_rev/{fo}/{f_name}_armjntsseq.pkl', 'rb'))
             fail_index, pathseq_list = self.check_motion(seq, bendresseq, armjntsseq_list)
             # fail_index, pathseq_list = self.check_pull_motion(bendresseq, armjntsseq_list)
             if fail_index != -1:
                 self._iptree.add_invalid_seq(seq[:fail_index + 1])
                 seq, _ = self._iptree.get_potential_valid()
                 continue
-            pickle.dump(pathseq_list, open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_pathseq.pkl', 'wb'))
+            pickle.dump(pathseq_list, open(f'{config.ROOT}/bendplanner/planres_rev/{fo}/{f_name}_pathseq.pkl', 'wb'))
             print(f'Grasp Reasoning time cost: {time_gr - time_seq}')
             print(f'Sequence Planning time cost: {time_seq}')
             print(f'Success {seq}')
@@ -409,20 +412,21 @@ class BendRbtPlanner(object):
         if not all(is_success):
             return None
         pickle.dump([seq, is_success, bendresseq],
-                    open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendresseq.pkl', 'wb'))
-        seq, _, bendresseq = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_bendresseq.pkl', 'rb'))
+                    open(f'{config.ROOT}/bendplanner/planres_rev/{fo}/{f_name}_bendresseq.pkl', 'wb'))
+        seq, _, bendresseq = pickle.load(
+            open(f'{config.ROOT}/bendplanner/planres_rev/{fo}/{f_name}_bendresseq.pkl', 'rb'))
 
         fail_index, armjntsseq_list = self.check_ik(bendresseq, grasp_l=grasp_l)
         if fail_index != -1:
             return None
-        pickle.dump(armjntsseq_list, open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_armjntsseq.pkl', 'wb'))
+        pickle.dump(armjntsseq_list, open(f'{config.ROOT}/bendplanner/planres_rev/{fo}/{f_name}_armjntsseq.pkl', 'wb'))
         # self.show_bendresseq_withrbt(bendresseq, armjntsseq_list[0][1])
         # base.run()
-        armjntsseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_armjntsseq.pkl', 'rb'))
+        armjntsseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres_rev/{fo}/{f_name}_armjntsseq.pkl', 'rb'))
         fail_index, pathseq_list = self.check_motion(seq, bendresseq, armjntsseq_list)
         if fail_index != -1:
             return None
-        pickle.dump(pathseq_list, open(f'{config.ROOT}/bendplanner/planres/{fo}/{f_name}_pathseq.pkl', 'wb'))
+        pickle.dump(pathseq_list, open(f'{config.ROOT}/bendplanner/planres_rev/{fo}/{f_name}_pathseq.pkl', 'wb'))
         print(f'success {seq}')
 
     def show_bend_crop(self, bendres_i, l_i):

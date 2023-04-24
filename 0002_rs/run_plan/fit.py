@@ -27,7 +27,7 @@ if __name__ == '__main__':
     transmat4 = rm.homomat_from_posrot((.9, -.35, .78 + bconfig.BENDER_H), rm.rotmat_from_axangle((0, 0, 1), np.pi))
     # goal_pseq = bu.gen_hook()
     # goal_pseq = bu.gen_helix(r=.02, lift_a=np.radians(-20), rot_num=2)
-    goal_pseq = bu.gen_sprial(150)
+    goal_pseq = bu.gen_sprial(200)
     # goal_pseq = bu.gen_circle(.05)
     # goal_pseq = np.asarray([(0, 0, 0), (0, .2, 0), (.2, .2, 0), (.2, .3, .2), (0, .3, 0), (0, .3, -.2)])
     # goal_pseq = np.asarray([[.1, 0, .2], [.1, 0, .1], [0, 0, .1], [0, 0, 0],
@@ -37,12 +37,17 @@ if __name__ == '__main__':
     # goal_pseq = np.asarray([[.1, 0, .1], [0, 0, .1], [0, 0, 0]]) * .4
 
     # goal_pseq = bu.gen_ramdom_curve(kp_num=5, length=.12, step=.0005, z_max=.05, toggledebug=False)
-    pickle.dump(goal_pseq, open(f'{config.ROOT}/bendplanner/goal/pseq/sprial.pkl', 'wb'))
+    pickle.dump(goal_pseq[30:][::-1], open(f'{config.ROOT}/bendplanner/goal/pseq/sprial.pkl', 'wb'))
     goal_pseq = pickle.load(open(f'{config.ROOT}/bendplanner/goal/pseq/sprial.pkl', 'rb'))
+
+    ax = plt.axes(projection='3d')
+    ax.plot3D(goal_pseq[:, 0], goal_pseq[:, 1], goal_pseq[:, 2], color='red')
+    plt.show()
+
     init_pseq = [(0, 0, 0), (0, bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
 
-    fit_pseq, fit_rotseq, _ = bu.decimate_pseq(goal_pseq, tor=.005, toggledebug=False)
+    fit_pseq, fit_rotseq, _ = bu.decimate_pseq(goal_pseq, tor=.002, toggledebug=False)
     bendset = bu.pseq2bendset(fit_pseq, toggledebug=False)
     # for b in bendset:
     #     print(b)

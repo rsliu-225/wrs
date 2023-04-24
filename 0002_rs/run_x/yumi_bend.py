@@ -59,7 +59,7 @@ if __name__ == '__main__':
     motor = motor.MotorNema23()
     phxi = phoxi.Phoxi(host=config.PHOXI_HOST)
 
-    f = 'randomc'
+    f = 'helix'
     fo = 'stick'
     rbt_name = 'yumi'
 
@@ -73,7 +73,7 @@ if __name__ == '__main__':
         rbtx = el.loadUr3ex()
     z_range = (.15, .3)
     line_thresh = 0.003
-    line_size_thresh = 600
+    line_size_thresh = 500
 
     """
     init class
@@ -84,8 +84,8 @@ if __name__ == '__main__':
     mp_x_rgt = m_plannerx.MotionPlannerRbtX(env, rbt, rbtx, armname="rgt_arm")
     mp_x_lft = m_plannerx.MotionPlannerRbtX(env, rbt, rbtx, armname="lft_arm")
 
-    # mp_x_lft.goto_init_x(speed_n=200)
-    # mp_x_rgt.goto_init_x(speed_n=200)
+    mp_x_lft.goto_init_x(speed_n=200)
+    # mp_x_rgt.goto_init_x(speed_n=100)
 
     # mp_x_lft.move_up_x(direction=np.asarray((0, 0, -1)), length=.03)
     # textureimg, depthimg, pcd = \
@@ -95,11 +95,11 @@ if __name__ == '__main__':
     run
     '''
     goal_pseq, bendset = \
-        pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{rbt_name}/{f}_bendset.pkl', 'rb'))
+        pickle.load(open(f'{config.ROOT}/bendplanner/planres_rev/{fo}/{rbt_name}/{f}_bendset.pkl', 'rb'))
     seq, _, bendresseq = \
-        pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{rbt_name}/{f}_bendresseq.pkl', 'rb'))
-    pathseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{rbt_name}/{f}_pathseq.pkl', 'rb'))
-    transmat4 = pickle.load(open(f'{config.ROOT}/bendplanner/planres/{fo}/{rbt_name}/{f}_transmat4.pkl', 'rb'))
+        pickle.load(open(f'{config.ROOT}/bendplanner/planres_rev/{fo}/{rbt_name}/{f}_bendresseq.pkl', 'rb'))
+    pathseq_list = pickle.load(open(f'{config.ROOT}/bendplanner/planres_rev/{fo}/{rbt_name}/{f}_pathseq.pkl', 'rb'))
+    transmat4 = pickle.load(open(f'{config.ROOT}/bendplanner/planres_rev/{fo}/{rbt_name}/{f}_transmat4.pkl', 'rb'))
     print(transmat4)
 
     for bendres in bendresseq:
@@ -114,7 +114,8 @@ if __name__ == '__main__':
     # print(min_f_list)
 
     grasp, pathseq = pathseq_list[0]
-    # mp_x_lft.movepath(pathseq[-1], speed_n=50)
+    # mp_x_lft.movepath(pathseq[-1][::-1], speed_n=50)
+    # mp_x_lft.goto_init_x(speed_n=100)
 
     for i, path in enumerate(pathseq[0:]):
         eepos, eerot = mp_x_lft.get_ee(armjnts=mp_x_lft.get_armjnts())
@@ -131,41 +132,41 @@ if __name__ == '__main__':
             mp_x_lft.movepath(path, speed_n=50)
 
         time.sleep(3)
-        motor.rot_degree(clockwise=0, rot_deg=bend_a)
-        goal = _action(os.path.join(fo, f), f"{str(i)}_goal.pkl",
-                       bend_a, z_range,
-                       center=transmat4[:3, 3],
-                       line_thresh=line_thresh, line_size_thresh=line_size_thresh,
-                       ulim=None,
-                       rgba=(0, 1, 0, 1))
-
-        if i == 0:
-            motor.rot_degree(clockwise=1, rot_deg=20)
-            time.sleep(1)
-            goal = _action(os.path.join(fo, f), f"{str(i)}_release.pkl",
-                           bend_a, z_range,
-                           center=transmat4[:3, 3],
-                           line_thresh=line_thresh, line_size_thresh=line_size_thresh,
-                           ulim=None,
-                           rgba=(0, 1, 0, 1))
-            motor.rot_degree(clockwise=0, rot_deg=23)
-            time.sleep(1)
-            motor.rot_degree(clockwise=1, rot_deg=bend_a + 3)
-            refine = _action(os.path.join(fo, f), f"{str(i)}_refine.pkl",
-                             bend_a, z_range,
-                             center=transmat4[:3, 3],
-                             line_thresh=line_thresh, line_size_thresh=line_size_thresh,
-                             ulim=None,
-                             rgba=(0, 1, 0, 1))
-        else:
-            motor.rot_degree(clockwise=1, rot_deg=bend_a)
-            goal = _action(os.path.join(fo, f), f"{str(i)}_release.pkl",
-                           bend_a, z_range,
-                           center=transmat4[:3, 3],
-                           line_thresh=line_thresh, line_size_thresh=line_size_thresh,
-                           ulim=None,
-                           rgba=(0, 1, 0, 1))
-        time.sleep(3)
+        # motor.rot_degree(clockwise=0, rot_deg=bend_a)
+        # goal = _action(os.path.join(fo, f), f"{str(i)}_goal.pkl",
+        #                bend_a, z_range,
+        #                center=transmat4[:3, 3],
+        #                line_thresh=line_thresh, line_size_thresh=line_size_thresh,
+        #                ulim=None,
+        #                rgba=(0, 1, 0, 1))
+        #
+        # if i == 0:
+        #     motor.rot_degree(clockwise=1, rot_deg=20)
+        #     time.sleep(1)
+        #     goal = _action(os.path.join(fo, f), f"{str(i)}_release.pkl",
+        #                    bend_a, z_range,
+        #                    center=transmat4[:3, 3],
+        #                    line_thresh=line_thresh, line_size_thresh=line_size_thresh,
+        #                    ulim=None,
+        #                    rgba=(0, 1, 0, 1))
+        #     motor.rot_degree(clockwise=0, rot_deg=23)
+        #     time.sleep(1)
+        #     motor.rot_degree(clockwise=1, rot_deg=bend_a + 3)
+        #     refine = _action(os.path.join(fo, f), f"{str(i)}_refine.pkl",
+        #                      bend_a, z_range,
+        #                      center=transmat4[:3, 3],
+        #                      line_thresh=line_thresh, line_size_thresh=line_size_thresh,
+        #                      ulim=None,
+        #                      rgba=(0, 1, 0, 1))
+        # else:
+        #     motor.rot_degree(clockwise=1, rot_deg=bend_a)
+        #     goal = _action(os.path.join(fo, f), f"{str(i)}_release.pkl",
+        #                    bend_a, z_range,
+        #                    center=transmat4[:3, 3],
+        #                    line_thresh=line_thresh, line_size_thresh=line_size_thresh,
+        #                    ulim=None,
+        #                    rgba=(0, 1, 0, 1))
+        # time.sleep(3)
 
     # init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendresseq[-1]
     # bend_a = end_a - init_a + 15
