@@ -234,15 +234,13 @@ def show_data(input_dict):
     # plt.plot(X, [np.mean(bend_err_list)] * len(X), c='g', linestyle='dashed')
 
     plt.scatter(X, refined_err_list, marker='x', c='b')
-    plt.plot(X, [np.mean(refined_err_list)] * len(X), c='b', linestyle='dashed')
+    plt.plot([14, 175], [np.mean(refined_err_list)] * 2, c='b', linestyle='dashed')
 
     X = [72.0, 72.0, 72.0, 72.0, 90.0, 90.0, 109.63, 13.41, 29.42, 35.25]
     y = [3.88, 3.81, 3.79, 2.23, 4.12, 5.94, 5.71, 3.22, 2.88, 3.09]
     # X = [72.0, 72.0, 72.0, 72.0]
     # y = [4.51, 5.57, 4.06, 4.17]
-    # for i in range(2, 4):
-    #     print(X[:i], y[:i])
-    #     print(X[i], lasso_pre(X[:i], y[:i], X[i], plot=False))
+
     X = [72.0, 72.0 + 3.88, 72.0 + 3.86, 72.0 + 3.82, 90.0, 90.0 + 4.12, 109.63, 13.41 + 5.71, 29.42 + 3.77,
          35.25 + 3.57]
     # X = [72.0, 72.0 + 4.51, 72.0 + 5.04, 72.0 + 4.71]
@@ -294,33 +292,38 @@ def show_data_fix(input_dict):
     bend_err_list = [bend_err_list[i] for i in sort_inx]
     refined_err_list = [refined_err_list[i] for i in sort_inx]
 
-    ax.scatter(X, sb_err_list, marker='o', c='darkorange')
+    ax.scatter(X, sb_err_list, s=50, edgecolors='darkorange', facecolor='none')
     # plt.plot(X, [np.mean(sb_err_list)] * len(X), c='gold', linestyle='dashed')
 
     # plt.plot(X, bend_err_list, c='g')
     # plt.plot(X, [np.mean(bend_err_list)] * len(X), c='g', linestyle='dashed')
 
-    plt.scatter(X, refined_err_list, marker='o', c='cyan')
-    plt.plot(X, [np.mean(refined_err_list)] * len(X), c='cyan', linestyle='dashed')
+    # plt.scatter(X, refined_err_list, marker='o', c='cyan')
+    ax.scatter(X, refined_err_list, s=50, edgecolors='cyan', facecolor='none')
+    plt.plot([14, 175], [np.mean(refined_err_list)] * 2, c='cyan', linestyle='dashed')
 
 
 def lasso_pre(X, y, x_pre, plot=False):
-    model = linear_model.Lasso(alpha=0)
+    model = linear_model.Lasso(alpha=10)
     model.fit([[x] for x in X], y)
     print('model', model.coef_, model.intercept_)
     y_pre = model.predict([[x] for x in X])
+    std = np.std(np.asarray(y) - np.asarray(y_pre))
+    mean = np.mean(abs(np.asarray(y) - np.asarray(y_pre)))
+    print(std, mean)
     if plot:
         plt.plot(X, y_pre, c='gold', linestyle='dashed')
+        plt.fill_between(X, y_pre - std, y_pre + std, alpha=0.2, color='gold')
         # plt.plot(X, [(x + model.intercept_) / (1 - model.coef_[0]) - x for x in X], c='r', linestyle='dashed')
-    # pre = (x_pre + model.intercept_) / (1 - model.coef_[0]) - x_pre
-    return model.predict([[x_pre]])
-    # return pre
+    pre = (x_pre + model.intercept_) / (1 - model.coef_[0]) - x_pre
+    # return model.predict([[x_pre]])
+    return pre
 
 
 def grid_on(ax):
     ax.minorticks_on()
-    # ax.grid(b=True, which='major')
-    # ax.grid(b=True, which='minor', grid_linestyle='--', grid_alpha=.2)
+    ax.grid(b=True, which='major')
+    ax.grid(b=True, which='minor', linestyle='--', alpha=.2)
 
 
 if __name__ == '__main__':
@@ -333,7 +336,7 @@ if __name__ == '__main__':
 
     mtr = 'steel'
     # fo = f'springback/{mtr}_refine_lr_1'
-    fo = f'springback/{mtr}_fix_lr_2'
+    fo = f'springback/{mtr}_fix_lr_3'
 
     fig = plt.figure()
     plt.rcParams["font.family"] = "Times New Roman"
@@ -342,14 +345,16 @@ if __name__ == '__main__':
     grid_on(ax)
     ax.set_xticks([v for v in range(15, 166, 30)])
     ax.set_yticks([v for v in range(-2, 12, 2)])
+    ax.set_ylim([-3.5, 11])
+    ax.set_xlim([5, 180])
 
     z_range = (.15, .18)
-    line_thresh = 0.0018
-    line_size_thresh = 300
+    line_thresh = 0.0029
+    line_size_thresh = 500
 
     # sb_dict_fix = springback_from_img(fo, z_range, line_thresh, line_size_thresh)
-    sb_dict_fix = pickle.load(
-        open(os.path.join(config.ROOT, 'bendplanner/', f'{fo}_springback.pkl'), 'rb'))
+    # sb_dict_fix = pickle.load(
+    #     open(os.path.join(config.ROOT, 'bendplanner/', f'{fo}_springback.pkl'), 'rb'))
 
     # sb_dict_fix = {}
     # sb_dict_fix_1 = pickle.load(
@@ -362,21 +367,40 @@ if __name__ == '__main__':
     #     else:
     #         sb_dict_fix[k] = sb_dict_fix_2[k]
 
-    show_data_fix(sb_dict_fix)
+    # show_data_fix(sb_dict_fix)
 
-    sb_dict = {}
-    sb_dict_1 = pickle.load(
-        open(os.path.join(config.ROOT, 'bendplanner/', f'springback/{mtr}_refine_lr_1_springback.pkl'), 'rb'))
-    sb_dict_2 = pickle.load(
-        open(os.path.join(config.ROOT, 'bendplanner/', f'springback/{mtr}_refine_lr_2_springback.pkl'), 'rb'))
-    sb_dict_3 = pickle.load(
-        open(os.path.join(config.ROOT, 'bendplanner/', f'springback/{mtr}_refine_lr_3_springback.pkl'), 'rb'))
+    # X = [72.0, 72.0, 72.0, 72.0]
+    # y = [3.88, 3.81, 3.79, 2.23]
+    # y = [4.51, 5.57, 4.06, 4.17]
+    # X = [90.0, 90.0, 90, 90]
+    # y = [4.12, 5.94, None, None]
+    X = [109.63, 8.0, 14.18, 14.33, 13.41, 29.42, 35.25, 79.11]
+    y = [5.71, None, None, None, 3.22, 2.88, 3.09, None]
+    res = ['-']
+    for i in range(1, len(X)):
+        # print(X[:i], y[:i])
+        pre = lasso_pre([x for j, x in enumerate(X[:i]) if y[j] is not None],
+                              [v for v in y[:i] if v is not None],
+                              X[i], plot=False)
+        print(X[i], pre)
+        print('--')
+        res.append(X[i]+pre)
+    print('/'.join([str(v) for v in res]))
 
-    sb_dict.update(sb_dict_1)
-    sb_dict.update(sb_dict_2)
-    sb_dict.update(sb_dict_3)
-    show_data(sb_dict)
-
-    plt.show()
-
-    base.run()
+    #
+    # sb_dict = {}
+    # sb_dict_1 = pickle.load(
+    #     open(os.path.join(config.ROOT, 'bendplanner/', f'springback/{mtr}_refine_lr_1_springback.pkl'), 'rb'))
+    # # sb_dict_2 = pickle.load(
+    # #     open(os.path.join(config.ROOT, 'bendplanner/', f'springback/{mtr}_refine_lr_2_springback.pkl'), 'rb'))
+    # # sb_dict_3 = pickle.load(
+    # #     open(os.path.join(config.ROOT, 'bendplanner/', f'springback/{mtr}_refine_lr_3_springback.pkl'), 'rb'))
+    #
+    # sb_dict.update(sb_dict_1)
+    # # sb_dict.update(sb_dict_2)
+    # # sb_dict.update(sb_dict_3)
+    # show_data(sb_dict)
+    #
+    # plt.show()
+    #
+    # base.run()

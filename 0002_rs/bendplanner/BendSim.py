@@ -108,8 +108,8 @@ class BendSim(object):
         self.pseq = list(copy.deepcopy(pseq))
         self.rotseq = list(copy.deepcopy(rotseq))
         if extend:
-            # self.pseq.append((0, self.pseq[-1][1] + 2 * np.pi * self.bend_r, 0))
-            self.pseq.append((0, self.pseq[-1][1] + .6 * np.pi * self.bend_r, 0))
+            self.pseq.append((0, self.pseq[-1][1] + 2 * np.pi * self.bend_r, 0))
+            # self.pseq.append((0, self.pseq[-1][1] + .6 * np.pi * self.bend_r, 0))
             # self.pseq = [np.asarray(p) + np.asarray([self.bend_r, 0, 0]) for p in self.pseq]
             self.rotseq.append(np.eye(3))
         self.update_cm()
@@ -447,13 +447,13 @@ class BendSim(object):
                         continue
 
                 collided_pts = self.bender_cc([objcm_init, self.objcm.copy()])
-                # if len(collided_pts) != 0:
-                #     self.reset(pseq_init, rotseq_init, extend=False)
-                #     fail_reason_list.append('collided')
-                #     if prune:
-                #         break
-                #     else:
-                #         continue
+                if len(collided_pts) != 0:
+                    self.reset(pseq_init, rotseq_init, extend=False)
+                    fail_reason_list.append('collided')
+                    if prune:
+                        break
+                    else:
+                        continue
 
                 if abs(bend[1]) > np.pi / 2:
                     self._reverse()

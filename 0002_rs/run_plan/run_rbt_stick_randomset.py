@@ -30,9 +30,9 @@ if __name__ == '__main__':
     bs = b_sim.BendSim(show=True)
     mp = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
 
-    result, _, _, _, bendset = pickle.load(open(f'{config.ROOT}/bendplanner/bendresseq/final_90/5_3.pkl', 'rb'))
+    result, _, _, _, bendset = pickle.load(open(f'{config.ROOT}/bendplanner/bendresseq/org_90/5_3.pkl', 'rb'))
 
-    bs.reset([(0, 0, 0), (0, bendset[0][3], 0)], [np.eye(3), np.eye(3)])
+    bs.reset([(0, 0, 0), (0, max([b[-1] for b in bendset]), 0)], [np.eye(3), np.eye(3)])
     seqs = result[0]
     bendseq = [bendset[i] for i in seqs]
     print(seqs)
@@ -40,20 +40,20 @@ if __name__ == '__main__':
         print(b)
     is_success, bendresseq, _ = bs.gen_by_bendseq(bendseq, cc=True, prune=True, toggledebug=False)
     init_a, end_a, plate_a, pseq_init, rotseq_init, pseq_end, rotseq_end = bendresseq[-1]
-    pseq_end = np.asarray(pseq_end)*1000
-    pseq_end[0] = pseq_end[0] + (pseq_end[1] - pseq_end[0])*.7
-    pseq_end[-1] = pseq_end[-1] + (pseq_end[-2] - pseq_end[-1])*.2
+    pseq_end = np.asarray(pseq_end) * 1000
+    # pseq_end[0] = pseq_end[0] + (pseq_end[1] - pseq_end[0]) * .7
+    # pseq_end[-1] = pseq_end[-1] + (pseq_end[-2] - pseq_end[-1]) * .2
 
-    # ax = plt.axes(projection='3d')
-    # eps = 40
-    # center = pseq_end.mean(axis=0)
-    # ax.axes.set_xlim3d(left=center[0] - eps, right=center[0] + eps)
-    # ax.axes.set_ylim3d(bottom=center[1] - eps, top=center[1] + eps)
-    # ax.axes.set_zlim3d(bottom=center[2] - eps, top=center[2] + eps)
-    #
-    # bu.plot_pseq(ax, pseq_end, c='k')
-    # bu.scatter_pseq(ax, pseq_end[:-1], c='r')
-    # plt.show()
+    ax = plt.axes(projection='3d')
+    eps = 40
+    center = pseq_end.mean(axis=0)
+    ax.axes.set_xlim3d(left=center[0] - eps, right=center[0] + eps)
+    ax.axes.set_ylim3d(bottom=center[1] - eps, top=center[1] + eps)
+    ax.axes.set_zlim3d(bottom=center[2] - eps, top=center[2] + eps)
+
+    bu.plot_pseq(ax, pseq_end, c='k')
+    bu.scatter_pseq(ax, pseq_end[:-1], c='r')
+    plt.show()
 
     init_pseq = [(0, 0, 0), (0, max([b[-1] for b in bendset]), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]

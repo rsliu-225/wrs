@@ -47,6 +47,7 @@ def get_fit_err(bs, goal_pseq, goal_rotseq, bend_num_range):
         bend_avg_err, _ = bu.mindist_err(bs.pseq[1:], goal_pseq_trans, toggledebug=False, type='avg')
         fit_avg_err_list.append(fit_avg_err)
         bend_avg_err_list.append(bend_avg_err)
+
     return fit_max_err_list, bend_max_err_list, fit_avg_err_list, bend_avg_err_list, m_list
 
 

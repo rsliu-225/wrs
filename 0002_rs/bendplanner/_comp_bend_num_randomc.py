@@ -81,8 +81,8 @@ def get_fit_err(bs, goal_pseq, goal_rotseq, bend_num_range, init_pseq, init_rots
 
     for i in range(bend_num_range[0], bend_num_range[1]):
         bs.reset(init_pseq, init_rotseq)
-        # fit_pseq, fit_rotseq, _ = bu.decimate_pseq_by_cnt(goal_pseq, cnt=i, toggledebug=False)
-        fit_pseq, fit_rotseq = bu.decimate_pseq_by_cnt_uni(goal_pseq, cnt=i, toggledebug=False)
+        fit_pseq, fit_rotseq, _ = bu.decimate_pseq_by_cnt(goal_pseq, cnt=i, toggledebug=True)
+        # fit_pseq, fit_rotseq = bu.decimate_pseq_by_cnt_uni(goal_pseq, cnt=i, toggledebug=False)
         # fit_pseq, fit_rotseq, res_id = bu.decimate_pseq_by_cnt_curvature(goal_pseq, cnt=i, toggledebug=False)
         init_rot = bu.get_init_rot(fit_pseq)
         init_bendset = bu.pseq2bendset(fit_pseq, bend_r=bs.bend_r, toggledebug=False)
@@ -134,7 +134,8 @@ if __name__ == '__main__':
     snum = 20
     res_list = []
     # goal_list = []
-    goal_list = pickle.load(open('./bendnum/bspl_goal.pkl', 'rb'))
+    # goal_list = pickle.load(open('./bendnum/bspl_goal.pkl', 'rb'))
+    goal_list = [pickle.load(open('./goal/pseq/randomc.pkl', 'rb'))]
 
     for goal_pseq in goal_list:
         # goal_pseq = bu.gen_bspline(kp_num=random.choice([4, 5, 6]), length=.2, y_max=.04)
@@ -158,11 +159,11 @@ if __name__ == '__main__':
             print('Large Error!', bend_max_err_list)
             # continue
 
-        # ax = plt.axes(projection='3d')
-        # bu.plot_pseq(ax, fit_pseq_list[best_n], c='darkorange', linestyle='--')
-        # bu.plot_pseq(ax, bend_pseq_list[best_n], c='darkorange')
-        # bu.plot_pseq(ax, goal_pseq_list[best_n], c='k')
-        # plt.show()
+        ax = plt.axes(projection='3d')
+        bu.plot_pseq(ax, fit_pseq_list[best_n], c='darkorange', linestyle='--')
+        bu.plot_pseq(ax, bend_pseq_list[best_n], c='darkorange')
+        bu.plot_pseq(ax, goal_pseq_list[best_n], c='k')
+        plt.show()
 
         # plot_err(fit_max_err_list, bend_max_err_list, fit_avg_err_list, bend_avg_err_list, m_list)
 

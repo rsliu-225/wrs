@@ -99,7 +99,7 @@ if __name__ == '__main__':
 
     bs = b_sim.BendSim(show=True, cm_type=fo)
     mp = m_planner.MotionPlanner(env, rbt, armname="lft_arm")
-    goal_pseq = pickle.load(open(os.path.join(config.ROOT, f'bendplanner/goal/pseq/{f_name}.pkl'), 'rb'))
+    goal_pseq = pickle.load(open(os.path.join(config.ROOT, f'bendplanner/goal/pseq/{f_name}.pkl'), 'rb'))[:220]
     grasp_list = mp.load_all_grasp(grasp_f_name)
 
     '''

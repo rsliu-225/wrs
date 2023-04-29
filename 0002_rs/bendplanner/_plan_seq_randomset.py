@@ -203,23 +203,38 @@ if __name__ == '__main__':
     #         res, tc, attemp_cnt_list, total_tc = plan_premutation(bs, bendset, snum=10, fo=fo, f_name=f_name)
     #         print(tc, attemp_cnt_list)
     #         print(total_tc)
+    #
+    # fo = 'new_180'
+    # org_fo = '180'
+    # for random_cnt in range(3, 9):
+    #     for i in range(0, 15):
+    #         f_name = f'{str(random_cnt)}_{str(i)}'
+    #         print(f'--------------{str(i)}--------------')
+    #         try:
+    #             file = pickle.load(
+    #                 open(f'{config.ROOT}/bendplanner/bendresseq/{org_fo}/{f_name}.pkl', 'rb'))
+    #         except:
+    #             continue
+    #         bendset = file[4][::-1]
+    #         print('benset:', bendset)
+    #         bs.reset([(0, 0, 0), (0, bendset[0][3], 0)], [np.eye(3), np.eye(3)])
+    #         if os.path.exists(f'{config.ROOT}/bendplanner/bendresseq/{fo}/{f_name}.pkl'):
+    #             print('Exists!')
+    #             continue
+    #         res, tc, attemp_cnt_list, total_tc = plan_premutation(bs, bendset, snum=10, fo=fo, f_name=f'{f_name}')
+    #         print(tc, attemp_cnt_list)
 
-    fo = 'new_180'
-    org_fo = '180'
-    for random_cnt in range(3, 9):
-        for i in range(0, 15):
-            f_name = f'{str(random_cnt)}_{str(i)}'
-            print(f'--------------{str(i)}--------------')
-            try:
-                file = pickle.load(
-                    open(f'{config.ROOT}/bendplanner/bendresseq/{org_fo}/{f_name}.pkl', 'rb'))
-            except:
-                continue
-            bendset = file[4][::-1]
-            print('benset:', bendset)
-            bs.reset([(0, 0, 0), (0, bendset[0][3], 0)], [np.eye(3), np.eye(3)])
-            if os.path.exists(f'{config.ROOT}/bendplanner/bendresseq/{fo}/{f_name}.pkl'):
-                print('Exists!')
-                continue
-            res, tc, attemp_cnt_list, total_tc = plan_premutation(bs, bendset, snum=10, fo=fo, f_name=f'{f_name}')
-            print(tc, attemp_cnt_list)
+    fo = 'org_90'
+    org_fo = 'final_90'
+    random_cnt = 5
+    i = 3
+    f_name = f'{str(random_cnt)}_{str(i)}'
+    print(f'--------------{str(i)}--------------')
+    file = pickle.load(
+        open(f'{config.ROOT}/bendplanner/bendresseq/{org_fo}/{f_name}.pkl', 'rb'))
+    bendset = file[4]
+    print('benset:', bendset)
+    bs.reset([(0, 0, 0), (0, max([b[-1] for b in bendset]), 0)], [np.eye(3), np.eye(3)])
+
+    res, tc, attemp_cnt_list, total_tc = plan_ipt(bs, bendset, snum=10, fo=fo, f_name=f'{f_name}')
+    print(tc, attemp_cnt_list)

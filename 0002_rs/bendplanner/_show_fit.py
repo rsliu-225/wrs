@@ -49,16 +49,16 @@ if __name__ == '__main__':
     # goal_pseq = pickle.load(open('goal/pseq/randomc.pkl', 'rb'))
     # goal_pseq = bu.gen_bspline(kp_num=5, length=.4, y_max=.04)
     # pickle.dump(goal_pseq, open('goal/pseq/bspl.pkl', 'wb'))
-    goal_pseq = pickle.load(open('goal/pseq/bspl.pkl', 'rb'))
+    goal_pseq = pickle.load(open('goal/pseq/helix.pkl', 'rb'))[:220]
     goal_pseq = np.asarray(goal_pseq)
     goal_rotseq = bu.get_rotseq_by_pseq(goal_pseq)
 
     init_pseq = [(0, 0, 0), (0, .05 + bu.cal_length(goal_pseq), 0)]
     init_rotseq = [np.eye(3), np.eye(3)]
     for i in range(5, 50):
-        # pseq, rotseq, res_pids = bu.decimate_pseq_by_cnt(goal_pseq, cnt=i)
+        pseq, rotseq, res_pids = bu.decimate_pseq_by_cnt(goal_pseq, cnt=i)
         # pseq, rotseq, res_pids = bu.decimate_pseq_by_cnt_uni(goal_pseq, cnt=i)
-        pseq, rotseq, res_pids = bu.decimate_pseq_by_cnt_curvature(goal_pseq, cnt=i, toggledebug=True)
+        # pseq, rotseq, res_pids = bu.decimate_pseq_by_cnt_curvature(goal_pseq, cnt=i, toggledebug=True)
         bs.reset(init_pseq, init_rotseq)
 
         # ax = plt.axes(projection='3d')
