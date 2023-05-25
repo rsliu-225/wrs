@@ -180,7 +180,7 @@ if __name__ == '__main__':
     grpr.gen_meshmodel().attach_to(base)
     # grpr.gen_stickmodel(togglejntscs=False).attach_to(base)
     grpr.fix_to(pos=np.array([0, .3, .2]), rotmat=rm.rotmat_from_axangle([1, 0, 0], .05))
-    grpr.gen_meshmodel().attach_to(base)
+    grpr.gen_meshmodel(toggle_tcpcs=True).attach_to(base)
     grpr.show_cdmesh()
     grpr.show_cdprimit()
     base.run()

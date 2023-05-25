@@ -270,5 +270,5 @@ if __name__=='__main__':
 
     import robotconn.rpc.frtknt.frtknt_client as fkc
     fk = fkc.FrtKnt(host="192.168.125.60:18300")
-    img = fk.getrgbimg()
+    img = fk.clframe2rgbimg()
     estimate_corners(img)

@@ -6,6 +6,7 @@ import numpy as np
 import robot_con.ur.program_builder as pb
 import robot_con.ur.ur3e_rtqhe_x as u3erhex
 
+
 class Ur3EDualUrx(object):
     """
     urx 50, right arm 51, left arm 52
@@ -73,40 +74,41 @@ class Ur3EDualUrx(object):
         date: 20210404
         """
         if component_name == "all":
-            if interpolation_method:
-                self._lft_arm_hnd.trajt.change_method(interpolation_method)
-            interpolated_confs, _, _, _ = self._lft_arm_hnd.trajt.interpolate_by_time_interval(path,
-                                                                                               control_frequency,
-                                                                                               interval_time)
-            # upload a urscript to connect to the pc server started by this class
-            self._rgt_arm_hnd.arm.send_program(self._slave_modern_driver_urscript)
-            self._lft_arm_hnd.arm.send_program(self._master_modern_driver_urscript)
-            # accept arm socket
-            pc_server_socket, pc_server_socket_addr = self._lft_arm_hnd.pc_server_socket.accept()
-            print("PC server connected by ", pc_server_socket_addr)
-            # send trajectory
-            keepalive = 1
-            buf = bytes()
-            for id, conf in enumerate(interpolated_confs):
-                if id == len(interpolated_confs) - 1:
-                    keepalive = 0
-                jointsradint = [int(jnt_value * self._lft_arm_hnd.jnts_scaler) for jnt_value in conf]
-                buf += struct.pack('!iiiiiiiiiiiii', jointsradint[0], jointsradint[1], jointsradint[2],
-                                   jointsradint[3], jointsradint[4], jointsradint[5], jointsradint[6],
-                                   jointsradint[7], jointsradint[8], jointsradint[9], jointsradint[10],
-                                   jointsradint[11], keepalive)
-            pc_server_socket.send(buf)
-            pc_server_socket.close()
+            # if interpolation_method:
+            #     self._lft_arm_hnd.trajt.change_method(interpolation_method)
+            # interpolated_confs, _, _, _ = self._lft_arm_hnd.trajt.interpolate_by_time_interval(path,
+            #                                                                                    control_frequency,
+            #                                                                                    interval_time)
+            # # upload a urscript to connect to the pc server started by this class
+            # self._rgt_arm_hnd.arm.send_program(self._slave_modern_driver_urscript)
+            # self._lft_arm_hnd.arm.send_program(self._master_modern_driver_urscript)
+            # # accept arm socket
+            # pc_server_socket, pc_server_socket_addr = self._lft_arm_hnd.pc_server_socket.accept()
+            # print("PC server connected by ", pc_server_socket_addr)
+            # # send trajectory
+            # keepalive = 1
+            # buf = bytes()
+            # for id, conf in enumerate(interpolated_confs):
+            #     if id == len(interpolated_confs) - 1:
+            #         keepalive = 0
+            #     jointsradint = [int(jnt_value * self._lft_arm_hnd.jnts_scaler) for jnt_value in conf]
+            #     buf += struct.pack('!iiiiiiiiiiiii', jointsradint[0], jointsradint[1], jointsradint[2],
+            #                        jointsradint[3], jointsradint[4], jointsradint[5], jointsradint[6],
+            #                        jointsradint[7], jointsradint[8], jointsradint[9], jointsradint[10],
+            #                        jointsradint[11], keepalive)
+            # pc_server_socket.send(buf)
+            # pc_server_socket.close()
+            pass
         elif component_name in ["lft_arm", "lft_hnd"]:
-            self._lft_arm_hnd.move_jspace_path(path=path,
-                                               control_frequency=control_frequency,
-                                               interval_time=interval_time,
-                                               interpolation_method=interpolation_method)
+            self._lft_arm_hnd.move_jntspace_path(path=np.asarray(path),
+                                                 control_frequency=control_frequency,
+                                                 interval_time=interval_time,
+                                                 interpolation_method=interpolation_method)
         elif component_name in ["rgt_arm", "rgt_hnd"]:
-            self._rgt_arm_hnd.move_jspace_path(path=path,
-                                               control_frequency=control_frequency,
-                                               interval_time=interval_time,
-                                               interpolation_method=interpolation_method)
+            self._rgt_arm_hnd.move_jntspace_path(path=np.asarray(path),
+                                                 control_frequency=control_frequency,
+                                                 interval_time=interval_time,
+                                                 interpolation_method=interpolation_method)
         else:
             raise ValueError("Component_name must be in ['all', 'lft_arm', 'rgt_arm']!")
 
@@ -128,12 +130,12 @@ class Ur3EDualUrx(object):
 
 
 if __name__ == '__main__':
-    import robot_sim.ur3edual.ur3edual as u3ed
+    import robot_sim.robots.ur3e_dual.ur3e_dual as u3ed
     import pandaplotutils.pandactrl as pc
     import manipulation.grip.robotiqhe.robotiqhe as rtqhe
     import robot_sim.ur3edual.ur3edual as robot
 
-    base = pc.World(camp=[3000, 0, 3000], lookatp=[0, 0, 700])
+    base = pc.World(camp=[3, 0, 3], lookatp=[0, 0, .7])
 
     ur3edualrobot = u3ed.Ur3EDualRobot()
     ur3edualrobot.goinitpose()
@@ -146,8 +148,8 @@ if __name__ == '__main__':
     # robot_s = robot_s.Ur3EDualRobot(rgthnd, lfthnd)
     # robot_s.goinitpose()
     # ur3eu.attachfirm(robot_s, upthreshold=10, arm_name='lft')
-    ur3eu.opengripper(armname="lft", forcepercentage=0, distance=23)
-    ur3eu.opengripper(armname="lft", forcepercentage=0, distance=80)
+    ur3eu._lft_arm_hnd.open_gripper(forcepercentage=0, fingerdistance=.23)
+    ur3eu._rgt_arm_hnd.open_gripper(forcepercentage=0, fingerdistance=.8)
     # ur3eu.closegripper(arm_name="lft")
     # initpose = ur3dualrobot.initjnts
     # initrgt = initpose[3:9]

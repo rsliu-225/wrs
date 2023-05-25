@@ -9,6 +9,7 @@ import threading
 import socket
 import struct
 import os
+import random
 import motion.trajectory.piecewisepoly_scl as pwp
 
 
@@ -17,6 +18,7 @@ class UR3ERtqHE():
     author: weiwei
     date: 20180131, 20210401osaka
     """
+
     def __init__(self, robot_ip='10.2.0.50', pc_ip='10.2.0.91'):
         """
         :param robot_ip:
@@ -42,7 +44,7 @@ class UR3ERtqHE():
         self._jointscaler = 1e6
         self._pb = pb.ProgramBuilder()
         script_dir = os.path.dirname(__file__)
-        self._pb.load_prog(os.path.join(script_dir, "urscripts_cbseries/moderndriver_eseries.script"))
+        self._pb.load_prog(os.path.join(script_dir, "urscripts_eseries/moderndriver_eseries.script"))
         self._pc_server_urscript = self._pb.get_program_to_run()
         self._pc_server_urscript = self._pc_server_urscript.replace("parameter_ip", self._pc_server_socket_addr[0])
         self._pc_server_urscript = self._pc_server_urscript.replace("parameter_port",
@@ -51,7 +53,7 @@ class UR3ERtqHE():
                                                                     str(self._jointscaler))
         self._ftsensor_thread = None
         self._ftsensor_values = []
-        self.trajt = pwp.PiecewisePoly(method='quintic')
+        self.trajt = pwp.PiecewisePolyScl(method='quintic')
 
     @property
     def arm(self):
@@ -118,7 +120,7 @@ class UR3ERtqHE():
     def clear_ftsensor_values(self):
         self._ftsensor_values = []
 
-    def move_jnts(self, jnt_values, radius=0.01):
+    def move_jnts(self, jnt_values, radius=0.01, wait=True):
         """
         :param jnt_values: a 1-by-6 list in degree
         :param arm_name:
@@ -127,8 +129,8 @@ class UR3ERtqHE():
         date: 20170411
         """
         jointsrad = [math.radians(angdeg) for angdeg in jnt_values]
-        self._arm.movej(jointsrad, acc=1, vel=1, wait=True)
-        # targetarm.movejr(jointsrad, acc = 1, vel = 1, radius = radius, wait = False)
+        self._arm.movej(jointsrad, acc=1, vel=1, wait=wait)
+        # targetarm.movejr(jointsrad, acc=1, vel=1, radius=radius, wait=False)
 
     def regulate_jnts_pmpi(self):
         """
@@ -156,9 +158,7 @@ class UR3ERtqHE():
         author: weiwei
         date: 20210331
         """
-        if interpolation_method:
-            self.trajt.change_method(interpolation_method)
-        interpolated_confs, _, _, _ = self.trajt.interpolate_by_time_interval(path, control_frequency, interval_time)
+        interpolated_confs = self.trajt.interpolate_by_max_spdacc(path, control_frequency)
         # upload a urscript to connect to the pc server started by this class
         self._arm.send_program(self._pc_server_urscript)
         # accept arm socket
@@ -192,5 +192,5 @@ if __name__ == '__main__':
 
     base = wd.World(cam_pos=[3, 1, 2], lookat_pos=[0, 0, 0])
     u3erhe_x = UR3ERtqHE(robot_ip='10.0.2.2', pc_ip='10.2.0.91')
-    u3erhe_x.opengripper()
+    u3erhe_x.open_gripper()
     base.run()

@@ -1,25 +1,21 @@
-"""
-Yumi Higher-level Control API.
-Author: Hao Chen
-Date: 20220123
-"""
 import time
-from typing import Tuple, List
-
 import numpy as np
 
 import robot_con.yumi.yumi_robot as yr
 import robot_con.yumi.yumi_state as ys
+import motion.probabilistic.rrt_connect as rrtc
+from motion.trajectory.piecewisepoly import PiecewisePoly
 
 
-class Yumi_Controller:
-    def __init__(self, debug: bool = False):
-        """
-        is_add_all: Set True, the function `move_jntspace_path` will send multiple joint angles at once.
-                    Otherwise, it will send single joint angle at once
-        """
+class YumiController:
+    """
+    A client to control the yumi
+    """
+
+    def __init__(self, debug=False):
         self.rbtx = yr.YuMiRobot(debug=debug)
         self._is_add_all = True
+        self._traj_opt = PiecewisePoly()
 
     @property
     def lft_arm_hnd(self):
@@ -29,11 +25,7 @@ class Yumi_Controller:
     def rgt_arm_hnd(self):
         return self.rbtx.right
 
-    def get_pose(self, component_name: str) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Get pose of the robot computed by YUMI Server
-        :return 1x3 position vector and 3x3 rotation matrix
-        """
+    def get_pose(self, component_name):
         if component_name in ["lft_arm", "lft_hnd"]:
             armx = self.rbtx.left
         elif component_name in ["rgt_arm", "rgt_hnd"]:
@@ -45,7 +37,7 @@ class Yumi_Controller:
         rot = pose.rotation
         return pos, rot
 
-    def move_jnts(self, component_name: str, jnt_vals: np.ndarray, speed_n: int = 100):
+    def move_jnts(self, component_name, jnt_vals, speed_n=100):
         """
         move one arm joints of the yumi
         :param component_name
@@ -54,6 +46,11 @@ class Yumi_Controller:
                 specified in RAPID. Loosely, n is translational speed in milimeters per second
                 Please refer to page 1186 of
                 https://library.e.abb.com/public/688894b98123f87bc1257cc50044e809/Technical%20reference%20manual_RAPID_3HAC16581-1_revJ_en.pdf
+
+        :return: bool
+
+        author: weiwei
+        date: 20170411
         """
         if component_name in ["lft_arm", "lft_hnd"]:
             armx = self.rbtx.left
@@ -69,11 +66,7 @@ class Yumi_Controller:
         ajstate = ys.YuMiState(armjnts)
         armx.movetstate_sgl(ajstate)
 
-    def contactL(self, component_name: str, jnt_vals: np.ndarray, desired_torque: float = .5) -> bool:
-        """
-        Use contactL. Move the robot to a target pose. The robot will stop in advance if the torque reach desired torque
-        :return True if the robot reach target pose else False
-        """
+    def contactL(self, component_name, jnt_vals, desired_torque=.5):
         if component_name in ["rgt_arm", "rgt_hnd"]:
             armx = self.rbtx.right
         else:
@@ -82,10 +75,11 @@ class Yumi_Controller:
         ajstate = ys.YuMiState(armjnts)
         return armx.contactL(ajstate, desired_torque)
 
-    def get_jnt_values(self, component_name: str):
+    def get_jnt_values(self, component_name):
         """
         get the joint angles of both arms
         :return: 1x6 array
+        author: chen
         """
         if component_name == "all":
             lftjnts = self._get_arm_jnts("lft")
@@ -98,7 +92,7 @@ class Yumi_Controller:
         else:
             raise ValueError("Component_name must be in ['lft_arm/lft_hnd', 'rgt_arm/rgt_hnd']!")
 
-    def move_jntspace_path(self, component_name: str, path: List[np.ndarray], speed_n: int = 100) -> bool:
+    def move_jntspace_path(self, component_name, path, speed_n=100) -> bool:
         """
         :param speed_n: speed number. If speed_n = 100, then speed will be set to the corresponding v100
                 specified in RAPID. Loosely, n is translational speed in milimeters per second
@@ -114,7 +108,7 @@ class Yumi_Controller:
             raise ValueError("Component_name must be in ['lft_arm/lft_hnd', 'rgt_arm/rgt_hnd']!")
         statelist = []
         st = time.time()
-        for armjnts in path:
+        for armjnts in self._traj_opt.interpolate_path(path, num=min(100, int(len(path)))):
             armjnts = np.rad2deg(armjnts)
             ajstate = ys.YuMiState(armjnts)
             statelist.append(ajstate)
@@ -141,7 +135,7 @@ class Yumi_Controller:
         self.rgt_arm_hnd.calibrate_gripper()
         self.lft_arm_hnd.calibrate_gripper()
 
-    def __set_gripper_force(self, component_name: str, force: float = 10):
+    def __set_gripper_force(self, component_name, force=10):
         """
         TODO: this program has bug. Fix it later.
         :param force: Hold force by the gripper in Newton.
@@ -154,7 +148,7 @@ class Yumi_Controller:
             raise ValueError("Component_name must be in ['lft_arm/lft_hnd', 'rgt_arm/rgt_hnd']!")
         armx.set_gripper_force(force=force)
 
-    def set_gripper_speed(self, component_name: str, speed: int = 10):
+    def set_gripper_speed(self, component_name, speed=10):
         """
         :param speed: In mm/s.
         """
@@ -166,7 +160,7 @@ class Yumi_Controller:
             raise ValueError("Component_name must be in ['lft_arm/lft_hnd', 'rgt_arm/rgt_hnd']!")
         armx.set_gripper_max_speed(max_speed=speed)
 
-    def move_gripper(self, component_name: str, width: float):
+    def move_gripper(self, component_name, width):
         """
         Moves the gripper to the given width in meters.
         width : float
@@ -184,7 +178,7 @@ class Yumi_Controller:
             raise ValueError("Component_name must be in ['lft_arm/lft_hnd', 'rgt_arm/rgt_hnd']!")
         armx.move_gripper(width=width / 2)
 
-    def open_gripper(self, component_name: str):
+    def open_gripper(self, component_name):
         if component_name in ["lft_arm", "lft_hnd"]:
             armx = self.rbtx.left
         elif component_name in ["rgt_arm", "rgt_hnd"]:
@@ -193,7 +187,7 @@ class Yumi_Controller:
             raise ValueError("Component_name must be in ['lft_arm/lft_hnd', 'rgt_arm/rgt_hnd']!")
         armx.open_gripper()
 
-    def close_gripper(self, component_name: str, force: float = 10):
+    def close_gripper(self, component_name, force=10):
         assert 0 <= force <= yr.YMC.MAX_GRIPPER_FORCE
         if component_name in ["lft_arm", "lft_hnd"]:
             armx = self.rbtx.left
@@ -203,7 +197,7 @@ class Yumi_Controller:
             raise ValueError("Component_name must be in ['lft_arm/lft_hnd', 'rgt_arm/rgt_hnd']!")
         armx.close_gripper(force=force)
 
-    def get_gripper_width(self, component_name: str):
+    def get_gripper_width(self, component_name):
         if component_name in ["lft_arm", "lft_hnd"]:
             armx = self.rbtx.left
         elif component_name in ["rgt_arm", "rgt_hnd"]:
@@ -212,7 +206,7 @@ class Yumi_Controller:
             raise ValueError("Component_name must be in ['lft_arm/lft_hnd', 'rgt_arm/rgt_hnd']!")
         return armx.get_gripper_width() * 2
 
-    def _get_arm_jnts(self, armname: str):
+    def _get_arm_jnts(self, armname):
         if armname == "rgt":
             return np.deg2rad(self.rbtx.right.get_state().joints)
         elif armname == "lft":
@@ -220,7 +214,7 @@ class Yumi_Controller:
         else:
             raise ValueError("Arm name must be right or left!")
 
-    def get_hc_img(self, armname: str):
+    def get_hc_img(self, armname):
         if armname == "rgt":
             self.rbtx.right.write_handcamimg_ftp()
         elif armname == "lft":
@@ -244,8 +238,55 @@ class Yumi_Controller:
         self.rbtx.stop()
 
 
+def to_homeconf(yumi_s: 'robot_sim.robots.yumi.yumi.Yumi', yumi_x: YumiController, component_name="rgt_arm",
+                method="RRT", speed_n=300, ):
+    """
+    make robot go to init position
+    :param yumi_s: Yumi instamce
+    :param yumi_x: YumiController instance
+    :param component_name: rgt_arm, lft_arm or both. Indicates the arm to go to home configuration
+    :param method: rrt
+    :param speed_n: -1: full speed, speed number. If speed_n = 100, then speed will be set to the corresponding v100
+                specified in RAPID. Loosely, n is translational speed in milimeters per second
+                Please refer to page 1186 of
+                https://library.e.abb.com/public/688894b98123f87bc1257cc50044e809/Technical%20reference%20manual_RAPID_3HAC16581-1_revJ_en.pdf
+    :return:
+    """
+    if method.lower() == "rrt":
+        # initialize the module for RRT
+        rrtc_planner = rrtc.RRTConnect(yumi_s)
+        # the left and right arm go initial pose
+        if component_name in ["rgt_arm", "rgt_hnd", "both"]:
+            rrt_path_rgt = rrtc_planner.plan(component_name="rgt_arm",
+                                             start_conf=np.array(yumi_x.get_jnt_values("rgt_arm")),
+                                             goal_conf=np.array(yumi_s.rgt_arm.homeconf),
+                                             obstacle_list=[],
+                                             ext_dist=.05,
+                                             max_time=300)
+            if len(rrt_path_rgt) > 5:
+                yumi_x.move_jntspace_path(component_name="rgt_arm", path=rrt_path_rgt, speed_n=speed_n)
+            else:
+                yumi_x.move_jnts(component_name="rgt_arm", jnt_vals=yumi_s.rgt_arm.homeconf, speed_n=speed_n)
+        if component_name in ["lft_arm", "lft_hnd", "both"]:
+            rrt_path_lft = rrtc_planner.plan(component_name="lft_arm",
+                                             start_conf=np.array(yumi_x.get_jnt_values("lft_arm")),
+                                             goal_conf=np.array(yumi_s.lft_arm.homeconf),
+                                             obstacle_list=[],
+                                             ext_dist=.05,
+                                             max_time=300)
+            if len(rrt_path_lft) > 5:
+                yumi_x.move_jntspace_path(component_name="lft_arm", path=rrt_path_lft, speed_n=speed_n)
+            else:
+                yumi_x.move_jnts(component_name="lft_arm", jnt_vals=yumi_s.lft_arm.homeconf, speed_n=speed_n)
+    else:
+        if component_name in ["rgt_arm", "rgt_hnd", "both"]:
+            yumi_x.move_jnts(component_name="rgt_arm", jnt_vals=yumi_s.rgt_arm.homeconf, speed_n=speed_n)
+        if component_name in ["lft_arm", "lft_hnd", "both"]:
+            yumi_x.move_jnts(component_name="lft_arm", jnt_vals=yumi_s.lft_arm.homeconf, speed_n=speed_n)
+
+
 if __name__ == "__main__":
-    ycc = Yumi_Controller(debug=False)
+    ycc = YumiController(debug=False)
     ycc.set_gripper_speed("rgt_arm", 10)
 
     ycc.open_gripper("rgt_hnd")

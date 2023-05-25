@@ -179,8 +179,11 @@ if __name__ == "__main__":
     import pandaplotutils.pandactrl as pc
     import random
     import basis
+    import visualization.panda.world as wd
 
-    base = pc.World(camp=[1000, 300, 1000], lookatpos=[0, 0, 0], toggledebug=False)
+    cam_pos = np.asarray([1, .3, 1])
+    base = wd.World(cam_pos=cam_pos, lookat_pos=[0, 0, 0])
+
     base.setFrameRateMeter(True)
     objpath = os.path.join(basis.__path__[0], 'objects', 'block.stl')
     bunnycm = BDModel(objpath, mass=1, shapetype="convex")

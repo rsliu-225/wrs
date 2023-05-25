@@ -4,9 +4,10 @@ import drivers.rpc.frtknt.frtknt_pb2 as fkmsg
 import drivers.rpc.frtknt.frtknt_pb2_grpc as fkrpc
 import copy
 
+
 class FrtKnt(object):
 
-    def __init__(self, host = "localhost:18300"):
+    def __init__(self, host="localhost:18300"):
         options = [('grpc.max_receive_message_length', 100 * 1024 * 1024)]
         channel = grpc.insecure_channel(host, options=options)
         self.stub = fkrpc.KntStub(channel)
@@ -15,7 +16,7 @@ class FrtKnt(object):
         h = dobj.width
         w = dobj.height
         ch = dobj.channel
-        return copy.deepcopy(np.frombuffer(dobj.image, dtype=np.uint8).reshape((w,h,ch)))
+        return copy.deepcopy(np.frombuffer(dobj.image, dtype=np.uint8).reshape((w, h, ch)))
 
     def getrgbimg(self):
         """
@@ -52,7 +53,7 @@ class FrtKnt(object):
         """
 
         pcd = self.stub.getpcd(fkmsg.Empty())
-        return np.frombuffer(pcd.points, dtype=np.int16).reshape((-1,3))
+        return np.frombuffer(pcd.points, dtype=np.int16).reshape((-1, 3))
 
     def getpartialpcd(self, dframe, width, height):
         """
@@ -66,14 +67,14 @@ class FrtKnt(object):
         date: 20181121
         """
 
-        widthpairmsg = fkmsg.Pair(data0 = width[0], data1 = width[1])
-        heightpairmsg = fkmsg.Pair(data0 = height[0], data1 = height[1])
+        widthpairmsg = fkmsg.Pair(data0=width[0], data1=width[1])
+        heightpairmsg = fkmsg.Pair(data0=height[0], data1=height[1])
         h, w, ch = dframe.shape
         dframedata = fkmsg.CamImg(width=w, height=h, channel=ch, image=np.ndarray.tobytes(dframe))
-        dframemsg = fkmsg.PartialPcdPara(data = dframedata, width = widthpairmsg,
-                                         height = heightpairmsg)
+        dframemsg = fkmsg.PartialPcdPara(data=dframedata, width=widthpairmsg,
+                                         height=heightpairmsg)
         dobj = self.stub.getpartialpcd(dframemsg)
-        return np.frombuffer(dobj.points, dtype=np.int16).reshape((-1,3))
+        return np.frombuffer(dobj.points, dtype=np.int16).reshape((-1, 3))
 
     def mapColorPointToCameraSpace(self, pt):
         """
@@ -85,36 +86,58 @@ class FrtKnt(object):
         date: 20181121
         """
 
-        ptpairmsg = fkmsg.Pair(data0 = pt[0], data1 = pt[1])
+        ptpairmsg = fkmsg.Pair(data0=pt[0], data1=pt[1])
         dobj = self.stub.mapColorPointToCameraSpace(ptpairmsg)
-        return np.frombuffer(dobj.points, dtype=np.int16).reshape((-1,3))
+        return np.frombuffer(dobj.points, dtype=np.int16).reshape((-1, 3))
+
 
 if __name__ == "__main__":
-    import robotconn.rpc.frtknt.frtknt_client as fc
-    import pandaplotutils.pandactrl as pc
+    import drivers.rpc.frtknt.frtknt_client as fc
+    import visualization.panda.world as pc
+    import modeling.geometric_model as gm
+
     import cv2
+    import time
+    import pickle
 
-    frk = fc.FrtKnt(host = "10.2.0.60:183001")
-
+    frk = fc.FrtKnt(host="10.0.1.143:183001")
+    depthimg_list = []
+    rgbimg_list = []
+    pcd_list = []
     while True:
-        img = frk.getdepthimg()
-        cv2.imshow("test", img)
-        cv2.waitKey(1)
-
-
-    pcdcenter=[0,0,1500]
-    base = pc.World(camp=[0,0,-5000], lookatp=pcdcenter, w=1024, h=768)
-
-    pcldnp = [None]
-    def update(frk, pcldnp, task):
-        if pcldnp[0] is not None:
-            pcldnp[0].detachNode()
+        print(len(depthimg_list))
+        depthimg = frk.getdepthimg()
+        rgbimg = frk.getrgbimg()
         pcd = frk.getpcd()
-        pcldnp[0] = base.pg.genpointcloudnp(pcd)
-        pcldnp[0].reparentTo(base.render)
-        return task.done
+        pcd = pcd / 1000
+        print(depthimg.shape, len(pcd))
+        cv2.imshow('rgbimg', rgbimg)
+        cv2.imshow('depthimg', depthimg)
+        print(depthimg.shape, rgbimg.shape)
+        depthimg_list.append(depthimg)
+        rgbimg_list.append(rgbimg)
 
-    taskMgr.doMethodLater(0.05, update, "update", extraArgs=[frk, pcldnp],
-                      appendTask=True)
+        if cv2.waitKey(1) & 0xff == 27:  # ESCで終了
+            cv2.destroyAllWindows()
+            break
 
-    base.run()
+    # pcdcenter = [0, 0, 1.5]
+    # base = pc.World(cam_pos=[0, 0, -1], lookat_pos=pcdcenter, w=1024, h=768)
+    #
+    # pcldnp = [None]
+    #
+    #
+    # def update(frk, pcldnp, task):
+    #     if pcldnp[0] is not None:
+    #         pcldnp[0].detachNode()
+    #     pcd = frk.getpcd()
+    #     pcd = pcd/1000
+    #     print(pcd)
+    #     pcldnp[0] = gm.gen_pointcloud(pcd)
+    #     pcldnp[0].attach_to(base)
+    #     return task.done
+
+    # taskMgr.doMethodLater(0.05, update, "update", extraArgs=[frk, pcldnp],
+    #                       appendTask=True)
+    #
+    # base.run()

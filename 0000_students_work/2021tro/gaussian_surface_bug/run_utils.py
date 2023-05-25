@@ -8,12 +8,12 @@ import numpy as np
 import config
 import modeling.collision_model as cm
 import item as item
-# import motionplanner.motion_planner as m_planner
+import motionplanner.motion_planner as m_planner
 import pcd_utils as pcdu
 import phoxi as phoxi
 import prj_utils as pu
 import vision_utils as vu
-import envloader as el
+import localenv.envloader as el
 
 
 # import db_service.db_service as dbs
@@ -55,7 +55,7 @@ def get_obj_from_phoxiinfo_nobgf(phxilocator, load=True, phoxi_f_name=None, reco
 
 def get_obj_from_phoxiinfo_withmodel(phxilocator, stl_f_name, load_f_name=None, match_filp=False,
                                      bg_f_name="bg_0217.pkl"):
-    objcm = cm.CollisionModel(objinit=os.path.join(config.ROOT + '/obstacles/' + stl_f_name))
+    objcm = cm.CollisionModel(initor=os.path.join(config.ROOT + '/obstacles/' + stl_f_name))
     grayimg, depthnparray_float32, pcd = load_phxiinfo(phoxi_f_name=load_f_name)
 
     workingarea_uint8 = phxilocator.remove_depth_bg(depthnparray_float32, bg_f_name=bg_f_name, toggledebug=False)
@@ -66,7 +66,7 @@ def get_obj_from_phoxiinfo_withmodel(phxilocator, stl_f_name, load_f_name=None, 
 
     objpcd = pcdu.trans_pcd(pcdu.remove_pcd_zeros(vu.map_depth2pcd(obj_depth, pcd)), phxilocator.amat)
     objmat4 = phxilocator.match_pcdncm(objpcd, objcm, match_rotz=match_filp)
-    objcm.sethomomat(objmat4)
+    objcm.set_homomat(objmat4)
 
     return item.Item(objcm=objcm, pcd=objpcd, objmat4=objmat4)
 
@@ -76,7 +76,7 @@ def get_obj_from_phoxiinfo_withmodel_nobgf(phxilocator, stl_f_name, objpcd_list=
                                            match_rotz=False, resolution=1, eps=5, use_rmse=True):
     if stl_f_name[-3:] != 'stl':
         stl_f_name += '.stl'
-    objcm = cm.CollisionModel(objinit=os.path.join(config.ROOT + '/obstacles/' + stl_f_name))
+    objcm = cm.CollisionModel(initor=os.path.join(config.ROOT + '/obstacles/' + stl_f_name))
     if objpcd_list is None:
         grayimg, depthnparray_float32, pcd = load_phxiinfo(phoxi_f_name=phoxi_f_name, load=load)
         objpcd_list = phxilocator.find_objpcd_list_by_pos(pcd, x_range=x_range, y_range=y_range, z_range=z_range,
@@ -88,7 +88,7 @@ def get_obj_from_phoxiinfo_withmodel_nobgf(phxilocator, stl_f_name, objpcd_list=
     objpcd = phxilocator.find_closest_objpcd_by_stl(stl_f_name, objpcd_list, use_rmse=use_rmse)
     objmat4 = phxilocator.match_pcdncm(objpcd, objcm, toggledebug=False, match_rotz=match_rotz)
     objmat4[:3, :3] = np.eye(3)
-    objcm.sethomomat(objmat4)
+    objcm.set_homomat(objmat4)
 
     return item.Item(objcm=objcm, pcd=objpcd, objmat4=objmat4)
 
@@ -108,12 +108,12 @@ def get_obj_inhand_from_phoxiinfo_withmodel_pcd(phxilocator, stl_f_name, tcp_pos
     :param h:
     :return:
     """
-    objcm = cm.CollisionModel(objinit=os.path.join(config.ROOT + '/obstacles/' + stl_f_name))
+    objcm = cm.CollisionModel(initor=os.path.join(config.ROOT + '/obstacles/' + stl_f_name))
     grayimg, depthnparray_float32, pcd = load_phxiinfo(phoxi_f_name=phoxi_f_name, load=load)
 
     objpcd = phxilocator.find_objinhand_pcd(tcp_pos, pcd, stl_f_name, toggledebug=showcluster)
     objmat4 = phxilocator.match_pcdncm(objpcd, objcm, inithomomat, toggledebug=showicp)
-    objcm.sethomomat(objmat4)
+    objcm.set_homomat(objmat4)
 
     return item.Item(objcm=objcm, pcd=objpcd, objmat4=objmat4, draw_center=tcp_pos)
 
@@ -181,7 +181,7 @@ if __name__ == '__main__':
     set up env and param
     '''
     base, env = el.loadEnv_wrs()
-    rbt, rbtmg, rbtball = el.loadUr3e()
+    rbt = el.loadUr3e()
     rbtx = el.loadUr3ex
     rbt.opengripper(armname="rgt")
     rbt.opengripper(armname="lft")
@@ -191,12 +191,12 @@ if __name__ == '__main__':
     '''
     init planner
     '''
-    motion_planner_rgt = m_planner.MotionPlanner(env, rbt, rbtmg, rbtball, armname="rgt")
-    motion_planner_lft = m_planner.MotionPlanner(env, rbt, rbtmg, rbtball, armname="lft")
+    motion_planner_rgt = m_planner.MotionPlanner(env, rbt, armname="rgt")
+    motion_planner_lft = m_planner.MotionPlanner(env, rbt, armname="lft")
 
     folder_path = config.MOTIONSCRIPT_REL_PATH + "real_egg_circle/withmodel/"
 
-    obj = cm.CollisionModel(objinit=os.path.join(config.ROOT + '/obstacles/pentip.stl'))
+    obj = cm.CollisionModel(initor=os.path.join(config.ROOT + '/obstacles/pentip.stl'))
 
     objmat4_list = pickle.load(
         open(config.PREGRASP_REL_PATH + pen_stl_f_name + "_objmat4_list.pkl", "rb"))

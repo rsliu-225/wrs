@@ -68,6 +68,7 @@ class RobotInterface(object):
                                                         local_minima=local_minima,
                                                         toggle_debug=toggle_debug)
 
+
     def manipulability(self,
                        tcp_jnt_id=None,
                        tcp_loc_pos=None,
@@ -84,8 +85,8 @@ class RobotInterface(object):
                              component_name='arm',
                              type="translational"):
         return self.manipulator_dict[component_name].manipulability_axmat(tcp_jnt_id=tcp_jnt_id,
-                                                                          tcp_loc_pos=tcp_tloc_pos,
-                                                                          tcp_loc_rotmat=tcp_loc_rotma,
+                                                                          tcp_loc_pos=tcp_loc_pos,
+                                                                          tcp_loc_rotmat=tcp_loc_rotmat,
                                                                           type=type)
 
     def jacobian(self,
@@ -110,9 +111,9 @@ class RobotInterface(object):
         date: 20210417
         """
         jnt_values_bk = self.get_jnt_values(manipulator_name)
-        self.robot_s.fk(manipulator_name, jnt_values)
-        gl_tcp_pos, gl_tcp_rotmat = self.robot_s.get_gl_tcp(manipulator_name)
-        self.robot_s.fk(manipulator_name, jnt_values_bk)
+        self.fk(manipulator_name, jnt_values)
+        gl_tcp_pos, gl_tcp_rotmat = self.get_gl_tcp(manipulator_name)
+        self.fk(manipulator_name, jnt_values_bk)
         return gl_tcp_pos, gl_tcp_rotmat
 
     def cvt_gl_to_loc_tcp(self, manipulator_name, gl_obj_pos, gl_obj_rotmat):

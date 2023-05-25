@@ -12,7 +12,7 @@ class YuMiRobot:
     Communicates with the robot_s over Ethernet.
     """
 
-    def __init__(self, ip=YMC.IP, port_l=YMC.PORTS["left"]["server"], port_r=YMC.PORTS["right"]["server"], tcp=YMC.TCP_ABB_GRASP_GRIPPER,
+    def __init__(self, ip=YMC.IP, port_l=YMC.PORTS["left"]["server"], port_r=YMC.PORTS["right"]["server"], tcp=YMC.TCP_ABB_GRASP_GRIPPER_HURI,
                     include_left=True, include_right=True, debug=YMC.DEBUG,
                     log_pose_histories=False, log_state_histories=False,
                     arm_type='local', ros_namespace = None):
@@ -233,7 +233,7 @@ class YuMiRobot:
             self.right.goto_state(YMC.R_HOME_STATE, wait_for_res=True)
 
     def calibrate_grippers(self):
-        '''Calibrates gripper for instantiated arms.
+        '''Calibrates grippers for instantiated arms.
 
         Raises
         ------

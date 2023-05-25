@@ -1,8 +1,6 @@
 '''
 Constants for YuMi interface and control
 Author: Jacky Liang
-Add command code for "ContactL", "buffer_j_add_all", "set_max_speed"
-Author: Hao Chen 20220123
 '''
 import logging
 from robot_con.yumi.yumi_state import YuMiState
@@ -43,7 +41,7 @@ class YuMiConstants:
     COMM_PERIOD = 0.04
 
     DEBUG = False
-    LOGGING_LEVEL = logging.WARNING
+    LOGGING_LEVEL = logging.WARNING # LOGGING_LEVEL = logging.WARNING
 
     # reset mechanism
     RESET_RIGHT_COMM = '/dev/ttyACM0'
@@ -134,6 +132,7 @@ class YuMiConstants:
     TCP_LONG_GRIPPER = RigidTransform(translation=[0,0,(136-56+88-12)/1000.])
     TCP_DEFAULT_GRIPPER = RigidTransform(translation=[0,0,(136-56+88-12)/1000.])
     TCP_GECKO_GRIPPER = RigidTransform(translation=[0,0,(136-56+88-12+19)/1000.])
+    TCP_ABB_GRASP_GRIPPER_HURI = RigidTransform(translation=[0,0,0.15])
 
     L_HOME_STATE = YuMiState([0, -130, 135, 30, 0, 40, 0])
     L_HOME_POSE = RigidTransform(translation=[0.123, 0.147, 0.124], rotation=[0.06551, 0.84892, -0.11147, 0.51246])

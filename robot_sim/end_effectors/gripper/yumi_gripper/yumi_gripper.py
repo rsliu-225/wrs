@@ -6,9 +6,11 @@ import robot_sim._kinematics.jlchain as jl
 import basis.robot_math as rm
 import robot_sim.end_effectors.gripper.gripper_interface as gp
 
+
 class YumiGripper(gp.GripperInterface):
 
-    def __init__(self, pos=np.zeros(3), rotmat=np.eye(3), cdmesh_type='convex_hull', name='yumi_gripper', enable_cc=True):
+    def __init__(self, pos=np.zeros(3), rotmat=np.eye(3), cdmesh_type='convex_hull', name='yumi_gripper',
+                 enable_cc=True):
         super().__init__(pos=pos, rotmat=rotmat, cdmesh_type=cdmesh_type, name=name)
         this_dir, this_filename = os.path.split(__file__)
         cpl_end_pos = self.coupling.jnts[-1]['gl_posq']
@@ -41,9 +43,9 @@ class YumiGripper(gp.GripperInterface):
         # jaw width
         self.jawwidth_rng = [0.0, .05]
         # jaw center
-        self.jaw_center_pos = np.array([0,0,.13])
+        self.jaw_center_pos = np.array([0, 0, .13 - .016])
         # collision detection
-        self.all_cdelements=[]
+        self.all_cdelements = []
         self.enable_cc(toggle_cdprimit=enable_cc)
 
     def enable_cc(self, toggle_cdprimit):
@@ -88,13 +90,13 @@ class YumiGripper(gp.GripperInterface):
         else:
             raise ValueError("The motion_val parameter is out of range!")
 
-    def jaw_to(self, jawwidth):
-        if jawwidth > .05:
+    def jaw_to(self, jaw_width):
+        if jaw_width > .05:
             raise ValueError("The jaw_width parameter is out of range!")
-        self.fk(motion_val=-jawwidth / 2.0)
+        self.fk(motion_val=-jaw_width / 2.0)
 
     def get_jawwidth(self):
-        return -self.lft.jnts[1]['motion_val']*2
+        return -self.lft.jnts[1]['motion_val'] * 2
 
     def gen_stickmodel(self,
                        tcp_jnt_id=None,
@@ -157,7 +159,7 @@ if __name__ == '__main__':
     base = wd.World(cam_pos=[.5, .5, .5], lookat_pos=[0, 0, 0])
     gm.gen_frame().attach_to(base)
     grpr = YumiGripper(enable_cc=True)
-    grpr.fix_to(pos=np.array([0, .3, .2]), rotmat=rm.rotmat_from_euler(math.pi/3, math.pi/3, math.pi/3))
+    grpr.fix_to(pos=np.array([0, .3, .2]), rotmat=rm.rotmat_from_euler(math.pi / 3, math.pi / 3, math.pi / 3))
     grpr.jaw_to(.02)
     print(grpr.get_jawwidth())
     grpr.gen_stickmodel().attach_to(base)
@@ -168,7 +170,7 @@ if __name__ == '__main__':
     grpr.gen_meshmodel().attach_to(base)
 
     grpr2 = grpr.copy()
-    grpr2.fix_to(pos=np.array([.3,.3,.2]), rotmat=rm.rotmat_from_axangle([0,1,0],.01))
+    grpr2.fix_to(pos=np.array([.3, .3, .2]), rotmat=rm.rotmat_from_axangle([0, 1, 0], .01))
     model = grpr2.gen_meshmodel(rgba=[0.5, .5, 0, .5])
     model.attach_to(base)
     grpr2.show_cdprimit()

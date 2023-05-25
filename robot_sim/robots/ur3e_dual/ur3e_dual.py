@@ -282,6 +282,189 @@ class UR3EDual(ri.RobotInterface):
         else:
             raise NotImplementedError
 
+    def hold(self, objcm, jawwidth=None, hnd_name='lft_hnd'):
+        """
+        the objcm is added as a part of the robot_s to the cd checker
+        :param jawwidth:
+        :param objcm:
+        :return:
+        """
+        if hnd_name == 'lft_hnd':
+            rel_pos, rel_rotmat = self.lft_arm.cvt_gl_to_loc_tcp(objcm.get_pos(), objcm.get_rotmat())
+            intolist = [self.lft_body.lnks[0],  # body
+                        self.lft_arm.lnks[1],
+                        self.lft_arm.lnks[2],
+                        self.lft_arm.lnks[3],
+                        self.rgt_arm.lnks[1],
+                        self.rgt_arm.lnks[2],
+                        self.rgt_arm.lnks[3],
+                        self.rgt_arm.lnks[4],
+                        self.rgt_arm.lnks[5],
+                        self.rgt_arm.lnks[6]]
+            self.lft_oih_infos.append(self.cc.add_cdobj(objcm, rel_pos, rel_rotmat, intolist))
+        elif hnd_name == 'rgt_hnd':
+            rel_pos, rel_rotmat = self.rgt_arm.cvt_gl_to_loc_tcp(objcm.get_pos(), objcm.get_rotmat())
+            intolist = [self.lft_body.lnks[0],
+                        self.lft_arm.lnks[1],
+                        self.lft_arm.lnks[2],
+                        self.lft_arm.lnks[3],
+                        self.lft_arm.lnks[4],
+                        self.lft_arm.lnks[5],
+                        self.lft_arm.lnks[6],
+                        self.rgt_arm.lnks[1],
+                        self.rgt_arm.lnks[2],
+                        self.rgt_arm.lnks[3],]
+            self.rgt_oih_infos.append(self.cc.add_cdobj(objcm, rel_pos, rel_rotmat, intolist))
+        else:
+            raise ValueError("hnd_name must be lft_hnd or rgt_hnd!")
+        if jawwidth is not None:
+            self.hnd_dict[hnd_name].jaw_to(jawwidth)
+        return rel_pos, rel_rotmat
+
+    def get_loc_pose_from_hio(self, hio_pos, hio_rotmat, component_name='lft_arm'):
+        """
+        get the loc pose of an object from a grasp pose described in an object's local frame
+        :param hio_pos: a grasp pose described in an object's local frame -- pos
+        :param hio_rotmat: a grasp pose described in an object's local frame -- rotmat
+        :return:
+        author: weiwei
+        date: 20210302
+        """
+        if component_name == 'lft_arm':
+            arm = self.lft_arm
+        elif component_name == 'rgt_arm':
+            arm = self.rgt_arm
+        hnd_pos = arm.jnts[-1]['gl_posq']
+        hnd_rotmat = arm.jnts[-1]['gl_rotmatq']
+        hnd_homomat = rm.homomat_from_posrot(hnd_pos, hnd_rotmat)
+        hio_homomat = rm.homomat_from_posrot(hio_pos, hio_rotmat)
+        oih_homomat = rm.homomat_inverse(hio_homomat)
+        gl_obj_homomat = hnd_homomat.dot(oih_homomat)
+        return self.cvt_gl_to_loc_tcp(component_name, gl_obj_homomat[:3, 3], gl_obj_homomat[:3, :3])
+
+    def get_gl_pose_from_hio(self, hio_pos, hio_rotmat, component_name='lft_arm'):
+        """
+        get the loc pose of an object from a grasp pose described in an object's local frame
+        :param hio_pos: a grasp pose described in an object's local frame -- pos
+        :param hio_rotmat: a grasp pose described in an object's local frame -- rotmat
+        :return:
+        author: weiwei
+        date: 20210302
+        """
+        if component_name == 'lft_arm':
+            arm = self.lft_arm
+        elif component_name == 'rgt_arm':
+            arm = self.rgt_arm
+        hnd_pos = arm.jnts[-1]['gl_posq']
+        hnd_rotmat = arm.jnts[-1]['gl_rotmatq']
+        hnd_homomat = rm.homomat_from_posrot(hnd_pos, hnd_rotmat)
+        hio_homomat = rm.homomat_from_posrot(hio_pos, hio_rotmat)
+        oih_homomat = rm.homomat_inverse(hio_homomat)
+        gl_obj_homomat = hnd_homomat.dot(oih_homomat)
+        return gl_obj_homomat[:3, 3], gl_obj_homomat[:3, :3]
+
+    def get_oih_cm_list(self, hnd_name='lft_hnd'):
+        """
+        oih = object in hand list
+        :param hnd_name:
+        :return:
+        """
+        if hnd_name == 'lft_hnd':
+            oih_infos = self.lft_oih_infos
+        elif hnd_name == 'rgt_hnd':
+            oih_infos = self.rgt_oih_infos
+        else:
+            raise ValueError("hnd_name must be lft_hnd or rgt_hnd!")
+        return_list = []
+        for obj_info in oih_infos:
+            objcm = obj_info['collisionmodel']
+            objcm.set_pos(obj_info['gl_pos'])
+            objcm.set_rotmat(obj_info['gl_rotmat'])
+            return_list.append(objcm)
+        return return_list
+
+    def get_oih_glhomomat_list(self, hnd_name='lft_hnd'):
+        """
+        oih = object in hand list
+        :param hnd_name:
+        :return:
+        author: weiwei
+        date: 20210302
+        """
+        if hnd_name == 'lft_hnd':
+            oih_infos = self.lft_oih_infos
+        elif hnd_name == 'rgt_hnd':
+            oih_infos = self.rgt_oih_infos
+        else:
+            raise ValueError("hnd_name must be lft_hnd or rgt_hnd!")
+        return_list = []
+        for obj_info in oih_infos:
+            return_list.append(rm.homomat_from_posrot(obj_info['gl_pos']), obj_info['gl_rotmat'])
+        return return_list
+
+    def get_oih_relhomomat(self, objcm, hnd_name='lft_hnd'):
+        """
+        TODO: useless? 20210320
+        oih = object in hand list
+        :param objcm
+        :param hnd_name:
+        :return:
+        author: weiwei
+        date: 20210302
+        """
+        if hnd_name == 'lft_hnd':
+            oih_info_list = self.lft_oih_infos
+        elif hnd_name == 'rgt_hnd':
+            oih_info_list = self.rgt_oih_infos
+        else:
+            raise ValueError("hnd_name must be lft_hnd or rgt_hnd!")
+        for obj_info in oih_info_list:
+            if obj_info['collisionmodel'] is objcm:
+                return rm.homomat_from_posrot(obj_info['rel_pos']), obj_info['rel_rotmat']
+
+    def release(self, hnd_name, objcm, jawwidth=None):
+        """
+        the objcm is added as a part of the robot_s to the cd checker
+        :param jawwidth:
+        :param objcm:
+        :param hnd_name:
+        :return:
+        """
+        if hnd_name == 'lft_hnd':
+            oih_infos = self.lft_oih_infos
+        elif hnd_name == 'rgt_hnd':
+            oih_infos = self.rgt_oih_infos
+        else:
+            raise ValueError("hnd_name must be lft_hnd or rgt_hnd!")
+        if jawwidth is not None:
+            self.hnd_dict[hnd_name].jaw_to(jawwidth)
+        for obj_info in oih_infos:
+            if obj_info['collisionmodel'] is objcm:
+                self.cc.delete_cdobj(obj_info)
+                oih_infos.remove(obj_info)
+                break
+
+    def release_all(self, jaw_width=None, hnd_name='lft_hnd'):
+        """
+        release all objects from the specified hand
+        :param jaw_width:
+        :param hnd_name:
+        :return:
+        author: weiwei
+        date: 20210125
+        """
+        if hnd_name == 'lft_hnd':
+            oih_infos = self.lft_oih_infos
+        elif hnd_name == 'rgt_hnd':
+            oih_infos = self.rgt_oih_infos
+        else:
+            raise ValueError("hnd_name must be lft_hnd or rgt_hnd!")
+        if jaw_width is not None:
+            self.jaw_to(hnd_name, jaw_width)
+        for obj_info in oih_infos:
+            self.cc.delete_cdobj(obj_info)
+        oih_infos.clear()
+
     def gen_stickmodel(self,
                        tcp_jnt_id=None,
                        tcp_loc_pos=None,
@@ -374,6 +557,6 @@ if __name__ == '__main__':
     # u3ed.fk(.85)
     u3ed_meshmodel = u3ed.gen_meshmodel(toggle_tcpcs=True)
     u3ed_meshmodel.attach_to(base)
-    # u3ed_meshmodel.show_cdprimit()
-    # u3ed.gen_stickmodel().attach_to(base)
+    u3ed_meshmodel.show_cdprimit()
+    u3ed.gen_stickmodel().attach_to(base)
     base.run()

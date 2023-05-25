@@ -2,7 +2,7 @@ import math
 import time
 import numpy as np
 import drivers.xarm.wrapper.xarm_api as arm
-import shuidi_x as agv
+import robot_con.xarm_shuidi.shuidi_x as agv
 import motion.trajectory.piecewisepoly_toppra as pwp
 
 
@@ -30,7 +30,7 @@ class XArmShuidiX(object):
         self._arm_x.set_gripper_mode(0)
         self.__speed = 5000
         self._arm_x.set_gripper_speed(self.__speed)  # 1000-5000
-        self._arm_x.set_gripper_position(850)  # 1000-5000
+        # self._arm_x.set_gripper_position(850)  # 1000-5000
         self._agv_x = agv.ShuidiX(ip=ip)
         print("The Shuidi server is started!")
 
@@ -109,7 +109,7 @@ if __name__ == "__main__":
 
     base = wd.World(cam_pos=[3, 1, 1.5], lookat_pos=[0, 0, 0.7])
     rbt_s = rbt.XArmShuidi()
-    rbt_x = XArmShuidiX(ip="10.2.0.203")
+    rbt_x = XArmShuidiX(ip="10.2.0.201")
     jnt_values = rbt_x.arm_get_jnt_values()
     print(jnt_values)
     jawwidth = rbt_x.arm_get_jaw_width()

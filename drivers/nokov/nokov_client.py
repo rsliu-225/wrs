@@ -99,7 +99,7 @@ class RigidBodyData(object):
         return len(self._markers)
 
     def __repr__(self):
-        return f"Segment：Tx:{self.x:.2f} Ty:{self.y:.2f} Tz:{self.z:.2f} qw:{self.qw:.3f} qx:{self.qx:.3f} qy:{self.qy:.3f} qz:{self.qz:.3f}"
+        return f"Segment：Tx:{self.x:.5f} Ty:{self.y:.5f} Tz:{self.z:.5f} qw:{self.qw:.5f} qx:{self.qx:.5f} qy:{self.qy:.5f} qz:{self.qz:.5f}"
 
 
 class SkeletonData(object):
@@ -320,8 +320,12 @@ class NokovClient(object):
 
 if __name__ == "__main__":
     # 160,
-    server = NokovClient()
+    server = NokovClient(server_ip='10.1.1.198')
     while True:
-        data = server.get_rigidbody_set_frame()
-        if data is not None:
-            print(data)
+        # data = server.get_rigidbody_set_frame()
+        data = server.get_marker_set_frame()
+        if data:
+            print(data.marker_set_dict)
+            for v in data.marker_set_dict.values():
+                print(v)
+

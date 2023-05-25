@@ -233,15 +233,15 @@ def setting_real_simple(phoxi_f_path, amat):
 
 
 def setting_real(phxilocator, phoxi_f_path, pen_stl_f_name, paintingobj_stl_f_name, resolution=1):
-    pen_item = ru.get_obj_from_phoxiinfo_withmodel_nobgf(phxilocator, pen_stl_f_name, phoxi_f_name=phoxi_f_path,
-                                                         x_range=(600, 1000), y_range=(200, 600), z_range=(810, 1000))
+    pen_item = ru.get_obj_from_phoxiinfo_withmodel(phxilocator, pen_stl_f_name, phoxi_f_name=phoxi_f_path,
+                                                   x_range=(600, 1000), y_range=(200, 600), z_range=(810, 1000))
     if paintingobj_stl_f_name is not None:
         paintingobj_item = \
-            ru.get_obj_from_phoxiinfo_withmodel_nobgf(phxilocator, paintingobj_stl_f_name, x_range=(400, 1080),
-                                                      phoxi_f_name=phoxi_f_path, resolution=resolution)
+            ru.get_obj_from_phoxiinfo_withmodel(phxilocator, paintingobj_stl_f_name, x_range=(400, 1080),
+                                                phoxi_f_name=phoxi_f_path, resolution=resolution)
     else:
-        paintingobj_item = ru.get_obj_from_phoxiinfo_nobgf(phxilocator, phoxi_f_name=phoxi_f_path, load=True,
-                                                           resolution=resolution)
+        paintingobj_item = ru.get_obj_from_phoxiinfo_withmodel(phxilocator, phoxi_f_name=phoxi_f_path, load=True,
+                                                               resolution=resolution)
     paintingobj_item.show_objcm(rgba=(1, 1, 1, .5))
     # paintingobj_item.show_objpcd(rgba=(1, 1, 0, 1))
     pen_item.show_objcm(rgba=(0, 1, 0, 1))
@@ -262,7 +262,7 @@ def show_drawmotion_ms(motion_planner, pen_cm, motion_f_path, grasp_id_list, jaw
                 path_gotodraw = motion_planner.plan_start2end(start=path[-1], end=path_stroke[0])
             else:
                 path_gotodraw = []
-            path_up = motion_planner.get_moveup_path(path_stroke[-1], pen_cm, objrelpos, objrelrot, length=30)
+            path_up = motion_planner.get_linear_path_from(path_stroke[-1], pen_cm, objrelpos, objrelrot, length=30)
             path.extend(path_gotodraw + path_stroke + path_up)
         motion_planner.ah.show_animation_hold(path, copy.deepcopy(pen_cm), objrelpos, objrelrot, jawwidth=jawwidth)
 

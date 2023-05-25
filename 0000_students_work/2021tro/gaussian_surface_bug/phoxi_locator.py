@@ -9,12 +9,12 @@ import sklearn.cluster as skc
 
 import config
 import modeling.collision_model as cm
-# import trimesh.sample as ts
+import trimesh.sample as ts
 import pcd_utils as pcdu
 import phoxi as phoxi
 import vision_utils as vu
 import basis.robot_math as rm
-# import utiltools.thirdparty.o3dhelper as o3dh
+import basis.o3dhelper as o3dh
 import envloader as el
 
 
@@ -192,7 +192,7 @@ class PhxiLocator(object):
         return objpcd_list
 
     def find_closest_objpcd_by_stl(self, src_stl_f_name, objpcd_list, inithomomat=None, use_rmse=True):
-        objcm = cm.CollisionModel(objinit=os.path.join(config.ROOT + '/obstacles/' + src_stl_f_name))
+        objcm = cm.CollisionModel(initor=os.path.join(config.ROOT + '/obstacles/' + src_stl_f_name))
         min_rmse = 100
         max_fitness = 0
         result_pcd = None
@@ -375,7 +375,7 @@ class PhxiLocator(object):
         return highest_component
 
     def match_pcdncm_ptpt(self, target, src_stl_f_name, dv=10, show_icp=False):
-        obj = cm.CollisionModel(objinit=os.path.join(config.ROOT + '/obstacles/' + src_stl_f_name))
+        obj = cm.CollisionModel(initor=os.path.join(config.ROOT + '/obstacles/' + src_stl_f_name))
         source = np.asarray(ts.sample_surface(obj.trimesh, count=10000))
         source = source[source[:, 2] > 5]
         target = np.asarray(target)
@@ -401,7 +401,7 @@ class PhxiLocator(object):
             min_rmse = rmse
             for rot in range(45, 180 + 1, 45):
                 inithomomat_rotted = copy.deepcopy(inithomomat)
-                inithomomat_rotted[:3, :3] = np.dot(inithomomat_rotted[:3, :3], rm.rodrigues([0, 0, 1], rot))
+                inithomomat_rotted[:3, :3] = np.dot(inithomomat_rotted[:3, :3], rm.rotmat_from_axangle([0, 0, 1], rot))
 
                 temp_center = pcdu.get_pcd_center(pcdu.trans_pcd(source, inithomomat_rotted))
                 inithomomat_rotted[:3, 3] = inithomomat_rotted[:3, 3] + (target_pcd_center - temp_center)

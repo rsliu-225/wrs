@@ -199,8 +199,8 @@ class ADPlanner(object):  # AD = Approach_Depart
                             approach_distance=.1,
                             approach_jawwidth=.05,
                             granularity=.03,
-                            obstacle_list=[], # obstacles, will be checked by both rrt and linear
-                            object_list=[], # target objects, will be checked by rrt, but not by linear
+                            obstacle_list=[],  # obstacles, will be checked by both rrt and linear
+                            object_list=[],  # target objects, will be checked by rrt, but not by linear
                             seed_jnt_values=None,
                             toggle_end_grasp=False,
                             end_jawwidth=.0):
@@ -226,13 +226,16 @@ class ADPlanner(object):  # AD = Approach_Depart
             start2approach_conf_list = self.rrtc_planner.plan(component_name=component_name,
                                                               start_conf=start_conf,
                                                               goal_conf=conf_list[0],
-                                                              obstacle_list=obstacle_list+object_list,
+                                                              obstacle_list=obstacle_list + object_list,
                                                               ext_dist=.05,
                                                               max_time=300)
             if start2approach_conf_list is None:
                 print("ADPlanner: Cannot plan approach motion!")
                 return None, None
             start2approach_jawwidth_list = self.gen_jawwidth_motion(start2approach_conf_list, approach_jawwidth)
+        else:
+            start2approach_conf_list = []
+            start2approach_jawwidth_list = []
         return start2approach_conf_list + conf_list, start2approach_jawwidth_list + jawwidth_list
 
     def gen_depart_motion(self,
@@ -244,8 +247,8 @@ class ADPlanner(object):  # AD = Approach_Depart
                           depart_distance=.1,
                           depart_jawwidth=.05,
                           granularity=.03,
-                          obstacle_list=[], # obstacles, will be checked by both rrt and linear
-                          object_list=[], # target objects, will be checked by rrt, but not by linear
+                          obstacle_list=[],  # obstacles, will be checked by both rrt and linear
+                          object_list=[],  # target objects, will be checked by rrt, but not by linear
                           seed_jnt_values=None,
                           toggle_begin_grasp=False,
                           begin_jawwidth=.0):
@@ -271,7 +274,7 @@ class ADPlanner(object):  # AD = Approach_Depart
             depart2goal_conf_list = self.rrtc_planner.plan(component_name=component_name,
                                                            start_conf=conf_list[-1],
                                                            goal_conf=end_conf,
-                                                           obstacle_list=obstacle_list+object_list,
+                                                           obstacle_list=obstacle_list + object_list,
                                                            ext_dist=.05,
                                                            max_time=300)
             if depart2goal_conf_list is None:
@@ -296,8 +299,8 @@ class ADPlanner(object):  # AD = Approach_Depart
                                        depart_distance=.1,
                                        depart_jawwidth=0,
                                        granularity=.03,
-                                       obstacle_list=[], # obstacles, will be checked by both rrt and linear
-                                       object_list=[], # target objects, will be checked by rrt, but not by linear
+                                       obstacle_list=[],  # obstacles, will be checked by both rrt and linear
+                                       object_list=[],  # target objects, will be checked by rrt, but not by linear
                                        seed_jnt_values=None):
         """
         degenerate into gen_ad_primitive if both seed_jnt_values and end_conf are None
@@ -345,7 +348,6 @@ class ADPlanner(object):  # AD = Approach_Depart
                                                               start_conf=start_conf,
                                                               goal_conf=ad_conf_list[0],
                                                               obstacle_list=obstacle_list,
-                                                              object_list=object_list,
                                                               ext_dist=.05,
                                                               max_time=300)
             if start2approach_conf_list is None:
@@ -357,7 +359,6 @@ class ADPlanner(object):  # AD = Approach_Depart
                                                            start_conf=ad_conf_list[-1],
                                                            goal_conf=goal_conf,
                                                            obstacle_list=obstacle_list,
-                                                           object_list=object_list,
                                                            ext_dist=.05,
                                                            max_time=300)
             if depart2goal_conf_list is None:
@@ -372,6 +373,7 @@ class ADPlanner(object):  # AD = Approach_Depart
 
     def gen_depart_and_approach_motion(self):
         pass
+
 
 if __name__ == '__main__':
     import time
@@ -399,24 +401,24 @@ if __name__ == '__main__':
     #                                                 depart_direction=np.array([0, 1, 0]),
     #                                                 depart_distance=.0,
     #                                                 depart_jawwidth=0)
-    conf_list, jawwidth_list = adp.gen_approach_and_depart_motion(manipulator_name,
-                                                                  goal_pos,
-                                                                  goal_rotmat,
-                                                                  start_conf=yumi_instance.get_jnt_values(
-                                                                      manipulator_name),
-                                                                  goal_conf=yumi_instance.get_jnt_values(
-                                                                      manipulator_name),
-                                                                  approach_direction=np.array([0, 0, -1]),
-                                                                  approach_distance=.1,
-                                                                  depart_direction=np.array([0, -1, 0]),
-                                                                  depart_distance=.0,
-                                                                  depart_jawwidth=0)
-    # conf_list, jawwidth_list = adp.gen_approach_motion(hnd_name,
-    #                                                    goal_pos,
-    #                                                    goal_rotmat,
-    #                                                    seed_jnt_values=robot_s.get_jnt_values(hnd_name),
-    #                                                    approach_direction=np.array([0, 0, -1]),
-    #                                                    approach_distance=.1)
+    # conf_list, jawwidth_list = adp.gen_approach_and_depart_motion(manipulator_name,
+    #                                                               goal_pos,
+    #                                                               goal_rotmat,
+    #                                                               start_conf=yumi_instance.get_jnt_values(
+    #                                                                   manipulator_name),
+    #                                                               goal_conf=yumi_instance.get_jnt_values(
+    #                                                                   manipulator_name),
+    #                                                               approach_direction=np.array([0, 0, -1]),
+    #                                                               approach_distance=.1,
+    #                                                               depart_direction=np.array([0, -1, 0]),
+    #                                                               depart_distance=.0,
+    #                                                               depart_jawwidth=0)
+    conf_list, jawwidth_list = adp.gen_approach_motion(hnd_name,
+                                                       goal_pos,
+                                                       goal_rotmat,
+                                                       seed_jnt_values=robot_s.get_jnt_values(hnd_name),
+                                                       approach_direction=np.array([0, 0, -1]),
+                                                       approach_distance=.1)
     # conf_list, jawwidth_list = adp.gen_depart_motion(hnd_name,
     #                                                  goal_pos,
     #                                                  goal_rotmat,

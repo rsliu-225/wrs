@@ -107,7 +107,8 @@ class PhoxiServer(pxrpc.PhoxiServicer):
 def serve(serialno="2019-09-051-LC3", host="127.0.0.1:18300"):
     portno = 65499
     resolution = "high"
-    calibpath = "D:\chen\phoxi_server_tst\calib_external_cam_custom\calibration.txt"
+    # calibpath = "D:\chen\phoxi_server_tst\calib_external_cam_custom\calibration.txt"
+    calibpath = ""
     pcins = pctrl.PhoxiControl(serialno, portno, resolution, calibpath)
     _ONE_DAY_IN_SECONDS = 60 * 60 * 24
     options = [('grpc.max_message_length', 100 * 1024 * 1024)]
@@ -124,5 +125,7 @@ def serve(serialno="2019-09-051-LC3", host="127.0.0.1:18300"):
     except KeyboardInterrupt:
         server.stop(0)
 
+
 if __name__ == "__main__":
-    serve(serialno="2019-04-009-LC3", host="127.0.0.1:18300")
+    # serve(serialno="2019-09-051-LC3", host="10.2.0.199:18300")
+    serve(serialno="2019-09-051-LC3", host="127.0.0.1:18300")

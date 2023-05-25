@@ -1,14 +1,14 @@
 import numpy as np
 import vision.depth_camera.surface._surface as sfc
+
 from scipy.optimize import curve_fit
 
 
 class MixedGaussianSurface(sfc.Surface):
-
     def __init__(self,
                  xydata,
                  zdata,
-                 n_mix=1,
+                 n_mix=4,
                  init_guess=[0, 0, .05, .05, .01]):
         """
         :param xydata:
@@ -42,6 +42,7 @@ class MixedGaussianSurface(sfc.Surface):
         def gaussian(xdata, ydata, xmean, ymean, xdelta, ydelta, attitude):
             return attitude * np.exp(-((xdata - xmean) / xdelta) ** 2 - ((ydata - ymean) / ydelta) ** 2)
 
+        xydata = np.asarray(xydata)
         z = np.zeros(len(xydata))
         for single_parameters in np.array(parameters).reshape(-1, 5):
             z += gaussian(xydata[:, 0], xydata[:, 1], *single_parameters)
@@ -63,11 +64,9 @@ if __name__ == '__main__':
     x, y = np.linspace(xmin, xmax, nx), np.linspace(ymin, ymax, ny)
     X, Y = np.meshgrid(x, y)
 
-
     # Our function to fit is going to be a sum of two-dimensional Gaussians
     def gaussian(x, y, x0, y0, xalpha, yalpha, A):
         return A * np.exp(-((x - x0) / xalpha) ** 2 - ((y - y0) / yalpha) ** 2)
-
 
     # A list of the Gaussian parameters: x0, y0, xalpha, yalpha, A
     gprms = [(0, 2, 2.5, 5.4, 1.5),
