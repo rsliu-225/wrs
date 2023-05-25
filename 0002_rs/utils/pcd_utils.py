@@ -21,7 +21,6 @@ import basis.trimesh.sample as ts
 import config
 import modeling.collision_model as cm
 import modeling.geometric_model as gm
-import motionplanner.nbv_pcn_opt_solver as nbv_solver
 import utils.math_utils as mu
 from basis import trimesh
 
@@ -756,6 +755,52 @@ def cal_conf(pts, voxel_size=.01, cam_pos=(0, 0, 0), theta=None, toggledebug=Fal
     return p_list, nrmls, conf_list
 
 
+def detect_edge(pts, voxel_size=.01, cam_pos=(0, 0, 0), theta=None, toggledebug=False):
+    pts = np.asarray(pts)
+    o3dpcd = o3d_helper.nparray2o3dpcd(pts)
+    downpcd = o3dpcd.voxel_down_sample(voxel_size=voxel_size)
+    # downpcd = o3dpcd.uniform_down_sample(10)
+    # o3d.visualization.draw_geometries([downpcd])
+    kdt_d3, _ = get_kdt(pts)
+    zeta1_list = []
+    d_list = []
+    p_list = []
+    nrmls = []
+    for p in np.asarray(downpcd.points):
+        knn = get_knn_by_dist(p, kdt_d3, radius=voxel_size)
+        # knn = get_knn(p, kdt_d3, k=50)
+        if len(knn) < 5:
+            continue
+        pcv_unsort, pcaxmat = rm.compute_pca(knn)
+        pcv = sorted(pcv_unsort, reverse=True)
+        zeta1 = pcv[0] - pcv[1]
+        zeta2 = pcv[1] - pcv[2]
+        zeta3 = pcv[2]
+        d = [zeta1, zeta2, zeta3].index(max([zeta1, zeta2, zeta3]))
+        zeta1_list.append(zeta1)
+        d_list.append(d)
+        p_list.append(p)
+        inx = sorted(range(len(pcv_unsort)), key=lambda k: pcv_unsort[k])
+        n = pcaxmat[:, inx[0]]
+        if rm.angle_between_vectors(n, cam_pos - p) > np.pi / 2:
+            n = -n
+        nrmls.append(n)
+
+    for i in range(len(zeta1_list)):
+        if d_list[i] == 0:
+            rgba = (1, 0, 0, 1)
+        elif d_list[i] == 1:
+            rgba = (0, 1, 0, 1)
+        else:
+            rgba = (0, 0, 1, 1)
+        if toggledebug:
+            # if d_list[i] == 0:
+            gm.gen_sphere(p_list[i], radius=.001, rgba=rgba).attach_to(base)
+            # gm.gen_arrow(spos=p_list[i], epos=p_list[i] + nrmls[i] * .03, thickness=.002,
+            #              rgba=rgba).attach_to(base)
+    return p_list, nrmls
+
+
 def extract_main_vec(pts, nrmls, confs, threshold=np.radians(30), toggledebug=False):
     inx = sorted(range(len(confs)), key=lambda k: confs[k])
     confs = np.asarray(confs)[inx]
@@ -899,7 +944,7 @@ def cal_nbv_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, radius=.01, icp=Tru
         show_pcd(pts, rgba=COLOR[0])
     o3d_pcn = o3dh.nparray2o3dpcd(pts_pcn)
     o3d_pts = o3dh.nparray2o3dpcd(pts)
-    o3d_pcn.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=radius*1.5, max_nn=200))
+    o3d_pcn.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=radius * 1.5, max_nn=200))
     o3d_pts.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=radius, max_nn=200))
 
     o3d_kpts = o3d_pcn.voxel_down_sample(voxel_size=radius)
@@ -939,12 +984,6 @@ def cal_nbv_pcn(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, radius=.01, icp=Tru
     return np.asarray(kpts)[np.argsort(confs)], \
            np.asarray(nrmls)[np.argsort(confs)], \
            np.asarray(confs)[np.argsort(confs)]
-
-
-def opt_nbv_pcn(pts, model_name, load_model, cam_pos=(0, 0, 0), method='COBYLA'):
-    nbv_opt = nbv_solver.NBVOptimizer(model_name=model_name, load_model=load_model, toggledebug=False)
-    trans, rot, time_cost = nbv_opt.solve(pts, cam_pos, method=method)
-    return trans, rot, time_cost
 
 
 def cal_nbv_pcn_kpts(pts, pts_pcn, cam_pos=(0, 0, 0), theta=None, toggledebug=False):
